@@ -7,6 +7,7 @@ name = "pypi"
 sly = "*"
 pytest = "*"
 pytest-cov = "*"
+autopep8 = "*"
 
 [dev-packages]
 
