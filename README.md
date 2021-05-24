@@ -40,3 +40,10 @@ pipenv run autopep8 -iraa es2hfa/
 Note that this uses the most aggressive form of linting available with
 autopep8. We can always reduce the amount of linting by using one `-a` (less
 agressive code changes) or none (whitespace changes only).
+
+## Type Checking
+
+To type check, run
+```
+pipenv run mypy es2hfa
+```

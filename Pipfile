@@ -8,6 +8,7 @@ sly = "*"
 pytest = "*"
 pytest-cov = "*"
 autopep8 = "*"
+mypy = "*"
 
 [dev-packages]
 
