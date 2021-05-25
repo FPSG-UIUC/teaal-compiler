@@ -19,6 +19,14 @@ pipenv shell
 [cmd]
 ```
 
+## All Checks
+
+All checks can be run with the command
+```
+./check.sh
+```
+The details for how to run specific checks can be found below.
+
 ## Type Checking
 
 To type check, run
