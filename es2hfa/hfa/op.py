@@ -4,24 +4,7 @@ HFA AST and code generation for HFA operators
 
 import abc
 
-
-class Operator(metaclass=abc.ABCMeta):
-    """
-    Operator interface
-    """
-    @classmethod
-    def __subclasshook__(cls, subclass):
-        """
-        Attributes a Operator must have
-        """
-        return (hasattr(subclass, "gen"))
-
-    @abc.abstractmethod
-    def gen(self) -> str:
-        """
-        Generate the HFA code for this Operator
-        """
-        raise NotImplementedError  # pragma: no cover
+from es2hfa.hfa.base import Operator
 
 
 @Operator.register
