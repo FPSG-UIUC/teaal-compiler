@@ -2,7 +2,6 @@
 HFA AST and code generation for HFA expressions
 """
 
-import abc
 from typing import List
 
 from es2hfa.hfa.base import Expression, Operator

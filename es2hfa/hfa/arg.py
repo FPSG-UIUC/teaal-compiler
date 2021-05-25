@@ -2,8 +2,6 @@
 HFA AST and code generation for HFA expressions
 """
 
-import abc
-
 from es2hfa.hfa.base import Argument, Expression
 
 

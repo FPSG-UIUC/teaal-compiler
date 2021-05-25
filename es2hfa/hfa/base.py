@@ -9,13 +9,6 @@ class Argument(metaclass=abc.ABCMeta):
     """
     Argument interface
     """
-    @classmethod
-    def __subclasshook__(cls, subclass):
-        """
-        Attributes a Argument must have
-        """
-        return (hasattr(subclass, "gen"))
-
     @abc.abstractmethod
     def gen(self) -> str:
         """
@@ -28,13 +21,6 @@ class Expression(metaclass=abc.ABCMeta):
     """
     Expression interface
     """
-    @classmethod
-    def __subclasshook__(cls, subclass):
-        """
-        Attributes a Expression must have
-        """
-        return (hasattr(subclass, "gen"))
-
     @abc.abstractmethod
     def gen(self) -> str:
         """
@@ -47,13 +33,6 @@ class Operator(metaclass=abc.ABCMeta):
     """
     Operator interface
     """
-    @classmethod
-    def __subclasshook__(cls, subclass):
-        """
-        Attributes a Operator must have
-        """
-        return (hasattr(subclass, "gen"))
-
     @abc.abstractmethod
     def gen(self) -> str:
         """
@@ -66,13 +45,6 @@ class Statement(metaclass=abc.ABCMeta):
     """
     Statement interface
     """
-    @classmethod
-    def __subclasshook__(cls, subclass):
-        """
-        Attributes a Statement must have
-        """
-        return (hasattr(subclass, "gen"))
-
     @abc.abstractmethod
     def gen(self) -> str:
         """
