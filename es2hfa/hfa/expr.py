@@ -47,6 +47,24 @@ class EList:
 
 
 @Expression.register
+class EMethod:
+    """
+    An HFA method call
+    """
+
+    def __init__(self, name: str, params: List[Expression]) -> None:
+        self.name = name
+        self.params = params
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EList
+        """
+        return self.name + \
+            "(" + ", ".join([e.gen() for e in self.params]) + ")"
+
+
+@Expression.register
 class EParens:
     """
     An HFA expression surroounded by parentheses

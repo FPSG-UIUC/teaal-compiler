@@ -5,17 +5,7 @@ HFA AST and code generation for HFA statements
 import abc
 from typing import List
 
-
-class Statement(metaclass=abc.ABCMeta):
-    """
-    Statement interface
-    """
-    @classmethod
-    def __subclasshook__(cls, subclass):
-        """
-        Attributes a Statement must have
-        """
-        return (hasattr(subclass, "gen"))
+from es2hfa.hfa.base import Statement
 
 
 @Statement.register
