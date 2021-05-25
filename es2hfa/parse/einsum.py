@@ -3,6 +3,8 @@ Lexing and parsing for a single Einsum
 """
 
 from lark import Lark
+from lark.tree import Tree
+
 
 class EinsumParser:
     """
@@ -19,24 +21,21 @@ class EinsumParser:
 
         ?inds: [NAME ("," NAME)*]
 
-        ?op: "+"
-           | "-"
-           | "*"
+        ?op: "+" -> plus
+           | "-" -> minus
+           | "*" -> times
 
         ?sum: "sum(" inds ")." expr
 
         ?tensor: NAME "[" inds "]"
 
         %import common.CNAME -> NAME
+        %import common.WS_INLINE
+
+        %ignore WS_INLINE
     """
+    parser = Lark(grammar)
 
-    def __init__(self) -> None:
-        """
-        Construct the par
-        """
-        self.parser = Lark(EinsumParser.grammar)
-
-    def parse(self, einsum: str) -> None:
-        out = self.parser.parse(einsum)
-        print(out)
-        print(type(out))
+    @staticmethod
+    def parse(einsum: str) -> Tree:
+        return EinsumParser.parser.parse(einsum)
