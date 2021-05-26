@@ -26,8 +26,6 @@ def test_sum():
     sum_ = Tree("sum", [make_inds("sinds", ["K", "L"]),
                 make_tensor("B", ["k", "l"])])
     tree = make_einsum(make_output("A", []), sum_)
-    print(EinsumParser.parse("A[] = sum(K, L).B[k, l]"))
-    print(tree)
     assert EinsumParser.parse("A[] = sum(K, L).B[k, l]") == tree
 
 
