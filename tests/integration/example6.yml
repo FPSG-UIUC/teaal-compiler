@@ -1,0 +1,8 @@
+einsum:
+    declaration:
+        - A[I,J,K]
+        - B[K,L]
+        - C[I,J]
+        - D[I]
+    expression:
+        - D[i] = sum(J).(B[i, j])

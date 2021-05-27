@@ -1,0 +1,10 @@
+einsum:
+    declaration:
+        - A[M]
+        - B[N]
+        - Z[M, N]
+    expression:
+        - Z[m, n] = A[m] * B[n]
+mapping:
+    rank-order:
+        - Z[N, M]

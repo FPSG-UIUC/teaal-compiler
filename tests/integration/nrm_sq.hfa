@@ -1,0 +1,7 @@
+q_ref = Q_.getRoot()
+v_a = V_ABIJ.getRoot()
+for a, (v_b, v_b) in (v_a & v_a):
+    for b, (v_i, v_i) in (v_b & v_b):
+        for i, (v_j, v_j) in (v_i & v_i):
+            for j, (v_val, v_val) in (v_j & v_j):
+                q_ref += v_val * v_val

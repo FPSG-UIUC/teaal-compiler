@@ -1,0 +1,7 @@
+einsum:
+    declaration:
+        - I[M, N]
+        - F[R, S]
+        - O[X, Y]
+    expression:
+        - O[x, y] = sum(R, S).(I[x + r, y + s] * F[r, s])

@@ -1,0 +1,7 @@
+einsum:
+    declaration:
+        - A[M, N, K]
+        - B[K]
+        - Z[M, N]
+    expression:
+        - Z[m, n] = sum(K).(A[m, n, k] * B[k])

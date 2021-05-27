@@ -1,0 +1,6 @@
+a_m = A_M.getRoot()
+b_n = B_N.getRoot()
+z_n = Z_NM.getRoot()
+for n, (z_m, b_val) in z_n << b_n:
+    for m, (z_ref, a_val) in z_m << a_m:
+        z_ref += a_val * b_val

@@ -1,0 +1,7 @@
+a_i = A_IJ.getRoot()
+B_IJ = B_JI.swizzleRanks(rank_ids=["I", "J"])
+b_i = B_IJ.getRoot()
+d_ref = D_.getRoot()
+for i, (a_j, b_j) in (a_i & b_i):
+    for j, (a_val, b_val) in (a_j & b_j):
+        d_ref += a_val * b_val

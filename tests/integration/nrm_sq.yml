@@ -1,0 +1,8 @@
+# The square of the Frobenius norm
+# Source: https://arxiv.org/pdf/1512.00066.pdf
+einsum:
+    declaration:
+        - Q[]
+        - V[A, B, I, J]
+    expression:
+        - Q[] = sum(a, b, i, j).(V[a, b, i, j] * V[a, b, i, j])

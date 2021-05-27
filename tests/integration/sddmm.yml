@@ -1,0 +1,10 @@
+einsum:
+    declaration:
+        - A[M, K]
+        - B[K, N]
+        - T1[M, N]
+        - C[M, N]
+        - Z[M, N]
+    expression:
+        - T1[m, n] = sum(K).(A[m, k] * B[k, n])
+        - Z[m, n] = C[m, n] * T1[m, n]

@@ -1,0 +1,10 @@
+einsum:
+    declaration:
+        - A[I, J]
+        - B[I, J]
+        - D[]
+    expression:
+        - D[] = sum(I, J).(A[i, j] * B[i, j])
+mapping:
+    rank-order:
+        - B[J, I]

@@ -1,0 +1,13 @@
+einsum:
+    declaration:
+        - A[I, J, K]
+        - B0[I_, J, K]
+        - B1[I, J_, K]
+        - B2[I, J, K_]
+        - G0[I, I_]
+        - G1[J, J_]
+        - G2[K, K_]
+    expression:
+        - G0[i, i_] = sum(J, K).(A[i, j, k] * B0[i_, j, k])
+        - G1[j, j_] = sum(I, K).(A[i, j, k] * B1[i, j_, k])
+        - G2[k, k_] = sum(I, J).(A[i, j, k] * B2[i, j, k_])

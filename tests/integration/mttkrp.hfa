@@ -1,0 +1,11 @@
+a_m = A_MKJ.getRoot()
+B_NK = B_KN.swizzleRanks(rank_ids=["N", "K"])
+b_n = B_NK.getRoot()
+C_NJ = C_JN.swizzleRanks(rank_ids=["N", "J"])
+c_n = C_NJ.getRoot()
+z_m = Z_MN.getRoot()
+for m, (z_n, a_k) in z_m << a_m:
+    for n, (z_ref, (b_k, c_j)) in z_n << (b_n & c_n):
+        for k, (a_j, b_val) in (a_k & b_k):
+            for j, (a_val, c_val) in (a_j & c_j):
+                z_ref += a_val * b_val * c_val

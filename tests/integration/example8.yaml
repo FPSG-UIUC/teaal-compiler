@@ -1,0 +1,14 @@
+einsum:
+    declaration:
+        - A[I,J,K]
+        - B[K,L]
+        - C[I,J]
+        - D[I]
+        - T1[I, J]
+    expression:
+        - T1[i, j] = sum(K,L).(A[i,j,k] * B[k,l])
+        - D[i] = sum(J).(C[i,j] + T1[i, j])
+mapping:
+    loop-order:
+        - D: I, J
+        - T1: J, I, L, K

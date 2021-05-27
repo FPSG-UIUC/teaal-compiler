@@ -1,0 +1,19 @@
+einsum:
+    declaration:
+        - A[I, J, L]
+        - B[K, L]
+        - C[I, J]
+        - D[I]
+        - T1[I, J]
+    expression: 
+        - T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])
+        - D[i] = sum(J).(C[i, j] + T1[i, j])
+mapping:
+    rank-order:
+        - A[J, L, I]
+        - B[L, K]
+    partitions:
+        D:
+            J: [uniformShape(6), uniformShape(4)]
+    loop-order:
+        - T1: J, I, L, K

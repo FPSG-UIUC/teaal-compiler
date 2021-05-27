@@ -1,0 +1,16 @@
+einsum:
+    declaration:
+        - A[K, M]
+        - B[K, N]
+        - Z[M, N]
+    expression:
+        - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+mapping:
+    rank-order:
+        - A[M, K]
+        - B[K, N]
+        - Z[N, M]
+    partitions:
+        Z:
+            M: [uniformShape(4), uniformShape(2)]
+            N: [uniformShape(3), uniformShape(5)]

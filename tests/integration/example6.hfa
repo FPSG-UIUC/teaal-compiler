@@ -1,0 +1,5 @@
+b_k = B_KL.getRoot()
+d_i = D_I.getRoot()
+for i, (d_ref, b_j) in d_i << b_k:
+    for j, b_val in b_j:
+        d_ref += b_val
