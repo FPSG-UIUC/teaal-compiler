@@ -1,4 +1,6 @@
 # Einsum to HFA Compiler
+![Build Status](https://github.com/FPSG-UIUC/hfa-compiler/actions/workflows/test.yml/badge.svg)
+
 
 ## Installation
 
