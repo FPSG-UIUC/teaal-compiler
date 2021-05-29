@@ -103,39 +103,22 @@ def test_make_payload_mult_terms():
     assert eqn.make_payload(tensors).gen() == payload
 
 
-def test_make_update_no_output():
-    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
-    eqn = Equation(tree)
-    with pytest.raises(ValueError) as excinfo:
-        eqn.make_update([])
-
-    assert str(excinfo.value) == "Missing output tensor"
-
-
 def test_make_update():
     tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
-    graph = IterationGraph(tree, None)
-    graph.pop()
-    _, tensors = graph.peek()
     eqn = Equation(tree)
     stmt = "a_ref += b_val * c_val * d_val"
-    assert eqn.make_update(tensors).gen(depth=0) == stmt
+    assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_vars():
     tree = EinsumParser.parse("A[] = b * c * d")
-    graph = IterationGraph(tree, None)
-    _, tensors = graph.peek()
     eqn = Equation(tree)
     stmt = "a_ref += b * c * d"
-    assert eqn.make_update(tensors).gen(depth=0) == stmt
+    assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_mult_terms():
     tree = EinsumParser.parse("A[i] = b * B[i] + c * C[i] + d * D[i]")
-    graph = IterationGraph(tree, None)
-    graph.pop()
-    _, tensors = graph.peek()
     eqn = Equation(tree)
     stmt = "a_ref += b * b_val + c * c_val + d * d_val"
-    assert eqn.make_update(tensors).gen(depth=0) == stmt
+    assert eqn.make_update().gen(depth=0) == stmt

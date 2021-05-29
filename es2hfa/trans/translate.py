@@ -36,7 +36,7 @@ class Translator:
 
         # If we are at the bottom of the loop nest, build the update
         if not ind:
-            return eqn.make_update(tensors)
+            return eqn.make_update()
 
         # Otherwise, get the information for the for loop
         expr = eqn.make_iter_expr(tensors)

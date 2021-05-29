@@ -31,27 +31,26 @@ class Equation:
         print(einsum)
 
         # First find all terms (terminals multiplied together)
-        terms: List[List[str]] = []
+        self.terms: List[List[str]] = []
         self.vars: List[List[str]] = []
         for term in einsum.find_data("times"):
-            terms.append(cast(List[str], []))
+            self.terms.append(cast(List[str], []))
             self.vars.append([])
             for var in term.find_data("var"):
                 self.vars[-1].append(next(cast(Generator,
                                                var.scan_values(lambda _: True))))
             for tensor in term.find_data("tensor"):
-                terms[-1].append(next(cast(Generator,
+                self.terms[-1].append(next(cast(Generator,
                                            tensor.scan_values(lambda _: True))))
-        self.num_terms = len(terms)
 
         # Now create the reverse dictionary of factors to term #
-        self.terms: Dict[str, int] = {}
-        for i, factors in enumerate(terms):
+        self.term_dict: Dict[str, int] = {}
+        for i, factors in enumerate(self.terms):
             for factor in factors:
-                if factor in self.terms.keys():
+                if factor in self.term_dict.keys():
                     raise ValueError(
                         factor + " appears multiple times in the einsum")
-                self.terms[factor] = i
+                self.term_dict[factor] = i
 
         # Finally, get the name of the output
         self.output = next(
@@ -59,7 +58,7 @@ class Equation:
                 Generator, next(
                     einsum.find_data("output")).scan_values(
                     lambda _: True)))
-        if self.output in self.terms.keys():
+        if self.output in self.term_dict.keys():
             raise ValueError(self.output +
                              " appears multiple times in the einsum")
 
@@ -72,7 +71,7 @@ class Equation:
             raise ValueError("Must iterate over at least one tensor")
 
         # Separate the tensors into terms
-        terms = self.__separate_terms(tensors, True)
+        terms = self.__separate_terms(tensors)
 
         # Combine terms with intersections
         intersections = []
@@ -113,7 +112,7 @@ class Equation:
                 "Must have at least one tensor to make the payload")
 
         # Separate the tensors into terms
-        terms = self.__separate_terms(tensors, True)
+        terms = self.__separate_terms(tensors)
 
         # Construct the term payloads
         term_payloads = []
@@ -138,23 +137,15 @@ class Equation:
 
         return payload
 
-    def make_update(self, tensors: List[Tensor]) -> Statement:
+    def make_update(self) -> Statement:
         """
         Construct the statement that will actually update the output tensor
         """
-        # Make sure we have an output tensor
-        output_tensor = self.__get_output_tensor(tensors)
-        if not output_tensor:
-            raise ValueError("Missing output tensor")
-
-        # Separate the tensors into terms
-        terms = self.__separate_terms(tensors, False)
-
         # Combine the factors within a term
         products = []
-        for i, term in enumerate(terms):
+        for i, term in enumerate(self.terms):
             factors = [var for var in self.vars[i]] + \
-                [tensor.fiber_name() for tensor in term]
+                [tensor[0].lower() + tensor[1:] + "_val" for tensor in term]
             product = cast(Expression, EVar(factors[0]))
             for factor in factors[1:]:
                 product = cast(
@@ -177,14 +168,8 @@ class Equation:
                     product))
 
         # Create the final statement
-        return cast(
-            Statement,
-            SIAssign(
-                output_tensor.fiber_name(),
-                cast(
-                    Operator,
-                    OAdd()),
-                sum_))
+        return cast(Statement, SIAssign(self.output[0].lower(
+        ) + self.output[1:] + "_ref", cast(Operator, OAdd()), sum_))
 
     @staticmethod
     def __add_operator(
@@ -212,20 +197,15 @@ class Equation:
         else:
             return None
 
-    def __separate_terms(self,
-                         tensors: List[Tensor],
-                         remove_empty: bool) -> List[List[Tensor]]:
+    def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
         """
         Separate a list of tensors according to which term they belong to
         """
         # Separate the tensors
-        terms: List[List[Tensor]] = [[] for _ in range(self.num_terms)]
+        terms: List[List[Tensor]] = [[] for _ in self.terms]
         for tensor in tensors:
-            if tensor.root_name() in self.terms.keys():
-                terms[self.terms[tensor.root_name()]].append(tensor)
+            if tensor.root_name() in self.term_dict.keys():
+                terms[self.term_dict[tensor.root_name()]].append(tensor)
 
         # Remove any empty lists
-        if remove_empty:
-            return [term for term in terms if term]
-        else:
-            return terms
+        return [term for term in terms if term]
