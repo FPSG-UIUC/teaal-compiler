@@ -1,15 +1,20 @@
 import pytest
 
 from es2hfa.ir.tensor import Tensor
-from tests.utils.parse_tree import make_op, make_output, make_tensor
+from tests.utils.parse_tree import make_output, make_plus, make_tensor
 
 
 def test_bad_tree():
-    tree = make_op("a", "plus", "b")
+    tree = make_plus("a", "b")
     with pytest.raises(ValueError) as excinfo:
         Tensor(tree)
 
     assert str(excinfo.value) == "Input parse tree must be a tensor"
+
+
+def test_root_name():
+    tree = make_tensor("A", ["i", "j"])
+    assert Tensor(tree).root_name() == "A"
 
 
 def test_fiber_name_ind():

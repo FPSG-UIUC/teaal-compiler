@@ -15,10 +15,9 @@ class EinsumParser:
               | output "=" sum -> einsum
 
         ?expr: expr "+" expr -> plus
-             | expr "-" expr -> minus
              | term
 
-        ?factor: NAME
+        ?factor: NAME -> var
                | tensor
 
         ?output: NAME "[" tinds "]"
@@ -30,10 +29,9 @@ class EinsumParser:
 
         ?tensor: NAME "[" tinds "]"
 
-        ?term: term "*" term -> times
-             | factor
+        ?term: (factor "*")* factor -> times
 
-        ?tinds: [NAME ("," NAME)*]
+        ?tinds: [NAME ("," NAME)*] -> tinds
 
         %import common.CNAME -> NAME
         %import common.WS_INLINE

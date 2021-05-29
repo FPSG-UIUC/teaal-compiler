@@ -18,12 +18,12 @@ class IterationGraph:
     make this parameter no longer optional
     """
 
-    def __init__(self, tree: Tree, loop_order: Optional[List[str]]) -> None:
+    def __init__(self, einsum: Tree, loop_order: Optional[List[str]]) -> None:
         """
         Construct a new IterationGraph
         """
         # Make sure we are starting with the full einsum
-        if tree.data != "einsum":
+        if einsum.data != "einsum":
             raise ValueError("Input parse tree must be an einsum")
 
         # First, check if the default loop order should be computed
@@ -34,7 +34,7 @@ class IterationGraph:
 
         # Build the list of tensors, starting with the output tensor
         tensors = []
-        tensor_tree = next(tree.find_data("output"))
+        tensor_tree = next(einsum.find_data("output"))
         tensors.append(Tensor(tensor_tree))
 
         # We need to use the output tensor to extract the default loop order
@@ -44,12 +44,12 @@ class IterationGraph:
                     lambda _: True))
 
         # Add in the rest of the tensors
-        for tensor_tree in tree.find_data("tensor"):
+        for tensor_tree in einsum.find_data("tensor"):
             tensors.append(Tensor(tensor_tree))
 
         # Now, build the rest of the self.loop_order if necessary
         if default_loop_order:
-            for sum_ in tree.find_data("sum"):
+            for sum_ in einsum.find_data("sum"):
                 self.loop_order += [ind[0].lower() + ind[1:] for ind in
                                     next(sum_.find_data("sinds")).scan_values(
                     lambda _: True)]

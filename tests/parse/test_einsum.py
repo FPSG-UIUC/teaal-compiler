@@ -2,12 +2,12 @@ from lark.lexer import Token
 from lark.tree import Tree
 
 from es2hfa.parse.einsum import EinsumParser
-from tests.utils.parse_tree import make_inds, make_op, make_output, make_einsum, make_tensor
+from tests.utils.parse_tree import *
 
 
 def test_einsum():
     # Note: also tests rank-0 tensor and variable name parsing
-    tree = make_einsum(make_output("A", []), Token("NAME", "b"))
+    tree = make_einsum(make_output("A", []), Tree("times", [make_var("b")]))
     assert EinsumParser.parse("A[] = b") == tree
 
 
@@ -16,10 +16,17 @@ def test_tensor():
     tree = make_einsum(
         make_output(
             "A", [
-                "i", "j"]), make_tensor(
-            "B", [
-                "i", "j"]))
+                "i", "j"]), Tree(
+            "times", [
+                make_tensor(
+                    "B", [
+                        "i", "j"])]))
     assert EinsumParser.parse("A[i, j] = B[i, j]") == tree
+
+
+def test_tensor_rank1():
+    tree = make_einsum(make_output("A", ["i"]), Tree("times", [make_var("b")]))
+    assert EinsumParser.parse("A[i] = b") == tree
 
 
 def test_sum():
@@ -30,15 +37,10 @@ def test_sum():
 
 
 def test_plus():
-    tree = make_einsum(make_output("A", []), make_op("a", "plus", "b"))
+    tree = make_einsum(make_output("A", []), make_plus("a", "b"))
     assert EinsumParser.parse("A[] = a + b") == tree
 
 
-def test_minus():
-    tree = make_einsum(make_output("A", []), make_op("a", "minus", "b"))
-    assert EinsumParser.parse("A[] = a - b") == tree
-
-
 def test_times():
-    tree = make_einsum(make_output("A", []), make_op("a", "times", "b"))
+    tree = make_einsum(make_output("A", []), make_times(["a", "b"]))
     assert EinsumParser.parse("A[] = a * b") == tree

@@ -31,6 +31,12 @@ class Tensor:
         self.name = values[0]
         self.inds = values[1:]
 
+    def root_name(self) -> str:
+        """
+        Return the name of the tensor as defined in the Einsum
+        """
+        return self.name
+
     def fiber_name(self) -> str:
         """
         Return the current fiber name for this tensor
