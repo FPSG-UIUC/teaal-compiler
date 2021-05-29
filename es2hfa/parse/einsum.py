@@ -11,23 +11,26 @@ class EinsumParser:
     A lexer and parser for a single Einsum
     """
     grammar = """
-        ?start: tensor "=" expr
-              | tensor "=" sum
+        ?start: output "=" expr -> einsum
+              | output "=" sum -> einsum
 
-        ?expr: NAME
-             | "(" expr ")"
-             | expr op expr
-             | tensor
+        ?expr: (term "+")* term -> plus
 
-        ?inds: [NAME ("," NAME)*]
+        ?factor: NAME -> var
+               | tensor
 
-        ?op: "+" -> plus
-           | "-" -> minus
-           | "*" -> times
+        ?output: NAME "[" tinds "]"
 
-        ?sum: "sum(" inds ")." expr
+        ?sum: "sum(" sinds ")." factor
+            | "sum(" sinds ").(" expr ")"
 
-        ?tensor: NAME "[" inds "]"
+        ?sinds: [NAME ("," NAME)*] -> sinds
+
+        ?tensor: NAME "[" tinds "]"
+
+        ?term: (factor "*")* factor -> times
+
+        ?tinds: [NAME ("," NAME)*] -> tinds
 
         %import common.CNAME -> NAME
         %import common.WS_INLINE
