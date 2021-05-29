@@ -5,7 +5,7 @@ from typing import cast, List, Optional, Tuple
 
 from lark.tree import Tree
 
-from es2hfa.ir.loop.tensor import Tensor
+from es2hfa.ir.tensor import Tensor
 
 
 class IterationGraph:
