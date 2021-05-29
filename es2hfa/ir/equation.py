@@ -6,10 +6,11 @@ from typing import cast, Dict, Generator, List, Optional
 
 from lark.tree import Tree
 
-from es2hfa.hfa.base import Expression, Operator, Payload
+from es2hfa.hfa.base import Expression, Operator, Payload, Statement
 from es2hfa.hfa.expr import EBinOp, EParens, EVar
-from es2hfa.hfa.op import OAnd, OLtLt, OOr
+from es2hfa.hfa.op import *
 from es2hfa.hfa.payload import *
+from es2hfa.hfa.stmt import SIAssign
 from es2hfa.ir.tensor import Tensor
 
 
@@ -29,11 +30,13 @@ class Equation:
 
         # First find all terms (terminals multiplied together)
         terms: List[List[str]] = []
+        self.vars: List[List[str]] = []
         for term in einsum.find_data("times"):
             terms.append(cast(List[str], []))
+            self.vars.append([])
             for var in term.find_data("var"):
-                terms[-1].append(next(cast(Generator,
-                                 var.scan_values(lambda _: True))))
+                self.vars[-1].append(next(cast(Generator,
+                                               var.scan_values(lambda _: True))))
             for tensor in term.find_data("tensor"):
                 terms[-1].append(next(cast(Generator,
                                            tensor.scan_values(lambda _: True))))
@@ -58,41 +61,6 @@ class Equation:
             raise ValueError(self.output +
                              " appears multiple times in the einsum")
 
-    def make_payload(self, tensors: List[Tensor]) -> Payload:
-        """
-        Given a list of tensors, construct the corresponding payload
-        """
-        # Make sure that we have at least one tensor
-        if not tensors:
-            raise ValueError(
-                "Must have at least one tensor to make the payload")
-
-        # Get the tensors that will be used in this payload
-        terms = self.__separate_terms(tensors)
-
-        # Construct the term payloads
-        term_payloads = []
-        for term in terms:
-            payload = cast(Payload, PVar(term[-1].fiber_name()))
-            for factor in reversed(term[:-1]):
-                payload = cast(Payload, PTuple(
-                    [cast(Payload, PVar(factor.fiber_name())), payload]))
-            term_payloads.append(payload)
-
-        # Construct the entire expression payload
-        payload = term_payloads[-1]
-        for term_payload in reversed(term_payloads[:-1]):
-            payload = cast(Payload, PTuple(
-                [cast(Payload, PVar("_")), term_payload, payload]))
-
-        # Finally, put the output on the outside
-        output_tensor = self.__get_output_tensor(tensors)
-        if output_tensor:
-            payload = cast(Payload, PTuple(
-                [cast(Payload, PVar(output_tensor.fiber_name())), payload]))
-
-        return payload
-
     def make_iter_expr(self, tensors: List[Tensor]) -> Expression:
         """
         Given a list of tensors, make the expression used to combine them
@@ -101,8 +69,8 @@ class Equation:
         if not tensors:
             raise ValueError("Must iterate over at least one tensor")
 
-        # Get the tensors that will be used in this payload
-        terms = self.__separate_terms(tensors)
+        # Separate the tensors into terms
+        terms = self.__separate_terms(tensors, True)
 
         # Combine terms with intersections
         intersections = []
@@ -133,29 +101,88 @@ class Equation:
 
         return expr
 
-    def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
+    def make_payload(self, tensors: List[Tensor]) -> Payload:
         """
-        Separate a list of tensors according to which term they belong to
+        Given a list of tensors, construct the corresponding payload
         """
-        # Separate the tensors
-        terms: List[List[Tensor]] = [[] for _ in range(self.num_terms)]
-        for tensor in tensors:
-            if tensor.root_name() in self.terms.keys():
-                terms[self.terms[tensor.root_name()]].append(tensor)
+        # Make sure that we have at least one tensor
+        if not tensors:
+            raise ValueError(
+                "Must have at least one tensor to make the payload")
 
-        # Remove any empty lists
-        return [term for term in terms if term]
+        # Separate the tensors into terms
+        terms = self.__separate_terms(tensors, True)
 
-    def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
-        """
-        Get the output tensor if it exists
-        """
-        output_tensor = [
-            tensor for tensor in tensors if tensor.root_name() == self.output]
+        # Construct the term payloads
+        term_payloads = []
+        for term in terms:
+            payload = cast(Payload, PVar(term[-1].fiber_name()))
+            for factor in reversed(term[:-1]):
+                payload = cast(Payload, PTuple(
+                    [cast(Payload, PVar(factor.fiber_name())), payload]))
+            term_payloads.append(payload)
+
+        # Construct the entire expression payload
+        payload = term_payloads[-1]
+        for term_payload in reversed(term_payloads[:-1]):
+            payload = cast(Payload, PTuple(
+                [cast(Payload, PVar("_")), term_payload, payload]))
+
+        # Finally, put the output on the outside
+        output_tensor = self.__get_output_tensor(tensors)
         if output_tensor:
-            return output_tensor[0]
-        else:
-            return None
+            payload = cast(Payload, PTuple(
+                [cast(Payload, PVar(output_tensor.fiber_name())), payload]))
+
+        return payload
+
+    def make_update(self, tensors: List[Tensor]) -> Statement:
+        """
+        Construct the statement that will actually update the output tensor
+        """
+        # Make sure we have an output tensor
+        output_tensor = self.__get_output_tensor(tensors)
+        if not output_tensor:
+            raise ValueError("Missing output tensor")
+
+        # Separate the tensors into terms
+        terms = self.__separate_terms(tensors, False)
+
+        # Combine the factors within a term
+        products = []
+        for i, term in enumerate(terms):
+            factors = [var for var in self.vars[i]] + \
+                [tensor.fiber_name() for tensor in term]
+            product = cast(Expression, EVar(factors[0]))
+            for factor in factors[1:]:
+                product = cast(
+                    Expression, EBinOp(
+                        product, cast(
+                            Operator, OMul()), cast(
+                            Expression, EVar(factor))))
+            products.append(product)
+
+        # Combine the terms
+        sum_ = products[0]
+        for product in products[1:]:
+            sum_ = cast(
+                Expression,
+                EBinOp(
+                    sum_,
+                    cast(
+                        Operator,
+                        OAdd()),
+                    product))
+
+        # Create the final statement
+        return cast(
+            Statement,
+            SIAssign(
+                output_tensor.fiber_name(),
+                cast(
+                    Operator,
+                    OAdd()),
+                sum_))
 
     @staticmethod
     def __add_operator(
@@ -171,3 +198,32 @@ class Equation:
                 exprs[i] = cast(Expression, EParens(expr))
 
         return cast(Expression, EBinOp(exprs[0], op, exprs[1]))
+
+    def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
+        """
+        Get the output tensor if it exists
+        """
+        output_tensor = [
+            tensor for tensor in tensors if tensor.root_name() == self.output]
+        if output_tensor:
+            return output_tensor[0]
+        else:
+            return None
+
+    def __separate_terms(self,
+                         tensors: List[Tensor],
+                         remove_empty: bool) -> List[List[Tensor]]:
+        """
+        Separate a list of tensors according to which term they belong to
+        """
+        # Separate the tensors
+        terms: List[List[Tensor]] = [[] for _ in range(self.num_terms)]
+        for tensor in tensors:
+            if tensor.root_name() in self.terms.keys():
+                terms[self.terms[tensor.root_name()]].append(tensor)
+
+        # Remove any empty lists
+        if remove_empty:
+            return [term for term in terms if term]
+        else:
+            return terms

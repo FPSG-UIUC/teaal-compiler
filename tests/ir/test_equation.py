@@ -30,6 +30,42 @@ def test_tensor_in_out():
     assert str(excinfo.value) == "A appears multiple times in the einsum"
 
 
+def test_make_iter_expr_no_tensors():
+    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
+    eqn = Equation(tree)
+    with pytest.raises(ValueError) as excinfo:
+        eqn.make_iter_expr([])
+
+    assert str(excinfo.value) == "Must iterate over at least one tensor"
+
+
+def test_make_iter_expr():
+    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
+    graph = IterationGraph(tree, None)
+    _, tensors = graph.peek()
+    eqn = Equation(tree)
+    iter_expr = "b_i & c_i"
+    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_output():
+    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
+    graph = IterationGraph(tree, None)
+    _, tensors = graph.peek()
+    eqn = Equation(tree)
+    iter_expr = "a_i << (b_i & c_i)"
+    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_mult_terms():
+    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i]")
+    graph = IterationGraph(tree, None)
+    _, tensors = graph.peek()
+    eqn = Equation(tree)
+    iter_expr = "a_i << ((b_i & c_i) | (d_i & e_i))"
+    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+
+
 def test_make_payload_no_tensors():
     tree = EinsumParser.parse("A[i] = B[i] * C[i]")
     eqn = Equation(tree)
@@ -67,37 +103,39 @@ def test_make_payload_mult_terms():
     assert eqn.make_payload(tensors).gen() == payload
 
 
-def test_make_iter_expr_no_tensors():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
+def test_make_update_no_output():
+    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
     eqn = Equation(tree)
     with pytest.raises(ValueError) as excinfo:
-        eqn.make_iter_expr([])
+        eqn.make_update([])
 
-    assert str(excinfo.value) == "Must iterate over at least one tensor"
+    assert str(excinfo.value) == "Missing output tensor"
 
 
-def test_make_iter_expr():
+def test_make_update():
     tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
     graph = IterationGraph(tree, None)
+    graph.pop()
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    iter_expr = "b_i & c_i"
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    stmt = "a_ref += b_val * c_val"
+    assert eqn.make_update(tensors).gen(depth=0) == stmt
 
 
-def test_make_iter_expr_output():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
+def test_make_update_vars():
+    tree = EinsumParser.parse("A[] = b * c * d")
     graph = IterationGraph(tree, None)
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    iter_expr = "a_i << (b_i & c_i)"
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    stmt = "a_ref += b * c * d"
+    assert eqn.make_update(tensors).gen(depth=0) == stmt
 
 
-def test_make_iter_expr_mult_terms():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i]")
+def test_make_update_mult_terms():
+    tree = EinsumParser.parse("A[i] = b * B[i] + c * C[i]")
     graph = IterationGraph(tree, None)
+    graph.pop()
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    iter_expr = "a_i << ((b_i & c_i) | (d_i & e_i))"
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    stmt = "a_ref += b * b_val + c * c_val"
+    assert eqn.make_update(tensors).gen(depth=0) == stmt
