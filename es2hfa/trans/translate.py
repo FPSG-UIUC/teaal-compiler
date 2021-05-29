@@ -8,8 +8,8 @@ from lark.tree import Tree
 
 from es2hfa.hfa.base import Statement
 from es2hfa.hfa.stmt import SFor
-from es2hfa.ir.equation import Equation
 from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.trans.equation import Equation
 
 
 class Translator:
