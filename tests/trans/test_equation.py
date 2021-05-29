@@ -1,6 +1,6 @@
 import pytest
 
-from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.ir.loop.iter_graph import IterationGraph
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.trans.equation import Equation
 from tests.utils.parse_tree import make_plus

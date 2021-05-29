@@ -1,6 +1,6 @@
 import pytest
 
-from es2hfa.ir.tensor import Tensor
+from es2hfa.ir.loop.tensor import Tensor
 from tests.utils.parse_tree import make_output, make_plus, make_tensor
 
 

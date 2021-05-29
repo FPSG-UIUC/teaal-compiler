@@ -11,7 +11,7 @@ from es2hfa.hfa.expr import EBinOp, EParens, EVar
 from es2hfa.hfa.op import *
 from es2hfa.hfa.payload import *
 from es2hfa.hfa.stmt import SIAssign
-from es2hfa.ir.tensor import Tensor
+from es2hfa.ir.loop.tensor import Tensor
 
 
 class Equation:

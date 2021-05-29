@@ -1,7 +1,7 @@
 import pytest
 
-from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.tensor import Tensor
+from es2hfa.ir.loop.iter_graph import IterationGraph
+from es2hfa.ir.loop.tensor import Tensor
 from es2hfa.parse.einsum import EinsumParser
 from tests.utils.parse_tree import make_output, make_plus, make_tensor
 
