@@ -40,29 +40,29 @@ def test_make_iter_expr_no_tensors():
 
 
 def test_make_iter_expr():
-    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
+    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
     graph = IterationGraph(tree, None)
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    iter_expr = "b_i & c_i"
+    iter_expr = "b_i & (c_i & d_i)"
     assert eqn.make_iter_expr(tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_output():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
+    tree = EinsumParser.parse("A[i] = B[i] * C[i] * D[i]")
     graph = IterationGraph(tree, None)
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    iter_expr = "a_i << (b_i & c_i)"
+    iter_expr = "a_i << (b_i & (c_i & d_i))"
     assert eqn.make_iter_expr(tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_mult_terms():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i]")
+    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i] + F[i]")
     graph = IterationGraph(tree, None)
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    iter_expr = "a_i << ((b_i & c_i) | (d_i & e_i))"
+    iter_expr = "a_i << ((b_i & c_i) | ((d_i & e_i) | f_i))"
     assert eqn.make_iter_expr(tensors).gen() == iter_expr
 
 
@@ -77,29 +77,29 @@ def test_make_payload_no_tensors():
 
 
 def test_make_payload():
-    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
+    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
     graph = IterationGraph(tree, None)
     _, tensors = graph.pop()
     eqn = Equation(tree)
-    payload = "(b_val, c_val)"
+    payload = "(b_val, (c_val, d_val))"
     assert eqn.make_payload(tensors).gen() == payload
 
 
 def test_make_payload_output():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
+    tree = EinsumParser.parse("A[i] = B[i] * C[i] * D[i]")
     graph = IterationGraph(tree, None)
     _, tensors = graph.pop()
     eqn = Equation(tree)
-    payload = "(a_ref, (b_val, c_val))"
+    payload = "(a_ref, (b_val, (c_val, d_val)))"
     assert eqn.make_payload(tensors).gen() == payload
 
 
 def test_make_payload_mult_terms():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i]")
+    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i] + F[i]")
     graph = IterationGraph(tree, None)
     _, tensors = graph.pop()
     eqn = Equation(tree)
-    payload = "(a_ref, (_, (b_val, c_val), (d_val, e_val)))"
+    payload = "(a_ref, (_, (b_val, c_val), (_, (d_val, e_val), f_val)))"
     assert eqn.make_payload(tensors).gen() == payload
 
 
@@ -113,12 +113,12 @@ def test_make_update_no_output():
 
 
 def test_make_update():
-    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i])")
+    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
     graph = IterationGraph(tree, None)
     graph.pop()
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    stmt = "a_ref += b_val * c_val"
+    stmt = "a_ref += b_val * c_val * d_val"
     assert eqn.make_update(tensors).gen(depth=0) == stmt
 
 
@@ -132,10 +132,10 @@ def test_make_update_vars():
 
 
 def test_make_update_mult_terms():
-    tree = EinsumParser.parse("A[i] = b * B[i] + c * C[i]")
+    tree = EinsumParser.parse("A[i] = b * B[i] + c * C[i] + d * D[i]")
     graph = IterationGraph(tree, None)
     graph.pop()
     _, tensors = graph.peek()
     eqn = Equation(tree)
-    stmt = "a_ref += b * b_val + c * c_val"
+    stmt = "a_ref += b * b_val + c * c_val + d * d_val"
     assert eqn.make_update(tensors).gen(depth=0) == stmt
