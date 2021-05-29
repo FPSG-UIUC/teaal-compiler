@@ -14,8 +14,8 @@ def make_output(name, inds):
     return Tree("output", [Token("NAME", name), make_inds("tinds", inds)])
 
 
-def make_plus(var1, var2):
-    return Tree("plus", [make_times([var1]), make_times([var2])])
+def make_plus(vars_):
+    return Tree("plus", [make_times([var]) for var in vars_])
 
 
 def make_tensor(name, inds):

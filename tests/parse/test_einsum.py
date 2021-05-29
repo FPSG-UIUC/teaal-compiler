@@ -7,7 +7,7 @@ from tests.utils.parse_tree import *
 
 def test_einsum():
     # Note: also tests rank-0 tensor and variable name parsing
-    tree = make_einsum(make_output("A", []), Tree("times", [make_var("b")]))
+    tree = make_einsum(make_output("A", []), Tree("plus", [make_times(["b"])]))
     assert EinsumParser.parse("A[] = b") == tree
 
 
@@ -16,20 +16,20 @@ def test_tensor():
     tree = make_einsum(
         make_output(
             "A", [
-                "i", "j"]), Tree(
-            "times", [
-                make_tensor(
-                    "B", [
-                        "i", "j"])]))
+                "i", "j"]), Tree("plus", [Tree(
+                    "times", [
+                        make_tensor(
+                            "B", [
+                                "i", "j"])])]))
     assert EinsumParser.parse("A[i, j] = B[i, j]") == tree
 
 
 def test_tensor_rank1():
-    tree = make_einsum(make_output("A", ["i"]), Tree("times", [make_var("b")]))
+    tree = make_einsum(make_output("A", ["i"]), make_plus(["b"]))
     assert EinsumParser.parse("A[i] = b") == tree
 
 
-def test_sum():
+def test_sum_factor():
     sum_ = Tree("sum", [make_inds("sinds", ["K", "L"]),
                 make_tensor("B", ["k", "l"])])
     tree = make_einsum(make_output("A", []), sum_)
@@ -37,10 +37,18 @@ def test_sum():
 
 
 def test_plus():
-    tree = make_einsum(make_output("A", []), make_plus("a", "b"))
+    tree = make_einsum(make_output("A", []), make_plus(["a", "b"]))
     assert EinsumParser.parse("A[] = a + b") == tree
 
 
+def test_sum_expr():
+    sum_ = Tree("sum", [make_inds("sinds", ["K", "L"]),
+                make_plus(["a", "b"])])
+    tree = make_einsum(make_output("A", []), sum_)
+    assert EinsumParser.parse("A[] = sum(K, L).(a + b)") == tree
+
+
 def test_times():
-    tree = make_einsum(make_output("A", []), make_times(["a", "b"]))
+    tree = make_einsum(make_output("A", []), Tree(
+        "plus", [make_times(["a", "b"])]))
     assert EinsumParser.parse("A[] = a * b") == tree

@@ -14,8 +14,7 @@ class EinsumParser:
         ?start: output "=" expr -> einsum
               | output "=" sum -> einsum
 
-        ?expr: expr "+" expr -> plus
-             | term
+        ?expr: (term "+")* term -> plus
 
         ?factor: NAME -> var
                | tensor

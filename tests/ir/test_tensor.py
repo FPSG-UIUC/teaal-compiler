@@ -5,7 +5,7 @@ from tests.utils.parse_tree import make_output, make_plus, make_tensor
 
 
 def test_bad_tree():
-    tree = make_plus("a", "b")
+    tree = make_plus(["a", "b"])
     with pytest.raises(ValueError) as excinfo:
         Tensor(tree)
 
