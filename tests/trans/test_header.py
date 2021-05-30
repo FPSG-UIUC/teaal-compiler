@@ -1,18 +1,12 @@
 from es2hfa.ir.mapping import Mapping
 from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.tensor import TensorParser
 from es2hfa.trans.header import Header
-from tests.utils.parse_tree import make_tensor
 
 
 def test_make_header():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
@@ -26,14 +20,8 @@ def test_make_header():
 
 
 def test_make_header_swizzle():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")

@@ -3,20 +3,20 @@ import pytest
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import EinsumParser
-from tests.utils.parse_tree import make_tensor
+from es2hfa.parse.tensor import TensorParser
 
 
 def test_missing_decl():
-    tensors = [make_tensor("A", []), make_tensor("B", [])]
+    tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
     with pytest.raises(ValueError) as excinfo:
         Mapping(tensors[:1], tensors)
     assert str(excinfo.value) == "Undeclared tensor: B"
 
 
 def test_add_einsum_bad_tree():
-    tensors = [make_tensor("A", []), make_tensor("B", [])]
+    tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
     mapping = Mapping(tensors, [])
-    tree = make_tensor("A", [])
+    tree = TensorParser.parse("A[]")
 
     with pytest.raises(ValueError) as excinfo:
         mapping.add_einsum(tree, None)
@@ -24,7 +24,7 @@ def test_add_einsum_bad_tree():
 
 
 def test_add_einsum_missing_decl():
-    tensors = [make_tensor("A", []), make_tensor("B", [])]
+    tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
     mapping = Mapping(tensors, [])
     tree = EinsumParser.parse("A[] = B[] + C[]")
 
@@ -34,7 +34,7 @@ def test_add_einsum_missing_decl():
 
 
 def test_apply_loop_order_unconfigured():
-    tensors = [make_tensor("A", ["I", "J"])]
+    tensors = [TensorParser.parse("A[I, J]")]
     mapping = Mapping(tensors, [])
 
     with pytest.raises(ValueError) as excinfo:
@@ -44,45 +44,33 @@ def test_apply_loop_order_unconfigured():
 
 
 def test_apply_loop_order_default():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "K", "J"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[K, J]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[k, j])")
     mapping.add_einsum(tree, [])
     mapping.apply_loop_order(mapping.get_tensors()[2])
 
-    C = Tensor(make_tensor("C", ["J", "K"]))
+    C = Tensor(TensorParser.parse("C[J, K]"))
     assert mapping.get_tensors()[2] == C
 
 
 def test_apply_loop_order_ordered():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, ["K", "J", "I"])
     mapping.apply_loop_order(mapping.get_tensors()[2])
 
-    C = Tensor(make_tensor("C", ["K", "J"]))
+    C = Tensor(TensorParser.parse("C[K, J]"))
     assert mapping.get_tensors()[2] == C
 
 
 def test_get_loop_order_unconfigured():
-    tensors = [make_tensor("A", []), make_tensor("B", [])]
+    tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
     mapping = Mapping(tensors, [])
 
     with pytest.raises(ValueError) as excinfo:
@@ -92,14 +80,8 @@ def test_get_loop_order_unconfigured():
 
 
 def test_get_loop_order_default():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
@@ -109,14 +91,8 @@ def test_get_loop_order_default():
 
 
 def test_get_loop_order_ordered():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
@@ -126,7 +102,7 @@ def test_get_loop_order_ordered():
 
 
 def test_get_tensors_unconfigured():
-    tensors = [make_tensor("A", []), make_tensor("B", [])]
+    tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
     mapping = Mapping(tensors, [])
 
     with pytest.raises(ValueError) as excinfo:
@@ -136,56 +112,42 @@ def test_get_tensors_unconfigured():
 
 
 def test_get_tensors():
-    tensor_trees = [
-        make_tensor(
-            "A", []), make_tensor(
-            "B", []), make_tensor(
-                "C", [])]
-    mapping = Mapping(tensor_trees, [])
+    tensors = ["A[]", "B[]", "C[]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[] = C[]")
     mapping.add_einsum(tree, [])
 
-    A = Tensor(make_tensor("A", []))
+    A = Tensor(TensorParser.parse("A[]"))
     A.set_is_output(True)
-    C = Tensor(make_tensor("C", []))
+    C = Tensor(TensorParser.parse("C[]"))
 
     assert mapping.get_tensors() == [A, C]
 
 
 def test_get_tensors_ordered():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
-    orders = [make_tensor("A", ["J", "I"]), make_tensor("C", ["K", "J"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    orders = ["A[J, I]", "C[K, J]"]
+    orders = [TensorParser.parse(order) for order in orders]
     mapping = Mapping(tensors, orders)
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, [])
 
-    A = Tensor(make_tensor("A", ["J", "I"]))
-    A.set_is_output(True)
-    B = Tensor(make_tensor("B", ["I", "K"]))
-    C = Tensor(make_tensor("C", ["K", "J"]))
+    results = ["A[J, I]", "B[I, K]", "C[K, J]"]
+    results = [Tensor(TensorParser.parse(result)) for result in results]
+    results[0].set_is_output(True)
 
-    assert mapping.get_tensors() == [A, B, C]
+    assert mapping.get_tensors() == results
 
 
 def test_reset():
-    tensors = [
-        make_tensor(
-            "A", [
-                "I", "J"]), make_tensor(
-            "B", [
-                "I", "K"]), make_tensor(
-            "C", [
-                "J", "K"])]
-    orders = [make_tensor("A", ["J", "I"]), make_tensor("C", ["K", "J"])]
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    orders = ["A[J, I]", "C[K, J]"]
+    orders = [TensorParser.parse(order) for order in orders]
     mapping = Mapping(tensors, orders)
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
@@ -208,9 +170,8 @@ def test_reset():
 
     mapping.add_einsum(tree, [])
 
-    A = Tensor(make_tensor("A", ["J", "I"]))
-    A.set_is_output(True)
-    B = Tensor(make_tensor("B", ["I", "K"]))
-    C = Tensor(make_tensor("C", ["K", "J"]))
+    results = ["A[J, I]", "B[I, K]", "C[K, J]"]
+    results = [Tensor(TensorParser.parse(result)) for result in results]
+    results[0].set_is_output(True)
 
-    assert mapping.get_tensors() == [A, B, C]
+    assert mapping.get_tensors() == results
