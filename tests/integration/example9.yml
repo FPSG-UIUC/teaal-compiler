@@ -5,7 +5,7 @@ einsum:
         - C[I, J]
         - D[I]
         - T1[I, J]
-    expression: 
+    expression:
         - T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])
         - D[i] = sum(J).(C[i, j] + T1[i, j])
 mapping:
@@ -16,4 +16,4 @@ mapping:
         D:
             J: [uniformShape(6), uniformShape(4)]
     loop-order:
-        - T1: J, I, L, K
+        T1: [J, I, L, K]
