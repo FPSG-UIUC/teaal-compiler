@@ -2,7 +2,7 @@
 Representation of tensor metadata
 """
 
-from typing import cast, Generator, List, Optional
+from typing import cast, Dict, Generator, List, Optional
 
 from lark.tree import Tree
 
@@ -39,7 +39,7 @@ class Mapping:
         self.loop_order: List[str] = []
 
     def add_einsum(self, einsum: Tree,
-                   loop_order: Optional[List[str]]) -> None:
+                   loop_orders: Dict[str, List[str]]) -> None:
         """
         Configure the mapping for a particular Einsum
         """
@@ -58,8 +58,8 @@ class Mapping:
             self.es_tensors.append(self.__get_tensor(tensor_tree))
 
         # Store the loop order
-        if loop_order:
-            self.loop_order = loop_order
+        if output.root_name() in loop_orders.keys():
+            self.loop_order = loop_orders[output.root_name()]
         else:
             self.__default_loop_order(einsum)
 

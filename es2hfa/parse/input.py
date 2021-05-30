@@ -2,7 +2,7 @@
 Parse the input YAML file
 """
 
-from typing import List, Optional
+from typing import Dict, List
 
 from lark.tree import Tree
 
@@ -41,11 +41,11 @@ class Input:
             if "loop-order" in mapping.keys():
                 self.loop_orders = mapping["loop-order"]
             else:
-                self.loop_orders = None
+                self.loop_orders = {}
 
         else:
             self.rank_orders = []
-            self.loop_orders = None
+            self.loop_orders = {}
 
     def get_declaration(self) -> List[Tree]:
         """
@@ -59,17 +59,11 @@ class Input:
         """
         return self.exprs
 
-    def get_loop_order(self, output: str) -> Optional[List[str]]:
+    def get_loop_orders(self) -> Dict[str, List[str]]:
         """
-        Get the loop order for a specified output tensor
+        Get the dictionary from output tensors to loop orders
         """
-        if self.loop_orders:
-            if output in self.loop_orders.keys():
-                return self.loop_orders[output]
-            else:
-                return None
-        else:
-            return None
+        return self.loop_orders
 
     def get_rank_orders(self) -> List[Tree]:
         """

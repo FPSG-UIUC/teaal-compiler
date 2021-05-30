@@ -24,8 +24,7 @@ def test_expressions():
 def test_mapping():
     input_ = Input("tests/integration/test_input_no_mapping.yml")
     assert input_.get_rank_orders() == []
-    assert input_.get_loop_order("T1") is None
-    assert input_.get_loop_order("Z") is None
+    assert input_.get_loop_orders() == {}
 
 
 def test_rank_orders():
@@ -45,11 +44,9 @@ def test_rank_orders_missing():
 
 def test_loop_orders():
     input_ = Input("tests/integration/test_input.yml")
-    assert input_.get_loop_order("T1") == ["K", "N", "M"]
-    assert input_.get_loop_order("Z") is None
+    assert input_.get_loop_orders() == {"T1": ["K", "N", "M"]}
 
 
 def test_loop_orders_missing():
     input_ = Input("tests/integration/test_input_no_loop_order.yml")
-    assert input_.get_loop_order("T1") is None
-    assert input_.get_loop_order("Z") is None
+    assert input_.get_loop_orders() == {}
