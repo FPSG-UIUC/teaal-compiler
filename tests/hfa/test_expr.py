@@ -13,9 +13,14 @@ def test_elist():
     assert list_.gen() == "[a, b]"
 
 
+def test_efunc():
+    func = EFunc("foo", [AJust(EVar("x")), AJust(EVar("y"))])
+    assert func.gen() == "foo(x, y)"
+
+
 def test_emethod():
-    method = EMethod("foo", [AJust(EVar("x")), AJust(EVar("y"))])
-    assert method.gen() == "foo(x, y)"
+    method = EMethod("foo", "bar", [AJust(EVar("x")), AJust(EVar("y"))])
+    assert method.gen() == "foo.bar(x, y)"
 
 
 def test_eparens():

@@ -83,6 +83,11 @@ def test_swizzle():
     assert tensor.peek() is None
 
 
+def test_tensor():
+    tensor = Tensor(make_tensor("A", ["I", "J", "K"]))
+    assert tensor.tensor_name() == "A_IJK"
+
+
 def test_eq():
     tensor = make_tensor("A", ["I", "J"])
     assert Tensor(tensor) == Tensor(tensor)

@@ -92,6 +92,12 @@ class Tensor:
         """
         self.inds.sort(key=lambda i: loop_order.index(i))
 
+    def tensor_name(self) -> str:
+        """
+        Get the current name of the tensor
+        """
+        return self.name + "_" + "".join(self.inds)
+
     def __eq__(self, other: object) -> bool:
         """
         The == operator for Tensors
