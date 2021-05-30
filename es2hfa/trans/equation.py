@@ -28,8 +28,6 @@ class Equation:
         if einsum.data != "einsum":
             raise ValueError("Input parse tree must be an einsum")
 
-        print(einsum)
-
         # First find all terms (terminals multiplied together)
         self.terms: List[List[str]] = []
         self.vars: List[List[str]] = []
