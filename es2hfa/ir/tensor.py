@@ -31,6 +31,9 @@ class Tensor:
         self.name = values[0]
         self.inds = values[1:]
 
+        # Set the index pointer
+        self.ind_ptr = 0
+
     def root_name(self) -> str:
         """
         Return the name of the tensor as defined in the Einsum
@@ -42,8 +45,8 @@ class Tensor:
         Return the current fiber name for this tensor
         """
         stub = self.name[0].lower() + self.name[1:] + "_"
-        if self.inds:
-            return stub + self.inds[0]
+        if self.ind_ptr < len(self.inds):
+            return stub + self.inds[self.ind_ptr]
         elif self.is_output:
             return stub + "ref"
         else:
@@ -53,15 +56,17 @@ class Tensor:
         """
         Peek at the top index, returns None if there are no more indices
         """
-        if self.inds:
-            return self.inds[0]
+        if self.ind_ptr < len(self.inds):
+            return self.inds[self.ind_ptr]
         return None
 
     def pop(self) -> str:
         """
         Pop off the top index
         """
-        return self.inds.pop(0)
+        ind = self.inds[self.ind_ptr]
+        self.ind_ptr += 1
+        return ind
 
     def swizzle(self, loop_order: List[Optional[str]]) -> None:
         """

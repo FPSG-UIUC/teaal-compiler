@@ -1,5 +1,5 @@
 """
-Representation of how payloads are combined
+Representation of how tensors and variables are combined
 """
 
 from typing import cast, Dict, Generator, List, Optional

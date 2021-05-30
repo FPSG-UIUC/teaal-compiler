@@ -53,55 +53,25 @@ def test_pop_default():
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     graph = IterationGraph(tree, None)
 
-    tensors1 = [
-        Tensor(
-            make_output(
-                "A", ["j"])), Tensor(
-            make_tensor(
-                "B", ["k"]))]
-    assert graph.pop() == ("i", tensors1)
+    A = Tensor(make_output("A", ["i", "j"]))
+    B = Tensor(make_tensor("B", ["i", "k"]))
+    C = Tensor(make_tensor("C", ["j", "k"]))
 
-    tensors2 = [Tensor(make_tensor("C", ["k"])), Tensor(make_output("A", []))]
-    assert graph.pop() == ("j", tensors2)
-
-    tensors3 = [Tensor(make_tensor("B", [])), Tensor(make_tensor("C", []))]
-    assert graph.pop() == ("k", tensors3)
-
-    tensors4 = [
-        Tensor(
-            make_output(
-                "A", [])), Tensor(
-            make_tensor(
-                "B", [])), Tensor(
-            make_tensor(
-                "C", []))]
-    assert graph.peek() == (None, tensors4)
+    assert graph.pop() == ("i", [A, B])
+    assert graph.pop() == ("j", [C, A])
+    assert graph.pop() == ("k", [B, C])
+    assert graph.peek() == (None, [A, B, C])
 
 
 def test_pop_order():
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     graph = IterationGraph(tree, ["j", "k", "i"])
 
-    tensors1 = [
-        Tensor(
-            make_output(
-                "A", ["i"])), Tensor(
-            make_tensor(
-                "C", ["k"]))]
-    assert graph.pop() == ("j", tensors1)
+    A = Tensor(make_output("A", ["j", "i"]))
+    B = Tensor(make_tensor("B", ["k", "i"]))
+    C = Tensor(make_tensor("C", ["j", "k"]))
 
-    tensors2 = [Tensor(make_tensor("B", ["i"])), Tensor(make_tensor("C", []))]
-    assert graph.pop() == ("k", tensors2)
-
-    tensors3 = [Tensor(make_output("A", [])), Tensor(make_tensor("B", []))]
-    assert graph.pop() == ("i", tensors3)
-
-    tensors4 = [
-        Tensor(
-            make_tensor(
-                "C", [])), Tensor(
-            make_output(
-                "A", [])), Tensor(
-            make_tensor(
-                "B", []))]
-    assert graph.peek() == (None, tensors4)
+    assert graph.pop() == ("j", [A, C])
+    assert graph.pop() == ("k", [B, C])
+    assert graph.pop() == ("i", [A, B])
+    assert graph.peek() == (None, [C, A, B])
