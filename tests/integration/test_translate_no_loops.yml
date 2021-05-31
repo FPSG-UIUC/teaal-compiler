@@ -1,0 +1,5 @@
+einsum:
+    declaration:
+        - A[]
+    expressions:
+        - A[] = b

@@ -14,6 +14,20 @@ def test_sblock():
     assert block.gen(2) == "        x = y\n        a = b"
 
 
+def test_sblock_add_sblock():
+    block1 = SBlock([SAssign("x", EVar("y")), SAssign("a", EVar("b"))])
+    block2 = SBlock([SAssign("z", EVar("w")), SAssign("c", EVar("d"))])
+    block1.add(block2)
+    assert block1.gen(0) == "x = y\na = b\nz = w\nc = d"
+
+
+def test_sblock_add_other():
+    block = SBlock([SAssign("x", EVar("y")), SAssign("a", EVar("b"))])
+    assign = SAssign("z", EVar("w"))
+    block.add(assign)
+    assert block.gen(0) == "x = y\na = b\nz = w"
+
+
 def test_sexpr():
     expr = SExpr(EVar("c"))
     assert expr.gen(2) == "        c"

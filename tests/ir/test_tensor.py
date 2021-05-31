@@ -36,7 +36,7 @@ def test_get_inds():
 
 def test_peek_ind():
     tree = TensorParser.parse("A[I, J]")
-    assert Tensor(tree).peek() == "i"
+    assert Tensor(tree).peek() == "I"
 
 
 def test_peek_empty():

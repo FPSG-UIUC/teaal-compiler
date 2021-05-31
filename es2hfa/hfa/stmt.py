@@ -39,6 +39,16 @@ class SBlock:
         """
         return "\n".join([s.gen(depth) for s in self.stmts])
 
+    def add(self, stmt: Statement) -> None:
+        """
+        Add a statement onto the end of the SBlock, combine if the new
+        statement is also an SBlock
+        """
+        if isinstance(stmt, SBlock):
+            self.stmts.extend(stmt.stmts)
+        else:
+            self.stmts.append(stmt)
+
 
 @Statement.register
 class SExpr:

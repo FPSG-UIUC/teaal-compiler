@@ -4,12 +4,13 @@ Translate an Einsum to the corresponding HFA code
 
 from typing import cast, List, Optional
 
-from lark.tree import Tree
-
 from es2hfa.hfa.base import Statement
-from es2hfa.hfa.stmt import SFor
+from es2hfa.hfa.stmt import SBlock, SFor
 from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.ir.mapping import Mapping
+from es2hfa.parse.input import Input
 from es2hfa.trans.equation import Equation
+from es2hfa.trans.header import Header
 
 
 class Translator:
@@ -18,14 +19,24 @@ class Translator:
     """
 
     @staticmethod
-    def translate(einsum: Tree, loop_order: Optional[List[str]]) -> Statement:
+    def translate(input_: Input) -> Statement:
         """
         Perform the Einsum to HFA translation
         """
-        graph = IterationGraph(einsum, loop_order)
-        eqn = Equation(einsum)
+        mapping = Mapping(input_.get_declaration(), input_.get_rank_orders())
 
-        return Translator.__build_loop_nest(graph, eqn)
+        program = SBlock([])
+        for einsum in input_.get_expressions():
+            mapping.add_einsum(einsum, input_.get_loop_orders())
+            program.add(Header.make_header(mapping))
+
+            graph = IterationGraph(mapping)
+            eqn = Equation(einsum)
+            program.add(Translator.__build_loop_nest(graph, eqn))
+
+            mapping.reset()
+
+        return cast(Statement, program)
 
     @staticmethod
     def __build_loop_nest(graph: IterationGraph, eqn: Equation) -> Statement:

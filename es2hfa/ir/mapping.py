@@ -36,7 +36,7 @@ class Mapping:
             self.tensors[tensor.root_name()] = tensor
 
         self.es_tensors: List[Tensor] = []
-        self.loop_order: List[str] = []
+        self.loop_order: Optional[List[str]] = None
 
     def add_einsum(self, einsum: Tree,
                    loop_orders: Dict[str, List[str]]) -> None:
@@ -46,6 +46,9 @@ class Mapping:
         # Make sure we are starting with the full einsum
         if einsum.data != "einsum":
             raise ValueError("Input parse tree must be an einsum")
+
+        # First, make sure to reset the mapping
+        self.reset()
 
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
@@ -68,7 +71,7 @@ class Mapping:
         Swizzle the given tensor with the loop order
         """
         # Make sure that the mapping is configured
-        if not self.loop_order:
+        if self.loop_order is None:
             raise ValueError(
                 "Unconfigured mapping. Make sure to first call add_einsum()")
 
@@ -79,7 +82,7 @@ class Mapping:
         Get the loop order used for this kernel
         """
         # Make sure that the mapping is configured
-        if not self.loop_order:
+        if self.loop_order is None:
             raise ValueError(
                 "Unconfigured mapping. Make sure to first call add_einsum()")
 
@@ -104,7 +107,7 @@ class Mapping:
             tensor.reset()
 
         self.es_tensors = []
-        self.loop_order = []
+        self.loop_order = None
 
     def __default_loop_order(self, einsum: Tree) -> None:
         """

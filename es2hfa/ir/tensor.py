@@ -15,12 +15,7 @@ class Tensor:
         """
         Construct a new Tensor from its parse tree
         """
-        # TODO: remove allowing output at this point
-        if tree.data == "output":
-            self.is_output = True
-        elif tree.data == "tensor":
-            self.is_output = False
-        else:
+        if tree.data != "tensor":
             raise ValueError("Input parse tree must be a tensor")
 
         # Extract the name and indices
@@ -29,8 +24,9 @@ class Tensor:
         self.inds = values[1:]
         self.init_inds = self.inds.copy()
 
-        # Set the index pointer
+        # Set the index pointer and output status
         self.ind_ptr = 0
+        self.is_output = False
 
     def fiber_name(self) -> str:
         """
@@ -55,7 +51,7 @@ class Tensor:
         Peek at the top index, returns None if there are no more indices
         """
         if self.ind_ptr < len(self.inds):
-            return self.__get_ind()
+            return self.inds[self.ind_ptr]
         return None
 
     def pop(self) -> str:

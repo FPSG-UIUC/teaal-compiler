@@ -1,61 +1,73 @@
 import pytest
 
 from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import EinsumParser
-from tests.utils.parse_tree import make_output, make_plus, make_tensor
-
-
-def test_bad_tree():
-    tree = make_plus(["a", "b"])
-    with pytest.raises(ValueError) as excinfo:
-        IterationGraph(tree, None)
-
-    assert str(excinfo.value) == "Input parse tree must be an einsum"
+from es2hfa.parse.tensor import TensorParser
 
 
 def test_peek_rank0():
+    tensors = [TensorParser.parse("A[]")]
+    mapping = Mapping(tensors, [])
+
     tree = EinsumParser.parse("A[] = b")
-    graph = IterationGraph(tree, None)
-    tensors = [Tensor(make_output("A", []))]
-    assert graph.peek() == (None, tensors)
+    mapping.add_einsum(tree, {})
+    graph = IterationGraph(mapping)
+
+    tensor = Tensor(TensorParser.parse("A[]"))
+    tensor.set_is_output(True)
+
+    assert graph.peek() == (None, [tensor])
 
 
 def test_peek_default():
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
+
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    graph = IterationGraph(tree, None)
-    tensors = [
-        Tensor(
-            make_output(
-                "A", [
-                    "i", "j"])), Tensor(
-            make_tensor(
-                "B", [
-                    "i", "k"]))]
-    assert graph.peek() == ("i", tensors)
+    mapping.add_einsum(tree, {})
+    graph = IterationGraph(mapping)
+
+    results = ["A[I, J]", "B[I, K]"]
+    results = [Tensor(TensorParser.parse(tensor)) for tensor in results]
+    results[0].set_is_output(True)
+
+    assert graph.peek() == ("i", results)
 
 
 def test_peek_order():
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
+
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    graph = IterationGraph(tree, ["j", "k", "i"])
-    tensors = [
-        Tensor(
-            make_output(
-                "A", [
-                    "j", "i"])), Tensor(
-            make_tensor(
-                "C", [
-                    "j", "k"]))]
-    assert graph.peek() == ("j", tensors)
+    mapping.add_einsum(tree, {"A": ["J", "K", "I"]})
+    for tensor in mapping.get_tensors():
+        mapping.apply_loop_order(tensor)
+    graph = IterationGraph(mapping)
+
+    results = ["A[J, I]", "C[J, K]"]
+    results = [Tensor(TensorParser.parse(tensor)) for tensor in results]
+    results[0].set_is_output(True)
+
+    assert graph.peek() == ("j", results)
 
 
 def test_pop_default():
-    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    graph = IterationGraph(tree, None)
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
 
-    A = Tensor(make_output("A", ["i", "j"]))
-    B = Tensor(make_tensor("B", ["i", "k"]))
-    C = Tensor(make_tensor("C", ["j", "k"]))
+    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
+    mapping.add_einsum(tree, {})
+    graph = IterationGraph(mapping)
+
+    A = Tensor(TensorParser.parse("A[I, J]"))
+    A.set_is_output(True)
+    B = Tensor(TensorParser.parse("B[I, K]"))
+    C = Tensor(TensorParser.parse("C[J, K]"))
 
     assert graph.pop() == ("i", [A, B])
     assert graph.pop() == ("j", [C, A])
@@ -64,12 +76,20 @@ def test_pop_default():
 
 
 def test_pop_order():
-    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    graph = IterationGraph(tree, ["j", "k", "i"])
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
 
-    A = Tensor(make_output("A", ["j", "i"]))
-    B = Tensor(make_tensor("B", ["k", "i"]))
-    C = Tensor(make_tensor("C", ["j", "k"]))
+    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
+    mapping.add_einsum(tree, {"A": ["J", "K", "I"]})
+    for tensor in mapping.get_tensors():
+        mapping.apply_loop_order(tensor)
+    graph = IterationGraph(mapping)
+
+    A = Tensor(TensorParser.parse("A[J, I]"))
+    A.set_is_output(True)
+    B = Tensor(TensorParser.parse("B[K, I]"))
+    C = Tensor(TensorParser.parse("C[J, K]"))
 
     assert graph.pop() == ("j", [A, C])
     assert graph.pop() == ("k", [B, C])
