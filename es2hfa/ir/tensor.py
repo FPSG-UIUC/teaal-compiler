@@ -9,27 +9,66 @@ from lark.tree import Tree
 class Tensor:
     """
     Intermediate representation for a tensor
-
-    TODO: currently assumes lowercase indices from the einsum as opposed to
-    the uppercase indices from the declaration
     """
 
     def __init__(self, tree: Tree) -> None:
         """
-        Construct a new Tensor from its parse tree, and note if this is an
-        output tensor
+        Construct a new Tensor from its parse tree
         """
-        if tree.data == "output":
-            self.is_output = True
-        elif tree.data == "tensor":
-            self.is_output = False
-        else:
+        if tree.data != "tensor":
             raise ValueError("Input parse tree must be a tensor")
 
         # Extract the name and indices
         values = list(tree.scan_values(lambda _: True))
         self.name = values[0]
         self.inds = values[1:]
+        self.init_inds = self.inds.copy()
+
+        # Set the index pointer and output status
+        self.ind_ptr = 0
+        self.is_output = False
+
+    def fiber_name(self) -> str:
+        """
+        Return the current fiber name for this tensor
+        """
+        stub = self.name[0].lower() + self.name[1:] + "_"
+        if self.ind_ptr < len(self.inds):
+            return stub + self.__get_ind()
+        elif self.is_output:
+            return stub + "ref"
+        else:
+            return stub + "val"
+
+    def get_inds(self) -> List[str]:
+        """
+        Return a list of indices for this tensor
+        """
+        return self.inds
+
+    def peek(self) -> Optional[str]:
+        """
+        Peek at the top index, returns None if there are no more indices
+        """
+        if self.ind_ptr < len(self.inds):
+            return self.inds[self.ind_ptr]
+        return None
+
+    def pop(self) -> str:
+        """
+        Pop off the top index
+        """
+        ind = self.__get_ind()
+        self.ind_ptr += 1
+        return ind
+
+    def reset(self) -> None:
+        """
+        Reset the tensor to its initial state
+        """
+        self.ind_ptr = 0
+        self.inds = self.init_inds
+        self.is_output = False
 
     def root_name(self) -> str:
         """
@@ -37,37 +76,23 @@ class Tensor:
         """
         return self.name
 
-    def fiber_name(self) -> str:
+    def set_is_output(self, is_output: bool) -> None:
         """
-        Return the current fiber name for this tensor
+        Specify if this is the output tensor
         """
-        stub = self.name[0].lower() + self.name[1:] + "_"
-        if self.inds:
-            return stub + self.inds[0]
-        elif self.is_output:
-            return stub + "ref"
-        else:
-            return stub + "val"
-
-    def peek(self) -> Optional[str]:
-        """
-        Peek at the top index, returns None if there are no more indices
-        """
-        if self.inds:
-            return self.inds[0]
-        return None
-
-    def pop(self) -> str:
-        """
-        Pop off the top index
-        """
-        return self.inds.pop(0)
+        self.is_output = is_output
 
     def swizzle(self, loop_order: List[Optional[str]]) -> None:
         """
         Re-order the indices of this tensor to match the given loop order
         """
         self.inds.sort(key=lambda i: loop_order.index(i))
+
+    def tensor_name(self) -> str:
+        """
+        Get the current name of the tensor
+        """
+        return self.name + "_" + "".join(self.inds)
 
     def __eq__(self, other: object) -> bool:
         """
@@ -78,3 +103,10 @@ class Tensor:
                 self.inds == other.inds and \
                 self.is_output == other.is_output
         return False
+
+    def __get_ind(self) -> str:
+        """
+        Get the name of the current index of the tensor
+        """
+        ind = self.inds[self.ind_ptr]
+        return ind[0].lower() + ind[1:]

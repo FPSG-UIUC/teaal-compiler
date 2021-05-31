@@ -1,4 +1,3 @@
-from lark.lexer import Token
 from lark.tree import Tree
 
 from es2hfa.parse.einsum import EinsumParser

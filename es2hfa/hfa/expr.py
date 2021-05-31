@@ -4,7 +4,7 @@ HFA AST and code generation for HFA expressions
 
 from typing import List
 
-from es2hfa.hfa.base import Expression, Operator
+from es2hfa.hfa.base import Argument, Expression, Operator
 
 
 @Expression.register
@@ -46,21 +46,40 @@ class EList:
 
 
 @Expression.register
+class EFunc:
+    """
+    An HFA function call
+    """
+
+    def __init__(self, name: str, args: List[Argument]) -> None:
+        self.name = name
+        self.args = args
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EFunc
+        """
+        return self.name + \
+            "(" + ", ".join([a.gen() for a in self.args]) + ")"
+
+
+@Expression.register
 class EMethod:
     """
     An HFA method call
     """
 
-    def __init__(self, name: str, params: List[Expression]) -> None:
+    def __init__(self, obj: str, name: str, args: List[Argument]) -> None:
+        self.obj = obj
         self.name = name
-        self.params = params
+        self.args = args
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EList
+        Generate the HFA code for an EMethod
         """
-        return self.name + \
-            "(" + ", ".join([e.gen() for e in self.params]) + ")"
+        return self.obj + "." + self.name + \
+            "(" + ", ".join([a.gen() for a in self.args]) + ")"
 
 
 @Expression.register

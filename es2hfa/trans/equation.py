@@ -1,5 +1,5 @@
 """
-Representation of how payloads are combined
+Representation of how tensors and variables are combined
 """
 
 from typing import cast, Dict, Generator, List, Optional
@@ -11,7 +11,7 @@ from es2hfa.hfa.expr import EBinOp, EParens, EVar
 from es2hfa.hfa.op import *
 from es2hfa.hfa.payload import *
 from es2hfa.hfa.stmt import SIAssign
-from es2hfa.ir.loop.tensor import Tensor
+from es2hfa.ir.tensor import Tensor
 
 
 class Equation:
@@ -27,8 +27,6 @@ class Equation:
         # Make sure we are starting with the full einsum
         if einsum.data != "einsum":
             raise ValueError("Input parse tree must be an einsum")
-
-        print(einsum)
 
         # First find all terms (terminals multiplied together)
         self.terms: List[List[str]] = []

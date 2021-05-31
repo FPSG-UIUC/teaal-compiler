@@ -1,0 +1,17 @@
+einsum:
+    declaration:
+        - A[K, M]
+        - B[K, N]
+        - C[M, N]
+        - T1[M, N]
+        - Z[M, N]
+    expressions:
+        - T1[m, n] = sum(K).(A[k, m] * B[k, n])
+        - Z[m, n] = T1[m, n] + C[m, n]
+mapping:
+    rank-order:
+        - A[M, K]
+        - C[N, M]
+        - Z[N, M]
+    loop-order:
+        T1: [K, N, M]
