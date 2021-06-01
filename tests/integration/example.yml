@@ -5,6 +5,6 @@ einsum:
         - C[I,J]
         - D[I]
         - T1[I, J]
-    expression:
+    expressions:
         - T1[i, j] = sum(K,L).(A[i,j,k] * B[k,l])
         - D[i] = sum(J).(C[i,j] + T1[i, j])
