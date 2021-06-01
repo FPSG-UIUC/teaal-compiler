@@ -5,6 +5,6 @@ einsum:
         - T1[M]
         - C[M]
         - Z[M]
-    expression:
+    expressions:
         - T1[m] = sum(K).(A[k] * B[k, m])
         - Z[m] = a * T1[m] + b * C[m]

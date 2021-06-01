@@ -3,5 +3,5 @@ einsum:
         - I[M, N]
         - F[R, S]
         - O[X, Y]
-    expression:
+    expressions:
         - O[x, y] = sum(R, S).(I[x + r, y + s] * F[r, s])

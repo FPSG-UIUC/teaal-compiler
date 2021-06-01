@@ -3,5 +3,5 @@ einsum:
         - A[I,J]
         - B[J,K]
         - Z[I,K]
-    expression:
+    expressions:
         - Z[i, k] = sum(J).(A[i,j]*B[j,k])

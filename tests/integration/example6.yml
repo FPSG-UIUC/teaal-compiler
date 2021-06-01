@@ -4,5 +4,5 @@ einsum:
         - B[K,L]
         - C[I,J]
         - D[I]
-    expression:
+    expressions:
         - D[i] = sum(J).(B[i, j])

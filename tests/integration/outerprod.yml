@@ -3,7 +3,7 @@ einsum:
         - A[M]
         - B[N]
         - Z[M, N]
-    expression:
+    expressions:
         - Z[m, n] = A[m] * B[n]
 mapping:
     rank-order:

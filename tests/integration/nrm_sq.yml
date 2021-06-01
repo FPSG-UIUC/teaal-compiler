@@ -4,5 +4,5 @@ einsum:
     declaration:
         - Q[]
         - V[A, B, I, J]
-    expression:
+    expressions:
         - Q[] = sum(a, b, i, j).(V[a, b, i, j] * V[a, b, i, j])

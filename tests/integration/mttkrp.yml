@@ -4,5 +4,5 @@ einsum:
         - B[K, N]
         - C[J, N]
         - Z[M, N]
-    expression:
+    expressions:
         - Z[m, n] = sum(K, J).(A[m, k, j] * B[k, n] * C[j, n])

@@ -7,7 +7,7 @@ einsum:
         - G0[I, I_]
         - G1[J, J_]
         - G2[K, K_]
-    expression:
+    expressions:
         - G0[i, i_] = sum(J, K).(A[i, j, k] * B0[i_, j, k])
         - G1[j, j_] = sum(I, K).(A[i, j, k] * B1[i, j_, k])
         - G2[k, k_] = sum(I, J).(A[i, j, k] * B2[i, j, k_])

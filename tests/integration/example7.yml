@@ -3,7 +3,7 @@ einsum:
         - A[M, N]
         - B[M, N]
         - Z[M, N]
-    expression:
+    expressions:
         - Z[m, n] = A[m, n] + B[m, n]
         - Z[m, n] = A[m, n] - B[m, n]
         - Z[m, n] = A[m, n] * B[m, n]
