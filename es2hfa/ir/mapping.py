@@ -47,9 +47,6 @@ class Mapping:
         if einsum.data != "einsum":
             raise ValueError("Input parse tree must be an einsum")
 
-        # First, make sure to reset the mapping
-        self.reset()
-
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
         output = self.__get_tensor(next(einsum.find_data("output")))
