@@ -151,6 +151,40 @@ def test_get_loop_order_default_partitioned():
     assert mapping.get_loop_order() == ["I1", "I0", "J", "K2", "K1", "K0"]
 
 
+def test_get_partitioning_unconfigured():
+    tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
+    mapping = Mapping(tensors, [])
+
+    with pytest.raises(ValueError) as excinfo:
+        mapping.get_partitioning(Tensor(tensors[0]))
+    assert str(
+        excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
+
+
+def test_get_partitioning_default():
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
+
+    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
+    mapping.add_einsum(tree, {}, {})
+
+    assert mapping.get_partitioning(Tensor(tensors[2])) == {}
+
+
+def test_get_partitioning_mapped():
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
+
+    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
+    mapping.add_einsum(
+        tree, {}, {"A": {"I": make_uniform_shape([4]), "K": make_uniform_shape([6, 3])}})
+
+    assert mapping.get_partitioning(Tensor(tensors[2])) == {
+        "K": make_uniform_shape([6, 3])}
+
+
 def test_get_tensors_unconfigured():
     tensors = [TensorParser.parse("A[]"), TensorParser.parse("B[]")]
     mapping = Mapping(tensors, [])
@@ -214,12 +248,13 @@ def test_reset():
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
 
     with pytest.raises(ValueError) as excinfo:
+        mapping.get_partitioning(Tensor(orders[0]))
+    assert str(
+        excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
+    with pytest.raises(ValueError) as excinfo:
         mapping.get_tensors()
     assert str(
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
-
-    # TODO: Test with get_partitioning method should one exist
-    assert mapping.partitioning is None
 
     mapping.add_einsum(tree, {}, {})
 

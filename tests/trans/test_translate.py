@@ -31,6 +31,7 @@ def test_translate_defaults():
 
 def test_translate_specified():
     input_ = Input("tests/integration/test_input.yml")
+
     hfa = "T1_NM = T1_MN.swizzleRanks([\"N\", \"M\"])\n" + \
           "t1_n = T1_NM.getRoot()\n" + \
           "A_KM = A_MK.swizzleRanks([\"K\", \"M\"])\n" + \
@@ -40,11 +41,34 @@ def test_translate_specified():
           "    for n, (t1_m, b_val) in t1_n << b_n:\n" + \
           "        for m, (t1_ref, a_val) in t1_m << a_m:\n" + \
           "            t1_ref += a_val * b_val\n" + \
-          "z_n = Z_NM.getRoot()\n" + \
-          "T1_NM = T1_MN.swizzleRanks([\"N\", \"M\"])\n" + \
-          "t1_n = T1_NM.getRoot()\n" + \
-          "c_n = C_NM.getRoot()\n" + \
-          "for n, (z_m, (_, t1_m, c_m)) in z_n << (t1_n | c_n):\n" + \
-          "    for m, (z_ref, (_, t1_val, c_val)) in z_m << (t1_m | c_m):\n" + \
-          "        z_ref += t1_val + c_val"
+          "tmp = Z_NM\n" + \
+          "tmp = tmp.splitUniform(4, depth=1)\n" + \
+          "tmp = tmp.splitUniform(2, depth=2)\n" + \
+          "tmp = tmp.splitUniform(6, depth=0)\n" + \
+          "tmp = tmp.splitUniform(3, depth=1)\n" + \
+          "Z_N2N1N0M2M1M0 = tmp\n" + \
+          "z_n2 = Z_N2N1N0M2M1M0.getRoot()\n" + \
+          "tmp = T1_MN\n" + \
+          "tmp = tmp.splitUniform(6, depth=1)\n" + \
+          "tmp = tmp.splitUniform(3, depth=2)\n" + \
+          "tmp = tmp.splitUniform(4, depth=0)\n" + \
+          "tmp = tmp.splitUniform(2, depth=1)\n" + \
+          "T1_M2M1M0N2N1N0 = tmp\n" + \
+          "T1_N2N1N0M2M1M0 = T1_M2M1M0N2N1N0.swizzleRanks([\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
+          "t1_n2 = T1_N2N1N0M2M1M0.getRoot()\n" + \
+          "tmp = C_NM\n" + \
+          "tmp = tmp.splitUniform(4, depth=1)\n" + \
+          "tmp = tmp.splitUniform(2, depth=2)\n" + \
+          "tmp = tmp.splitUniform(6, depth=0)\n" + \
+          "tmp = tmp.splitUniform(3, depth=1)\n" + \
+          "C_N2N1N0M2M1M0 = tmp\n" + \
+          "c_n2 = C_N2N1N0M2M1M0.getRoot()\n" + \
+          "for n2, (z_n1, (_, t1_n1, c_n1)) in z_n2 << (t1_n2 | c_n2):\n" + \
+          "    for n1, (z_n0, (_, t1_n0, c_n0)) in z_n1 << (t1_n1 | c_n1):\n" + \
+          "        for n0, (z_m2, (_, t1_m2, c_m2)) in z_n0 << (t1_n0 | c_n0):\n" + \
+          "            for m2, (z_m1, (_, t1_m1, c_m1)) in z_m2 << (t1_m2 | c_m2):\n" + \
+          "                for m1, (z_m0, (_, t1_m0, c_m0)) in z_m1 << (t1_m1 | c_m1):\n" + \
+          "                    for m0, (z_ref, (_, t1_val, c_val)) in z_m0 << (t1_m0 | c_m0):\n" + \
+          "                        z_ref += t1_val + c_val"
+
     assert Translator.translate(input_).gen(depth=0) == hfa

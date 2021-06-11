@@ -8,14 +8,19 @@ def test_ebinop():
     assert binop.gen() == "a + b"
 
 
-def test_elist():
-    list_ = EList([EVar("a"), EVar("b")])
-    assert list_.gen() == "[a, b]"
-
-
 def test_efunc():
     func = EFunc("foo", [AJust(EVar("x")), AJust(EVar("y"))])
     assert func.gen() == "foo(x, y)"
+
+
+def test_eint():
+    int_ = EInt(5)
+    assert int_.gen() == "5"
+
+
+def test_elist():
+    list_ = EList([EVar("a"), EVar("b")])
+    assert list_.gen() == "[a, b]"
 
 
 def test_emethod():

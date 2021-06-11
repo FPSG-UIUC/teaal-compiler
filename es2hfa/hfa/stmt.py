@@ -5,6 +5,7 @@ HFA AST and code generation for HFA statements
 from typing import List
 
 from es2hfa.hfa.base import Expression, Operator, Payload, Statement
+from es2hfa.hfa.expr import EVar
 
 
 @Statement.register
@@ -92,6 +93,26 @@ class SFor:
 
 
 @Statement.register
+class SFunc:
+    """
+    A function definition
+    """
+
+    def __init__(self, name: str, args: List[EVar], body: Statement) -> None:
+        self.name = name
+        self.args = args
+        self.body = body
+
+    def gen(self, depth: int) -> str:
+        """
+        Generate the HFA output for an SFunc
+        """
+        args = ", ".join([arg.gen() for arg in self.args])
+        header = "def " + self.name + "(" + args + "):\n"
+        return "    " * depth + header + self.body.gen(depth + 1)
+
+
+@Statement.register
 class SIAssign:
     """
     A variable assignment that updates a variable in place, e.g. i += j
@@ -107,3 +128,19 @@ class SIAssign:
         Generate the HFA output for an SIAssign
         """
         return "    " * depth + self.var + " " + self.op.gen() + "= " + self.expr.gen()
+
+
+@Statement.register
+class SReturn:
+    """
+    A return statement for the end of a function
+    """
+
+    def __init__(self, expr: Expression) -> None:
+        self.expr = expr
+
+    def gen(self, depth: int) -> str:
+        """
+        Generate the HFA output for an SReturn
+        """
+        return "    " * depth + "return " + self.expr.gen()

@@ -104,6 +104,18 @@ class Mapping:
 
         return self.loop_order
 
+    def get_partitioning(self, tensor: Tensor) -> Dict[str, List[Tree]]:
+        """
+        Get all of the partitioning information relevant for a given tensor
+        """
+        # Make sure that the mapping is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured mapping. Make sure to first call add_einsum()")
+
+        return {ind: parts for ind, parts in self.partitioning.items()
+                if ind in tensor.get_inds()}
+
     def get_tensors(self) -> List[Tensor]:
         """
         Get the tensors used in an einsum
@@ -124,7 +136,6 @@ class Mapping:
 
         self.es_tensors = []
         self.loop_order = None
-        # TODO: Add test for this
         self.partitioning = None
 
     def __default_loop_order(self, einsum: Tree) -> None:

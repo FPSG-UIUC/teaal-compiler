@@ -30,22 +30,6 @@ class EBinOp:
 
 
 @Expression.register
-class EList:
-    """
-    An HFA list
-    """
-
-    def __init__(self, list_: List[Expression]) -> None:
-        self.list = list_
-
-    def gen(self) -> str:
-        """
-        Generate the HFA code for an EList
-        """
-        return "[" + ", ".join([e.gen() for e in self.list]) + "]"
-
-
-@Expression.register
 class EFunc:
     """
     An HFA function call
@@ -61,6 +45,38 @@ class EFunc:
         """
         return self.name + \
             "(" + ", ".join([a.gen() for a in self.args]) + ")"
+
+
+@Expression.register
+class EInt:
+    """
+    An HFA integer
+    """
+
+    def __init__(self, int_: int) -> None:
+        self.int = int_
+
+    def gen(self) -> str:
+        """
+        Generate HFA code for an EInt
+        """
+        return str(self.int)
+
+
+@Expression.register
+class EList:
+    """
+    An HFA list
+    """
+
+    def __init__(self, list_: List[Expression]) -> None:
+        self.list = list_
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EList
+        """
+        return "[" + ", ".join([e.gen() for e in self.list]) + "]"
 
 
 @Expression.register
