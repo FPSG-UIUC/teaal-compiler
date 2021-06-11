@@ -30,6 +30,23 @@ class EBinOp:
 
 
 @Expression.register
+class EField:
+    """
+    An HFA object field access
+    """
+
+    def __init__(self, obj: str, field: str):
+        self.obj = obj
+        self.field = field
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EField
+        """
+        return self.obj + "." + self.field
+
+
+@Expression.register
 class EFunc:
     """
     An HFA function call

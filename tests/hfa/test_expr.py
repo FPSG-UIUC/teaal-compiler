@@ -8,6 +8,11 @@ def test_ebinop():
     assert binop.gen() == "a + b"
 
 
+def test_efield():
+    field = EField("foo", "bar")
+    assert field.gen() == "foo.bar"
+
+
 def test_efunc():
     func = EFunc("foo", [AJust(EVar("x")), AJust(EVar("y"))])
     assert func.gen() == "foo(x, y)"
