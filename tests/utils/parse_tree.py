@@ -28,3 +28,8 @@ def make_times(vars_):
 
 def make_var(var):
     return Tree("var", [Token("NAME", var)])
+
+
+def make_uniform_shape(shapes):
+    return [Tree("uniform_shape", [Token("NUMBER", shape)])
+            for shape in shapes]

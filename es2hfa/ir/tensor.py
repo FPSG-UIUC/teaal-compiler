@@ -1,7 +1,7 @@
 """
 Representation of a tensor as it moves through the iteration graph
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from lark.tree import Tree
 
@@ -45,6 +45,21 @@ class Tensor:
         Return a list of indices for this tensor
         """
         return self.inds
+
+    def partition(self, partitioning: Dict[str, List[Tree]]) -> None:
+        """
+        Partition this tensor across all relevant dimensions
+        """
+        for ind, parts in partitioning.items():
+            if ind in self.inds:
+                # Remove the old index
+                i = self.inds.index(ind)
+                self.inds.pop(i)
+
+                # Insert the new indices
+                new_inds = [ind + str(j) for j in range(len(parts) + 1)]
+                for new_ind in new_inds:
+                    self.inds.insert(i, new_ind)
 
     def peek(self) -> Optional[str]:
         """

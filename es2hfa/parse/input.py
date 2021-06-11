@@ -7,6 +7,7 @@ from typing import Dict, List
 from lark.tree import Tree
 
 from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.partitioning import PartitioningParser
 from es2hfa.parse.tensor import TensorParser
 from es2hfa.parse.yaml import YamlParser
 
@@ -43,9 +44,19 @@ class Input:
             else:
                 self.loop_orders = {}
 
+            self.partitioning: Dict[str, Dict[str, List[Tree]]] = {}
+            if "partitioning" in mapping.keys():
+                for tensor, inds in mapping["partitioning"].items():
+                    self.partitioning[tensor] = {}
+                    for ind, parts in inds.items():
+                        self.partitioning[tensor][ind] = []
+                        for part in parts:
+                            self.partitioning[tensor][ind].append(
+                                PartitioningParser.parse(part))
         else:
             self.rank_orders = []
             self.loop_orders = {}
+            self.partitioning = {}
 
     def get_declaration(self) -> List[Tree]:
         """
@@ -64,6 +75,13 @@ class Input:
         Get the dictionary from output tensors to loop orders
         """
         return self.loop_orders
+
+    def get_partitioning(self) -> Dict[str, Dict[str, List[Tree]]]:
+        """
+        Get a dictionary from output tensors to a dictionary of index variables
+        to partitioning information
+        """
+        return self.partitioning
 
     def get_rank_orders(self) -> List[Tree]:
         """

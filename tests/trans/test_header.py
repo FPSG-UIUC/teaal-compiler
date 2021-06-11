@@ -10,7 +10,7 @@ def test_make_header():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
 
     hfa = "a_i = A_IJ.getRoot()\n" + \
           "b_i = B_IK.getRoot()\n" + \
@@ -25,7 +25,7 @@ def test_make_header_swizzle():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {"A": ["K", "J", "I"]})
+    mapping.add_einsum(tree, {"A": ["K", "J", "I"]}, {})
 
     hfa = "A_JI = A_IJ.swizzleRanks([\"J\", \"I\"])\n" + \
           "a_j = A_JI.getRoot()\n" + \
@@ -35,3 +35,5 @@ def test_make_header_swizzle():
           "c_k = C_KJ.getRoot()"
 
     assert Header.make_header(mapping).gen(depth=0) == hfa
+
+# TODO: test that partitioning code is correctly translated

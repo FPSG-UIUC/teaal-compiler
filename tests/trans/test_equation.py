@@ -14,7 +14,7 @@ def make_basic():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
 
     return IterationGraph(mapping), Equation(tree)
 
@@ -25,7 +25,7 @@ def make_output():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i] = sum(I).(B[i] * C[i] * D[i])")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
 
     return IterationGraph(mapping), Equation(tree)
 
@@ -36,7 +36,7 @@ def make_mult_terms():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i] + F[i]")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
 
     return IterationGraph(mapping), Equation(tree)
 

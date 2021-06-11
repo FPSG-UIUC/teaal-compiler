@@ -1,6 +1,7 @@
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.input import Input
 from es2hfa.parse.tensor import TensorParser
+from tests.utils.parse_tree import make_uniform_shape
 
 
 def test_declaration():
@@ -21,10 +22,34 @@ def test_expressions():
     assert input_.get_expressions() == [T1, Z]
 
 
-def test_mapping():
+def test_loop_orders():
+    input_ = Input("tests/integration/test_input.yml")
+    assert input_.get_loop_orders() == {"T1": ["K", "N", "M"]}
+
+
+def test_loop_orders_missing():
+    input_ = Input("tests/integration/test_input_no_loop_order.yml")
+    assert input_.get_loop_orders() == {}
+
+
+def test_no_mapping():
     input_ = Input("tests/integration/test_input_no_mapping.yml")
     assert input_.get_rank_orders() == []
     assert input_.get_loop_orders() == {}
+    assert input_.get_partitioning() == {}
+
+
+def test_partitioning():
+    input_ = Input("tests/integration/test_input.yml")
+    partitioning = {"Z": {"M": make_uniform_shape(
+        [4, 2]), "N": make_uniform_shape([6, 3])}}
+
+    assert input_.get_partitioning() == partitioning
+
+
+def test_partitioning_missing():
+    input_ = Input("tests/integration/test_input_no_partitioning.yml")
+    assert input_.get_partitioning() == {}
 
 
 def test_rank_orders():
@@ -40,13 +65,3 @@ def test_rank_orders_missing():
     input_ = Input("tests/integration/test_input_no_rank_order.yml")
     tensors = []
     assert input_.get_rank_orders() == tensors
-
-
-def test_loop_orders():
-    input_ = Input("tests/integration/test_input.yml")
-    assert input_.get_loop_orders() == {"T1": ["K", "N", "M"]}
-
-
-def test_loop_orders_missing():
-    input_ = Input("tests/integration/test_input_no_loop_order.yml")
-    assert input_.get_loop_orders() == {}

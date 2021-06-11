@@ -37,9 +37,11 @@ class Mapping:
 
         self.es_tensors: List[Tensor] = []
         self.loop_order: Optional[List[str]] = None
+        self.partitioning: Optional[Dict[str, List[Tree]]] = None
 
     def add_einsum(self, einsum: Tree,
-                   loop_orders: Dict[str, List[str]]) -> None:
+                   loop_orders: Dict[str, List[str]],
+                   partitioning: Dict[str, Dict[str, List[Tree]]]) -> None:
         """
         Configure the mapping for a particular Einsum
         """
@@ -57,6 +59,12 @@ class Mapping:
         for tensor_tree in einsum.find_data("tensor"):
             self.es_tensors.append(self.__get_tensor(tensor_tree))
 
+        # Store the partitioning information
+        if output.root_name() in partitioning.keys():
+            self.partitioning = partitioning[output.root_name()]
+        else:
+            self.partitioning = {}
+
         # Store the loop order
         if output.root_name() in loop_orders.keys():
             self.loop_order = loop_orders[output.root_name()]
@@ -73,6 +81,17 @@ class Mapping:
                 "Unconfigured mapping. Make sure to first call add_einsum()")
 
         tensor.swizzle(cast(List[Optional[str]], self.loop_order))
+
+    def apply_partitioning(self, tensor: Tensor) -> None:
+        """
+        Partition the tensor according to the schedule given in add_einsum()
+        """
+        # Make sure that the mapping is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured mapping. Make sure to first call add_einsum()")
+
+        tensor.partition(self.partitioning)
 
     def get_loop_order(self) -> List[str]:
         """
@@ -105,16 +124,31 @@ class Mapping:
 
         self.es_tensors = []
         self.loop_order = None
+        # TODO: Add test for this
+        self.partitioning = None
 
     def __default_loop_order(self, einsum: Tree) -> None:
         """
         Compute the default loop order
         """
+        if self.partitioning is None:
+            raise ValueError("Must configure partitioning before loop order")
+
         self.loop_order = self.es_tensors[0].get_inds().copy()
 
         for sum_ in einsum.find_data("sum"):
             self.loop_order += list(next(sum_.find_data("sinds")
                                          ).scan_values(lambda _: True))
+
+        for ind, parts in self.partitioning.items():
+            # Remove the old index
+            i = self.loop_order.index(ind)
+            self.loop_order.pop(i)
+
+            # Insert the new indices
+            new_inds = [ind + str(j) for j in range(len(parts) + 1)]
+            for new_ind in new_inds:
+                self.loop_order.insert(i, new_ind)
 
     def __get_tensor(self, tensor: Tree) -> Tensor:
         """
