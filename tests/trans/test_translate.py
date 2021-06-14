@@ -4,22 +4,25 @@ from es2hfa.trans.translate import Translator
 
 def test_translate_no_loops():
     input_ = Input("tests/integration/test_translate_no_loops.yml")
-    hfa = "a_ref = A_.getRoot()\n" + \
+    hfa = "A_ = Tensor(rank_ids=[])\n" +\
+          "a_ref = A_.getRoot()\n" + \
           "a_ref += b"
     assert Translator.translate(input_).gen(depth=0) == hfa
 
 
 def test_translate_defaults():
     input_ = Input("tests/integration/test_input_no_mapping.yml")
-    hfa = "t1_m = T1_MN.getRoot()\n" + \
-          "A_MK = A_KM.swizzleRanks([\"M\", \"K\"])\n" + \
+    hfa = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "t1_m = T1_MN.getRoot()\n" + \
+          "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
           "a_m = A_MK.getRoot()\n" + \
-          "B_NK = B_KN.swizzleRanks([\"N\", \"K\"])\n" + \
+          "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
           "b_n = B_NK.getRoot()\n" + \
           "for m, (t1_n, a_k) in t1_m << a_m:\n" + \
           "    for n, (t1_ref, b_k) in t1_n << b_n:\n" + \
           "        for k, (a_val, b_val) in a_k & b_k:\n" + \
           "            t1_ref += a_val * b_val\n" + \
+          "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "t1_m = T1_MN.getRoot()\n" + \
           "c_m = C_MN.getRoot()\n" + \
@@ -32,15 +35,17 @@ def test_translate_defaults():
 def test_translate_specified():
     input_ = Input("tests/integration/test_input.yml")
 
-    hfa = "T1_NM = T1_MN.swizzleRanks([\"N\", \"M\"])\n" + \
+    hfa = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "T1_NM = T1_MN.swizzleRanks(rank_ids=[\"N\", \"M\"])\n" + \
           "t1_n = T1_NM.getRoot()\n" + \
-          "A_KM = A_MK.swizzleRanks([\"K\", \"M\"])\n" + \
+          "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()\n" + \
           "for k, (a_m, b_n) in a_k & b_k:\n" + \
           "    for n, (t1_m, b_val) in t1_n << b_n:\n" + \
           "        for m, (t1_ref, a_val) in t1_m << a_m:\n" + \
           "            t1_ref += a_val * b_val\n" + \
+          "Z_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
           "tmp = Z_NM\n" + \
           "tmp = tmp.splitUniform(4, depth=1)\n" + \
           "tmp = tmp.splitUniform(2, depth=2)\n" + \
@@ -54,7 +59,7 @@ def test_translate_specified():
           "tmp = tmp.splitUniform(4, depth=0)\n" + \
           "tmp = tmp.splitUniform(2, depth=1)\n" + \
           "T1_M2M1M0N2N1N0 = tmp\n" + \
-          "T1_N2N1N0M2M1M0 = T1_M2M1M0N2N1N0.swizzleRanks([\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
+          "T1_N2N1N0M2M1M0 = T1_M2M1M0N2N1N0.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
           "t1_n2 = T1_N2N1N0M2M1M0.getRoot()\n" + \
           "tmp = C_NM\n" + \
           "tmp = tmp.splitUniform(4, depth=1)\n" + \

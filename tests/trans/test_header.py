@@ -13,7 +13,8 @@ def test_make_header():
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, {})
 
-    hfa = "a_i = A_IJ.getRoot()\n" + \
+    hfa = "A_IJ = Tensor(rank_ids=[\"I\", \"J\"])\n" + \
+          "a_i = A_IJ.getRoot()\n" + \
           "b_i = B_IK.getRoot()\n" + \
           "c_j = C_JK.getRoot()"
 
@@ -28,11 +29,12 @@ def test_make_header_swizzle():
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {"A": ["K", "J", "I"]}, {})
 
-    hfa = "A_JI = A_IJ.swizzleRanks([\"J\", \"I\"])\n" + \
+    hfa = "A_IJ = Tensor(rank_ids=[\"I\", \"J\"])\n" + \
+          "A_JI = A_IJ.swizzleRanks(rank_ids=[\"J\", \"I\"])\n" + \
           "a_j = A_JI.getRoot()\n" + \
-          "B_KI = B_IK.swizzleRanks([\"K\", \"I\"])\n" + \
+          "B_KI = B_IK.swizzleRanks(rank_ids=[\"K\", \"I\"])\n" + \
           "b_k = B_KI.getRoot()\n" + \
-          "C_KJ = C_JK.swizzleRanks([\"K\", \"J\"])\n" + \
+          "C_KJ = C_JK.swizzleRanks(rank_ids=[\"K\", \"J\"])\n" + \
           "c_k = C_KJ.getRoot()"
 
     assert Header.make_header(mapping).gen(depth=0) == hfa
@@ -47,7 +49,8 @@ def test_make_header_partitioned():
     mapping.add_einsum(
         tree, {}, {"A": {"I": make_uniform_shape([5]), "K": make_uniform_shape([6, 3])}})
 
-    hfa = "tmp = A_IJ\n" + \
+    hfa = "A_IJ = Tensor(rank_ids=[\"I\", \"J\"])\n" + \
+          "tmp = A_IJ\n" + \
           "tmp = tmp.splitUniform(5, depth=0)\n" + \
           "A_I1I0J = tmp\n" + \
           "a_i1 = A_I1I0J.getRoot()\n" + \
