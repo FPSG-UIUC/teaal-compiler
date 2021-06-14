@@ -54,7 +54,6 @@ def test_peek_order():
 
     assert graph.peek() == ("j", results)
 
-# TODO: Add peek partitioning
 
 
 def test_pop_default():
@@ -98,4 +97,3 @@ def test_pop_order():
     assert graph.pop() == ("i", [A, B])
     assert graph.peek() == (None, [C, A, B])
 
-# TODO: Add pop partitioning
