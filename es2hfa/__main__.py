@@ -1,7 +1,7 @@
-import os
-import sys
+import os  # pragma: no cover
+import sys  # pragma: no cover
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Configure Python path
     path = os.path.abspath(".")
     if path not in sys.path:

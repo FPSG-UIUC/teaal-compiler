@@ -104,6 +104,17 @@ class Mapping:
 
         return self.loop_order
 
+    def get_output(self) -> Tensor:
+        """
+        Get the output tensor used for this kernel
+        """
+        # Make sure that the mapping is configured
+        if self.loop_order is None:
+            raise ValueError(
+                "Unconfigured mapping. Make sure to first call add_einsum()")
+
+        return self.es_tensors[0]
+
     def get_partitioning(self, tensor: Tensor) -> Dict[str, List[Tree]]:
         """
         Get all of the partitioning information relevant for a given tensor
