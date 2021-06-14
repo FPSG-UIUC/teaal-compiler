@@ -13,3 +13,7 @@ mapping:
         - A[M, K]
         - C[N, M]
         - Z[N, M]
+    partitioning:
+        Z:
+            M: [uniform_shape(4), uniform_shape(2)]
+            N: [uniform_shape(6), uniform_shape(3)]

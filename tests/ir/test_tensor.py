@@ -2,7 +2,7 @@ import pytest
 
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.tensor import TensorParser
-from tests.utils.parse_tree import make_plus
+from tests.utils.parse_tree import make_plus, make_uniform_shape
 
 
 def test_bad_tree():
@@ -32,6 +32,15 @@ def test_fiber_name_val():
 def test_get_inds():
     tree = TensorParser.parse("A[I, J]")
     assert Tensor(tree).get_inds() == ["I", "J"]
+
+
+def test_partition():
+    tree = TensorParser.parse("A[I, J, K]")
+    partitioning = {"I": make_uniform_shape(
+        [3]), "K": make_uniform_shape([4, 2])}
+    tensor = Tensor(tree)
+    tensor.partition(partitioning)
+    assert tensor.get_inds() == ["I1", "I0", "J", "K2", "K1", "K0"]
 
 
 def test_peek_ind():

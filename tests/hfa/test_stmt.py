@@ -1,4 +1,4 @@
-from es2hfa.hfa.expr import EVar
+from es2hfa.hfa.expr import EBinOp, EVar
 from es2hfa.hfa.op import OAdd
 from es2hfa.hfa.payload import PVar
 from es2hfa.hfa.stmt import *
@@ -38,6 +38,19 @@ def test_sfor():
     assert for_.gen(1) == "    for i, a_j in a_i:\n        a_j"
 
 
+def test_sfunc():
+    stmt = SAssign("z", EBinOp(EVar("x"), OAdd(), EVar("y")))
+    func = SFunc("foo", [EVar("x"), EVar("y")],
+                 SBlock([stmt, SReturn(EVar("z"))]))
+    assert func.gen(
+        1) == "    def foo(x, y):\n        z = x + y\n        return z"
+
+
 def test_siassign():
     iassign = SIAssign("i", OAdd(), EVar("j"))
     assert iassign.gen(2) == "        i += j"
+
+
+def tst_sreturn():
+    return_ = SReturn(EVar("foo"))
+    assert return_.gen(2) == "        return foo"

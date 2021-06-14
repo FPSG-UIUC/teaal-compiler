@@ -12,7 +12,7 @@ def test_peek_rank0():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[] = b")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
     graph = IterationGraph(mapping)
 
     tensor = Tensor(TensorParser.parse("A[]"))
@@ -27,7 +27,7 @@ def test_peek_default():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
     graph = IterationGraph(mapping)
 
     results = ["A[I, J]", "B[I, K]"]
@@ -43,7 +43,7 @@ def test_peek_order():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {"A": ["J", "K", "I"]})
+    mapping.add_einsum(tree, {"A": ["J", "K", "I"]}, {})
     for tensor in mapping.get_tensors():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)
@@ -54,6 +54,8 @@ def test_peek_order():
 
     assert graph.peek() == ("j", results)
 
+# TODO: Add peek partitioning
+
 
 def test_pop_default():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
@@ -61,7 +63,7 @@ def test_pop_default():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {})
+    mapping.add_einsum(tree, {}, {})
     graph = IterationGraph(mapping)
 
     A = Tensor(TensorParser.parse("A[I, J]"))
@@ -81,7 +83,7 @@ def test_pop_order():
     mapping = Mapping(tensors, [])
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {"A": ["J", "K", "I"]})
+    mapping.add_einsum(tree, {"A": ["J", "K", "I"]}, {})
     for tensor in mapping.get_tensors():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)
@@ -95,3 +97,5 @@ def test_pop_order():
     assert graph.pop() == ("k", [B, C])
     assert graph.pop() == ("i", [A, B])
     assert graph.peek() == (None, [C, A, B])
+
+# TODO: Add pop partitioning

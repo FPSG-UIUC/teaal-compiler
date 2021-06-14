@@ -27,7 +27,10 @@ class Translator:
 
         program = SBlock([])
         for einsum in input_.get_expressions():
-            mapping.add_einsum(einsum, input_.get_loop_orders())
+            mapping.add_einsum(
+                einsum,
+                input_.get_loop_orders(),
+                input_.get_partitioning())
             program.add(Header.make_header(mapping))
 
             graph = IterationGraph(mapping)
