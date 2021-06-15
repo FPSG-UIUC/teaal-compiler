@@ -3,10 +3,8 @@ Translate the footer below the loop nest
 """
 from typing import cast
 
-from es2hfa.hfa.arg import AParam
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EInt, EMethod, EString, EVar
-from es2hfa.hfa.stmt import SAssign, SBlock
+from es2hfa.hfa.base import Statement
+from es2hfa.hfa.stmt import SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.trans.partitioning import Partitioner
 from es2hfa.trans.utils import Utils

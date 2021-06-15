@@ -4,9 +4,8 @@ Translate the header above the HFA loop nest
 
 from typing import cast
 
-from es2hfa.hfa.arg import AParam
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EFunc, EList, EMethod, EString
+from es2hfa.hfa.base import Expression, Statement
+from es2hfa.hfa.expr import EFunc, EMethod
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
