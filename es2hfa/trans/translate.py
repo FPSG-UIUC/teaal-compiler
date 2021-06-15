@@ -10,6 +10,7 @@ from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.mapping import Mapping
 from es2hfa.parse.input import Input
 from es2hfa.trans.equation import Equation
+from es2hfa.trans.footer import Footer
 from es2hfa.trans.header import Header
 
 
@@ -27,15 +28,22 @@ class Translator:
 
         program = SBlock([])
         for einsum in input_.get_expressions():
+            # Add Einsum to mapping
             mapping.add_einsum(
                 einsum,
                 input_.get_loop_orders(),
                 input_.get_partitioning())
+
+            # Build the header
             program.add(Header.make_header(mapping))
 
+            # Build the loop nests
             graph = IterationGraph(mapping)
             eqn = Equation(einsum)
             program.add(Translator.__build_loop_nest(graph, eqn))
+
+            # Build the footer
+            program.add(Footer.make_footer(mapping))
 
             mapping.reset()
 

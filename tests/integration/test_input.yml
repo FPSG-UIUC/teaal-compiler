@@ -15,6 +15,7 @@ mapping:
         - Z[N, M]
     loop-order:
         T1: [K, N, M]
+        Z: [M2, N2, M1, N1, M0, N0]
     partitioning:
         Z:
             M: [uniform_shape(4), uniform_shape(2)]

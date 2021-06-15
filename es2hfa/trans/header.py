@@ -4,13 +4,13 @@ Translate the header above the HFA loop nest
 
 from typing import cast
 
-from es2hfa.hfa.arg import AParam
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EFunc, EList, EMethod, EString
+from es2hfa.hfa.base import Expression, Statement
+from es2hfa.hfa.expr import EFunc, EMethod
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.partitioning import Partitioner
+from es2hfa.trans.utils import Utils
 
 
 class Header:
@@ -30,10 +30,8 @@ class Header:
 
         # First, create the output tensor
         output = mapping.get_output()
-        out_constr = cast(
-            Expression, EFunc(
-                "Tensor", [
-                    Header._build_rank_ids(output)]))
+        out_arg = Utils.build_rank_ids(output)
+        out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
         out_assn = SAssign(output.tensor_name(), out_constr)
         header.add(cast(Statement, out_assn))
 
@@ -55,28 +53,11 @@ class Header:
 
             # Emit code to perform the swizzle if necessary
             if old_name != new_name:
-                arg = Header._build_rank_ids(tensor)
-                swizzle_call = cast(
-                    Expression, EMethod(
-                        old_name, "swizzleRanks", [arg]))
-                header.add(cast(Statement, SAssign(new_name, swizzle_call)))
+                header.add(Utils.build_swizzle(tensor, old_name))
 
             # Emit code to get the root fiber
             get_root_call = cast(Expression, EMethod(new_name, "getRoot", []))
-            header.add(
-                cast(
-                    Statement,
-                    SAssign(
-                        tensor.fiber_name(),
-                        get_root_call)))
+            fiber_name = tensor.fiber_name()
+            header.add(cast(Statement, SAssign(fiber_name, get_root_call)))
 
         return cast(Statement, header)
-
-    @staticmethod
-    def _build_rank_ids(tensor: Tensor) -> Argument:
-        """
-        Build the rank_ids argument
-        """
-        ranks = [cast(Expression, EString(ind)) for ind in tensor.get_inds()]
-        arg = AParam("rank_ids", cast(Expression, EList(ranks)))
-        return cast(Argument, arg)

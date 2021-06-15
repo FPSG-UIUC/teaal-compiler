@@ -72,6 +72,11 @@ def test_reset():
     assert tensor == Tensor(TensorParser.parse("A[I, J, K]"))
     assert tensor.fiber_name() == "a_i"
 
+    tensor.partition({"J": make_uniform_shape([4])})
+    tensor.reset()
+
+    assert tensor == Tensor(TensorParser.parse("A[I, J, K]"))
+
 
 def test_root_name():
     tree = TensorParser.parse("A[I, J]")

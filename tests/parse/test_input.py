@@ -24,7 +24,10 @@ def test_expressions():
 
 def test_loop_orders():
     input_ = Input("tests/integration/test_input.yml")
-    assert input_.get_loop_orders() == {"T1": ["K", "N", "M"]}
+    assert input_.get_loop_orders() == {
+        "T1": [
+            "K", "N", "M"], "Z": [
+            "M2", "N2", "M1", "N1", "M0", "N0"]}
 
 
 def test_loop_orders_missing():
