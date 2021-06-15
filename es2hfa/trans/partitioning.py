@@ -52,11 +52,14 @@ class Partitioner:
                 if part.data == "uniform_shape":
                     block.add(self._uniform_shape(part, i + j))
 
-        # Finally, rename the tensor
+        # Rename the tensor
         self.mapping.apply_partitioning(tensor)
         part_name = tensor.tensor_name()
         tmp_expr = cast(Expression, EVar("tmp"))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
+
+        # Rename the rank_ids
+        block.add(Utils.build_set_rank_ids(tensor))
 
         return cast(Statement, block)
 

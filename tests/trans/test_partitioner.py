@@ -30,7 +30,8 @@ def test_uniform_shape():
     hfa = "tmp = C_JK\n" + \
           "tmp = tmp.splitUniform(6, depth=1)\n" + \
           "tmp = tmp.splitUniform(3, depth=2)\n" + \
-          "C_JK2K1K0 = tmp"
+          "C_JK2K1K0 = tmp\n" + \
+          "C_JK2K1K0.setRankIds(rank_ids=[\"J\", \"K2\", \"K1\", \"K0\"])"
 
     partitioner = Partitioner(mapping)
     assert partitioner.partition(Tensor(tensors[2])).gen(depth=0) == hfa

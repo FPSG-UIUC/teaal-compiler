@@ -52,6 +52,7 @@ def test_translate_specified():
           "tmp = tmp.splitUniform(6, depth=0)\n" + \
           "tmp = tmp.splitUniform(3, depth=1)\n" + \
           "Z_N2N1N0M2M1M0 = tmp\n" + \
+          "Z_N2N1N0M2M1M0.setRankIds(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
           "Z_M2N2M1N1M0N0 = Z_N2N1N0M2M1M0.swizzleRanks(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
           "z_m2 = Z_M2N2M1N1M0N0.getRoot()\n" + \
           "tmp = T1_MN\n" + \
@@ -60,6 +61,7 @@ def test_translate_specified():
           "tmp = tmp.splitUniform(4, depth=0)\n" + \
           "tmp = tmp.splitUniform(2, depth=1)\n" + \
           "T1_M2M1M0N2N1N0 = tmp\n" + \
+          "T1_M2M1M0N2N1N0.setRankIds(rank_ids=[\"M2\", \"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
           "T1_M2N2M1N1M0N0 = T1_M2M1M0N2N1N0.swizzleRanks(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
           "t1_m2 = T1_M2N2M1N1M0N0.getRoot()\n" + \
           "tmp = C_NM\n" + \
@@ -68,6 +70,7 @@ def test_translate_specified():
           "tmp = tmp.splitUniform(6, depth=0)\n" + \
           "tmp = tmp.splitUniform(3, depth=1)\n" + \
           "C_N2N1N0M2M1M0 = tmp\n" + \
+          "C_N2N1N0M2M1M0.setRankIds(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
           "C_M2N2M1N1M0N0 = C_N2N1N0M2M1M0.swizzleRanks(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
           "c_m2 = C_M2N2M1N1M0N0.getRoot()\n" + \
           "for m2, (z_n2, (_, t1_n2, c_n2)) in z_m2 << (t1_m2 | c_m2):\n" + \
@@ -85,5 +88,4 @@ def test_translate_specified():
           "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
           "Z_NM = tmp\n" + \
           "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
-
     assert Translator.translate(input_).gen(depth=0) == hfa

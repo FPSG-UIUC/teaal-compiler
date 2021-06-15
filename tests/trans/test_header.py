@@ -53,17 +53,20 @@ def test_make_header_partitioned():
           "tmp = A_IJ\n" + \
           "tmp = tmp.splitUniform(5, depth=0)\n" + \
           "A_I1I0J = tmp\n" + \
+          "A_I1I0J.setRankIds(rank_ids=[\"I1\", \"I0\", \"J\"])\n" + \
           "a_i1 = A_I1I0J.getRoot()\n" + \
           "tmp = B_IK\n" + \
           "tmp = tmp.splitUniform(6, depth=1)\n" + \
           "tmp = tmp.splitUniform(3, depth=2)\n" + \
           "tmp = tmp.splitUniform(5, depth=0)\n" + \
           "B_I1I0K2K1K0 = tmp\n" + \
+          "B_I1I0K2K1K0.setRankIds(rank_ids=[\"I1\", \"I0\", \"K2\", \"K1\", \"K0\"])\n" + \
           "b_i1 = B_I1I0K2K1K0.getRoot()\n" + \
           "tmp = C_JK\n" + \
           "tmp = tmp.splitUniform(6, depth=1)\n" + \
           "tmp = tmp.splitUniform(3, depth=2)\n" + \
           "C_JK2K1K0 = tmp\n" + \
+          "C_JK2K1K0.setRankIds(rank_ids=[\"J\", \"K2\", \"K1\", \"K0\"])\n" + \
           "c_j = C_JK2K1K0.getRoot()"
 
     assert Header.make_header(mapping).gen(depth=0) == hfa
