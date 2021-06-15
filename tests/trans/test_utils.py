@@ -8,7 +8,13 @@ def test_build_rank_ids():
     assert Utils.build_rank_ids(tensor).gen() == "rank_ids=[\"I\", \"J\"]"
 
 
+def test_build_set_rank_ids():
+    tensor = Tensor(TensorParser.parse("A[I, J]"))
+    hfa = "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
+    assert Utils.build_set_rank_ids(tensor).gen(0) == hfa
+
+
 def test_build_swizzle():
     new = Tensor(TensorParser.parse("A[J, I]"))
     hfa = "A_JI = A_IJ.swizzleRanks(rank_ids=[\"J\", \"I\"])"
-    assert Utils.build_swizzle(new, "A_IJ").gen(depth=0) == hfa
+    assert Utils.build_swizzle(new, "A_IJ").gen(0) == hfa

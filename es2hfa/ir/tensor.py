@@ -82,7 +82,7 @@ class Tensor:
         Reset the tensor to its initial state
         """
         self.ind_ptr = 0
-        self.inds = self.init_inds
+        self.inds = self.init_inds.copy()
         self.is_output = False
 
     def root_name(self) -> str:

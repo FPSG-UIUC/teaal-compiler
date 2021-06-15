@@ -55,7 +55,6 @@ def test_peek_order():
     assert graph.peek() == ("j", results)
 
 
-
 def test_pop_default():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
@@ -96,4 +95,3 @@ def test_pop_order():
     assert graph.pop() == ("k", [B, C])
     assert graph.pop() == ("i", [A, B])
     assert graph.peek() == (None, [C, A, B])
-

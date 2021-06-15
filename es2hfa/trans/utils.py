@@ -7,7 +7,7 @@ from typing import cast
 from es2hfa.hfa.arg import AParam
 from es2hfa.hfa.base import Argument, Expression, Statement
 from es2hfa.hfa.expr import EList, EMethod, EString
-from es2hfa.hfa.stmt import SAssign
+from es2hfa.hfa.stmt import SAssign, SExpr
 from es2hfa.ir.tensor import Tensor
 
 
@@ -24,7 +24,7 @@ class Utils:
     @staticmethod
     def build_swizzle(tensor: Tensor, old_name: str) -> Statement:
         """
-        Build the swizzleRanks function
+        Build the swizzleRanks() function
         """
         arg = Utils.build_rank_ids(tensor)
         swizzle_call = cast(
@@ -34,3 +34,12 @@ class Utils:
                 "swizzleRanks",
                 [arg]))
         return cast(Statement, SAssign(tensor.tensor_name(), swizzle_call))
+
+    @staticmethod
+    def build_set_rank_ids(tensor: Tensor) -> Statement:
+        """
+        Build the setRankIds() function
+        """
+        arg = Utils.build_rank_ids(tensor)
+        set_call = EMethod(tensor.tensor_name(), "setRankIds", [arg])
+        return cast(Statement, SExpr(cast(Expression, set_call)))
