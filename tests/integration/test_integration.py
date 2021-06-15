@@ -9,7 +9,24 @@ def read_hfa(filename):
     return data
 
 
-test_names = ['example', 'gemm']
+test_names = [
+    'dotprod',
+    'example',
+    'example2',
+    'example3',
+    'example4',
+    'example5',
+    'gemm',
+    'gemv',
+    'gram',
+    'mttkrp',
+    'outerprod',
+    'sddmm',
+    'spmv',
+    'ttm',
+    'ttv']
+
+# TODO: example6, example7, nrm_sq, spmm
 
 
 def test_integration():
@@ -19,5 +36,7 @@ def test_integration():
         hfa = read_hfa(filename + ".hfa")
         output = Translator.translate(input_).gen(
             depth=0)
+        if(output != hfa):
+            print(output)
         assert output == hfa, test_names[i] + " :integration test failed!\n" + \
             "output:\n" + output + "\n" + "expected:\n" + hfa

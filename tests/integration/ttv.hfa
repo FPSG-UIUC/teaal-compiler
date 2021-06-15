@@ -1,7 +1,8 @@
+Z_MN = Tensor(rank_ids=["M", "N"])
+z_m = Z_MN.getRoot()
 a_m = A_MNK.getRoot()
 b_k = B_K.getRoot()
-z_m = Z_MN.getRoot()
 for m, (z_n, a_n) in z_m << a_m:
     for n, (z_ref, a_k) in z_n << a_n:
-        for k, (a_val, b_val) in (a_k & b_k):
+        for k, (b_val, a_val) in b_k & a_k:
             z_ref += a_val * b_val
