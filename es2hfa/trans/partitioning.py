@@ -7,10 +7,11 @@ from lark.tree import Tree
 
 from es2hfa.hfa.arg import AJust, AParam
 from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EInt, EMethod, EVar
+from es2hfa.hfa.expr import EInt, EMethod, EString, EVar
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
+from es2hfa.trans.utils import Utils
 
 
 class Partitioner:
@@ -56,6 +57,54 @@ class Partitioner:
         part_name = tensor.tensor_name()
         tmp_expr = cast(Expression, EVar("tmp"))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
+
+        return cast(Statement, block)
+
+    def unpartition(self, tensor: Tensor) -> Statement:
+        """
+        Unpartition the given tensor
+        """
+        # Get the tensor names
+        part_name = tensor.tensor_name()
+        tensor.reset()
+        new_name = tensor.tensor_name()
+
+        # Get the partitioning
+        partitioning = self.mapping.get_partitioning(tensor)
+
+        # If there was no partitioning, there is nothing to undo
+        block = SBlock([])
+        if not partitioning:
+            return cast(Statement, block)
+
+        # Switch to name tmp
+        part_name_expr = cast(Expression, EVar(part_name))
+        block.add(cast(Statement, SAssign("tmp", part_name_expr)))
+
+        # For each dimension
+        for i, ind in enumerate(tensor.get_inds()):
+            if ind not in partitioning.keys():
+                continue
+
+            # TODO: Replace with a single call
+            # Flatten the rank if necessary
+            for _ in range(len(partitioning[ind])):
+                arg1 = AParam("depth", cast(Expression, EInt(i)))
+                arg2 = AParam("levels", cast(Expression, EInt(1)))
+                arg3 = AParam(
+                    "coord_style", cast(
+                        Expression, EString("absolute")))
+                args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
+
+                flat_call = EMethod("tmp", "flattenRanks", args)
+                flat_assn = SAssign("tmp", cast(Expression, flat_call))
+
+                block.add(cast(Statement, flat_assn))
+
+        # Switch back to tensor name and rename the rank_ids
+        tmp_name_expr = cast(Expression, EVar("tmp"))
+        block.add(cast(Statement, SAssign(new_name, tmp_name_expr)))
+        block.add(Utils.build_set_rank_ids(tensor))
 
         return cast(Statement, block)
 

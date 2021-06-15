@@ -34,3 +34,45 @@ def test_uniform_shape():
 
     partitioner = Partitioner(mapping)
     assert partitioner.partition(Tensor(tensors[2])).gen(depth=0) == hfa
+
+
+def assert_unpartition(part, hfa):
+    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
+    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    mapping = Mapping(tensors, [])
+
+    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
+    mapping.add_einsum(tree, {}, part)
+
+    mapping.apply_partitioning(mapping.get_output())
+
+    partitioner = Partitioner(mapping)
+    assert partitioner.unpartition(mapping.get_output()).gen(0) == hfa
+
+
+def test_unpartition_none():
+    part = {"A": {"K": make_uniform_shape([6, 3])}}
+    hfa = ""
+    assert_unpartition(part, hfa)
+
+
+def test_unpartition_one():
+    part = {"A": {"J": make_uniform_shape([6, 3])}}
+    hfa = "tmp = A_IJ2J1J0\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "A_IJ = tmp\n" + \
+          "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
+    assert_unpartition(part, hfa)
+
+
+def test_unpartition_all():
+    part = {"A": {"I": make_uniform_shape(
+        [5]), "J": make_uniform_shape([6, 3])}}
+    hfa = "tmp = A_I1I0J2J1J0\n" + \
+          "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "A_IJ = tmp\n" + \
+          "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
+    assert_unpartition(part, hfa)

@@ -56,7 +56,7 @@ def test_make_footer_partitioned():
 
 
 def test_make_footer_all():
-    part = {"A": {"J": make_uniform_shape([3, 4])}}
+    part = {"A": {"J": make_uniform_shape([6, 3])}}
     loop_order = {"A": ["J2", "J1", "I", "J0", "K"]}
     hfa = "A_IJ2J1J0 = A_J2J1IJ0.swizzleRanks(rank_ids=[\"I\", \"J2\", \"J1\", \"J0\"])\n" + \
           "tmp = A_IJ2J1J0\n" + \
