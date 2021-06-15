@@ -11,4 +11,8 @@ einsum:
 mapping:
     partitioning:
         T1:
-            K: [uniform_shape(5)]
+            K: [uniform_shape(3)]
+            M: [uniform_shape(2)]
+    loop-order:
+        T1: [K1, M1, N, K0, M0]
+        Z: [N, M]
