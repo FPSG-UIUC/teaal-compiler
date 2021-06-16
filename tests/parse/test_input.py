@@ -37,7 +37,7 @@ def test_loop_orders_missing():
 
 def test_no_mapping():
     input_ = Input("tests/integration/test_input_no_mapping.yml")
-    assert input_.get_rank_orders() == []
+    assert input_.get_rank_orders() == {}
     assert input_.get_loop_orders() == {}
     assert input_.get_partitioning() == {}
 
@@ -59,12 +59,12 @@ def test_rank_orders():
     input_ = Input("tests/integration/test_input.yml")
 
     tensors = ["A[M, K]", "C[N, M]", "Z[N, M]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
+    tensors = {"A": ["M", "K"], "C": ["N", "M"], "Z": ["N", "M"]}
 
     assert input_.get_rank_orders() == tensors
 
 
 def test_rank_orders_missing():
     input_ = Input("tests/integration/test_input_no_rank_order.yml")
-    tensors = []
+    tensors = {}
     assert input_.get_rank_orders() == tensors

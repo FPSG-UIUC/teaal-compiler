@@ -83,8 +83,13 @@ class Input:
         """
         return self.partitioning
 
-    def get_rank_orders(self) -> List[Tree]:
+    def get_rank_orders(self) -> Dict[str, List[str]]:
         """
         Get any rank orders specified
         """
-        return self.rank_orders
+        orders = {}
+        for order in self.rank_orders:
+            values = list(order.scan_values(lambda _: True))
+            orders[values[0]] = values[1:]
+
+        return orders

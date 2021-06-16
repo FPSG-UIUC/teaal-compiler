@@ -9,7 +9,7 @@ from es2hfa.parse.tensor import TensorParser
 
 def test_peek_rank0():
     tensors = [TensorParser.parse("A[]")]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[] = b")
     mapping.add_einsum(tree, {}, {})
@@ -24,7 +24,7 @@ def test_peek_rank0():
 def test_peek_default():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, {})
@@ -41,7 +41,7 @@ def test_peek_default():
 def test_peek_order():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {"A": ["J", "K", "I"]}, {})
@@ -60,7 +60,7 @@ def test_peek_order():
 def test_pop_default():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, {})
@@ -80,7 +80,7 @@ def test_pop_default():
 def test_pop_order():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {"A": ["J", "K", "I"]}, {})

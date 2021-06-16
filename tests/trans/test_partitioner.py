@@ -9,7 +9,7 @@ from tests.utils.parse_tree import make_uniform_shape
 def test_no_partitioning():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, {})
@@ -22,7 +22,7 @@ def test_no_partitioning():
 def test_uniform_shape():
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(
@@ -42,7 +42,7 @@ def test_uniform_shape():
 def assert_unpartition(part, hfa):
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, part)
