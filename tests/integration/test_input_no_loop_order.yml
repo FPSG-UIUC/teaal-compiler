@@ -10,9 +10,9 @@ einsum:
         - Z[m, n] = T1[m, n] + C[m, n]
 mapping:
     rank-order:
-        - A[M, K]
-        - C[N, M]
-        - Z[N, M]
+        A: [M, K]
+        C: [N, M]
+        Z: [N, M]
     partitioning:
         Z:
             M: [uniform_shape(4), uniform_shape(2)]

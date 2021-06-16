@@ -32,6 +32,7 @@ test_names = [
 def test_integration():
     for i in range(len(test_names)):
         filename = 'tests/integration/' + test_names[i]
+        print(test_names[i])
         input_ = Input(filename + ".yml")
         hfa = read_hfa(filename + ".hfa")
         output = Translator.translate(input_).gen(

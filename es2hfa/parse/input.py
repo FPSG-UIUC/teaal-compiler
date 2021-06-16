@@ -33,11 +33,11 @@ class Input:
         # If a mapping exists, parse the mapping
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
+
             if "rank-order" in mapping.keys():
-                self.rank_orders = [TensorParser.parse(
-                    tensor) for tensor in mapping["rank-order"]]
+                self.rank_orders = mapping["rank-order"]
             else:
-                self.rank_orders = []
+                self.rank_orders = {}
 
             if "loop-order" in mapping.keys():
                 self.loop_orders = mapping["loop-order"]
@@ -54,7 +54,7 @@ class Input:
                             self.partitioning[tensor][ind].append(
                                 PartitioningParser.parse(part))
         else:
-            self.rank_orders = []
+            self.rank_orders = {}
             self.loop_orders = {}
             self.partitioning = {}
 
@@ -87,9 +87,4 @@ class Input:
         """
         Get any rank orders specified
         """
-        orders = {}
-        for order in self.rank_orders:
-            values = list(order.scan_values(lambda _: True))
-            orders[values[0]] = values[1:]
-
-        return orders
+        return self.rank_orders

@@ -5,6 +5,3 @@ einsum:
         - Z[M, N]
     expressions:
         - Z[m, n] = A[m] * B[n]
-mapping:
-    rank-order:
-        - Z[N, M]
