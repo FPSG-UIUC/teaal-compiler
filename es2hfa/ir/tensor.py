@@ -11,7 +11,20 @@ class Tensor:
     Intermediate representation for a tensor
     """
 
-    def __init__(self, tree: Tree) -> None:
+    def __init__(self, name: str, inds: List[str]) -> None:
+        """
+        Construct a new tensor from a name and list of indices
+        """
+        self.name = name
+        self.inds = inds
+        self.init_inds = self.inds.copy()
+
+        # Set the index pointer and output status
+        self.ind_ptr = 0
+        self.is_output = False
+
+    @classmethod
+    def from_tree(cls, tree: Tree) -> "Tensor":
         """
         Construct a new Tensor from its parse tree
         """
@@ -20,13 +33,9 @@ class Tensor:
 
         # Extract the name and indices
         values = list(tree.scan_values(lambda _: True))
-        self.name = values[0]
-        self.inds = values[1:]
-        self.init_inds = self.inds.copy()
 
-        # Set the index pointer and output status
-        self.ind_ptr = 0
-        self.is_output = False
+        # Construct a new tensor
+        return cls(values[0], values[1:])
 
     def fiber_name(self) -> str:
         """

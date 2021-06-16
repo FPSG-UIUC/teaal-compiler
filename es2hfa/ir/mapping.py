@@ -24,12 +24,12 @@ class Mapping:
         # Get all tensors
         self.tensors = {}
         for declared in declaration:
-            tensor = Tensor(declared)
+            tensor = Tensor.from_tree(declared)
             self.tensors[tensor.root_name()] = tensor
 
         # Replace the tensors whose rank order is specified
         for ordered in rank_orders:
-            tensor = Tensor(ordered)
+            tensor = Tensor.from_tree(ordered)
             if tensor.root_name() not in self.tensors.keys():
                 raise ValueError("Undeclared tensor: " + tensor.root_name())
 

@@ -15,7 +15,8 @@ def test_no_partitioning():
     mapping.add_einsum(tree, {}, {})
 
     partitioner = Partitioner(mapping)
-    assert partitioner.partition(Tensor(tensors[1])).gen(depth=0) == ""
+    tensor = Tensor.from_tree(tensors[1])
+    assert partitioner.partition(tensor).gen(depth=0) == ""
 
 
 def test_uniform_shape():
@@ -34,7 +35,8 @@ def test_uniform_shape():
           "C_JK2K1K0.setRankIds(rank_ids=[\"J\", \"K2\", \"K1\", \"K0\"])"
 
     partitioner = Partitioner(mapping)
-    assert partitioner.partition(Tensor(tensors[2])).gen(depth=0) == hfa
+    tensor = Tensor.from_tree(tensors[2])
+    assert partitioner.partition(tensor).gen(depth=0) == hfa
 
 
 def assert_unpartition(part, hfa):

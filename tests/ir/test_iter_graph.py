@@ -15,7 +15,7 @@ def test_peek_rank0():
     mapping.add_einsum(tree, {}, {})
     graph = IterationGraph(mapping)
 
-    tensor = Tensor(TensorParser.parse("A[]"))
+    tensor = Tensor.from_tree(TensorParser.parse("A[]"))
     tensor.set_is_output(True)
 
     assert graph.peek() == (None, [tensor])
@@ -31,7 +31,8 @@ def test_peek_default():
     graph = IterationGraph(mapping)
 
     results = ["A[I, J]", "B[I, K]"]
-    results = [Tensor(TensorParser.parse(tensor)) for tensor in results]
+    results = [Tensor.from_tree(TensorParser.parse(tensor))
+               for tensor in results]
     results[0].set_is_output(True)
 
     assert graph.peek() == ("i", results)
@@ -49,7 +50,8 @@ def test_peek_order():
     graph = IterationGraph(mapping)
 
     results = ["A[J, I]", "C[J, K]"]
-    results = [Tensor(TensorParser.parse(tensor)) for tensor in results]
+    results = [Tensor.from_tree(TensorParser.parse(tensor))
+               for tensor in results]
     results[0].set_is_output(True)
 
     assert graph.peek() == ("j", results)
@@ -64,10 +66,10 @@ def test_pop_default():
     mapping.add_einsum(tree, {}, {})
     graph = IterationGraph(mapping)
 
-    A = Tensor(TensorParser.parse("A[I, J]"))
+    A = Tensor.from_tree(TensorParser.parse("A[I, J]"))
     A.set_is_output(True)
-    B = Tensor(TensorParser.parse("B[I, K]"))
-    C = Tensor(TensorParser.parse("C[J, K]"))
+    B = Tensor.from_tree(TensorParser.parse("B[I, K]"))
+    C = Tensor.from_tree(TensorParser.parse("C[J, K]"))
 
     assert graph.pop() == ("i", [A, B])
     assert graph.pop() == ("j", [C, A])
@@ -86,10 +88,10 @@ def test_pop_order():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)
 
-    A = Tensor(TensorParser.parse("A[J, I]"))
+    A = Tensor.from_tree(TensorParser.parse("A[J, I]"))
     A.set_is_output(True)
-    B = Tensor(TensorParser.parse("B[K, I]"))
-    C = Tensor(TensorParser.parse("C[J, K]"))
+    B = Tensor.from_tree(TensorParser.parse("B[K, I]"))
+    C = Tensor.from_tree(TensorParser.parse("C[J, K]"))
 
     assert graph.pop() == ("j", [A, C])
     assert graph.pop() == ("k", [B, C])

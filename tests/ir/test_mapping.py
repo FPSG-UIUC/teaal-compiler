@@ -39,7 +39,7 @@ def test_apply_loop_order_unconfigured():
     mapping = Mapping(tensors, [])
 
     with pytest.raises(ValueError) as excinfo:
-        mapping.apply_loop_order(Tensor(tensors[0]))
+        mapping.apply_loop_order(Tensor.from_tree(tensors[0]))
     assert str(
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
 
@@ -53,7 +53,7 @@ def test_apply_loop_order_default():
     mapping.add_einsum(tree, {}, {})
     mapping.apply_loop_order(mapping.get_tensors()[2])
 
-    C = Tensor(TensorParser.parse("C[J, K]"))
+    C = Tensor.from_tree(TensorParser.parse("C[J, K]"))
     assert mapping.get_tensors()[2] == C
 
 
@@ -66,7 +66,7 @@ def test_apply_loop_order_ordered():
     mapping.add_einsum(tree, {"A": ["K", "J", "I"]}, {})
     mapping.apply_loop_order(mapping.get_tensors()[2])
 
-    C = Tensor(TensorParser.parse("C[K, J]"))
+    C = Tensor.from_tree(TensorParser.parse("C[K, J]"))
     assert mapping.get_tensors()[2] == C
 
 
@@ -75,7 +75,7 @@ def test_apply_partitioning_unconfigured():
     mapping = Mapping(tensors, [])
 
     with pytest.raises(ValueError) as excinfo:
-        mapping.apply_partitioning(Tensor(tensors[0]))
+        mapping.apply_partitioning(Tensor.from_tree(tensors[0]))
     assert str(
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
 
@@ -89,7 +89,7 @@ def test_apply_partitioning_default():
     mapping.add_einsum(tree, {}, {})
     mapping.apply_partitioning(mapping.get_tensors()[2])
 
-    C = Tensor(TensorParser.parse("C[K, J]"))
+    C = Tensor.from_tree(TensorParser.parse("C[K, J]"))
     assert mapping.get_tensors()[2] == C
 
 
@@ -103,7 +103,7 @@ def test_apply_partitiong_mapped():
         tree, {}, {"A": {"I": make_uniform_shape([4]), "K": make_uniform_shape([6, 3])}})
     mapping.apply_partitioning(mapping.get_tensors()[2])
 
-    C = Tensor(TensorParser.parse("C[J, K2, K1, K0]"))
+    C = Tensor.from_tree(TensorParser.parse("C[J, K2, K1, K0]"))
     assert mapping.get_tensors()[2] == C
 
 
@@ -169,7 +169,7 @@ def test_get_output():
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, {})
 
-    result = Tensor(tensors[1])
+    result = Tensor.from_tree(tensors[1])
     result.set_is_output(True)
 
     assert mapping.get_output() == result
@@ -180,7 +180,7 @@ def test_get_partitioning_unconfigured():
     mapping = Mapping(tensors, [])
 
     with pytest.raises(ValueError) as excinfo:
-        mapping.get_partitioning(Tensor(tensors[0]))
+        mapping.get_partitioning(Tensor.from_tree(tensors[0]))
     assert str(
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
 
@@ -193,7 +193,7 @@ def test_get_partitioning_default():
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, {}, {})
 
-    assert mapping.get_partitioning(Tensor(tensors[2])) == {}
+    assert mapping.get_partitioning(Tensor.from_tree(tensors[2])) == {}
 
 
 def test_get_partitioning_mapped():
@@ -205,7 +205,7 @@ def test_get_partitioning_mapped():
     mapping.add_einsum(
         tree, {}, {"A": {"I": make_uniform_shape([4]), "K": make_uniform_shape([6, 3])}})
 
-    assert mapping.get_partitioning(Tensor(tensors[2])) == {
+    assert mapping.get_partitioning(Tensor.from_tree(tensors[2])) == {
         "K": make_uniform_shape([6, 3])}
 
 
@@ -227,9 +227,9 @@ def test_get_tensors():
     tree = EinsumParser.parse("A[] = C[]")
     mapping.add_einsum(tree, {}, {})
 
-    A = Tensor(TensorParser.parse("A[]"))
+    A = Tensor.from_tree(TensorParser.parse("A[]"))
     A.set_is_output(True)
-    C = Tensor(TensorParser.parse("C[]"))
+    C = Tensor.from_tree(TensorParser.parse("C[]"))
 
     assert mapping.get_tensors() == [A, C]
 
@@ -245,7 +245,8 @@ def test_get_tensors_ordered():
     mapping.add_einsum(tree, {}, {})
 
     results = ["A[J, I]", "B[I, K]", "C[K, J]"]
-    results = [Tensor(TensorParser.parse(result)) for result in results]
+    results = [Tensor.from_tree(TensorParser.parse(result))
+               for result in results]
     results[0].set_is_output(True)
 
     assert mapping.get_tensors() == results
@@ -272,7 +273,7 @@ def test_reset():
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
 
     with pytest.raises(ValueError) as excinfo:
-        mapping.get_partitioning(Tensor(orders[0]))
+        mapping.get_partitioning(Tensor.from_tree(orders[0]))
     assert str(
         excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
     with pytest.raises(ValueError) as excinfo:
@@ -283,7 +284,8 @@ def test_reset():
     mapping.add_einsum(tree, {}, {})
 
     results = ["A[J, I]", "B[I, K]", "C[K, J]"]
-    results = [Tensor(TensorParser.parse(result)) for result in results]
+    results = [Tensor.from_tree(TensorParser.parse(result))
+               for result in results]
     results[0].set_is_output(True)
 
     assert mapping.get_tensors() == results

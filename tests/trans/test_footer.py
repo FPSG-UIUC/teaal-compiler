@@ -31,7 +31,7 @@ def test_output_still_output():
     mapping = assert_make_footer({}, {}, "")
     output = mapping.get_output()
 
-    desired = Tensor(TensorParser.parse("A[I, J]"))
+    desired = Tensor.from_tree(TensorParser.parse("A[I, J]"))
     desired.set_is_output(True)
 
     assert output == desired
