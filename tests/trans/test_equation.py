@@ -11,7 +11,7 @@ from tests.utils.parse_tree import make_plus
 def make_basic():
     tensors = ["A[]", "B[I]", "C[I]", "D[I]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
     mapping.add_einsum(tree, {}, {})
@@ -22,7 +22,7 @@ def make_basic():
 def make_output():
     tensors = ["A[I]", "B[I]", "C[I]", "D[I]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i] = sum(I).(B[i] * C[i] * D[i])")
     mapping.add_einsum(tree, {}, {})
@@ -33,7 +33,7 @@ def make_output():
 def make_mult_terms():
     tensors = ["A[I]", "B[I]", "C[I]", "D[I]", "E[I]", "F[I]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i] + F[i]")
     mapping.add_einsum(tree, {}, {})

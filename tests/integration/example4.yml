@@ -8,5 +8,5 @@ einsum:
         - D[] = sum(I, J, K).(A[i, j, k] * B[i, j, k] * C[i, j, k])
 mapping:
     rank-order:
-        - B[J,K,I]
-        - C[J,K,I]
+        B: [J, K, I]
+        C: [J, K, I]

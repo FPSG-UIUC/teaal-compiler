@@ -30,13 +30,12 @@ test_names = [
 
 
 def test_integration():
-    for i in range(len(test_names)):
-        filename = 'tests/integration/' + test_names[i]
+    for test_name in test_names:
+        filename = 'tests/integration/' + test_name
+
         input_ = Input(filename + ".yml")
+        output = Translator.translate(input_).gen(depth=0)
+
         hfa = read_hfa(filename + ".hfa")
-        output = Translator.translate(input_).gen(
-            depth=0)
-        if(output != hfa):
-            print(output)
-        assert output == hfa, test_names[i] + " :integration test failed!\n" + \
-            "output:\n" + output + "\n" + "expected:\n" + hfa
+
+        assert output == hfa, test_name + " integration test failed!"

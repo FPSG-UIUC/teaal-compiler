@@ -9,7 +9,7 @@ from tests.utils.parse_tree import make_uniform_shape
 def assert_make_footer(loop_order, partitioning, hfa):
     tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, [])
+    mapping = Mapping(tensors, {})
 
     tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
     mapping.add_einsum(tree, loop_order, partitioning)
@@ -31,7 +31,7 @@ def test_output_still_output():
     mapping = assert_make_footer({}, {}, "")
     output = mapping.get_output()
 
-    desired = Tensor(TensorParser.parse("A[I, J]"))
+    desired = Tensor.from_tree(TensorParser.parse("A[I, J]"))
     desired.set_is_output(True)
 
     assert output == desired

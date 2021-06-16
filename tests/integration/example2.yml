@@ -7,4 +7,4 @@ einsum:
         - D[] = sum(I, J).(A[i, j] * B[i, j])
 mapping:
     rank-order:
-        - B[J, I]
+        B: [J, I]
