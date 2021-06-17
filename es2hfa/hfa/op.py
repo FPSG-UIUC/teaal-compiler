@@ -33,6 +33,19 @@ class OAnd:
 
 
 @Operator.register
+class OFDiv:
+    """
+    The HFA floor divide operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for the OFDiv operator
+        """
+        return "//"
+
+
+@Operator.register
 class OLtLt:
     """
     The HFA less-than less-than operator

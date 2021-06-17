@@ -11,6 +11,11 @@ def test_oand():
     assert and_.gen() == "&"
 
 
+def test_ofdiv():
+    fdiv = OFDiv()
+    assert fdiv.gen() == "//"
+
+
 def test_oltlt():
     ltlt = OLtLt()
     assert ltlt.gen() == "<<"

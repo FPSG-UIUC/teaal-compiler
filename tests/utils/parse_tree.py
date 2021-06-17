@@ -2,6 +2,11 @@ from lark.lexer import Token
 from lark.tree import Tree
 
 
+def make_divide_uniform(shapes):
+    return [Tree("divide_uniform", [Token("NUMBER", shape)])
+            for shape in shapes]
+
+
 def make_einsum(lhs, rhs):
     return Tree("einsum", [lhs, rhs])
 
