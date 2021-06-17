@@ -6,8 +6,9 @@ from typing import cast, Generator
 from lark.tree import Tree
 
 from es2hfa.hfa.arg import AJust, AParam
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EInt, EMethod, EString, EVar
+from es2hfa.hfa.base import Argument, Expression, Operator, Statement
+from es2hfa.hfa.expr import EBinOp, EInt, EMethod, EString, EVar
+from es2hfa.hfa.op import OFDiv
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
@@ -44,6 +45,7 @@ class Partitioner:
 
         # Emit the partitioning code
         for i, ind in reversed(list(enumerate(tensor.get_inds()))):
+            print(ind)
             # Continue if no partitioning across this dimension
             if ind not in partitioning.keys():
                 continue
@@ -51,6 +53,11 @@ class Partitioner:
             for j, part in enumerate(partitioning[ind]):
                 if part.data == "uniform_shape":
                     block.add(self._uniform_shape(part, i + j))
+                elif part.data == "divide_uniform":
+                    block.add(self._divide_uniform(ind, part, i))
+                else:
+                    raise ValueError(
+                        "Unknown partitioning style: " + part.data)
 
         # Rename the tensor
         self.mapping.apply_partitioning(tensor)
@@ -111,15 +118,30 @@ class Partitioner:
 
         return cast(Statement, block)
 
-    def _uniform_shape(self, part: Tree, depth: int) -> Statement:
+    def _divide_uniform(self, dim: str, part: Tree, depth: int) -> Statement:
         """
-        Partition with a uniform shape
-        """
-        # Build the shape
-        dim = cast(Generator, part.scan_values(lambda _: True))
-        arg1 = AJust(cast(Expression, EInt(next(dim))))
+        Partition into the given number of partitions in coordinate space
 
+        TODO: strange behavior if number of partitions is not a multiple of the
+        total size of the dimension
+        """
+        # Build the step
+        parts = next(cast(Generator, part.scan_values(lambda _: True)))
+        step = EBinOp(
+            cast(
+                Expression, EVar(dim)), cast(
+                Operator, OFDiv()), cast(
+                Expression, EInt(parts)))
+
+        # Build the splitUniform
+        return self._split_uniform(cast(Expression, step), depth)
+
+    def _split_uniform(self, step: Expression, depth: int) -> Statement:
+        """
+        Build a call to splitUniform
+        """
         # Build the depth and the arguments
+        arg1 = AJust(step)
         arg2 = AParam("depth", cast(Expression, EInt(depth)))
         args = [cast(Argument, arg1), cast(Argument, arg2)]
 
@@ -128,3 +150,13 @@ class Partitioner:
         part_assn = SAssign("tmp", cast(Expression, part_call))
 
         return cast(Statement, part_assn)
+
+    def _uniform_shape(self, part: Tree, depth: int) -> Statement:
+        """
+        Partition with a uniform shape
+        """
+        # Build the step
+        step = next(cast(Generator, part.scan_values(lambda _: True)))
+
+        # Build the splitUniform()
+        return self._split_uniform(cast(Expression, EInt(step)), depth)
