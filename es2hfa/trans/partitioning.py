@@ -45,7 +45,6 @@ class Partitioner:
 
         # Emit the partitioning code
         for i, ind in reversed(list(enumerate(tensor.get_inds()))):
-            print(ind)
             # Continue if no partitioning across this dimension
             if ind not in partitioning.keys():
                 continue
