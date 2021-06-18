@@ -20,6 +20,7 @@ test_names = [
     'gemv',
     'gram',
     'mttkrp',
+    'nrm_sq',
     'outerprod',
     'sddmm',
     'spmv',

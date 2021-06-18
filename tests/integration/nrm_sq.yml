@@ -4,5 +4,7 @@ einsum:
     declaration:
         - Q[]
         - V[A, B, I, J]
+        - T[A, B, I, J]
     expressions:
-        - Q[] = sum(A, B, I, J).(V[a, b, i, j] * V[a, b, i, j])
+        - T[a, b, i, j] = V[a, b, i, j]
+        - Q[] = sum(A, B, I, J).(V[a, b, i, j] * T[a, b, i, j])
