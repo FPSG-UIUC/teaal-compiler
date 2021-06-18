@@ -118,7 +118,7 @@ class EMethod:
 @Expression.register
 class EParens:
     """
-    An HFA expression surroounded by parentheses
+    An HFA expression surrounded by parentheses
     """
 
     def __init__(self, expr: Expression) -> None:
