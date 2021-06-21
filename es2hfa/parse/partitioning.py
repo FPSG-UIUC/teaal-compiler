@@ -12,7 +12,7 @@ class PartitioningParser:
     """
     grammar = """
         ?start: "uniform_shape(" NUMBER ")" -> uniform_shape
-              | "divide_uniform(" NUMBER ")" -> divide_uniform
+              | "nway_shape(" NUMBER ")" -> nway_shape
 
         %import common.SIGNED_NUMBER -> NUMBER
         %import common.WS_INLINE

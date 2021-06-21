@@ -9,6 +9,6 @@ def test_uniform_shape():
     assert PartitioningParser.parse("uniform_shape(5)") == tree
 
 
-def test_divide_uniform():
-    tree = Tree("divide_uniform", [Token("NUMBER", 7)])
-    assert PartitioningParser.parse("divide_uniform(7)") == tree
+def test_nway_shape():
+    tree = Tree("nway_shape", [Token("NUMBER", 7)])
+    assert PartitioningParser.parse("nway_shape(7)") == tree

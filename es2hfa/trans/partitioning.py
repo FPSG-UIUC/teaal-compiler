@@ -52,8 +52,8 @@ class Partitioner:
             for j, part in enumerate(partitioning[ind]):
                 if part.data == "uniform_shape":
                     block.add(self._uniform_shape(part, i + j))
-                elif part.data == "divide_uniform":
-                    block.add(self._divide_uniform(ind, part, i))
+                elif part.data == "nway_shape":
+                    block.add(self._nway_shape(ind, part, i))
                 else:
                     raise ValueError(
                         "Unknown partitioning style: " + part.data)
@@ -117,7 +117,7 @@ class Partitioner:
 
         return cast(Statement, block)
 
-    def _divide_uniform(self, dim: str, part: Tree, depth: int) -> Statement:
+    def _nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
         """
         Partition into the given number of partitions in coordinate space
 

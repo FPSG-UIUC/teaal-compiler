@@ -2,8 +2,8 @@ from lark.lexer import Token
 from lark.tree import Tree
 
 
-def make_divide_uniform(shapes):
-    return [Tree("divide_uniform", [Token("NUMBER", shape)])
+def make_nway_shape(shapes):
+    return [Tree("nway_shape", [Token("NUMBER", shape)])
             for shape in shapes]
 
 

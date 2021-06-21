@@ -5,7 +5,7 @@ from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.tensor import TensorParser
 from es2hfa.trans.partitioning import Partitioner
-from tests.utils.parse_tree import make_divide_uniform, make_var, make_uniform_shape
+from tests.utils.parse_tree import make_nway_shape, make_var, make_uniform_shape
 
 
 def assert_partition(tensor, parts, hfa):
@@ -38,10 +38,10 @@ def test_uniform_shape():
     assert_partition(tensor, parts, hfa)
 
 
-def test_divide_uniform():
+def test_nway_shape():
     tensor = Tensor("C", ["J", "K"])
-    parts = {"A": {"I": make_divide_uniform(
-        [5]), "K": make_divide_uniform([6, 3])}}
+    parts = {"A": {"I": make_nway_shape(
+        [5]), "K": make_nway_shape([6, 3])}}
     hfa = "tmp = C_JK\n" + \
           "tmp = tmp.splitUniform(K // 6, depth=1)\n" + \
           "tmp = tmp.splitUniform(K // 3, depth=1)\n" + \
