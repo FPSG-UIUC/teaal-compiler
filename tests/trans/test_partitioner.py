@@ -82,8 +82,7 @@ def test_unpartition_none():
 def test_unpartition_one():
     part = {"A": {"J": make_uniform_shape([6, 3])}}
     hfa = "tmp = A_IJ2J1J0\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "A_IJ = tmp\n" + \
           "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
     assert_unpartition(part, hfa)
@@ -94,8 +93,7 @@ def test_unpartition_all():
         [5]), "J": make_uniform_shape([6, 3])}}
     hfa = "tmp = A_I1I0J2J1J0\n" + \
           "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "A_IJ = tmp\n" + \
           "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
     assert_unpartition(part, hfa)

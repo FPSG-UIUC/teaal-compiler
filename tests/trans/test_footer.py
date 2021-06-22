@@ -48,8 +48,7 @@ def test_make_footer_partitioned():
         [5]), "J": make_uniform_shape([3, 4])}}
     hfa = "tmp = A_I1I0J2J1J0\n" + \
           "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "A_IJ = tmp\n" + \
           "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
     assert_make_footer({}, part, hfa)
@@ -60,8 +59,7 @@ def test_make_footer_all():
     loop_order = {"A": ["J2", "J1", "I", "J0", "K"]}
     hfa = "A_IJ2J1J0 = A_J2J1IJ0.swizzleRanks(rank_ids=[\"I\", \"J2\", \"J1\", \"J0\"])\n" + \
           "tmp = A_IJ2J1J0\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "A_IJ = tmp\n" + \
           "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
     assert_make_footer(loop_order, part, hfa)

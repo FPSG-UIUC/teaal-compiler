@@ -7,7 +7,6 @@
 ## Minor Changes
 
 - [ ] Add all other integration tests
-- [ ] Use one flattenRanks call per unpartitioned dimension
 - [ ] Use ruamel.yaml to parse YAML
 - [ ] Switch declaration to be in the same format as the rank order
 - [ ] Explicitly check for repeated indices in declared tensors
@@ -24,5 +23,4 @@
 
 ## Other
 
-- [ ] Fix HFA's `__truediv__` and `__floordiv__`
 - [ ] Add TensorMaker instruction notebook

@@ -95,20 +95,17 @@ class Partitioner:
             if ind not in partitioning.keys():
                 continue
 
-            # TODO: Replace with a single call
-            # Flatten the rank if necessary
-            for _ in range(len(partitioning[ind])):
-                arg1 = AParam("depth", cast(Expression, EInt(i)))
-                arg2 = AParam("levels", cast(Expression, EInt(1)))
-                arg3 = AParam(
-                    "coord_style", cast(
-                        Expression, EString("absolute")))
-                args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
+            # Flatten the rank
+            arg1 = AParam("depth", cast(Expression, EInt(i)))
+            arg2 = AParam("levels", cast(
+                Expression, EInt(len(partitioning[ind]))))
+            arg3 = AParam("coord_style", cast(Expression, EString("absolute")))
+            args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
 
-                flat_call = EMethod("tmp", "flattenRanks", args)
-                flat_assn = SAssign("tmp", cast(Expression, flat_call))
+            flat_call = EMethod("tmp", "flattenRanks", args)
+            flat_assn = SAssign("tmp", cast(Expression, flat_call))
 
-                block.add(cast(Statement, flat_assn))
+            block.add(cast(Statement, flat_assn))
 
         # Switch back to tensor name and rename the rank_ids
         tmp_name_expr = cast(Expression, EVar("tmp"))

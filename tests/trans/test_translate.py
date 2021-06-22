@@ -82,10 +82,8 @@ def test_translate_specified():
           "                        z_ref += t1_val + c_val\n" + \
           "Z_N2N1N0M2M1M0 = Z_M2N2M1N1M0N0.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
           "tmp = Z_N2N1N0M2M1M0\n" + \
-          "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "Z_NM = tmp\n" + \
           "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
     assert Translator.translate(input_).gen(depth=0) == hfa
