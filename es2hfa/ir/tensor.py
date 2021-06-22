@@ -15,6 +15,11 @@ class Tensor:
         """
         Construct a new tensor from a name and list of indices
         """
+        # Check for no repeated indices
+        if len(inds) > len(set(inds)):
+            bad_tensor = name + ": [" + ", ".join(inds) + "]"
+            raise ValueError("All indices must be unique; given " + bad_tensor)
+
         self.name = name
         self.inds = inds
         self.init_inds = self.inds.copy()

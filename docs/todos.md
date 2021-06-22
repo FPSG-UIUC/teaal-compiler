@@ -9,7 +9,6 @@
 - [ ] Add all other integration tests
 - [ ] Use ruamel.yaml to parse YAML
 - [ ] Switch declaration to be in the same format as the rank order
-- [ ] Explicitly check for repeated indices in declared tensors
 
 ## Major Changes
 

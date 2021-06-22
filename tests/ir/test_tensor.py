@@ -5,6 +5,14 @@ from es2hfa.parse.tensor import TensorParser
 from tests.utils.parse_tree import make_plus, make_uniform_shape
 
 
+def test_repeat_inds():
+    with pytest.raises(ValueError) as excinfo:
+        Tensor("A", ["I", "J", "I"])
+
+    assert str(
+        excinfo.value) == "All indices must be unique; given A: [I, J, I]"
+
+
 def test_bad_tree():
     tree = make_plus(["a", "b"])
     with pytest.raises(ValueError) as excinfo:
