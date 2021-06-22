@@ -7,8 +7,8 @@ from lark.tree import Tree
 
 from es2hfa.hfa.arg import AJust, AParam
 from es2hfa.hfa.base import Argument, Expression, Operator, Statement
-from es2hfa.hfa.expr import EBinOp, EInt, EMethod, EString, EVar
-from es2hfa.hfa.op import OFDiv
+from es2hfa.hfa.expr import EBinOp, EInt, EMethod, EParens, EString, EVar
+from es2hfa.hfa.op import OAdd, OFDiv, OSub
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
@@ -123,11 +123,19 @@ class Partitioner:
         """
         # Build the step
         parts = next(cast(Generator, part.scan_values(lambda _: True)))
-        step = EBinOp(
+
+        # Ceiling divide: (dim - 1) // parts + 1
+        dim_expr = cast(Expression, EVar(dim))
+        one_expr = cast(Expression, EInt(1))
+        parts_expr = cast(Expression, EInt(parts))
+
+        dim_one = EBinOp(dim_expr, cast(Operator, OSub()), one_expr)
+        parens_expr = cast(Expression, EParens(cast(Expression, dim_one)))
+        fdiv = EBinOp(
             cast(
-                Expression, EVar(dim)), cast(
-                Operator, OFDiv()), cast(
-                Expression, EInt(parts)))
+                Expression, parens_expr), cast(
+                Operator, OFDiv()), parts_expr)
+        step = EBinOp(cast(Expression, fdiv), cast(Operator, OAdd()), one_expr)
 
         # Build the splitUniform
         return self._split_uniform(cast(Expression, step), depth)

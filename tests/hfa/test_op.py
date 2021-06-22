@@ -29,3 +29,8 @@ def test_omul():
 def test_oor():
     or_ = OOr()
     assert or_.gen() == "|"
+
+
+def test_osub():
+    sub = OSub()
+    assert sub.gen() == "-"

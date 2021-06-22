@@ -82,3 +82,16 @@ class OOr:
         Generate the HFA code for the OOr operator
         """
         return "|"
+
+
+@Operator.register
+class OSub:
+    """
+    The HFA subtract operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for the OSub operator
+        """
+        return "-"

@@ -43,8 +43,8 @@ def test_nway_shape():
     parts = {"A": {"I": make_nway_shape(
         [5]), "K": make_nway_shape([6, 3])}}
     hfa = "tmp = C_JK\n" + \
-          "tmp = tmp.splitUniform(K // 6, depth=1)\n" + \
-          "tmp = tmp.splitUniform(K // 3, depth=1)\n" + \
+          "tmp = tmp.splitUniform((K - 1) // 6 + 1, depth=1)\n" + \
+          "tmp = tmp.splitUniform((K - 1) // 3 + 1, depth=1)\n" + \
           "C_JK2K1K0 = tmp\n" + \
           "C_JK2K1K0.setRankIds(rank_ids=[\"J\", \"K2\", \"K1\", \"K0\"])"
 
