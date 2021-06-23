@@ -34,7 +34,7 @@ def test_integration():
     for test_name in test_names:
         filename = 'tests/integration/' + test_name
 
-        input_ = Input(filename + ".yml")
+        input_ = Input.from_file(filename + ".yml")
         output = Translator.translate(input_).gen(depth=0)
 
         hfa = read_hfa(filename + ".hfa")

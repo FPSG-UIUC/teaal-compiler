@@ -10,8 +10,8 @@ einsum:
         - D[i] = sum(J).(C[i, j] + T1[i, j])
 mapping:
     rank-order:
-        - A[J, L, I]
-        - B[L, K]
+        A: [J, L, I]
+        B: [L, K]
     partitions:
         D:
             J: [uniformShape(6), uniformShape(4)]

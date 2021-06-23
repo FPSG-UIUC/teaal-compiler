@@ -4,8 +4,43 @@ from es2hfa.parse.tensor import TensorParser
 from tests.utils.parse_tree import make_uniform_shape
 
 
+def test_from():
+    yaml = """
+    einsum:
+        declaration:
+            - A[K, M]
+            - B[K, N]
+            - C[M, N]
+            - T1[M, N]
+            - Z[M, N]
+        expressions:
+            - T1[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = T1[m, n] + C[m, n]
+    mapping:
+        rank-order:
+            A: [M, K]
+            C: [N, M]
+            Z: [N, M]
+        loop-order:
+            T1: [K, N, M]
+            Z: [M2, N2, M1, N1, M0, N0]
+        partitioning:
+            Z:
+                M: [uniform_shape(4), uniform_shape(2)]
+                N: [uniform_shape(6), uniform_shape(3)]
+    """
+    from_file = Input.from_file("tests/integration/test_input.yml")
+    from_str = Input.from_str(yaml)
+    assert from_file == from_str
+
+
+def test_eq():
+    input_ = Input.from_file("tests/integration/test_input.yml")
+    assert input_ != "foo"
+
+
 def test_declaration():
-    input_ = Input("tests/integration/test_input.yml")
+    input_ = Input.from_file("tests/integration/test_input.yml")
 
     tensors = ["A[K, M]", "B[K, N]", "C[M, N]", "T1[M, N]", "Z[M, N]"]
     tensors = [TensorParser.parse(tensor) for tensor in tensors]
@@ -14,7 +49,7 @@ def test_declaration():
 
 
 def test_expressions():
-    input_ = Input("tests/integration/test_input.yml")
+    input_ = Input.from_file("tests/integration/test_input.yml")
 
     T1 = EinsumParser.parse("T1[m, n] = sum(K).(A[k, m] * B[k, n])")
     Z = EinsumParser.parse("Z[m, n] = T1[m, n] + C[m, n]")
@@ -23,7 +58,7 @@ def test_expressions():
 
 
 def test_loop_orders():
-    input_ = Input("tests/integration/test_input.yml")
+    input_ = Input.from_file("tests/integration/test_input.yml")
     assert input_.get_loop_orders() == {
         "T1": [
             "K", "N", "M"], "Z": [
@@ -31,19 +66,19 @@ def test_loop_orders():
 
 
 def test_loop_orders_missing():
-    input_ = Input("tests/integration/test_input_no_loop_order.yml")
+    input_ = Input.from_file("tests/integration/test_input_no_loop_order.yml")
     assert input_.get_loop_orders() == {}
 
 
 def test_no_mapping():
-    input_ = Input("tests/integration/test_input_no_mapping.yml")
+    input_ = Input.from_file("tests/integration/test_input_no_mapping.yml")
     assert input_.get_rank_orders() == {}
     assert input_.get_loop_orders() == {}
     assert input_.get_partitioning() == {}
 
 
 def test_partitioning():
-    input_ = Input("tests/integration/test_input.yml")
+    input_ = Input.from_file("tests/integration/test_input.yml")
     partitioning = {"Z": {"M": make_uniform_shape(
         [4, 2]), "N": make_uniform_shape([6, 3])}}
 
@@ -51,12 +86,13 @@ def test_partitioning():
 
 
 def test_partitioning_missing():
-    input_ = Input("tests/integration/test_input_no_partitioning.yml")
+    input_ = Input.from_file(
+        "tests/integration/test_input_no_partitioning.yml")
     assert input_.get_partitioning() == {}
 
 
 def test_rank_orders():
-    input_ = Input("tests/integration/test_input.yml")
+    input_ = Input.from_file("tests/integration/test_input.yml")
 
     tensors = ["A[M, K]", "C[N, M]", "Z[N, M]"]
     tensors = {"A": ["M", "K"], "C": ["N", "M"], "Z": ["N", "M"]}
@@ -65,6 +101,6 @@ def test_rank_orders():
 
 
 def test_rank_orders_missing():
-    input_ = Input("tests/integration/test_input_no_rank_order.yml")
+    input_ = Input.from_file("tests/integration/test_input_no_rank_order.yml")
     tensors = {}
     assert input_.get_rank_orders() == tensors

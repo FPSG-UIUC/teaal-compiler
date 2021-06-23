@@ -17,12 +17,10 @@ class Input:
     Parse the input YAML file into the input to the compiler
     """
 
-    def __init__(self, filename: str) -> None:
+    def __init__(self, yaml: dict) -> None:
         """
         Read the YAML file input
         """
-        yaml = YamlParser.parse(filename)
-
         # Parse the Einsums
         self.declaration = [TensorParser.parse(
             tensor) for tensor in yaml["einsum"]["declaration"]]
@@ -58,6 +56,20 @@ class Input:
             self.loop_orders = {}
             self.partitioning = {}
 
+    @classmethod
+    def from_file(cls, filename: str) -> "Input":
+        """
+        Construct a new Input from a YAML file
+        """
+        return cls(YamlParser.parse_file(filename))
+
+    @classmethod
+    def from_str(cls, string: str) -> "Input":
+        """
+        Construct a new Input from a string in the YAML format
+        """
+        return cls(YamlParser.parse_str(string))
+
     def get_declaration(self) -> List[Tree]:
         """
         Get the declaration
@@ -88,3 +100,15 @@ class Input:
         Get any rank orders specified
         """
         return self.rank_orders
+
+    def __eq__(self, other: object) -> bool:
+        """
+        The == operator for Inputs
+        """
+        if isinstance(other, type(self)):
+            return self.declaration == other.declaration and \
+                self.exprs == other.exprs and \
+                self.loop_orders == other.loop_orders and \
+                self.partitioning == other.partitioning and \
+                self.rank_orders == other.rank_orders
+        return False
