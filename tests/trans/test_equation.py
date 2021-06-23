@@ -3,42 +3,66 @@ import pytest
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.mapping import Mapping
 from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.input import Input
 from es2hfa.parse.tensor import TensorParser
 from es2hfa.trans.equation import Equation
 from tests.utils.parse_tree import make_plus
 
 
 def make_basic():
-    tensors = ["A[]", "B[I]", "C[I]", "D[I]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[]
+            - B[I]
+            - C[I]
+            - D[I]
+        expressions:
+            - "A[] = sum(I).(B[i] * C[i] * D[i])"
+    """
+    input_ = Input.from_str(yaml)
+    mapping = Mapping(input_)
+    mapping.add_einsum(0)
 
-    tree = EinsumParser.parse("A[] = sum(I).(B[i] * C[i] * D[i])")
-    mapping.add_einsum(tree, {}, {})
-
-    return IterationGraph(mapping), Equation(tree)
+    return IterationGraph(mapping), Equation(input_.get_expressions()[0])
 
 
 def make_output():
-    tensors = ["A[I]", "B[I]", "C[I]", "D[I]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[I]
+            - B[I]
+            - C[I]
+            - D[I]
+        expressions:
+            - "A[I] = B[i] * C[i] * D[i]"
+    """
+    input_ = Input.from_str(yaml)
+    mapping = Mapping(input_)
+    mapping.add_einsum(0)
 
-    tree = EinsumParser.parse("A[i] = sum(I).(B[i] * C[i] * D[i])")
-    mapping.add_einsum(tree, {}, {})
-
-    return IterationGraph(mapping), Equation(tree)
+    return IterationGraph(mapping), Equation(input_.get_expressions()[0])
 
 
 def make_mult_terms():
-    tensors = ["A[I]", "B[I]", "C[I]", "D[I]", "E[I]", "F[I]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[I]
+            - B[I]
+            - C[I]
+            - D[I]
+            - E[I]
+            - F[I]
+        expressions:
+            - "A[I] = B[i] * C[i] + D[i] * E[i] + F[i]"
+    """
+    input_ = Input.from_str(yaml)
+    mapping = Mapping(input_)
+    mapping.add_einsum(0)
 
-    tree = EinsumParser.parse("A[i] = B[i] * C[i] + D[i] * E[i] + F[i]")
-    mapping.add_einsum(tree, {}, {})
-
-    return IterationGraph(mapping), Equation(tree)
+    return IterationGraph(mapping), Equation(input_.get_expressions()[0])
 
 
 def test_bad_tree():

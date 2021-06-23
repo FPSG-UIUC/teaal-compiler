@@ -2,7 +2,7 @@
 Parse the input YAML file
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from lark.tree import Tree
 
@@ -29,32 +29,46 @@ class Input:
                       for expr in yaml["einsum"]["expressions"]]
 
         # If a mapping exists, parse the mapping
+        rank_orders = None
+        loop_orders = None
+        partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
             if "rank-order" in mapping.keys():
-                self.rank_orders = mapping["rank-order"]
-            else:
-                self.rank_orders = {}
+                rank_orders = mapping["rank-order"]
 
             if "loop-order" in mapping.keys():
-                self.loop_orders = mapping["loop-order"]
-            else:
-                self.loop_orders = {}
+                loop_orders = mapping["loop-order"]
 
-            self.partitioning: Dict[str, Dict[str, List[Tree]]] = {}
             if "partitioning" in mapping.keys():
+                partitioning = {}
                 for tensor, inds in mapping["partitioning"].items():
-                    self.partitioning[tensor] = {}
+                    partitioning[tensor] = {}
+
+                    if inds is None:
+                        continue
+
                     for ind, parts in inds.items():
-                        self.partitioning[tensor][ind] = []
+                        partitioning[tensor][ind] = []
                         for part in parts:
-                            self.partitioning[tensor][ind].append(
+                            partitioning[tensor][ind].append(
                                 PartitioningParser.parse(part))
-        else:
+
+        if rank_orders is None:
             self.rank_orders = {}
+        else:
+            self.rank_orders = rank_orders
+
+        if loop_orders is None:
             self.loop_orders = {}
+        else:
+            self.loop_orders = loop_orders
+
+        if partitioning is None:
             self.partitioning = {}
+        else:
+            self.partitioning = partitioning
 
     @classmethod
     def from_file(cls, filename: str) -> "Input":

@@ -24,15 +24,12 @@ class Translator:
         """
         Perform the Einsum to HFA translation
         """
-        mapping = Mapping(input_.get_declaration(), input_.get_rank_orders())
+        mapping = Mapping(input_)
 
         program = SBlock([])
-        for einsum in input_.get_expressions():
+        for i, einsum in enumerate(input_.get_expressions()):
             # Add Einsum to mapping
-            mapping.add_einsum(
-                einsum,
-                input_.get_loop_orders(),
-                input_.get_partitioning())
+            mapping.add_einsum(i)
 
             # Build the header
             program.add(Header.make_header(mapping))

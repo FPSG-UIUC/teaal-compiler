@@ -3,16 +3,20 @@ import pytest
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.input import Input
 from es2hfa.parse.tensor import TensorParser
 
 
 def test_peek_rank0():
-    tensors = [TensorParser.parse("A[]")]
-    mapping = Mapping(tensors, {})
-
-    tree = EinsumParser.parse("A[] = b")
-    mapping.add_einsum(tree, {}, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[]
+        expressions:
+            - A[] = b
+    """
+    mapping = Mapping(Input.from_str(yaml))
+    mapping.add_einsum(0)
     graph = IterationGraph(mapping)
 
     tensor = Tensor.from_tree(TensorParser.parse("A[]"))
@@ -22,12 +26,17 @@ def test_peek_rank0():
 
 
 def test_peek_default():
-    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
-
-    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {}, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[I, J]
+            - B[I, K]
+            - C[J, K]
+        expressions:
+            - A[i, j] = sum(K).(B[i, k] * C[j, k])
+    """
+    mapping = Mapping(Input.from_str(yaml))
+    mapping.add_einsum(0)
     graph = IterationGraph(mapping)
 
     results = ["A[I, J]", "B[I, K]"]
@@ -39,12 +48,21 @@ def test_peek_default():
 
 
 def test_peek_order():
-    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[I, J]
+            - B[I, K]
+            - C[J, K]
+        expressions:
+            - A[i, j] = sum(K).(B[i, k] * C[j, k])
+    mapping:
+        loop-order:
+            A: [J, K, I]
+    """
+    mapping = Mapping(Input.from_str(yaml))
+    mapping.add_einsum(0)
 
-    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {"A": ["J", "K", "I"]}, {})
     for tensor in mapping.get_tensors():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)
@@ -58,12 +76,17 @@ def test_peek_order():
 
 
 def test_pop_default():
-    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
-
-    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {}, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[I, J]
+            - B[I, K]
+            - C[J, K]
+        expressions:
+            - A[i, j] = sum(K).(B[i, k] * C[j, k])
+    """
+    mapping = Mapping(Input.from_str(yaml))
+    mapping.add_einsum(0)
     graph = IterationGraph(mapping)
 
     A = Tensor.from_tree(TensorParser.parse("A[I, J]"))
@@ -78,12 +101,21 @@ def test_pop_default():
 
 
 def test_pop_order():
-    tensors = ["A[I, J]", "B[I, K]", "C[J, K]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-    mapping = Mapping(tensors, {})
+    yaml = """
+    einsum:
+        declaration:
+            - A[I, J]
+            - B[I, K]
+            - C[J, K]
+        expressions:
+            - A[i, j] = sum(K).(B[i, k] * C[j, k])
+    mapping:
+        loop-order:
+            A: [J, K, I]
+    """
+    mapping = Mapping(Input.from_str(yaml))
+    mapping.add_einsum(0)
 
-    tree = EinsumParser.parse("A[i, j] = sum(K).(B[i, k] * C[j, k])")
-    mapping.add_einsum(tree, {"A": ["J", "K", "I"]}, {})
     for tensor in mapping.get_tensors():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)

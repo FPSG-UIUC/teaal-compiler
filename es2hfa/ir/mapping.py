@@ -7,6 +7,7 @@ from typing import cast, Dict, Generator, List, Optional
 from lark.tree import Tree
 
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.input import Input
 
 
 class Mapping:
@@ -14,20 +15,20 @@ class Mapping:
     Store tensor metadata and configure the metadaa for specific einsums
     """
 
-    def __init__(
-            self,
-            declaration: List[Tree],
-            rank_orders: Dict[str, List[str]]) -> None:
+    def __init__(self, input_: Input) -> None:
         """
         Construct the metadata for tensors
         """
+        self.input = input_
+
         # Get all tensors
         self.tensors = {}
-        for declared in declaration:
+        for declared in self.input.get_declaration():
             tensor = Tensor.from_tree(declared)
             self.tensors[tensor.root_name()] = tensor
 
         # Replace the tensors whose rank order is specified
+        rank_orders = self.input.get_rank_orders()
         for ord_name in rank_orders:
             tensor = Tensor(ord_name, rank_orders[ord_name])
             if tensor.root_name() not in self.tensors.keys():
@@ -39,15 +40,11 @@ class Mapping:
         self.loop_order: Optional[List[str]] = None
         self.partitioning: Optional[Dict[str, List[Tree]]] = None
 
-    def add_einsum(self, einsum: Tree,
-                   loop_orders: Dict[str, List[str]],
-                   partitioning: Dict[str, Dict[str, List[Tree]]]) -> None:
+    def add_einsum(self, i: int) -> None:
         """
-        Configure the mapping for a particular Einsum
+        Configure the mapping for the ith Einsum
         """
-        # Make sure we are starting with the full einsum
-        if einsum.data != "einsum":
-            raise ValueError("Input parse tree must be an einsum")
+        einsum = self.input.get_expressions()[i]
 
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
@@ -60,15 +57,18 @@ class Mapping:
             self.es_tensors.append(self.__get_tensor(tensor_tree))
 
         # Store the partitioning information
+        partitioning = self.input.get_partitioning()
         if output.root_name() in partitioning.keys():
             self.partitioning = partitioning[output.root_name()]
         else:
             self.partitioning = {}
 
         # Store the loop order
+        loop_orders = self.input.get_loop_orders()
         if output.root_name() in loop_orders.keys():
             self.loop_order = loop_orders[output.root_name()]
-        else:
+
+        if self.loop_order is None:
             self.__default_loop_order(einsum)
 
     def apply_loop_order(self, tensor: Tensor) -> None:
