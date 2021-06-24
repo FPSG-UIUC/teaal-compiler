@@ -1,8 +1,8 @@
 einsum:
     declaration:
-        - A[I,J,K]
-        - B[K,L]
-        - C[I,J]
-        - D[I]
+        A: [I,J,K]
+        B: [K,L]
+        C: [I,J]
+        D: [I]
     expressions:
         - D[i] = sum(J).(B[i, j])

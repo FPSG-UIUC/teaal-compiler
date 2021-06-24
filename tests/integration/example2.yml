@@ -1,8 +1,8 @@
 einsum:
     declaration:
-        - A[I, J]
-        - B[I, J]
-        - D[]
+        A: [I, J]
+        B: [I, J]
+        D: []
     expressions:
         - D[] = sum(I, J).(A[i, j] * B[i, j])
 mapping:

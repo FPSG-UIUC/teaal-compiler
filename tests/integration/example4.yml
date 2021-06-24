@@ -1,9 +1,9 @@
 einsum:
     declaration:
-        - A[I, J, K]
-        - B[I, J, K]
-        - C[I, J, K]
-        - D[]
+        A: [I, J, K]
+        B: [I, J, K]
+        C: [I, J, K]
+        D: []
     expressions:
         - D[] = sum(I, J, K).(A[i, j, k] * B[i, j, k] * C[i, j, k])
 mapping:

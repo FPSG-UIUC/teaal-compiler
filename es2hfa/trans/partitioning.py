@@ -55,8 +55,11 @@ class Partitioner:
                 elif part.data == "nway_shape":
                     block.add(self._nway_shape(ind, part, i))
                 else:
+                    # Note: there is no good way to test this error. Bad
+                    # partitioning styles caught by the PartitioningParser
                     raise ValueError(
-                        "Unknown partitioning style: " + part.data)
+                        "Unknown partitioning style: " +
+                        part.data)  # pragma: no cover
 
         # Rename the tensor
         self.mapping.apply_partitioning(tensor)

@@ -1,10 +1,15 @@
 einsum:
     declaration:
-        - A[K, M]
-        - B[K, N]
-        - T1[M, N]
-        - C[M, N]
-        - Z[M, N]
+        A: [K, M]
+        B: [K, N]
+        T1: [M, N]
+        C: [M, N]
+        Z: [M, N]
     expressions:
         - T1[m, n] = sum(K).(A[k, m] * B[k, n])
         - Z[m, n] = a * T1[m, n] + b * C[m, n]
+mapping:
+    display:
+        T1:
+            space: [N]
+            time: [K, M]

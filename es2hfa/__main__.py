@@ -17,6 +17,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     # Translate
     else:
-        input_ = Input(sys.argv[1])
+        input_ = Input.from_file(sys.argv[1])
         hfa = Translator.translate(input_)
         print(hfa.gen(0))

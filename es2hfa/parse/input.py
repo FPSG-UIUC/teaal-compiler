@@ -2,13 +2,12 @@
 Parse the input YAML file
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from lark.tree import Tree
 
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.partitioning import PartitioningParser
-from es2hfa.parse.tensor import TensorParser
 from es2hfa.parse.yaml import YamlParser
 
 
@@ -17,52 +16,93 @@ class Input:
     Parse the input YAML file into the input to the compiler
     """
 
-    def __init__(self, filename: str) -> None:
+    def __init__(self, yaml: dict) -> None:
         """
         Read the YAML file input
         """
-        yaml = YamlParser.parse(filename)
-
         # Parse the Einsums
-        self.declaration = [TensorParser.parse(
-            tensor) for tensor in yaml["einsum"]["declaration"]]
+        self.declaration = yaml["einsum"]["declaration"]
 
         self.exprs = [EinsumParser.parse(expr)
                       for expr in yaml["einsum"]["expressions"]]
 
         # If a mapping exists, parse the mapping
+        display = None
+        loop_orders = None
+        partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
+        rank_orders = None
+
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
-            if "rank-order" in mapping.keys():
-                self.rank_orders = mapping["rank-order"]
-            else:
-                self.rank_orders = {}
+            if "display" in mapping.keys():
+                display = mapping["display"]
 
             if "loop-order" in mapping.keys():
-                self.loop_orders = mapping["loop-order"]
-            else:
-                self.loop_orders = {}
+                loop_orders = mapping["loop-order"]
 
-            self.partitioning: Dict[str, Dict[str, List[Tree]]] = {}
             if "partitioning" in mapping.keys():
+                partitioning = {}
                 for tensor, inds in mapping["partitioning"].items():
-                    self.partitioning[tensor] = {}
-                    for ind, parts in inds.items():
-                        self.partitioning[tensor][ind] = []
-                        for part in parts:
-                            self.partitioning[tensor][ind].append(
-                                PartitioningParser.parse(part))
-        else:
-            self.rank_orders = {}
-            self.loop_orders = {}
-            self.partitioning = {}
+                    partitioning[tensor] = {}
 
-    def get_declaration(self) -> List[Tree]:
+                    if inds is None:
+                        continue
+
+                    for ind, parts in inds.items():
+                        partitioning[tensor][ind] = []
+                        for part in parts:
+                            partitioning[tensor][ind].append(
+                                PartitioningParser.parse(part))
+
+            if "rank-order" in mapping.keys():
+                rank_orders = mapping["rank-order"]
+
+        if display is None:
+            self.display = {}
+        else:
+            self.display = display
+
+        if loop_orders is None:
+            self.loop_orders = {}
+        else:
+            self.loop_orders = loop_orders
+
+        if partitioning is None:
+            self.partitioning = {}
+        else:
+            self.partitioning = partitioning
+
+        if rank_orders is None:
+            self.rank_orders = {}
+        else:
+            self.rank_orders = rank_orders
+
+    @classmethod
+    def from_file(cls, filename: str) -> "Input":
+        """
+        Construct a new Input from a YAML file
+        """
+        return cls(YamlParser.parse_file(filename))
+
+    @classmethod
+    def from_str(cls, string: str) -> "Input":
+        """
+        Construct a new Input from a string in the YAML format
+        """
+        return cls(YamlParser.parse_str(string))
+
+    def get_declaration(self) -> Dict[str, List[str]]:
         """
         Get the declaration
         """
         return self.declaration
+
+    def get_display(self) -> Dict[str, Dict[str, List[str]]]:
+        """
+        Get the display information
+        """
+        return self.display
 
     def get_expressions(self) -> List[Tree]:
         """
@@ -88,3 +128,15 @@ class Input:
         Get any rank orders specified
         """
         return self.rank_orders
+
+    def __eq__(self, other: object) -> bool:
+        """
+        The == operator for Inputs
+        """
+        if isinstance(other, type(self)):
+            return self.declaration == other.declaration and \
+                self.exprs == other.exprs and \
+                self.loop_orders == other.loop_orders and \
+                self.partitioning == other.partitioning and \
+                self.rank_orders == other.rank_orders
+        return False

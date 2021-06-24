@@ -1,8 +1,8 @@
 einsum:
     declaration:
-        - A[M, K, J]
-        - B[K, N]
-        - C[J, N]
-        - Z[M, N]
+        A: [M, K, J]
+        B: [K, N]
+        C: [J, N]
+        Z: [M, N]
     expressions:
         - Z[m, n] = sum(K, J).(A[m, k, j] * B[k, n] * C[j, n])

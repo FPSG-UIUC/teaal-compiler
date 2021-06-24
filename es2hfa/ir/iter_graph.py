@@ -3,8 +3,6 @@ Represetation of an iteration graph
 """
 from typing import cast, List, Optional, Tuple
 
-from lark.tree import Tree
-
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 

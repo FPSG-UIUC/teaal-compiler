@@ -9,6 +9,7 @@ from es2hfa.hfa.expr import EFunc, EMethod
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
+from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.partitioning import Partitioner
 from es2hfa.trans.utils import Utils
 
@@ -19,7 +20,7 @@ class Header:
     """
 
     @staticmethod
-    def make_header(mapping: Mapping) -> Statement:
+    def make_header(mapping: Mapping, canvas: Canvas) -> Statement:
         """
         Create the header for a given einsum
 
@@ -59,5 +60,9 @@ class Header:
             get_root_call = cast(Expression, EMethod(new_name, "getRoot", []))
             fiber_name = tensor.fiber_name()
             header.add(cast(Statement, SAssign(fiber_name, get_root_call)))
+
+        # Generate canvas creation if needed
+        if canvas.displayable():
+            header.add(canvas.create_canvas())
 
         return cast(Statement, header)
