@@ -10,9 +10,9 @@ def assert_partition(tensor, parts, hfa):
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
@@ -65,9 +65,9 @@ def assert_unpartition(part, hfa):
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:

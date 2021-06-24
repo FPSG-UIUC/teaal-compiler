@@ -1,10 +1,10 @@
 einsum:
     declaration:
-        - A[I,J,K]
-        - B[K,L]
-        - C[I,J]
-        - D[I]
-        - T1[I, J]
+        A: [I,J,K]
+        B: [K,L]
+        C: [I,J]
+        D: [I]
+        T1: [I, J]
     expressions:
         - T1[i, j] = sum(K,L).(A[i,j,k] * B[k,l])
         - D[i] = sum(J).(C[i,j] + T1[i, j])

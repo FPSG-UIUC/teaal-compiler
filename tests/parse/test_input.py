@@ -1,6 +1,6 @@
+from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.input import Input
-from es2hfa.parse.tensor import TensorParser
 from tests.utils.parse_tree import make_uniform_shape
 
 
@@ -8,11 +8,11 @@ def test_from():
     yaml = """
     einsum:
         declaration:
-            - A[K, M]
-            - B[K, N]
-            - C[M, N]
-            - T1[M, N]
-            - Z[M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
+            T1: [M, N]
+            Z: [M, N]
         expressions:
             - T1[m, n] = sum(K).(A[k, m] * B[k, n])
             - Z[m, n] = T1[m, n] + C[m, n]
@@ -42,9 +42,13 @@ def test_eq():
 def test_declaration():
     input_ = Input.from_file("tests/integration/test_input.yml")
 
-    tensors = ["A[K, M]", "B[K, N]", "C[M, N]", "T1[M, N]", "Z[M, N]"]
-    tensors = [TensorParser.parse(tensor) for tensor in tensors]
-
+    tensors = {
+        "A": [
+            "K", "M"], "B": [
+            "K", "N"], "C": [
+                "M", "N"], "T1": [
+                    "M", "N"], "Z": [
+                        "M", "N"]}
     assert input_.get_declaration() == tensors
 
 

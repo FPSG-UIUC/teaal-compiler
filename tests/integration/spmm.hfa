@@ -1,24 +1,10 @@
-A_MK = A_MK.splitUniform(4, depth=0)
-A_MK = A_MK.splitUniform(2, depth=1)
-A_M2M1M0K = A_MK
-Z_NM = Z_NM.splitUniform(4, depth=1)
-Z_NM = Z_NM.splitUniform(2, depth=2)
-Z_NM2M1M0 = Z_NM
-B_KN = B_KN.splitUniform(3, depth=1)
-B_KN = B_KN.splitUniform(5, depth=2)
-B_KN2N1N0 = B_KN
-Z_NM2M1M0 = Z_NM2M1M0.splitUniform(3, depth=0)
-Z_NM2M1M0 = Z_NM2M1M0.splitUniform(5, depth=1)
-Z_N2N1N0M2M1M0 = Z_NM2M1M0
-a_m2 = A_M2M1M0K.getRoot()
-B_N2N1N0K = B_KN2N1N0.swizzleRanks(rank_ids=["N2", "N1", "N0", "K"])
-b_n2 = B_N2N1N0K.getRoot()
-z_n2 = Z_N2N1N0M2M1M0.getRoot()
-for n2, (z_n1, b_n1) in z_n2 << b_n2:
-    for n1, (z_n0, b_n0) in z_n1 << b_n1:
-        for n0, (z_m2, b_k) in z_n0 << b_n0:
-            for m2, (z_m1, a_m1) in z_m2 << a_m2:
-                for m1, (z_m0, a_m0) in z_m1 << a_m1:
-                    for m0, (z_ref, a_k) in z_m0 << a_m0:
-                        for k, (a_val, b_val) in (a_k & b_k):
-                            z_ref += a_val * b_val
+Z_MN = Tensor(rank_ids=["M", "N"])
+z_m = Z_MN.getRoot()
+A_MK = A_KM.swizzleRanks(rank_ids=["M", "K"])
+a_m = A_MK.getRoot()
+B_NK = B_KN.swizzleRanks(rank_ids=["N", "K"])
+b_n = B_NK.getRoot()
+for m, (z_n, a_k) in z_m << a_m:
+    for n, (z_ref, b_k) in z_n << b_n:
+        for k, (a_val, b_val) in a_k & b_k:
+            z_ref += a_val * b_val

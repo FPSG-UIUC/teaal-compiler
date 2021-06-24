@@ -1,7 +1,7 @@
 einsum:
     declaration:
-        - A[K]
-        - B[K]
-        - Z[]
+        A: [K]
+        B: [K]
+        Z: []
     expressions:
         - Z[] = sum(K).(A[k] * B[k])

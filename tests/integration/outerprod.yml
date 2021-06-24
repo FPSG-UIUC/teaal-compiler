@@ -1,7 +1,7 @@
 einsum:
     declaration:
-        - A[M]
-        - B[N]
-        - Z[M, N]
+        A: [M]
+        B: [N]
+        Z: [M, N]
     expressions:
         - Z[m, n] = A[m] * B[n]

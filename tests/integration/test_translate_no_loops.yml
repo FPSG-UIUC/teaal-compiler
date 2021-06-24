@@ -1,5 +1,5 @@
 einsum:
     declaration:
-        - A[]
+        A: []
     expressions:
         - A[] = b

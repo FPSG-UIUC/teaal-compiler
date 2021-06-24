@@ -8,10 +8,10 @@ def test_make_header():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
-            - C[M, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
@@ -32,10 +32,10 @@ def test_make_header_swizzle():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
-            - C[M, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
@@ -55,10 +55,10 @@ def test_make_header_partitioned():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
-            - C[M, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:

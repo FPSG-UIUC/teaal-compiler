@@ -10,10 +10,10 @@ def create_default():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
-            - C[M, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
@@ -24,9 +24,9 @@ def create_loop_ordered():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
@@ -40,9 +40,9 @@ def create_partitioned():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
@@ -58,9 +58,9 @@ def create_rank_ordered():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
@@ -75,7 +75,7 @@ def test_missing_decl():
     yaml = """
     einsum:
         declaration:
-            - A[]
+            A: []
         expressions:
             - A[] = b
     mapping:
@@ -93,8 +93,8 @@ def test_add_einsum_missing_decl():
     yaml = """
     einsum:
         declaration:
-            - A[]
-            - B[]
+            A: []
+            B: []
         expressions:
             - A[] = B[] + C[]
     """
@@ -299,10 +299,10 @@ def test_default_loop_order_unconfigured():
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
-            - C[M, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """

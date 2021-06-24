@@ -4,14 +4,13 @@ from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
-from es2hfa.parse.tensor import TensorParser
 
 
 def test_peek_rank0():
     yaml = """
     einsum:
         declaration:
-            - A[]
+            A: []
         expressions:
             - A[] = b
     """
@@ -19,7 +18,7 @@ def test_peek_rank0():
     mapping.add_einsum(0)
     graph = IterationGraph(mapping)
 
-    tensor = Tensor.from_tree(TensorParser.parse("A[]"))
+    tensor = Tensor("A", [])
     tensor.set_is_output(True)
 
     assert graph.peek() == (None, [tensor])
@@ -29,9 +28,9 @@ def test_peek_default():
     yaml = """
     einsum:
         declaration:
-            - A[I, J]
-            - B[I, K]
-            - C[J, K]
+            A: [I, J]
+            B: [I, K]
+            C: [J, K]
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     """
@@ -39,9 +38,7 @@ def test_peek_default():
     mapping.add_einsum(0)
     graph = IterationGraph(mapping)
 
-    results = ["A[I, J]", "B[I, K]"]
-    results = [Tensor.from_tree(TensorParser.parse(tensor))
-               for tensor in results]
+    results = [Tensor("A", ["I", "J"]), Tensor("B", ["I", "K"])]
     results[0].set_is_output(True)
 
     assert graph.peek() == ("i", results)
@@ -51,9 +48,9 @@ def test_peek_order():
     yaml = """
     einsum:
         declaration:
-            - A[I, J]
-            - B[I, K]
-            - C[J, K]
+            A: [I, J]
+            B: [I, K]
+            C: [J, K]
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     mapping:
@@ -67,9 +64,7 @@ def test_peek_order():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)
 
-    results = ["A[J, I]", "C[J, K]"]
-    results = [Tensor.from_tree(TensorParser.parse(tensor))
-               for tensor in results]
+    results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
     results[0].set_is_output(True)
 
     assert graph.peek() == ("j", results)
@@ -79,9 +74,9 @@ def test_pop_default():
     yaml = """
     einsum:
         declaration:
-            - A[I, J]
-            - B[I, K]
-            - C[J, K]
+            A: [I, J]
+            B: [I, K]
+            C: [J, K]
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     """
@@ -89,10 +84,10 @@ def test_pop_default():
     mapping.add_einsum(0)
     graph = IterationGraph(mapping)
 
-    A = Tensor.from_tree(TensorParser.parse("A[I, J]"))
+    A = Tensor("A", ["I", "J"])
     A.set_is_output(True)
-    B = Tensor.from_tree(TensorParser.parse("B[I, K]"))
-    C = Tensor.from_tree(TensorParser.parse("C[J, K]"))
+    B = Tensor("B", ["I", "K"])
+    C = Tensor("C", ["J", "K"])
 
     assert graph.pop() == ("i", [A, B])
     assert graph.pop() == ("j", [C, A])
@@ -104,9 +99,9 @@ def test_pop_order():
     yaml = """
     einsum:
         declaration:
-            - A[I, J]
-            - B[I, K]
-            - C[J, K]
+            A: [I, J]
+            B: [I, K]
+            C: [J, K]
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     mapping:
@@ -120,10 +115,10 @@ def test_pop_order():
         mapping.apply_loop_order(tensor)
     graph = IterationGraph(mapping)
 
-    A = Tensor.from_tree(TensorParser.parse("A[J, I]"))
+    A = Tensor("A", ["J", "I"])
     A.set_is_output(True)
-    B = Tensor.from_tree(TensorParser.parse("B[K, I]"))
-    C = Tensor.from_tree(TensorParser.parse("C[J, K]"))
+    B = Tensor("B", ["K", "I"])
+    C = Tensor("C", ["J", "K"])
 
     assert graph.pop() == ("j", [A, C])
     assert graph.pop() == ("k", [B, C])

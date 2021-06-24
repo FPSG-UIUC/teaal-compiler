@@ -8,7 +8,6 @@ from lark.tree import Tree
 
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.partitioning import PartitioningParser
-from es2hfa.parse.tensor import TensorParser
 from es2hfa.parse.yaml import YamlParser
 
 
@@ -22,8 +21,7 @@ class Input:
         Read the YAML file input
         """
         # Parse the Einsums
-        self.declaration = [TensorParser.parse(
-            tensor) for tensor in yaml["einsum"]["declaration"]]
+        self.declaration = yaml["einsum"]["declaration"]
 
         self.exprs = [EinsumParser.parse(expr)
                       for expr in yaml["einsum"]["expressions"]]
@@ -84,7 +82,7 @@ class Input:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get_declaration(self) -> List[Tree]:
+    def get_declaration(self) -> Dict[str, List[str]]:
         """
         Get the declaration
         """

@@ -8,9 +8,9 @@ def assert_make_footer(loop_order, partitioning, hfa):
     yaml = """
     einsum:
         declaration:
-            - Z[M, N]
-            - A[K, M]
-            - B[K, N]
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:

@@ -15,11 +15,11 @@ def test_parse_str():
     yaml = """
     einsum:
         declaration:
-            - A[I, J, L]
-            - B[K, L]
-            - C[I, J]
-            - D[I]
-            - T1[I, J]
+            A: [I, J, L]
+            B: [K, L]
+            C: [I, J]
+            D: [I]
+            T1: [I, J]
         expressions:
             - T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])
             - D[i] = sum(J).(C[i, j] + T1[i, j])

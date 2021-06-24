@@ -7,9 +7,13 @@
 ## Minor Changes
 
 - [ ] Add all other integration tests
+- [ ] Use .yaml instead of .yml to make things consistent
 - [ ] Use ruamel.yaml to parse YAML
-- [ ] Switch declaration to be in the same format as the rank order
 - [ ] Move typing imports with the other package imports
+- [ ] Use `Z_mn = A_km B_kn` everywhere
+- [ ] Clean up tests
+    - Which example tests actually test something unique?
+    - All tests should use the [tensor naming conventions](./tensor_naming.md)
 
 ## Major Changes
 

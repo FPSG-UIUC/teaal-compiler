@@ -28,20 +28,6 @@ class Tensor:
         self.ind_ptr = 0
         self.is_output = False
 
-    @classmethod
-    def from_tree(cls, tree: Tree) -> "Tensor":
-        """
-        Construct a new Tensor from its parse tree
-        """
-        if tree.data != "tensor":
-            raise ValueError("Input parse tree must be a tensor")
-
-        # Extract the name and indices
-        values = list(tree.scan_values(lambda _: True))
-
-        # Construct a new tensor
-        return cls(values[0], values[1:])
-
     def fiber_name(self) -> str:
         """
         Return the current fiber name for this tensor

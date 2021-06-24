@@ -4,7 +4,6 @@ from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.mapping import Mapping
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.input import Input
-from es2hfa.parse.tensor import TensorParser
 from es2hfa.trans.equation import Equation
 from tests.utils.parse_tree import make_plus
 
@@ -13,10 +12,10 @@ def make_basic():
     yaml = """
     einsum:
         declaration:
-            - A[]
-            - B[I]
-            - C[I]
-            - D[I]
+            A: []
+            B: [I]
+            C: [I]
+            D: [I]
         expressions:
             - "A[] = sum(I).(B[i] * C[i] * D[i])"
     """
@@ -31,10 +30,10 @@ def make_output():
     yaml = """
     einsum:
         declaration:
-            - A[I]
-            - B[I]
-            - C[I]
-            - D[I]
+            A: [I]
+            B: [I]
+            C: [I]
+            D: [I]
         expressions:
             - "A[I] = B[i] * C[i] * D[i]"
     """
@@ -49,12 +48,12 @@ def make_mult_terms():
     yaml = """
     einsum:
         declaration:
-            - A[I]
-            - B[I]
-            - C[I]
-            - D[I]
-            - E[I]
-            - F[I]
+            A: [I]
+            B: [I]
+            C: [I]
+            D: [I]
+            E: [I]
+            F: [I]
         expressions:
             - "A[I] = B[i] * C[i] + D[i] * E[i] + F[i]"
     """

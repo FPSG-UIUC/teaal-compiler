@@ -2,9 +2,9 @@
 # Source: https://arxiv.org/pdf/1512.00066.pdf
 einsum:
     declaration:
-        - Q[]
-        - V[A, B, I, J]
-        - T[A, B, I, J]
+        Q: []
+        V: [A, B, I, J]
+        T: [A, B, I, J]
     expressions:
         - T[a, b, i, j] = V[a, b, i, j]
         - Q[] = sum(A, B, I, J).(V[a, b, i, j] * T[a, b, i, j])

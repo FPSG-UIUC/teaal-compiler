@@ -23,8 +23,9 @@ class Mapping:
 
         # Get all tensors
         self.tensors = {}
-        for declared in self.input.get_declaration():
-            tensor = Tensor.from_tree(declared)
+        declaration = self.input.get_declaration()
+        for ten_name in declaration:
+            tensor = Tensor(ten_name, declaration[ten_name])
             self.tensors[tensor.root_name()] = tensor
 
         # Replace the tensors whose rank order is specified
