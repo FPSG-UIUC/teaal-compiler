@@ -27,14 +27,16 @@ class Input:
                       for expr in yaml["einsum"]["expressions"]]
 
         # If a mapping exists, parse the mapping
-        rank_orders = None
+        display = None
         loop_orders = None
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
+        rank_orders = None
+
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
-            if "rank-order" in mapping.keys():
-                rank_orders = mapping["rank-order"]
+            if "display" in mapping.keys():
+                display = mapping["display"]
 
             if "loop-order" in mapping.keys():
                 loop_orders = mapping["loop-order"]
@@ -53,10 +55,13 @@ class Input:
                             partitioning[tensor][ind].append(
                                 PartitioningParser.parse(part))
 
-        if rank_orders is None:
-            self.rank_orders = {}
+            if "rank-order" in mapping.keys():
+                rank_orders = mapping["rank-order"]
+
+        if display is None:
+            self.display = {}
         else:
-            self.rank_orders = rank_orders
+            self.display = display
 
         if loop_orders is None:
             self.loop_orders = {}
@@ -67,6 +72,11 @@ class Input:
             self.partitioning = {}
         else:
             self.partitioning = partitioning
+
+        if rank_orders is None:
+            self.rank_orders = {}
+        else:
+            self.rank_orders = rank_orders
 
     @classmethod
     def from_file(cls, filename: str) -> "Input":
@@ -87,6 +97,12 @@ class Input:
         Get the declaration
         """
         return self.declaration
+
+    def get_display(self) -> Dict[str, Dict[str, List[str]]]:
+        """
+        Get the display information
+        """
+        return self.display
 
     def get_expressions(self) -> List[Tree]:
         """

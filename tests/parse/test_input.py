@@ -4,6 +4,45 @@ from es2hfa.parse.input import Input
 from tests.utils.parse_tree import make_uniform_shape
 
 
+def test_declaration():
+    input_ = Input.from_file("tests/integration/test_input.yml")
+
+    tensors = {
+        "A": [
+            "K", "M"], "B": [
+            "K", "N"], "C": [
+                "M", "N"], "T1": [
+                    "M", "N"], "Z": [
+                        "M", "N"]}
+    assert input_.get_declaration() == tensors
+
+
+def test_display():
+    input_ = Input.from_file("tests/integration/test_input.yml")
+    display = {"T1": {"space": ["N"], "time": ["K", "M"]}}
+
+    assert input_.get_display() == display
+
+
+def test_display_missing():
+    input_ = Input.from_file("tests/integration/test_input_no_display.yml")
+    assert input_.get_display() == {}
+
+
+def test_eq():
+    input_ = Input.from_file("tests/integration/test_input.yml")
+    assert input_ != "foo"
+
+
+def test_expressions():
+    input_ = Input.from_file("tests/integration/test_input.yml")
+
+    T1 = EinsumParser.parse("T1[m, n] = sum(K).(A[k, m] * B[k, n])")
+    Z = EinsumParser.parse("Z[m, n] = T1[m, n] + C[m, n]")
+
+    assert input_.get_expressions() == [T1, Z]
+
+
 def test_from():
     yaml = """
     einsum:
@@ -28,37 +67,14 @@ def test_from():
             Z:
                 M: [uniform_shape(4), uniform_shape(2)]
                 N: [uniform_shape(6), uniform_shape(3)]
+        display:
+            T1:
+                space: [N]
+                time: [K, M]
     """
     from_file = Input.from_file("tests/integration/test_input.yml")
     from_str = Input.from_str(yaml)
     assert from_file == from_str
-
-
-def test_eq():
-    input_ = Input.from_file("tests/integration/test_input.yml")
-    assert input_ != "foo"
-
-
-def test_declaration():
-    input_ = Input.from_file("tests/integration/test_input.yml")
-
-    tensors = {
-        "A": [
-            "K", "M"], "B": [
-            "K", "N"], "C": [
-                "M", "N"], "T1": [
-                    "M", "N"], "Z": [
-                        "M", "N"]}
-    assert input_.get_declaration() == tensors
-
-
-def test_expressions():
-    input_ = Input.from_file("tests/integration/test_input.yml")
-
-    T1 = EinsumParser.parse("T1[m, n] = sum(K).(A[k, m] * B[k, n])")
-    Z = EinsumParser.parse("Z[m, n] = T1[m, n] + C[m, n]")
-
-    assert input_.get_expressions() == [T1, Z]
 
 
 def test_loop_orders():
@@ -76,9 +92,11 @@ def test_loop_orders_missing():
 
 def test_no_mapping():
     input_ = Input.from_file("tests/integration/test_input_no_mapping.yml")
-    assert input_.get_rank_orders() == {}
+
+    assert input_.get_display() == {}
     assert input_.get_loop_orders() == {}
     assert input_.get_partitioning() == {}
+    assert input_.get_rank_orders() == {}
 
 
 def test_partitioning():
