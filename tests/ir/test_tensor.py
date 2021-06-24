@@ -28,6 +28,11 @@ def test_fiber_name_val():
     assert tensor.fiber_name() == "a_val"
 
 
+def test_get_access():
+    tensor = Tensor("A", ["I", "J"])
+    assert tensor.get_access() == ["i", "j"]
+
+
 def test_get_inds():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.get_inds() == ["I", "J"]

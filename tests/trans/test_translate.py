@@ -40,11 +40,14 @@ def test_translate_specified():
           "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()\n" + \
+          "canvas = createCanvas(A_KM, B_KN, T1_NM)\n" + \
           "for k, (a_m, b_n) in a_k & b_k:\n" + \
           "    for n, (t1_m, b_val) in t1_n << b_n:\n" + \
           "        for m, (t1_ref, a_val) in t1_m << a_m:\n" + \
           "            t1_ref += a_val * b_val\n" + \
+          "            canvas.addActivity((k, m), (k, n), (n, m), spacetime=((n,), (k, m)))\n" + \
           "T1_MN = T1_NM.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+          "displayCanvas(canvas)\n" + \
           "Z_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
           "tmp = Z_NM\n" + \
           "tmp = tmp.splitUniform(4, depth=1)\n" + \

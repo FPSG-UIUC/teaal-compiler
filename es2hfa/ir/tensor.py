@@ -40,9 +40,15 @@ class Tensor:
         else:
             return stub + "val"
 
+    def get_access(self) -> List[str]:
+        """
+        Return a (lowercase) list of indices for this tensor
+        """
+        return [ind[0].lower() + ind[1:] for ind in self.inds]
+
     def get_inds(self) -> List[str]:
         """
-        Return a list of indices for this tensor
+        Return a (capitalized) list of indices for this tensor
         """
         return self.inds
 

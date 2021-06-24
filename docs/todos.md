@@ -18,7 +18,6 @@
 
 - [ ] Integration with the HFA docker environment
 - [ ] Write `tmp`s in SSA form
-- [ ] Add tensor display capabilities
 
 ## Planning
 

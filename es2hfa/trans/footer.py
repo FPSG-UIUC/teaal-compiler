@@ -6,6 +6,7 @@ from typing import cast
 from es2hfa.hfa.base import Statement
 from es2hfa.hfa.stmt import SBlock
 from es2hfa.ir.mapping import Mapping
+from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.partitioning import Partitioner
 from es2hfa.trans.utils import Utils
 
@@ -16,7 +17,7 @@ class Footer:
     """
 
     @staticmethod
-    def make_footer(mapping: Mapping) -> Statement:
+    def make_footer(mapping: Mapping, canvas: Canvas) -> Statement:
         """
         Create the footer for the given einsum
 
@@ -45,5 +46,9 @@ class Footer:
         # After reseting the output tensor, make sure that it still knows that
         # it is the output
         output.set_is_output(True)
+
+        # Display the canvas if necessary
+        if canvas.displayable():
+            footer.add(canvas.display_canvas())
 
         return cast(Statement, footer)

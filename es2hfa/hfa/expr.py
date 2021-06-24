@@ -148,6 +148,27 @@ class EString:
 
 
 @Expression.register
+class ETuple:
+    """
+    A tuple in HFA
+    """
+
+    def __init__(self, elems: List[Expression]) -> None:
+        self.elems = elems
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for this tuple
+        """
+        # A single element tuple in Python needs an extra trailing comma
+        if len(self.elems) == 1:
+            return "(" + self.elems[0].gen() + ",)"
+
+        else:
+            return "(" + ", ".join([elem.gen() for elem in self.elems]) + ")"
+
+
+@Expression.register
 class EVar:
     """
     An HFA variable

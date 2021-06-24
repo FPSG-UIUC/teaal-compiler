@@ -43,6 +43,16 @@ def test_estring():
     assert string.gen() == "\"y\""
 
 
+def test_etuple_one_elem():
+    tuple_ = ETuple([EVar("x")])
+    assert tuple_.gen() == "(x,)"
+
+
+def test_etuple():
+    tuple_ = ETuple([EVar("x"), EVar("y"), EVar("z")])
+    assert tuple_.gen() == "(x, y, z)"
+
+
 def test_evar():
     var = EVar("x")
     assert var.gen() == "x"
