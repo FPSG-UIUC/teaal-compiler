@@ -9,7 +9,12 @@ einsum:
         - T1[m, n] = sum(K).(A[k, m] * B[k, n])
         - Z[m, n] = a * T1[m, n] + b * C[m, n]
 mapping:
+    partitioning:
+        T1:
+            K: [uniform_shape(3)]
+    loop-order:
+        T1: [K1, M, N, K0]
     display:
         T1:
-            space: [N]
-            time: [K, M]
+            space: [K0]
+            time: [K1, M, N]

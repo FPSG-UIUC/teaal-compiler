@@ -2,6 +2,11 @@
 
 ## Bug Fixes
 
+- [ ] Figure out work-around for `ruamel.yaml` and `mypy` error
+    - Manually add necessary `__init__.py` file
+    - Symbolically link to `ruamel-yaml` or something
+- [ ] Fix partitioned dimension display
+
 ## Minor Changes
 
 - [ ] Add all other integration tests
@@ -13,6 +18,12 @@
 ## Major Changes
 
 - [ ] Integration with the HFA docker environment
+    - [ ] Make the compiler installable
+        - See [Accelergy](https://github.com/Accelergy-Project/accelergy) or
+          [yamlwidgets](https://github.com/jsemer/yamlwidgets) for examples
+    - [ ] Add copyright headers to each of the files
+    - [ ] Make HFA repository public
+    - [ ] Add compiler as a sub-repository within the docker container
 
 ## Planning
 
