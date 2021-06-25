@@ -9,7 +9,7 @@ pytest-cov = "*"
 autopep8 = "*"
 mypy = "*"
 lark-parser = "*"
-pyyaml = "*"
+ruamel-yaml = "*"
 
 [dev-packages]
 

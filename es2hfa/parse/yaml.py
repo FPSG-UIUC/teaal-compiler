@@ -1,7 +1,8 @@
 """
 Parsing the yaml input file
 """
-import yaml
+# Known issue with ruamel and mypy (https://github.com/python/mypy/issues/7276)
+from ruamel.yaml import YAML  # type: ignore
 
 
 class YamlParser:
@@ -14,7 +15,8 @@ class YamlParser:
         """
         Parse a string in the YAML format into the corresponding dictionary
         """
-        return yaml.safe_load(string)
+        yaml = YAML(typ='safe', pure=True)
+        return yaml.load(string)
 
     @staticmethod
     def parse_file(input_file: str) -> dict:
@@ -22,5 +24,6 @@ class YamlParser:
         Parse a YAML file into the corresponding dictionary
         """
         with open(input_file, 'r') as stream:
-            data_loaded = yaml.safe_load(stream)
+            yaml = YAML(typ='safe', pure=True)
+            data_loaded = yaml.load(stream)
         return data_loaded
