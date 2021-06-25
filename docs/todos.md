@@ -14,7 +14,6 @@
 ## Major Changes
 
 - [ ] Integration with the HFA docker environment
-- [ ] Write `tmp`s in SSA form
 
 ## Planning
 

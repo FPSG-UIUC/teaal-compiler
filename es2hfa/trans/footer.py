@@ -17,7 +17,10 @@ class Footer:
     """
 
     @staticmethod
-    def make_footer(mapping: Mapping, canvas: Canvas) -> Statement:
+    def make_footer(
+            mapping: Mapping,
+            canvas: Canvas,
+            utils: Utils) -> Statement:
         """
         Create the footer for the given einsum
 
@@ -40,7 +43,7 @@ class Footer:
             footer.add(Utils.build_swizzle(output, curr_name))
 
         # Now, undo partitioning
-        partitioner = Partitioner(mapping)
+        partitioner = Partitioner(mapping, utils)
         footer.add(partitioner.unpartition(mapping.get_output()))
 
         # After reseting the output tensor, make sure that it still knows that

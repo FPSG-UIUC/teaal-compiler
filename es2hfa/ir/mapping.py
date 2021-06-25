@@ -1,5 +1,5 @@
 """
-Representation of tensor metadata
+Representation of einsum metadata and the specification
 """
 
 from collections import Counter
@@ -13,7 +13,7 @@ from es2hfa.parse.input import Input
 
 class Mapping:
     """
-    Store tensor metadata and configure the metadaa for specific einsums
+    Store tensor metadata and configure the metadata for specific einsums
     """
 
     def __init__(self, input_: Input) -> None:

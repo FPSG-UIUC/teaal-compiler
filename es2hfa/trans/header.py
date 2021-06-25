@@ -20,7 +20,10 @@ class Header:
     """
 
     @staticmethod
-    def make_header(mapping: Mapping, canvas: Canvas) -> Statement:
+    def make_header(
+            mapping: Mapping,
+            canvas: Canvas,
+            utils: Utils) -> Statement:
         """
         Create the header for a given einsum
 
@@ -37,7 +40,7 @@ class Header:
         header.add(cast(Statement, out_assn))
 
         # Create a partitioner
-        partitioner = Partitioner(mapping)
+        partitioner = Partitioner(mapping, utils)
 
         # Get the tensors we need to generate headers for
         tensors = mapping.get_tensors()

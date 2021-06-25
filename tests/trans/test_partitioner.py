@@ -4,6 +4,7 @@ from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 from es2hfa.trans.partitioning import Partitioner
+from es2hfa.trans.utils import Utils
 
 
 def assert_partition(tensor, parts, hfa):
@@ -22,7 +23,7 @@ def assert_partition(tensor, parts, hfa):
     mapping = Mapping(Input.from_str(yaml))
     mapping.add_einsum(0)
 
-    partitioner = Partitioner(mapping)
+    partitioner = Partitioner(mapping, Utils())
     assert partitioner.partition(tensor).gen(depth=0) == hfa
 
 
@@ -37,10 +38,10 @@ def test_uniform_shape():
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
-    hfa = "tmp = B_KN\n" + \
-          "tmp = tmp.splitUniform(6, depth=1)\n" + \
-          "tmp = tmp.splitUniform(3, depth=2)\n" + \
-          "B_KN2N1N0 = tmp\n" + \
+    hfa = "tmp0 = B_KN\n" + \
+          "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
+          "tmp2 = tmp1.splitUniform(3, depth=2)\n" + \
+          "B_KN2N1N0 = tmp2\n" + \
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, part, hfa)
@@ -52,10 +53,10 @@ def test_nway_shape():
                 M: [nway_shape(5)]
                 N: [nway_shape(6), nway_shape(3)]
     """
-    hfa = "tmp = B_KN\n" + \
-          "tmp = tmp.splitUniform((N - 1) // 6 + 1, depth=1)\n" + \
-          "tmp = tmp.splitUniform((N - 1) // 3 + 1, depth=1)\n" + \
-          "B_KN2N1N0 = tmp\n" + \
+    hfa = "tmp0 = B_KN\n" + \
+          "tmp1 = tmp0.splitUniform((N - 1) // 6 + 1, depth=1)\n" + \
+          "tmp2 = tmp1.splitUniform((N - 1) // 3 + 1, depth=1)\n" + \
+          "B_KN2N1N0 = tmp2\n" + \
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, part, hfa)
@@ -80,7 +81,7 @@ def assert_unpartition(part, hfa):
     for tensor in mapping.get_tensors():
         mapping.apply_partitioning(tensor)
 
-    partitioner = Partitioner(mapping)
+    partitioner = Partitioner(mapping, Utils())
     assert partitioner.unpartition(mapping.get_output()).gen(0) == hfa
 
 
@@ -96,9 +97,9 @@ def test_unpartition_one():
     part = """
                 N: [uniform_shape(6), uniform_shape(3)]
     """
-    hfa = "tmp = Z_MN2N1N0\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-          "Z_MN = tmp\n" + \
+    hfa = "tmp0 = Z_MN2N1N0\n" + \
+          "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+          "Z_MN = tmp1\n" + \
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
     assert_unpartition(part, hfa)
 
@@ -108,9 +109,9 @@ def test_unpartition_all():
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
-    hfa = "tmp = Z_M1M0N2N1N0\n" + \
-          "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-          "Z_MN = tmp\n" + \
+    hfa = "tmp0 = Z_M1M0N2N1N0\n" + \
+          "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+          "Z_MN = tmp2\n" + \
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
     assert_unpartition(part, hfa)

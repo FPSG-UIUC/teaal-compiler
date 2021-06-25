@@ -20,11 +20,12 @@ class Partitioner:
     Generate the HFA code for the partitioning information
     """
 
-    def __init__(self, mapping: Mapping) -> None:
+    def __init__(self, mapping: Mapping, utils: Utils) -> None:
         """
         Create a partitioner for a given mapping
         """
         self.mapping = mapping
+        self.utils = utils
 
     def partition(self, tensor: Tensor) -> Statement:
         """
@@ -41,7 +42,7 @@ class Partitioner:
         # Rename the variable
         old_name = tensor.tensor_name()
         old_expr = cast(Expression, EVar(old_name))
-        block.add(cast(Statement, SAssign("tmp", old_expr)))
+        block.add(cast(Statement, SAssign(self.utils.next_tmp(), old_expr)))
 
         # Emit the partitioning code
         for i, ind in reversed(list(enumerate(tensor.get_inds()))):
@@ -56,7 +57,8 @@ class Partitioner:
                     block.add(self._nway_shape(ind, part, i))
                 else:
                     # Note: there is no good way to test this error. Bad
-                    # partitioning styles caught by the PartitioningParser
+                    # partitioning styles should be caught by the
+                    # PartitioningParser
                     raise ValueError(
                         "Unknown partitioning style: " +
                         part.data)  # pragma: no cover
@@ -64,7 +66,7 @@ class Partitioner:
         # Rename the tensor
         self.mapping.apply_partitioning(tensor)
         part_name = tensor.tensor_name()
-        tmp_expr = cast(Expression, EVar("tmp"))
+        tmp_expr = cast(Expression, EVar(self.utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
 
         # Rename the rank_ids
@@ -91,7 +93,12 @@ class Partitioner:
 
         # Switch to name tmp
         part_name_expr = cast(Expression, EVar(part_name))
-        block.add(cast(Statement, SAssign("tmp", part_name_expr)))
+        block.add(
+            cast(
+                Statement,
+                SAssign(
+                    self.utils.next_tmp(),
+                    part_name_expr)))
 
         # For each dimension
         for i, ind in enumerate(tensor.get_inds()):
@@ -105,13 +112,15 @@ class Partitioner:
             arg3 = AParam("coord_style", cast(Expression, EString("absolute")))
             args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
 
-            flat_call = EMethod("tmp", "flattenRanks", args)
-            flat_assn = SAssign("tmp", cast(Expression, flat_call))
+            flat_call = EMethod(self.utils.curr_tmp(), "flattenRanks", args)
+            flat_assn = SAssign(
+                self.utils.next_tmp(), cast(
+                    Expression, flat_call))
 
             block.add(cast(Statement, flat_assn))
 
         # Switch back to tensor name and rename the rank_ids
-        tmp_name_expr = cast(Expression, EVar("tmp"))
+        tmp_name_expr = cast(Expression, EVar(self.utils.curr_tmp()))
         block.add(cast(Statement, SAssign(new_name, tmp_name_expr)))
         block.add(Utils.build_set_rank_ids(tensor))
 
@@ -153,8 +162,8 @@ class Partitioner:
         args = [cast(Argument, arg1), cast(Argument, arg2)]
 
         # Build the call to splitUniform()
-        part_call = EMethod("tmp", "splitUniform", args)
-        part_assn = SAssign("tmp", cast(Expression, part_call))
+        part_call = EMethod(self.utils.curr_tmp(), "splitUniform", args)
+        part_assn = SAssign(self.utils.next_tmp(), cast(Expression, part_call))
 
         return cast(Statement, part_assn)
 

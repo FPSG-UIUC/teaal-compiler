@@ -12,6 +12,13 @@ from es2hfa.ir.tensor import Tensor
 
 
 class Utils:
+    """
+    Different utilities for generating HFA programs
+    """
+
+    def __init__(self) -> None:
+        self.count = -1
+
     @staticmethod
     def build_rank_ids(tensor: Tensor) -> Argument:
         """
@@ -43,3 +50,19 @@ class Utils:
                 "swizzleRanks",
                 [arg]))
         return cast(Statement, SAssign(tensor.tensor_name(), swizzle_call))
+
+    def curr_tmp(self) -> str:
+        """
+        Get the last temporary returned
+        """
+        if self.count == -1:
+            raise ValueError("No previous temporary")
+
+        return "tmp" + str(self.count)
+
+    def next_tmp(self) -> str:
+        """
+        Get a new unique temporary
+        """
+        self.count += 1
+        return "tmp" + str(self.count)

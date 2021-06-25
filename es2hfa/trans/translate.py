@@ -13,6 +13,7 @@ from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
 from es2hfa.trans.header import Header
+from es2hfa.trans.utils import Utils
 
 
 class Translator:
@@ -26,6 +27,7 @@ class Translator:
         Perform the Einsum to HFA translation
         """
         mapping = Mapping(input_)
+        utils = Utils()
 
         program = SBlock([])
         for i, einsum in enumerate(input_.get_expressions()):
@@ -36,7 +38,7 @@ class Translator:
             canvas = Canvas(mapping)
 
             # Build the header
-            program.add(Header.make_header(mapping, canvas))
+            program.add(Header.make_header(mapping, canvas, utils))
 
             # Build the loop nests
             graph = IterationGraph(mapping)
@@ -44,7 +46,7 @@ class Translator:
             program.add(Translator.__build_loop_nest(graph, eqn, canvas))
 
             # Build the footer
-            program.add(Footer.make_footer(mapping, canvas))
+            program.add(Footer.make_footer(mapping, canvas, utils))
 
             mapping.reset()
 

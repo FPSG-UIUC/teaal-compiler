@@ -3,6 +3,7 @@ from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.footer import Footer
+from es2hfa.trans.utils import Utils
 
 
 def assert_make_footer(loop_order, partitioning, display, hfa):
@@ -32,7 +33,7 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
         mapping.apply_partitioning(tensor)
         mapping.apply_loop_order(tensor)
 
-    assert Footer.make_footer(mapping, canvas).gen(depth=0) == hfa
+    assert Footer.make_footer(mapping, canvas, Utils()).gen(depth=0) == hfa
 
     return mapping
 
@@ -62,10 +63,10 @@ def test_make_footer_partitioned():
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
-    hfa = "tmp = Z_M1M0N2N1N0\n" + \
-          "tmp = tmp.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-          "Z_MN = tmp\n" + \
+    hfa = "tmp0 = Z_M1M0N2N1N0\n" + \
+          "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+          "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+          "Z_MN = tmp2\n" + \
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
     assert_make_footer("", part, "", hfa)
 
@@ -91,9 +92,9 @@ def test_make_footer_all():
                 time: [K, M, N0]
     """
     hfa = "Z_MN2N1N0 = Z_N2N1MN0.swizzleRanks(rank_ids=[\"M\", \"N2\", \"N1\", \"N0\"])\n" + \
-          "tmp = Z_MN2N1N0\n" + \
-          "tmp = tmp.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-          "Z_MN = tmp\n" + \
+          "tmp0 = Z_MN2N1N0\n" + \
+          "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+          "Z_MN = tmp1\n" + \
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
           "displayCanvas(canvas)"
     assert_make_footer(loop_order, part, display, hfa)
