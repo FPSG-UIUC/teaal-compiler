@@ -2,9 +2,8 @@
 Representation of how tensors and variables are combined
 """
 
-from typing import cast, Dict, Generator, List, Optional
-
 from lark.tree import Tree
+from typing import cast, Dict, Generator, List, Optional
 
 from es2hfa.hfa.base import Expression, Operator, Payload, Statement
 from es2hfa.hfa.expr import EBinOp, EParens, EVar

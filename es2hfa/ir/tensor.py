@@ -1,9 +1,9 @@
 """
 Representation of a tensor as it moves through the iteration graph
 """
-from typing import Dict, List, Optional
 
 from lark.tree import Tree
+from typing import Dict, List, Optional
 
 
 class Tensor:

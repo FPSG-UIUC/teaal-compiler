@@ -1,6 +1,7 @@
 """
 Represetation of an iteration graph
 """
+
 from typing import cast, List, Optional, Tuple
 
 from es2hfa.ir.mapping import Mapping

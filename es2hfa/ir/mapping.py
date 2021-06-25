@@ -3,9 +3,9 @@ Representation of einsum metadata and the specification
 """
 
 from collections import Counter
-from typing import cast, Dict, Generator, List, Optional
 
 from lark.tree import Tree
+from typing import cast, Dict, Generator, List, Optional
 
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input

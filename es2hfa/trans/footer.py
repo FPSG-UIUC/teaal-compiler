@@ -1,6 +1,7 @@
 """
 Translate the footer below the loop nest
 """
+
 from typing import cast
 
 from es2hfa.hfa.base import Statement

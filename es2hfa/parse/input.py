@@ -2,9 +2,8 @@
 Parse the input YAML file
 """
 
-from typing import Dict, List, Optional
-
 from lark.tree import Tree
+from typing import Dict, List, Optional
 
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.partitioning import PartitioningParser

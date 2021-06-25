@@ -5,7 +5,6 @@
 ## Minor Changes
 
 - [ ] Add all other integration tests
-- [ ] Move typing imports with the other package imports
 - [ ] Clean up tests
     - Which example tests actually test something unique?
     - All tests should use the [tensor naming conventions](./tensor_naming.md)
@@ -21,4 +20,3 @@
 
 ## Other
 
-- [ ] Add TensorMaker instruction notebook
