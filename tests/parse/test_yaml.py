@@ -2,12 +2,12 @@ from es2hfa.parse.yaml import YamlParser
 
 
 def test_parse_file():
-    out = YamlParser.parse_file("tests/integration/example9.yml")
+    out = YamlParser.parse_file("tests/integration/example9.yaml")
     assert out["einsum"]["expressions"][0] == "T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])"
 
 
 def test_parse_file_mapping():
-    out = YamlParser.parse_file("tests/integration/example9.yml")
+    out = YamlParser.parse_file("tests/integration/example9.yaml")
     assert out["mapping"]["rank-order"]["A"] == ["J", "L", "I"]
 
 

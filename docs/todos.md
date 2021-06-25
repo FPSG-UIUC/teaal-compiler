@@ -5,7 +5,6 @@
 ## Minor Changes
 
 - [ ] Add all other integration tests
-- [ ] Use .yaml instead of .yml to make things consistent
 - [ ] Use ruamel.yaml to parse YAML
 - [ ] Move typing imports with the other package imports
 - [ ] Clean up tests
