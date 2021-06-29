@@ -24,3 +24,4 @@ mapping:
         T1:
             space: [N]
             time: [K, M]
+            style: shape

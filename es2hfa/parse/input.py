@@ -3,7 +3,7 @@ Parse the input YAML file
 """
 
 from lark.tree import Tree
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.partitioning import PartitioningParser
@@ -97,7 +97,7 @@ class Input:
         """
         return self.declaration
 
-    def get_display(self) -> Dict[str, Dict[str, List[str]]]:
+    def get_display(self) -> Dict[str, Dict[str, Union[str, List[str]]]]:
         """
         Get the display information
         """

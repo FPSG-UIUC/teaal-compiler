@@ -44,10 +44,10 @@ class Canvas:
             args.append(cast(Argument, arg))
 
         # Add the space-time arguments
-        space = [EVar(ind[0].lower() + ind[1:]) for ind in display["space"]]
+        space = [EVar(ind[0].lower() + ind[1:]) for ind in display.get_space()]
         space_tup = cast(Expression, ETuple(
             [cast(Expression, ind) for ind in space]))
-        time = [EVar(ind[0].lower() + ind[1:]) for ind in display["time"]]
+        time = [EVar(ind[0].lower() + ind[1:]) for ind in display.get_time()]
         time_tup = cast(Expression, ETuple(
             [cast(Expression, ind) for ind in time]))
         spacetime = cast(Expression, ETuple([space_tup, time_tup]))
@@ -102,6 +102,4 @@ class Canvas:
         display the Einsum
         """
         display = self.mapping.get_display()
-        return display is not None and \
-            "space" in display.keys() and \
-            "time" in display.keys()
+        return display is not None

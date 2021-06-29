@@ -34,6 +34,7 @@ def create_displayed():
             Z:
                 space: [N]
                 time: [K, M]
+                style: shape
     """
     return Mapping(Input.from_str(yaml))
 
@@ -57,6 +58,7 @@ def create_partitioned():
             Z:
                 space: [N2, N1]
                 time: [K, M, N0]
+                style: shape
     """
     return Mapping(Input.from_str(yaml))
 

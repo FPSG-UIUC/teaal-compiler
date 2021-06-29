@@ -5,8 +5,9 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import cast, Dict, Generator, List, Optional
+from typing import cast, Dict, Generator, List, Optional, Union
 
+from es2hfa.ir.display import Display
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 
@@ -41,7 +42,7 @@ class Mapping:
         self.es_tensors: List[Tensor] = []
         self.loop_order: Optional[List[str]] = None
         self.partitioning: Optional[Dict[str, List[Tree]]] = None
-        self.display: Optional[Dict[str, List[str]]] = None
+        self.display: Optional[Display] = None
 
     def add_einsum(self, i: int) -> None:
         """
@@ -74,27 +75,17 @@ class Mapping:
         if self.loop_order is None:
             self.loop_order = self.__default_loop_order(einsum)
 
-        # Store the display information
-        display = self.input.get_display()
-        if output.root_name() in display.keys():
-            self.display = display[output.root_name()]
+        # Get the display information
+        display: Optional[Dict[str, Union[str, List[str]]]] = None
+        if output.root_name() in self.input.get_display().keys():
+            display = self.input.get_display()[output.root_name()]
 
-        if self.display is not None:
-            # Make sure that the display information is correct
-            if Counter(
-                    self.loop_order) != Counter(
-                    self.display["space"] +
-                    self.display["time"]):
-                raise ValueError(
-                    "Incorrect schedule for display on output " +
-                    output.root_name())
-
-            # Otherwise, sort the indices so that they are in the loop order
+        if display is not None:
+            # Build the display object
             # Unfortunately, mypy is not smart enough to figure out that
-            # self.loop_order is always a list at this poing
+            # self.loop_order is always a list at this point
             loop_order = cast(List[str], self.loop_order)
-            self.display["space"].sort(key=lambda i: loop_order.index(i))
-            self.display["time"].sort(key=lambda i: loop_order.index(i))
+            self.display = Display(display, loop_order, output.root_name())
 
     def apply_loop_order(self, tensor: Tensor) -> None:
         """
@@ -118,7 +109,7 @@ class Mapping:
 
         tensor.partition(self.partitioning)
 
-    def get_display(self) -> Optional[Dict[str, List[str]]]:
+    def get_display(self) -> Optional[Display]:
         """
         Get the display information for this kernel, should it exist
         """

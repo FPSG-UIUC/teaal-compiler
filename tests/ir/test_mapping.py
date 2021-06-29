@@ -1,5 +1,6 @@
 import pytest
 
+from es2hfa.ir.display import Display
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
@@ -71,7 +72,7 @@ def create_rank_ordered():
     return Mapping(Input.from_str(yaml))
 
 
-def create_displayed(time):
+def create_displayed(time, style):
     yaml = """
     einsum:
         declaration:
@@ -84,7 +85,8 @@ def create_displayed(time):
         display:
             Z:
                 space: [N]
-                time: """ + time
+                time: """ + time + """
+                """ + style
     return Mapping(Input.from_str(yaml))
 
 
@@ -120,14 +122,6 @@ def test_add_einsum_missing_decl():
     with pytest.raises(ValueError) as excinfo:
         mapping.add_einsum(0)
     assert str(excinfo.value) == "Undeclared tensor: C"
-
-
-def test_add_einsum_bad_display():
-    mapping = create_displayed("[K, N]")
-
-    with pytest.raises(ValueError) as excinfo:
-        mapping.add_einsum(0)
-    assert str(excinfo.value) == "Incorrect schedule for display on output Z"
 
 
 def test_apply_loop_order_unconfigured():
@@ -198,10 +192,12 @@ def test_get_display_unspecified():
 
 
 def test_get_display_specified():
-    mapping = create_displayed("[K, M]")
+    mapping = create_displayed("[K, M]", "style: shape")
     mapping.add_einsum(0)
 
-    display = {"space": ["N"], "time": ["M", "K"]}
+    yaml = {"space": ["N"], "time": ["M", "K"], "style": "shape"}
+    display = Display(yaml, mapping.get_loop_order(),
+                      mapping.get_output().root_name())
     assert mapping.get_display() == display
 
 
