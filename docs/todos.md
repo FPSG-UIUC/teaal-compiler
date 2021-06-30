@@ -2,9 +2,6 @@
 
 ## Bug Fixes
 
-- [ ] Figure out work-around for `ruamel.yaml` and `mypy` error
-    - Manually add necessary `__init__.py` file
-    - Symbolically link to `ruamel-yaml` or something
 - [ ] Fix partitioned dimension display
 
 ## Minor Changes

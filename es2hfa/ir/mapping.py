@@ -39,6 +39,7 @@ class Mapping:
 
             self.tensors[tensor.root_name()] = tensor
 
+        self.einsum: Optional[Tree] = None
         self.es_tensors: List[Tensor] = []
         self.loop_order: Optional[List[str]] = None
         self.partitioning: Optional[Dict[str, List[Tree]]] = None
@@ -48,16 +49,16 @@ class Mapping:
         """
         Configure the mapping for the ith Einsum
         """
-        einsum = self.input.get_expressions()[i]
+        self.einsum = self.input.get_expressions()[i]
 
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
-        output = self.__get_tensor(next(einsum.find_data("output")))
+        output = self.__get_tensor(next(self.einsum.find_data("output")))
         output.set_is_output(True)
         self.es_tensors.append(output)
 
         # Add the rest of the tensors
-        for tensor_tree in einsum.find_data("tensor"):
+        for tensor_tree in self.einsum.find_data("tensor"):
             self.es_tensors.append(self.__get_tensor(tensor_tree))
 
         # Store the partitioning information
@@ -73,7 +74,7 @@ class Mapping:
             self.loop_order = loop_orders[output.root_name()]
 
         if self.loop_order is None:
-            self.loop_order = self.__default_loop_order(einsum)
+            self.loop_order = self.__default_loop_order()
 
         # Get the display information
         display: Optional[Dict[str, Union[str, List[str]]]] = None
@@ -85,7 +86,11 @@ class Mapping:
             # Unfortunately, mypy is not smart enough to figure out that
             # self.loop_order is always a list at this point
             loop_order = cast(List[str], self.loop_order)
-            self.display = Display(display, loop_order, output.root_name())
+            self.display = Display(
+                display,
+                loop_order,
+                self.partitioning,
+                output.root_name())
 
     def apply_loop_order(self, tensor: Tensor) -> None:
         """
@@ -121,6 +126,17 @@ class Mapping:
                 "Unconfigured mapping. Make sure to first call add_einsum()")
 
         return self.display
+
+    def get_einsum(self) -> Tree:
+        """
+        Get the parse tree representation of the einsum
+        """
+        # Make sure that the mapping is configured
+        if self.einsum is None:
+            raise ValueError(
+                "Unconfigured mapping. Make sure to first call add_einsum()")
+
+        return self.einsum
 
     def get_loop_order(self) -> List[str]:
         """
@@ -179,16 +195,19 @@ class Mapping:
         self.partitioning = None
         self.display = None
 
-    def __default_loop_order(self, einsum: Tree) -> List[str]:
+    def __default_loop_order(self) -> List[str]:
         """
         Compute the default loop order
         """
+        if self.einsum is None:
+            raise ValueError("Must first set the einsum")
+
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
         loop_order = self.es_tensors[0].get_inds().copy()
 
-        for sum_ in einsum.find_data("sum"):
+        for sum_ in self.einsum.find_data("sum"):
             loop_order += list(next(sum_.find_data("sinds")
                                     ).scan_values(lambda _: True))
 

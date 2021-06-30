@@ -4,7 +4,7 @@ from es2hfa.ir.display import Display
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
-from tests.utils.parse_tree import make_uniform_shape
+from tests.utils.parse_tree import *
 
 
 def create_default():
@@ -196,9 +196,31 @@ def test_get_display_specified():
     mapping.add_einsum(0)
 
     yaml = {"space": ["N"], "time": ["M", "K"], "style": "shape"}
-    display = Display(yaml, mapping.get_loop_order(),
+    display = Display(yaml, mapping.get_loop_order(), {},
                       mapping.get_output().root_name())
     assert mapping.get_display() == display
+
+
+def test_get_einsum_unconfigured():
+    mapping = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        mapping.get_einsum()
+    assert str(
+        excinfo.value) == "Unconfigured mapping. Make sure to first call add_einsum()"
+
+
+def test_get_einsum():
+    mapping = create_default()
+    mapping.add_einsum(0)
+
+    tensors = [make_tensor("A", ["k", "m"]), make_tensor("B", ["k", "n"])]
+    expr = Tree("plus", [Tree("times", tensors)])
+    sum_ = make_sum(["K"], expr)
+    einsum = make_einsum(make_output("Z", ["m", "n"]), sum_)
+    print(mapping.get_einsum())
+    print(einsum)
+    assert mapping.get_einsum() == einsum
 
 
 def test_get_loop_order_unconfigured():
@@ -359,5 +381,24 @@ def test_default_loop_order_unconfigured():
     input_ = Input.from_str(yaml)
     mapping = Mapping(input_)
     with pytest.raises(ValueError) as excinfo:
-        mapping._Mapping__default_loop_order(input_.get_expressions()[0])
+        mapping._Mapping__default_loop_order()
+    assert str(excinfo.value) == "Must first set the einsum"
+
+
+def test_default_loop_order_no_partitioning():
+    yaml = """
+    einsum:
+        declaration:
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            C: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    input_ = Input.from_str(yaml)
+    mapping = Mapping(input_)
+    mapping.einsum = input_.get_expressions()[0]
+    with pytest.raises(ValueError) as excinfo:
+        mapping._Mapping__default_loop_order()
     assert str(excinfo.value) == "Must configure partitioning before loop order"

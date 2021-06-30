@@ -4,7 +4,8 @@ Intermediate representation of display information
 
 from collections import Counter
 
-from typing import Dict, List, Union
+from lark.tree import Tree
+from typing import Dict, List, Optional, Union
 
 
 class Display:
@@ -13,10 +14,9 @@ class Display:
     """
 
     def __init__(self,
-                 yaml: Dict[str,
-                            Union[str,
-                                  List[str]]],
+                 yaml: Dict[str, Union[str, List[str]]],
                  loop_order: List[str],
+                 partitioning: Dict[str, List[Tree]],
                  out_name: str) -> None:
         """
         Build the display object
@@ -69,6 +69,22 @@ class Display:
                 self.style +
                 " on output " +
                 out_name)
+
+        # Find the base index name associated with the partitioned indices
+        self.bases = {}
+        for ind in partitioning:
+            for i in range(len(partitioning[ind])):
+                self.bases[ind + str(i)] = ind + str(i + 1)
+
+    def get_base(self, ind: str) -> Optional[str]:
+        """
+        Get the base index name associated with a given index
+
+        Used to convert from absolute coordinates to relative coordinates
+        """
+        if ind in self.bases:
+            return self.bases[ind]
+        return None
 
     def get_space(self) -> List[str]:
         """
