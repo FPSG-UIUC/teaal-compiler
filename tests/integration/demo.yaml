@@ -12,6 +12,7 @@ mapping:
         B:
             space: [M1]
             time: [M2, M0]
+            style: occupancy
 # einsum:
 #     declaration:
 #         A: [K, M]

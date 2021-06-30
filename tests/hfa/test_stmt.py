@@ -34,8 +34,8 @@ def test_sexpr():
 
 
 def test_sfor():
-    for_ = SFor("i", PVar("a_j"), EVar("a_i"), SExpr(EVar("a_j")))
-    assert for_.gen(1) == "    for i, a_j in a_i:\n        a_j"
+    for_ = SFor(PVar("a_j"), EVar("a_i"), SExpr(EVar("a_j")))
+    assert for_.gen(1) == "    for a_j in a_i:\n        a_j"
 
 
 def test_sfunc():

@@ -75,9 +75,9 @@ class Translator:
         # Otherwise, get the information for the for loop
         expr = eqn.make_iter_expr(tensors)
         _, tensors = graph.pop()
-        payload = eqn.make_payload(tensors)
+        payload = eqn.make_payload(ind, tensors)
 
         # Recurse for the for loop body
         body = Translator.__build_loop_nest(graph, eqn, canvas)
 
-        return cast(Statement, SFor(ind, payload, expr, body))
+        return cast(Statement, SFor(payload, expr, body))
