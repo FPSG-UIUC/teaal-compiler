@@ -2,7 +2,6 @@
 Representation of how tensors and variables are combined
 """
 
-from lark.tree import Tree
 from typing import cast, Dict, Generator, List, Optional
 
 from es2hfa.hfa.base import Expression, Operator, Payload, Statement
@@ -10,6 +9,7 @@ from es2hfa.hfa.expr import EBinOp, EParens, EVar
 from es2hfa.hfa.op import *
 from es2hfa.hfa.payload import *
 from es2hfa.hfa.stmt import SIAssign
+from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 
 
@@ -19,13 +19,12 @@ class Equation:
     equation at the bottom of the loop nest
     """
 
-    def __init__(self, einsum: Tree) -> None:
+    def __init__(self, mapping: Mapping) -> None:
         """
         Construct a new Equation
         """
-        # Make sure we are starting with the full einsum
-        if einsum.data != "einsum":
-            raise ValueError("Input parse tree must be an einsum")
+        self.mapping = mapping
+        einsum = self.mapping.get_einsum()
 
         # First find all terms (terminals multiplied together)
         self.terms: List[List[str]] = []
@@ -126,7 +125,7 @@ class Equation:
             payload = cast(Payload, PTuple(
                 [cast(Payload, PVar("_")), term_payload, payload]))
 
-        # Finally, put the output on the outside
+        # Put the output on the outside
         output_tensor = self.__get_output_tensor(tensors)
         if output_tensor:
             payload = cast(Payload, PTuple(
