@@ -16,6 +16,8 @@ test_names = [
     'example3',
     'example4',
     'example5',
+    'example6',
+    'example7',
     'gemm',
     'gemv',
     'gram',
@@ -24,10 +26,9 @@ test_names = [
     'outerprod',
     'sddmm',
     'spmv',
+    'spmm',
     'ttm',
     'ttv']
-
-# TODO: example6, example7, nrm_sq, spmm
 
 
 def test_integration():
@@ -38,5 +39,4 @@ def test_integration():
         output = Translator.translate(input_).gen(depth=0)
 
         hfa = read_hfa(filename + ".hfa")
-
         assert output == hfa, test_name + " integration test failed!"

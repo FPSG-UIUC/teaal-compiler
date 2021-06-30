@@ -1,5 +1,6 @@
-b_k = B_KL.getRoot()
+D_I = Tensor(rank_ids=["I"])
 d_i = D_I.getRoot()
-for i, (d_ref, b_j) in d_i << b_k:
-    for j, b_val in b_j:
-        d_ref += b_val
+c_i = C_IJ.getRoot()
+for i, (d_ref, c_j) in d_i << c_i:
+    for j, c_val in c_j:
+        d_ref += c_val
