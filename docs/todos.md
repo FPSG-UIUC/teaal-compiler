@@ -2,7 +2,7 @@
 
 ## Bug Fixes
 
-- [ ] Fix partitioned dimension display
+- [ ] Weird `'M' not found in list` with default loop order error on installed package only
 
 ## Minor Changes
 
