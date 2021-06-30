@@ -4,8 +4,9 @@ Translate the canvas display information
 from typing import cast, List, Optional
 
 from es2hfa.hfa.arg import AJust, AParam
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EFunc, EMethod, ETuple, EVar
+from es2hfa.hfa.base import Argument, Expression, Operator, Statement
+from es2hfa.hfa.expr import EBinOp, EFunc, EMethod, ETuple, EVar
+from es2hfa.hfa.op import OSub
 from es2hfa.hfa.stmt import SAssign, SExpr
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
@@ -44,12 +45,10 @@ class Canvas:
             args.append(cast(Argument, arg))
 
         # Add the space-time arguments
-        space = [EVar(ind[0].lower() + ind[1:]) for ind in display["space"]]
         space_tup = cast(Expression, ETuple(
-            [cast(Expression, ind) for ind in space]))
-        time = [EVar(ind[0].lower() + ind[1:]) for ind in display["time"]]
+            [self.__rel_coord(ind) for ind in display.get_space()]))
         time_tup = cast(Expression, ETuple(
-            [cast(Expression, ind) for ind in time]))
+            [self.__rel_coord(ind) for ind in display.get_time()]))
         spacetime = cast(Expression, ETuple([space_tup, time_tup]))
         args.append(cast(Argument, AParam("spacetime", spacetime)))
 
@@ -102,6 +101,37 @@ class Canvas:
         display the Einsum
         """
         display = self.mapping.get_display()
-        return display is not None and \
-            "space" in display.keys() and \
-            "time" in display.keys()
+        return display is not None
+
+    def __rel_coord(self, ind: str) -> Expression:
+        """
+        Get the relative coordinate for this index (important for PE distribution)
+        """
+        display = self.mapping.get_display()
+
+        # Make sure we have a display (needed to unwrap the Optional)
+        if display is None:
+            raise ValueError("Display information unspecified")
+
+        # Check if we already have the absolute coordinate
+        base = display.get_base(ind)
+        ind_str = ind[0].lower() + ind[1:]
+        if base is None:
+            return cast(Expression, EVar(ind_str))
+
+        if display.get_style() == "shape":
+            # ind - base
+            ind_expr = cast(Expression, EVar(ind_str))
+            base_expr = cast(Expression, EVar(base[0].lower() + base[1:]))
+            sub = EBinOp(ind_expr, cast(Operator, OSub()), base_expr)
+
+            return cast(Expression, sub)
+
+        elif display.get_style() == "occupancy":
+            # ind_pos
+            return cast(Expression, EVar(ind_str + "_pos"))
+
+        else:
+            # Note: there is no good way to test this error. Bad display styles
+            # should be caught by the Display
+            raise ValueError("Unknown display style")  # pragma: no cover

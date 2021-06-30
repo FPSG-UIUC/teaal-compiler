@@ -114,6 +114,7 @@ def test_make_header_displayed():
             Z:
                 space: [N]
                 time: [K, M]
+                style: shape
     """
     mapping = Mapping(Input.from_str(yaml))
     mapping.add_einsum(0)

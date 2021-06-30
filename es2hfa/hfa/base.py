@@ -50,7 +50,7 @@ class Payload(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def gen(self) -> str:
+    def gen(self, parens: bool) -> str:
         """
         Generate the HFA code for this Payload
         """

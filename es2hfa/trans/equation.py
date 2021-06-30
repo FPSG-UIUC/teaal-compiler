@@ -2,14 +2,15 @@
 Representation of how tensors and variables are combined
 """
 
-from lark.tree import Tree
 from typing import cast, Dict, Generator, List, Optional
 
-from es2hfa.hfa.base import Expression, Operator, Payload, Statement
-from es2hfa.hfa.expr import EBinOp, EParens, EVar
+from es2hfa.hfa.arg import AJust
+from es2hfa.hfa.base import *
+from es2hfa.hfa.expr import EBinOp, EFunc, EParens, EVar
 from es2hfa.hfa.op import *
 from es2hfa.hfa.payload import *
 from es2hfa.hfa.stmt import SIAssign
+from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 
 
@@ -19,13 +20,12 @@ class Equation:
     equation at the bottom of the loop nest
     """
 
-    def __init__(self, einsum: Tree) -> None:
+    def __init__(self, mapping: Mapping) -> None:
         """
         Construct a new Equation
         """
-        # Make sure we are starting with the full einsum
-        if einsum.data != "einsum":
-            raise ValueError("Input parse tree must be an einsum")
+        self.mapping = mapping
+        einsum = self.mapping.get_einsum()
 
         # First find all terms (terminals multiplied together)
         self.terms: List[List[str]] = []
@@ -97,9 +97,16 @@ class Equation:
                         output_tensor.fiber_name())), cast(
                     Operator, OLtLt()), expr)
 
+        # If the display style is occupancy, we also need to enumerate the
+        # iterations
+        display = self.mapping.get_display()
+        if display is not None and display.get_style() == "occupancy":
+            arg = cast(Argument, AJust(expr))
+            expr = cast(Expression, EFunc("enumerate", [arg]))
+
         return expr
 
-    def make_payload(self, tensors: List[Tensor]) -> Payload:
+    def make_payload(self, ind: str, tensors: List[Tensor]) -> Payload:
         """
         Given a list of tensors, construct the corresponding payload
         """
@@ -116,8 +123,7 @@ class Equation:
         for term in terms:
             payload = cast(Payload, PVar(term[-1].fiber_name()))
             for factor in reversed(term[:-1]):
-                payload = cast(Payload, PTuple(
-                    [cast(Payload, PVar(factor.fiber_name())), payload]))
+                payload = Equation.__add_pvar(factor.fiber_name(), payload)
             term_payloads.append(payload)
 
         # Construct the entire expression payload
@@ -126,11 +132,19 @@ class Equation:
             payload = cast(Payload, PTuple(
                 [cast(Payload, PVar("_")), term_payload, payload]))
 
-        # Finally, put the output on the outside
+        # Put the output on the outside
         output_tensor = self.__get_output_tensor(tensors)
         if output_tensor:
-            payload = cast(Payload, PTuple(
-                [cast(Payload, PVar(output_tensor.fiber_name())), payload]))
+            payload = Equation.__add_pvar(output_tensor.fiber_name(), payload)
+
+        # Add the index variable
+        payload = Equation.__add_pvar(ind, payload)
+
+        # If the display style is occupancy, we also need to enumerate the
+        # iterations
+        display = self.mapping.get_display()
+        if display is not None and display.get_style() == "occupancy":
+            payload = Equation.__add_pvar(ind + "_pos", payload)
 
         return payload
 
@@ -182,6 +196,14 @@ class Equation:
                 exprs[i] = cast(Expression, EParens(expr))
 
         return cast(Expression, EBinOp(exprs[0], op, exprs[1]))
+
+    @staticmethod
+    def __add_pvar(var: str, payload: Payload) -> Payload:
+        """
+        Add a var to the front of a payload
+        """
+        pvar = cast(Payload, PVar(var))
+        return cast(Payload, PTuple([pvar, payload]))
 
     def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
         """

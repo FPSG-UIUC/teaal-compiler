@@ -19,7 +19,7 @@ def test_declaration():
 
 def test_display():
     input_ = Input.from_file("tests/integration/test_input.yaml")
-    display = {"T1": {"space": ["N"], "time": ["K", "M"]}}
+    display = {"T1": {"space": ["N"], "time": ["K", "M"], "style": "shape"}}
 
     assert input_.get_display() == display
 

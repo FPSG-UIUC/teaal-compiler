@@ -16,11 +16,14 @@ class PTuple:
     def __init__(self, payloads: List[Payload]) -> None:
         self.payloads = payloads
 
-    def gen(self) -> str:
+    def gen(self, parens: bool) -> str:
         """
         Generate the HFA output for an SBlock
         """
-        return "(" + ", ".join([p.gen() for p in self.payloads]) + ")"
+        payload = ", ".join([p.gen(True) for p in self.payloads])
+        if parens:
+            return "(" + payload + ")"
+        return payload
 
 
 @Payload.register
@@ -32,8 +35,11 @@ class PVar:
     def __init__(self, var: str) -> None:
         self.var = var
 
-    def gen(self) -> str:
+    def gen(self, parens: bool) -> str:
         """
         Generate the HFA output for an SBlock
+
+        Note: the parens argument has no impact on PVar because it is already
+        an atomic element
         """
         return self.var

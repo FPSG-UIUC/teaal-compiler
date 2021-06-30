@@ -30,7 +30,7 @@ class Translator:
         utils = Utils()
 
         program = SBlock([])
-        for i, einsum in enumerate(input_.get_expressions()):
+        for i in range(len(input_.get_expressions())):
             # Add Einsum to mapping
             mapping.add_einsum(i)
 
@@ -42,7 +42,7 @@ class Translator:
 
             # Build the loop nests
             graph = IterationGraph(mapping)
-            eqn = Equation(einsum)
+            eqn = Equation(mapping)
             program.add(Translator.__build_loop_nest(graph, eqn, canvas))
 
             # Build the footer
@@ -75,9 +75,9 @@ class Translator:
         # Otherwise, get the information for the for loop
         expr = eqn.make_iter_expr(tensors)
         _, tensors = graph.pop()
-        payload = eqn.make_payload(tensors)
+        payload = eqn.make_payload(ind, tensors)
 
         # Recurse for the for loop body
         body = Translator.__build_loop_nest(graph, eqn, canvas)
 
-        return cast(Statement, SFor(ind, payload, expr, body))
+        return cast(Statement, SFor(payload, expr, body))

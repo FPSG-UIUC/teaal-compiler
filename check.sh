@@ -3,7 +3,6 @@
 
 # Type Checking
 pipenv run mypy es2hfa
-pipenv run mypy es2hfa 2>&1 > /dev/null
 
 # Auto-Formatting
 pipenv run autopep8 -iraa es2hfa/

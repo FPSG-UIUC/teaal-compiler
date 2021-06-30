@@ -23,7 +23,7 @@ def make_basic():
     mapping = Mapping(input_)
     mapping.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(input_.get_expressions()[0])
+    return IterationGraph(mapping), Equation(mapping)
 
 
 def make_output():
@@ -41,7 +41,7 @@ def make_output():
     mapping = Mapping(input_)
     mapping.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(input_.get_expressions()[0])
+    return IterationGraph(mapping), Equation(mapping)
 
 
 def make_mult_terms():
@@ -61,36 +61,67 @@ def make_mult_terms():
     mapping = Mapping(input_)
     mapping.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(input_.get_expressions()[0])
+    return IterationGraph(mapping), Equation(mapping)
 
 
-def test_bad_tree():
-    tree = make_plus(["a", "b"])
-    with pytest.raises(ValueError) as excinfo:
-        Equation(tree)
+def make_other(einsum):
+    yaml = """
+    einsum:
+        declaration:
+            A: [I]
+            B: [I]
+            C: [I]
+            D: [I]
+        expressions:
+            - """ + einsum
+    input_ = Input.from_str(yaml)
+    mapping = Mapping(input_)
+    mapping.add_einsum(0)
 
-    assert str(excinfo.value) == "Input parse tree must be an einsum"
+    return mapping
+
+
+def make_display(style):
+    yaml = """
+    einsum:
+        declaration:
+            A: []
+            B: [I]
+            C: [I]
+            D: [I]
+        expressions:
+            - "A[] = sum(I).(B[i] * C[i] * D[i])"
+    mapping:
+        display:
+            A:
+                space: []
+                time: [I]
+                style: """ + style
+    input_ = Input.from_str(yaml)
+    mapping = Mapping(input_)
+    mapping.add_einsum(0)
+
+    return IterationGraph(mapping), Equation(mapping)
 
 
 def test_mult_tensor_uses():
-    tree = EinsumParser.parse("A[i] = B[i] * B[i]")
+    mapping = make_other("A[i] = B[i] * B[i]")
     with pytest.raises(ValueError) as excinfo:
-        Equation(tree)
+        Equation(mapping)
 
     assert str(excinfo.value) == "B appears multiple times in the einsum"
 
 
 def test_tensor_in_out():
-    tree = EinsumParser.parse("A[i] = A[i] * B[i]")
+    mapping = make_other("A[i] = A[i] * B[i]")
     with pytest.raises(ValueError) as excinfo:
-        Equation(tree)
+        Equation(mapping)
 
     assert str(excinfo.value) == "A appears multiple times in the einsum"
 
 
 def test_make_iter_expr_no_tensors():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
-    eqn = Equation(tree)
+    _, eqn = make_basic()
     with pytest.raises(ValueError) as excinfo:
         eqn.make_iter_expr([])
 
@@ -124,11 +155,28 @@ def test_make_iter_expr_mult_terms():
     assert eqn.make_iter_expr(tensors).gen() == iter_expr
 
 
+def test_make_iter_display_shape():
+    graph, eqn = make_display("shape")
+
+    _, tensors = graph.peek()
+    iter_expr = "b_i & (c_i & d_i)"
+
+    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_display_occupancy():
+    graph, eqn = make_display("occupancy")
+
+    _, tensors = graph.peek()
+    iter_expr = "enumerate(b_i & (c_i & d_i))"
+
+    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+
+
 def test_make_payload_no_tensors():
-    tree = EinsumParser.parse("A[i] = B[i] * C[i]")
-    eqn = Equation(tree)
+    _, eqn = make_basic()
     with pytest.raises(ValueError) as excinfo:
-        eqn.make_payload([])
+        eqn.make_payload(None, [])
 
     assert str(
         excinfo.value) == "Must have at least one tensor to make the payload"
@@ -137,28 +185,46 @@ def test_make_payload_no_tensors():
 def test_make_payload():
     graph, eqn = make_basic()
 
-    _, tensors = graph.pop()
-    payload = "(b_val, (c_val, d_val))"
+    ind, tensors = graph.pop()
+    payload = "i, (b_val, (c_val, d_val))"
 
-    assert eqn.make_payload(tensors).gen() == payload
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
 def test_make_payload_output():
     graph, eqn = make_output()
 
-    _, tensors = graph.pop()
-    payload = "(a_ref, (b_val, (c_val, d_val)))"
+    ind, tensors = graph.pop()
+    payload = "i, (a_ref, (b_val, (c_val, d_val)))"
 
-    assert eqn.make_payload(tensors).gen() == payload
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
 def test_make_payload_mult_terms():
     graph, eqn = make_mult_terms()
 
-    _, tensors = graph.pop()
-    payload = "(a_ref, (_, (b_val, c_val), (_, (d_val, e_val), f_val)))"
+    ind, tensors = graph.pop()
+    payload = "i, (a_ref, (_, (b_val, c_val), (_, (d_val, e_val), f_val)))"
 
-    assert eqn.make_payload(tensors).gen() == payload
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
+
+
+def test_make_payload_display_shape():
+    graph, eqn = make_display("shape")
+
+    ind, tensors = graph.pop()
+    payload = "i, (b_val, (c_val, d_val))"
+
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
+
+
+def test_make_payload_display_occupancy():
+    graph, eqn = make_display("occupancy")
+
+    ind, tensors = graph.pop()
+    payload = "i_pos, (i, (b_val, (c_val, d_val)))"
+
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
 def test_make_update():
@@ -168,14 +234,14 @@ def test_make_update():
 
 
 def test_make_update_vars():
-    tree = EinsumParser.parse("A[] = b * c * d")
-    eqn = Equation(tree)
+    mapping = make_other("A[i] = b * c * d")
+    eqn = Equation(mapping)
     stmt = "a_ref += b * c * d"
     assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_mult_terms():
-    tree = EinsumParser.parse("A[i] = b * B[i] + c * C[i] + d * D[i]")
-    eqn = Equation(tree)
+    mapping = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]")
+    eqn = Equation(mapping)
     stmt = "a_ref += b * b_val + c * c_val + d * d_val"
     assert eqn.make_update().gen(depth=0) == stmt

@@ -29,8 +29,7 @@ def test_tensor_rank1():
 
 
 def test_sum_factor():
-    sum_ = Tree("sum", [make_inds("sinds", ["K", "L"]),
-                make_tensor("B", ["k", "l"])])
+    sum_ = make_sum(["K", "L"], make_tensor("B", ["k", "l"]))
     tree = make_einsum(make_output("A", []), sum_)
     assert EinsumParser.parse("A[] = sum(K, L).B[k, l]") == tree
 

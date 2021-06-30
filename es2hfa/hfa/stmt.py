@@ -75,11 +75,9 @@ class SFor:
 
     def __init__(
             self,
-            var: str,
             payload: Payload,
             expr: Expression,
             stmt: Statement) -> None:
-        self.var = var
         self.payload = payload
         self.expr = expr
         self.stmt = stmt
@@ -88,8 +86,8 @@ class SFor:
         """
         Generate the HFA output for an SFor
         """
-        return "    " * depth + "for " + self.var + ", " + \
-            self.payload.gen() + " in " + self.expr.gen() + ":\n" + self.stmt.gen(depth + 1)
+        return "    " * depth + "for " + \
+            self.payload.gen(False) + " in " + self.expr.gen() + ":\n" + self.stmt.gen(depth + 1)
 
 
 @Statement.register
