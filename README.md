@@ -4,6 +4,11 @@
 
 ## Installation
 
+### Pipenv
+
+Pipenv automatically manages the virtual environment and dependencies for you.
+It is the easiest way to get started.
+
 First, make sure you have [pipenv](https://pipenv.pypa.io/en/latest/).
 
 To set up the virtual environment, run
@@ -20,6 +25,33 @@ or
 pipenv shell
 [cmd]
 ```
+
+### Manual Virtual Environment
+
+First, make sure you have [venv](https://docs.python.org/3/library/venv.html).
+
+To create the virtual environment,
+```
+python3 -m venv env
+```
+
+Then to enter the virtual environment, run
+```
+source env/bin/activate
+```
+
+Install all packages including the compiler with
+```
+pip install -e .
+```
+
+or remotely via SSH with
+```
+pip install -e git+ssh://git@github.com/FPSG-UIUC/hfa-compiler.git#egg=es2hfa
+```
+
+If installing this way, remember to remove `pipenv run` from the beginning of
+each of the commands.
 
 ## All Checks
 
