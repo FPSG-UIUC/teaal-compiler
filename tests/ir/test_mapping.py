@@ -5,7 +5,7 @@ from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.input import Input
-from tests.utils.parse_tree import make_nway, make_uniform_shape
+from tests.utils.parse_tree import make_uniform_shape
 
 
 def create_default():
