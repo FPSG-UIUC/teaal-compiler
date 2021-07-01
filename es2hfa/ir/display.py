@@ -31,7 +31,7 @@ class Display:
                 out_name)
         else:
             self.space = space
-            self.space.sort(key=lambda i: loop_order.index(i))
+            self.space.sort(key=loop_order.index)
 
         # Check the type of the time argument
         time = yaml["time"]
@@ -43,7 +43,7 @@ class Display:
                 out_name)
         else:
             self.time = time
-            self.time.sort(key=lambda i: loop_order.index(i))
+            self.time.sort(key=loop_order.index)
 
         # Now make sure that all indices are scheduled
         if Counter(loop_order) != Counter(self.space + self.time):

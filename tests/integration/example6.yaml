@@ -5,4 +5,4 @@ einsum:
         C: [I,J]
         D: [I]
     expressions:
-        - D[i] = sum(J).(B[i, j])
+        - D[i] = sum(J).(C[i, j])

@@ -107,7 +107,7 @@ class Tensor:
         """
         Re-order the indices of this tensor to match the given loop order
         """
-        self.inds.sort(key=lambda i: loop_order.index(i))
+        self.inds.sort(key=loop_order.index)
 
     def tensor_name(self) -> str:
         """
