@@ -2,8 +2,6 @@
 
 ## Bug Fixes
 
-- [ ] Weird `'M' not found in list` with default loop order error on installed package only
-
 ## Minor Changes
 
 - [ ] Add all other integration tests

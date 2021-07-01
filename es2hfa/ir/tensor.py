@@ -21,7 +21,7 @@ class Tensor:
             raise ValueError("All indices must be unique; given " + bad_tensor)
 
         self.name = name
-        self.inds = inds
+        self.inds = inds.copy()
         self.init_inds = self.inds.copy()
 
         # Set the index pointer and output status

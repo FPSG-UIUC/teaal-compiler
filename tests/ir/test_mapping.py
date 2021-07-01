@@ -3,8 +3,9 @@ import pytest
 from es2hfa.ir.display import Display
 from es2hfa.ir.mapping import Mapping
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.input import Input
-from tests.utils.parse_tree import *
+from tests.utils.parse_tree import make_nway, make_uniform_shape
 
 
 def create_default():
@@ -214,12 +215,7 @@ def test_get_einsum():
     mapping = create_default()
     mapping.add_einsum(0)
 
-    tensors = [make_tensor("A", ["k", "m"]), make_tensor("B", ["k", "n"])]
-    expr = Tree("plus", [Tree("times", tensors)])
-    sum_ = make_sum(["K"], expr)
-    einsum = make_einsum(make_output("Z", ["m", "n"]), sum_)
-    print(mapping.get_einsum())
-    print(einsum)
+    einsum = EinsumParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
     assert mapping.get_einsum() == einsum
 
 

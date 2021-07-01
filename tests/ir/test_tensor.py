@@ -46,6 +46,16 @@ def test_partition():
     assert tensor.get_inds() == ["I1", "I0", "J", "K2", "K1", "K0"]
 
 
+def test_inds_safe_after_partition():
+    inds = ["I", "J", "K"]
+    tensor = Tensor("A", inds)
+    partitioning = {"I": make_uniform_shape(
+        [3]), "K": make_uniform_shape([4, 2])}
+    tensor.partition(partitioning)
+    assert tensor.get_inds() == ["I1", "I0", "J", "K2", "K1", "K0"]
+    assert inds == ["I", "J", "K"]
+
+
 def test_peek_ind():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.peek() == "I"
