@@ -13,9 +13,6 @@
 ## Major Changes
 
 - [ ] Integration with the HFA docker environment
-    - [ ] Make the compiler installable
-        - See [Accelergy](https://github.com/Accelergy-Project/accelergy) or
-          [yamlwidgets](https://github.com/jsemer/yamlwidgets) for examples
     - [ ] Add copyright headers to each of the files
     - [ ] Make HFA repository public
     - [ ] Add compiler as a sub-repository within the docker container
