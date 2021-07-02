@@ -13,9 +13,15 @@
 ## Major Changes
 
 - [ ] Integration with the HFA docker environment
-    - [ ] Add copyright headers to each of the files
-    - [ ] Make HFA repository public
-    - [ ] Add compiler as a sub-repository within the docker container
+    - [ ] Clone docker repository and figure out how to build
+    - [ ] Figure out how to remove existing containers
+    - [ ] Figure out how to check if you have access to a Github repository
+    - [ ] Add pip install command (`RUN access='command' && pip install ...`)
+- [ ] Separate Input into Einsum and Mapping
+    - Rename current IR Mapping :(
+    - Refactor to manage the separation
+- [ ] Refactor Translator to HFA object with `__str__()` method
+- [ ] Make display style per-index with default as position space
 
 ## Planning
 
