@@ -33,7 +33,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # Import the necessary classes
     from es2hfa.parse.input import Input
-    from es2hfa.trans.translate import Translator
+    from es2hfa.trans.hfa import HFA
 
     # Make sure we are given exactly one argument
     if len(sys.argv) != 2:
@@ -42,5 +42,5 @@ if __name__ == "__main__":  # pragma: no cover
     # Translate
     else:
         input_ = Input.from_file(sys.argv[1])
-        hfa = Translator.translate(input_)
-        print(hfa.gen(0))
+        hfa = HFA(input_)
+        print(hfa)

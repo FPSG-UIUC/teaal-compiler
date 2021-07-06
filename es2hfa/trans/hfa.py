@@ -38,13 +38,12 @@ from es2hfa.trans.header import Header
 from es2hfa.trans.utils import Utils
 
 
-class Translator:
+class HFA:
     """
     Translate a given Einsum into the corresponding HFA code
     """
 
-    @staticmethod
-    def translate(input_: Input) -> Statement:
+    def __init__(self, input_: Input) -> None:
         """
         Perform the Einsum to HFA translation
         """
@@ -65,14 +64,14 @@ class Translator:
             # Build the loop nests
             graph = IterationGraph(mapping)
             eqn = Equation(mapping)
-            program.add(Translator.__build_loop_nest(graph, eqn, canvas))
+            program.add(HFA.__build_loop_nest(graph, eqn, canvas))
 
             # Build the footer
             program.add(Footer.make_footer(mapping, canvas, utils))
 
             mapping.reset()
 
-        return cast(Statement, program)
+        self.hfa = cast(Statement, program)
 
     @staticmethod
     def __build_loop_nest(
@@ -100,6 +99,13 @@ class Translator:
         payload = eqn.make_payload(ind, tensors)
 
         # Recurse for the for loop body
-        body = Translator.__build_loop_nest(graph, eqn, canvas)
+        body = HFA.__build_loop_nest(graph, eqn, canvas)
 
         return cast(Statement, SFor(payload, expr, body))
+
+    def __str__(self) -> str:
+        """
+        Return the string representation of this HFA program
+        """
+
+        return self.hfa.gen(0)

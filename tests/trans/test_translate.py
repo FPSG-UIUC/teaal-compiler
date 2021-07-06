@@ -1,5 +1,5 @@
 from es2hfa.parse.input import Input
-from es2hfa.trans.translate import Translator
+from es2hfa.trans.hfa import HFA
 
 
 def test_translate_no_loops():
@@ -7,7 +7,7 @@ def test_translate_no_loops():
     hfa = "A_ = Tensor(rank_ids=[])\n" +\
           "a_ref = A_.getRoot()\n" + \
           "a_ref += b"
-    assert Translator.translate(input_).gen(depth=0) == hfa
+    assert str(HFA(input_)) == hfa
 
 
 def test_translate_defaults():
@@ -29,7 +29,7 @@ def test_translate_defaults():
           "for m, (z_n, (_, t1_n, c_n)) in z_m << (t1_m | c_m):\n" + \
           "    for n, (z_ref, (_, t1_val, c_val)) in z_n << (t1_n | c_n):\n" + \
           "        z_ref += t1_val + c_val"
-    assert Translator.translate(input_).gen(depth=0) == hfa
+    assert str(HFA(input_)) == hfa
 
 
 def test_translate_specified():
@@ -89,4 +89,4 @@ def test_translate_specified():
           "tmp17 = tmp16.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "Z_NM = tmp17\n" + \
           "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
-    assert Translator.translate(input_).gen(depth=0) == hfa
+    assert str(HFA(input_)) == hfa

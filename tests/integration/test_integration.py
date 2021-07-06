@@ -1,5 +1,5 @@
 from es2hfa.parse.input import Input
-from es2hfa.trans.translate import Translator
+from es2hfa.trans.hfa import HFA
 
 
 def read_hfa(filename):
@@ -36,7 +36,7 @@ def test_integration():
         filename = 'tests/integration/' + test_name
 
         input_ = Input.from_file(filename + ".yaml")
-        output = Translator.translate(input_).gen(depth=0)
+        output = str(HFA(input_))
 
         hfa = read_hfa(filename + ".hfa")
         assert output == hfa, test_name + " integration test failed!"
