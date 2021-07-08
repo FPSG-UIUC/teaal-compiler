@@ -26,7 +26,7 @@ Represetation of an iteration graph
 
 from typing import cast, List, Optional, Tuple
 
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 
 
@@ -35,20 +35,20 @@ class IterationGraph:
     A graph storing the tensor IR used to build the loop nests
     """
 
-    def __init__(self, mapping: Mapping) -> None:
+    def __init__(self, program: Program) -> None:
         """
         Construct a new IterationGraph
         """
         # Add a None to the end of the loop_order for the bottom of the loop
         # nest
         self.loop_order = cast(List[Optional[str]],
-                               mapping.get_loop_order().copy()) + [None]
+                               program.get_loop_order().copy()) + [None]
 
         # Place the tensors in the appropriate locations in the iteration graph
         self.graph: List[List[Tensor]] = []
         for ind in self.loop_order:
             self.graph.append([])
-            for tensor in mapping.get_tensors():
+            for tensor in program.get_tensors():
                 if tensor.peek() == ind:
                     self.graph[-1].append(tensor)
 

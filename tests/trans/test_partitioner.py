@@ -1,6 +1,6 @@
 import pytest
 
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 from es2hfa.trans.partitioning import Partitioner
@@ -20,10 +20,10 @@ def assert_partition(tensor, parts, hfa):
         partitioning:
             Z:
         """ + parts
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
 
-    partitioner = Partitioner(mapping, Utils())
+    partitioner = Partitioner(program, Utils())
     assert partitioner.partition(tensor).gen(depth=0) == hfa
 
 
@@ -75,14 +75,14 @@ def assert_unpartition(part, hfa):
         partitioning:
             Z:
         """ + part
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
 
-    for tensor in mapping.get_tensors():
-        mapping.apply_partitioning(tensor)
+    for tensor in program.get_tensors():
+        program.apply_partitioning(tensor)
 
-    partitioner = Partitioner(mapping, Utils())
-    assert partitioner.unpartition(mapping.get_output()).gen(0) == hfa
+    partitioner = Partitioner(program, Utils())
+    assert partitioner.unpartition(program.get_output()).gen(0) == hfa
 
 
 def test_unpartition_none():

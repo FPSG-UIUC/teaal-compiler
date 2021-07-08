@@ -32,7 +32,7 @@ from es2hfa.hfa.base import Argument, Expression, Operator, Statement
 from es2hfa.hfa.expr import EBinOp, EInt, EMethod, EParens, EString, EVar
 from es2hfa.hfa.op import OAdd, OFDiv, OSub
 from es2hfa.hfa.stmt import SAssign, SBlock
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.utils import Utils
 
@@ -42,19 +42,19 @@ class Partitioner:
     Generate the HFA code for the partitioning information
     """
 
-    def __init__(self, mapping: Mapping, utils: Utils) -> None:
+    def __init__(self, program: Program, utils: Utils) -> None:
         """
-        Create a partitioner for a given mapping
+        Create a partitioner for a given program
         """
-        self.mapping = mapping
+        self.program = program
         self.utils = utils
 
     def partition(self, tensor: Tensor) -> Statement:
         """
-        Partition the given tensor according to the stored mapping
+        Partition the given tensor according to the stored program
         """
         # Check if we need to partition at all
-        partitioning = self.mapping.get_partitioning(tensor)
+        partitioning = self.program.get_partitioning(tensor)
         if not partitioning:
             return cast(Statement, SBlock([]))
 
@@ -86,7 +86,7 @@ class Partitioner:
                         part.data)  # pragma: no cover
 
         # Rename the tensor
-        self.mapping.apply_partitioning(tensor)
+        self.program.apply_partitioning(tensor)
         part_name = tensor.tensor_name()
         tmp_expr = cast(Expression, EVar(self.utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
@@ -106,7 +106,7 @@ class Partitioner:
         new_name = tensor.tensor_name()
 
         # Get the partitioning
-        partitioning = self.mapping.get_partitioning(tensor)
+        partitioning = self.program.get_partitioning(tensor)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])

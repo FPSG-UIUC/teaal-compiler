@@ -1,4 +1,4 @@
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 from es2hfa.trans.canvas import Canvas
@@ -23,19 +23,19 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
             Z: """ + loop_order + """
         display:
         """ + display
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
 
-    canvas = Canvas(mapping)
+    canvas = Canvas(program)
     canvas.create_canvas()
 
-    for tensor in mapping.get_tensors():
-        mapping.apply_partitioning(tensor)
-        mapping.apply_loop_order(tensor)
+    for tensor in program.get_tensors():
+        program.apply_partitioning(tensor)
+        program.apply_loop_order(tensor)
 
-    assert Footer.make_footer(mapping, canvas, Utils()).gen(depth=0) == hfa
+    assert Footer.make_footer(program, canvas, Utils()).gen(depth=0) == hfa
 
-    return mapping
+    return program
 
 
 def test_make_footer_default():
@@ -43,8 +43,8 @@ def test_make_footer_default():
 
 
 def test_output_still_output():
-    mapping = assert_make_footer("", "", "", "")
-    output = mapping.get_output()
+    program = assert_make_footer("", "", "", "")
+    output = program.get_output()
 
     desired = Tensor("Z", ["M", "N"])
     desired.set_is_output(True)

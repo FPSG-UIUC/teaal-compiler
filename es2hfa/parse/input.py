@@ -53,6 +53,8 @@ class Input:
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         rank_orders = None
 
+        print(yaml)
+
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 

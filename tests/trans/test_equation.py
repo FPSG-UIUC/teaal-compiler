@@ -1,7 +1,7 @@
 import pytest
 
 from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.parse.einsum import EinsumParser
 from es2hfa.parse.input import Input
 from es2hfa.trans.equation import Equation
@@ -20,10 +20,10 @@ def make_basic():
             - "A[] = sum(I).(B[i] * C[i] * D[i])"
     """
     input_ = Input.from_str(yaml)
-    mapping = Mapping(input_)
-    mapping.add_einsum(0)
+    program = Program(input_)
+    program.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(mapping)
+    return IterationGraph(program), Equation(program)
 
 
 def make_output():
@@ -38,10 +38,10 @@ def make_output():
             - "A[I] = B[i] * C[i] * D[i]"
     """
     input_ = Input.from_str(yaml)
-    mapping = Mapping(input_)
-    mapping.add_einsum(0)
+    program = Program(input_)
+    program.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(mapping)
+    return IterationGraph(program), Equation(program)
 
 
 def make_mult_terms():
@@ -58,10 +58,10 @@ def make_mult_terms():
             - "A[I] = B[i] * C[i] + D[i] * E[i] + F[i]"
     """
     input_ = Input.from_str(yaml)
-    mapping = Mapping(input_)
-    mapping.add_einsum(0)
+    program = Program(input_)
+    program.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(mapping)
+    return IterationGraph(program), Equation(program)
 
 
 def make_other(einsum):
@@ -75,10 +75,10 @@ def make_other(einsum):
         expressions:
             - """ + einsum
     input_ = Input.from_str(yaml)
-    mapping = Mapping(input_)
-    mapping.add_einsum(0)
+    program = Program(input_)
+    program.add_einsum(0)
 
-    return mapping
+    return program
 
 
 def make_display(style):
@@ -98,24 +98,24 @@ def make_display(style):
                 time: [I]
                 style: """ + style
     input_ = Input.from_str(yaml)
-    mapping = Mapping(input_)
-    mapping.add_einsum(0)
+    program = Program(input_)
+    program.add_einsum(0)
 
-    return IterationGraph(mapping), Equation(mapping)
+    return IterationGraph(program), Equation(program)
 
 
 def test_mult_tensor_uses():
-    mapping = make_other("A[i] = B[i] * B[i]")
+    program = make_other("A[i] = B[i] * B[i]")
     with pytest.raises(ValueError) as excinfo:
-        Equation(mapping)
+        Equation(program)
 
     assert str(excinfo.value) == "B appears multiple times in the einsum"
 
 
 def test_tensor_in_out():
-    mapping = make_other("A[i] = A[i] * B[i]")
+    program = make_other("A[i] = A[i] * B[i]")
     with pytest.raises(ValueError) as excinfo:
-        Equation(mapping)
+        Equation(program)
 
     assert str(excinfo.value) == "A appears multiple times in the einsum"
 
@@ -234,14 +234,14 @@ def test_make_update():
 
 
 def test_make_update_vars():
-    mapping = make_other("A[i] = b * c * d")
-    eqn = Equation(mapping)
+    program = make_other("A[i] = b * c * d")
+    eqn = Equation(program)
     stmt = "a_ref += b * c * d"
     assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_mult_terms():
-    mapping = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]")
-    eqn = Equation(mapping)
+    program = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]")
+    eqn = Equation(program)
     stmt = "a_ref += b * b_val + c * c_val + d * d_val"
     assert eqn.make_update().gen(depth=0) == stmt

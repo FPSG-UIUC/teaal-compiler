@@ -32,7 +32,7 @@ from es2hfa.hfa.expr import EBinOp, EFunc, EParens, EVar
 from es2hfa.hfa.op import *
 from es2hfa.hfa.payload import *
 from es2hfa.hfa.stmt import SIAssign
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 
 
@@ -42,12 +42,12 @@ class Equation:
     equation at the bottom of the loop nest
     """
 
-    def __init__(self, mapping: Mapping) -> None:
+    def __init__(self, program: Program) -> None:
         """
         Construct a new Equation
         """
-        self.mapping = mapping
-        einsum = self.mapping.get_einsum()
+        self.program = program
+        einsum = self.program.get_einsum()
 
         # First find all terms (terminals multiplied together)
         self.terms: List[List[str]] = []
@@ -121,7 +121,7 @@ class Equation:
 
         # If the display style is occupancy, we also need to enumerate the
         # iterations
-        display = self.mapping.get_display()
+        display = self.program.get_display()
         if display is not None and display.get_style() == "occupancy":
             arg = cast(Argument, AJust(expr))
             expr = cast(Expression, EFunc("enumerate", [arg]))
@@ -164,7 +164,7 @@ class Equation:
 
         # If the display style is occupancy, we also need to enumerate the
         # iterations
-        display = self.mapping.get_display()
+        display = self.program.get_display()
         if display is not None and display.get_style() == "occupancy":
             payload = Equation.__add_pvar(ind + "_pos", payload)
 

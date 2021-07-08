@@ -30,7 +30,7 @@ from es2hfa.hfa.base import Argument, Expression, Operator, Statement
 from es2hfa.hfa.expr import EBinOp, EFunc, EMethod, ETuple, EVar
 from es2hfa.hfa.op import OSub
 from es2hfa.hfa.stmt import SAssign, SExpr
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 
 
@@ -39,11 +39,11 @@ class Canvas:
     Generate the HFA code for the tensor graphics
     """
 
-    def __init__(self, mapping: Mapping) -> None:
+    def __init__(self, program: Program) -> None:
         """
         Construct a Canvas
         """
-        self.mapping = mapping
+        self.program = program
         self.tensors: Optional[List[Tensor]] = None
 
     def add_activity(self) -> Statement:
@@ -54,7 +54,7 @@ class Canvas:
             raise ValueError(
                 "Unconfigured canvas. Make sure to first call create_canvas()")
 
-        display = self.mapping.get_display()
+        display = self.program.get_display()
         if display is None:
             raise ValueError("Display information unspecified")
 
@@ -87,10 +87,10 @@ class Canvas:
         # Create a list of tensors in the order they should be displayed,
         # specifically, we want the output tensor to be at the end
         self.tensors = []
-        for tensor in self.mapping.get_tensors():
-            if tensor != self.mapping.get_output():
+        for tensor in self.program.get_tensors():
+            if tensor != self.program.get_output():
                 self.tensors.append(tensor)
-        self.tensors.append(self.mapping.get_output())
+        self.tensors.append(self.program.get_output())
 
         # Build the args
         args = []
@@ -119,17 +119,17 @@ class Canvas:
 
     def displayable(self) -> bool:
         """
-        Returns True if the mapping contains the information necessary to
+        Returns True if the program contains the information necessary to
         display the Einsum
         """
-        display = self.mapping.get_display()
+        display = self.program.get_display()
         return display is not None
 
     def __rel_coord(self, ind: str) -> Expression:
         """
         Get the relative coordinate for this index (important for PE distribution)
         """
-        display = self.mapping.get_display()
+        display = self.program.get_display()
 
         # Make sure we have a display (needed to unwrap the Optional)
         if display is None:

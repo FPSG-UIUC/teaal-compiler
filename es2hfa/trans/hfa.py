@@ -29,7 +29,7 @@ from typing import cast, List, Optional
 from es2hfa.hfa.base import Statement
 from es2hfa.hfa.stmt import SBlock, SFor
 from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.parse.input import Input
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.equation import Equation
@@ -47,31 +47,31 @@ class HFA:
         """
         Perform the Einsum to HFA translation
         """
-        mapping = Mapping(input_)
+        program = Program(input_)
         utils = Utils()
 
-        program = SBlock([])
+        code = SBlock([])
         for i in range(len(input_.get_expressions())):
-            # Add Einsum to mapping
-            mapping.add_einsum(i)
+            # Add Einsum to program
+            program.add_einsum(i)
 
             # Create a canvas
-            canvas = Canvas(mapping)
+            canvas = Canvas(program)
 
             # Build the header
-            program.add(Header.make_header(mapping, canvas, utils))
+            code.add(Header.make_header(program, canvas, utils))
 
             # Build the loop nests
-            graph = IterationGraph(mapping)
-            eqn = Equation(mapping)
-            program.add(HFA.__build_loop_nest(graph, eqn, canvas))
+            graph = IterationGraph(program)
+            eqn = Equation(program)
+            code.add(HFA.__build_loop_nest(graph, eqn, canvas))
 
             # Build the footer
-            program.add(Footer.make_footer(mapping, canvas, utils))
+            code.add(Footer.make_footer(program, canvas, utils))
 
-            mapping.reset()
+            program.reset()
 
-        self.hfa = cast(Statement, program)
+        self.hfa = cast(Statement, code)
 
     @staticmethod
     def __build_loop_nest(

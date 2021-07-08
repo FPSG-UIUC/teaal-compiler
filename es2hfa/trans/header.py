@@ -29,7 +29,7 @@ from typing import cast
 from es2hfa.hfa.base import Expression, Statement
 from es2hfa.hfa.expr import EFunc, EMethod
 from es2hfa.hfa.stmt import SAssign, SBlock
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.partitioning import Partitioner
@@ -43,29 +43,29 @@ class Header:
 
     @staticmethod
     def make_header(
-            mapping: Mapping,
+            program: Program,
             canvas: Canvas,
             utils: Utils) -> Statement:
         """
         Create the header for a given einsum
 
-        Expects the Einsum to have already been added to the mapping, but
-        modifies the tensors in the mapping for the current einsum
+        Expects the Einsum to have already been added to the program, but
+        modifies the tensors in the program for the current einsum
         """
         header = SBlock([])
 
         # First, create the output tensor
-        output = mapping.get_output()
+        output = program.get_output()
         out_arg = Utils.build_rank_ids(output)
         out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
         out_assn = SAssign(output.tensor_name(), out_constr)
         header.add(cast(Statement, out_assn))
 
         # Create a partitioner
-        partitioner = Partitioner(mapping, utils)
+        partitioner = Partitioner(program, utils)
 
         # Get the tensors we need to generate headers for
-        tensors = mapping.get_tensors()
+        tensors = program.get_tensors()
 
         # Generate the header for each tensor
         for tensor in tensors:
@@ -74,7 +74,7 @@ class Header:
 
             # Swizzle for a concordant traversal
             old_name = tensor.tensor_name()
-            mapping.apply_loop_order(tensor)
+            program.apply_loop_order(tensor)
             new_name = tensor.tensor_name()
 
             # Emit code to perform the swizzle if necessary

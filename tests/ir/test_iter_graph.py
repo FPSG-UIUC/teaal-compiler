@@ -1,7 +1,7 @@
 import pytest
 
 from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 
@@ -14,9 +14,9 @@ def test_peek_rank0():
         expressions:
             - A[] = b
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    graph = IterationGraph(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
 
     tensor = Tensor("A", [])
     tensor.set_is_output(True)
@@ -34,9 +34,9 @@ def test_peek_default():
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    graph = IterationGraph(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
 
     results = [Tensor("A", ["I", "J"]), Tensor("B", ["I", "K"])]
     results[0].set_is_output(True)
@@ -57,12 +57,12 @@ def test_peek_order():
         loop-order:
             A: [J, K, I]
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
 
-    for tensor in mapping.get_tensors():
-        mapping.apply_loop_order(tensor)
-    graph = IterationGraph(mapping)
+    for tensor in program.get_tensors():
+        program.apply_loop_order(tensor)
+    graph = IterationGraph(program)
 
     results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
     results[0].set_is_output(True)
@@ -80,9 +80,9 @@ def test_pop_default():
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    graph = IterationGraph(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
 
     A = Tensor("A", ["I", "J"])
     A.set_is_output(True)
@@ -108,12 +108,12 @@ def test_pop_order():
         loop-order:
             A: [J, K, I]
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
 
-    for tensor in mapping.get_tensors():
-        mapping.apply_loop_order(tensor)
-    graph = IterationGraph(mapping)
+    for tensor in program.get_tensors():
+        program.apply_loop_order(tensor)
+    graph = IterationGraph(program)
 
     A = Tensor("A", ["J", "I"])
     A.set_is_output(True)

@@ -1,4 +1,4 @@
-from es2hfa.ir.mapping import Mapping
+from es2hfa.ir.program import Program
 from es2hfa.parse.input import Input
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.header import Header
@@ -20,15 +20,15 @@ def test_make_header():
         loop-order:
             Z: [K, M, N]
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    canvas = Canvas(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    canvas = Canvas(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
-    assert Header.make_header(mapping, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
 
 
 def test_make_header_swizzle():
@@ -42,9 +42,9 @@ def test_make_header_swizzle():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    canvas = Canvas(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    canvas = Canvas(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
@@ -52,7 +52,7 @@ def test_make_header_swizzle():
           "a_m = A_MK.getRoot()\n" + \
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
           "b_n = B_NK.getRoot()"
-    assert Header.make_header(mapping, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
 
 
 def test_make_header_partitioned():
@@ -71,9 +71,9 @@ def test_make_header_partitioned():
                 K: [uniform_shape(6), uniform_shape(3)]
                 M: [uniform_shape(5)]
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    canvas = Canvas(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    canvas = Canvas(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "tmp0 = Z_MN\n" + \
@@ -96,7 +96,7 @@ def test_make_header_partitioned():
           "B_K2K1K0N.setRankIds(rank_ids=[\"K2\", \"K1\", \"K0\", \"N\"])\n" + \
           "B_NK2K1K0 = B_K2K1K0N.swizzleRanks(rank_ids=[\"N\", \"K2\", \"K1\", \"K0\"])\n" + \
           "b_n = B_NK2K1K0.getRoot()"
-    assert Header.make_header(mapping, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
 
 
 def test_make_header_displayed():
@@ -116,9 +116,9 @@ def test_make_header_displayed():
                 time: [K, M]
                 style: shape
     """
-    mapping = Mapping(Input.from_str(yaml))
-    mapping.add_einsum(0)
-    canvas = Canvas(mapping)
+    program = Program(Input.from_str(yaml))
+    program.add_einsum(0)
+    canvas = Canvas(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
@@ -127,4 +127,4 @@ def test_make_header_displayed():
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
-    assert Header.make_header(mapping, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa

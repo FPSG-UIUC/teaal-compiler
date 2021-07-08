@@ -34,7 +34,7 @@ from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.input import Input
 
 
-class Mapping:
+class Program:
     """
     Store tensor metadata and configure the metadata for specific einsums
     """
@@ -69,7 +69,7 @@ class Mapping:
 
     def add_einsum(self, i: int) -> None:
         """
-        Configure the mapping for the ith Einsum
+        Configure the program for the ith Einsum
         """
         self.einsum = self.input.get_expressions()[i]
 
@@ -118,10 +118,10 @@ class Mapping:
         """
         Swizzle the given tensor with the loop order
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if self.loop_order is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         tensor.swizzle(cast(List[Optional[str]], self.loop_order))
 
@@ -129,10 +129,10 @@ class Mapping:
         """
         Partition the tensor according to the schedule given in add_einsum()
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if self.partitioning is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         tensor.partition(self.partitioning)
 
@@ -140,12 +140,12 @@ class Mapping:
         """
         Get the display information for this kernel, should it exist
         """
-        # Make sure the mapping is configured
+        # Make sure the program is configured
         # Note: we have to check another field, since it is possible for display
-        # to be empty even in a configured mapping
+        # to be empty even in a configured program
         if self.loop_order is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.display
 
@@ -153,10 +153,10 @@ class Mapping:
         """
         Get the parse tree representation of the einsum
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if self.einsum is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.einsum
 
@@ -164,10 +164,10 @@ class Mapping:
         """
         Get the loop order used for this kernel
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if self.loop_order is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.loop_order
 
@@ -175,10 +175,10 @@ class Mapping:
         """
         Get the output tensor used for this kernel
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if self.loop_order is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.es_tensors[0]
 
@@ -186,10 +186,10 @@ class Mapping:
         """
         Get all of the partitioning information relevant for a given tensor
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if self.partitioning is None:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         return {ind: parts for ind, parts in self.partitioning.items()
                 if ind in tensor.get_inds()}
@@ -198,16 +198,16 @@ class Mapping:
         """
         Get the tensors used in an einsum
         """
-        # Make sure that the mapping is configured
+        # Make sure that the program is configured
         if not self.es_tensors:
             raise ValueError(
-                "Unconfigured mapping. Make sure to first call add_einsum()")
+                "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.es_tensors
 
     def reset(self) -> None:
         """
-        Unconfigure the mapping and corresponding tensors
+        Unconfigure the program and corresponding tensors
         """
         for tensor in self.es_tensors:
             tensor.reset()
