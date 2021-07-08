@@ -42,7 +42,7 @@ def test_peek_default():
     results = [Tensor("A", ["I", "J"]), Tensor("B", ["I", "K"])]
     results[0].set_is_output(True)
 
-    assert graph.peek() == ("i", results)
+    assert graph.peek() == ("I", results)
 
 
 def test_peek_order():
@@ -68,7 +68,7 @@ def test_peek_order():
     results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
     results[0].set_is_output(True)
 
-    assert graph.peek() == ("j", results)
+    assert graph.peek() == ("J", results)
 
 
 def test_pop_default():
@@ -90,9 +90,9 @@ def test_pop_default():
     B = Tensor("B", ["I", "K"])
     C = Tensor("C", ["J", "K"])
 
-    assert graph.pop() == ("i", [A, B])
-    assert graph.pop() == ("j", [C, A])
-    assert graph.pop() == ("k", [B, C])
+    assert graph.pop() == ("I", [A, B])
+    assert graph.pop() == ("J", [C, A])
+    assert graph.pop() == ("K", [B, C])
     assert graph.peek() == (None, [A, B, C])
 
 
@@ -121,7 +121,7 @@ def test_pop_order():
     B = Tensor("B", ["K", "I"])
     C = Tensor("C", ["J", "K"])
 
-    assert graph.pop() == ("j", [A, C])
-    assert graph.pop() == ("k", [B, C])
-    assert graph.pop() == ("i", [A, B])
+    assert graph.pop() == ("J", [A, C])
+    assert graph.pop() == ("K", [B, C])
+    assert graph.pop() == ("I", [A, B])
     assert graph.peek() == (None, [C, A, B])

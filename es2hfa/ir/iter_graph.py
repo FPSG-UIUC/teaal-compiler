@@ -57,9 +57,6 @@ class IterationGraph:
         Peek at the next iteration
         """
         ind = self.loop_order[0]
-        if ind:
-            ind = ind[0].lower() + ind[1:]
-
         return ind, self.graph[0]
 
     def pop(self) -> Tuple[Optional[str], List[Tensor]]:
@@ -68,9 +65,6 @@ class IterationGraph:
         """
         # Pop off the next iteration
         ind = self.loop_order.pop(0)
-        if ind:
-            ind = ind[0].lower() + ind[1:]
-
         tensors = self.graph.pop(0)
 
         # Update each of the tensors and re-insert them into the graph at the

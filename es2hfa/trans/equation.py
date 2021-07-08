@@ -156,13 +156,14 @@ class Equation:
             payload = Equation.__add_pvar(output_tensor.fiber_name(), payload)
 
         # Add the index variable
-        payload = Equation.__add_pvar(ind, payload)
+        ind_var = ind[0].lower() + ind[1:]
+        payload = Equation.__add_pvar(ind_var, payload)
 
         # If the display style is occupancy, we also need to enumerate the
         # iterations
         display = self.program.get_display()
         if display is not None and display.get_style() == "occupancy":
-            payload = Equation.__add_pvar(ind + "_pos", payload)
+            payload = Equation.__add_pvar(ind_var + "_pos", payload)
 
         return payload
 
