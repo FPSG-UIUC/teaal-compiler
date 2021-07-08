@@ -1,13 +1,13 @@
 from lark.tree import Tree
 
-from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.equation import EquationParser
 from tests.utils.parse_tree import *
 
 
 def test_einsum():
     # Note: also tests rank-0 tensor and variable name parsing
     tree = make_einsum(make_output("A", []), Tree("plus", [make_times(["b"])]))
-    assert EinsumParser.parse("A[] = b") == tree
+    assert EquationParser.parse("A[] = b") == tree
 
 
 def test_tensor():
@@ -20,33 +20,33 @@ def test_tensor():
                         make_tensor(
                             "B", [
                                 "i", "j"])])]))
-    assert EinsumParser.parse("A[i, j] = B[i, j]") == tree
+    assert EquationParser.parse("A[i, j] = B[i, j]") == tree
 
 
 def test_tensor_rank1():
     tree = make_einsum(make_output("A", ["i"]), make_plus(["b"]))
-    assert EinsumParser.parse("A[i] = b") == tree
+    assert EquationParser.parse("A[i] = b") == tree
 
 
 def test_sum_factor():
     sum_ = make_sum(["K", "L"], make_tensor("B", ["k", "l"]))
     tree = make_einsum(make_output("A", []), sum_)
-    assert EinsumParser.parse("A[] = sum(K, L).B[k, l]") == tree
+    assert EquationParser.parse("A[] = sum(K, L).B[k, l]") == tree
 
 
 def test_plus():
     tree = make_einsum(make_output("A", []), make_plus(["a", "b"]))
-    assert EinsumParser.parse("A[] = a + b") == tree
+    assert EquationParser.parse("A[] = a + b") == tree
 
 
 def test_sum_expr():
     sum_ = Tree("sum", [make_inds("sinds", ["K", "L"]),
                 make_plus(["a", "b"])])
     tree = make_einsum(make_output("A", []), sum_)
-    assert EinsumParser.parse("A[] = sum(K, L).(a + b)") == tree
+    assert EquationParser.parse("A[] = sum(K, L).(a + b)") == tree
 
 
 def test_times():
     tree = make_einsum(make_output("A", []), Tree(
         "plus", [make_times(["a", "b"])]))
-    assert EinsumParser.parse("A[] = a * b") == tree
+    assert EquationParser.parse("A[] = a * b") == tree

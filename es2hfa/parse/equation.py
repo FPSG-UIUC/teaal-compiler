@@ -6,7 +6,7 @@ from lark import Lark
 from lark.tree import Tree
 
 
-class EinsumParser:
+class EquationParser:
     """
     A lexer and parser for a single Einsum
     """
@@ -40,5 +40,5 @@ class EinsumParser:
     parser = Lark(grammar)
 
     @staticmethod
-    def parse(einsum: str) -> Tree:
-        return EinsumParser.parser.parse(einsum)
+    def parse(equation: str) -> Tree:
+        return EquationParser.parser.parse(equation)

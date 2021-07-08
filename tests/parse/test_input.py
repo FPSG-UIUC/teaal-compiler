@@ -1,5 +1,5 @@
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.input import Input
 from tests.utils.parse_tree import make_uniform_shape
 
@@ -37,8 +37,8 @@ def test_eq():
 def test_expressions():
     input_ = Input.from_file("tests/integration/test_input.yaml")
 
-    T1 = EinsumParser.parse("T1[m, n] = sum(K).(A[k, m] * B[k, n])")
-    Z = EinsumParser.parse("Z[m, n] = T1[m, n] + C[m, n]")
+    T1 = EquationParser.parse("T1[m, n] = sum(K).(A[k, m] * B[k, n])")
+    Z = EquationParser.parse("Z[m, n] = T1[m, n] + C[m, n]")
 
     assert input_.get_expressions() == [T1, Z]
 

@@ -27,7 +27,7 @@ Parse the input YAML file
 from lark.tree import Tree
 from typing import Dict, List, Optional, Union
 
-from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.partitioning import PartitioningParser
 from es2hfa.parse.yaml import YamlParser
 
@@ -44,7 +44,7 @@ class Input:
         # Parse the Einsums
         self.declaration = yaml["einsum"]["declaration"]
 
-        self.exprs = [EinsumParser.parse(expr)
+        self.exprs = [EquationParser.parse(expr)
                       for expr in yaml["einsum"]["expressions"]]
 
         # If a mapping exists, parse the mapping

@@ -3,7 +3,7 @@ import pytest
 from es2hfa.ir.display import Display
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.einsum import EinsumParser
+from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.input import Input
 from tests.utils.parse_tree import make_uniform_shape
 
@@ -215,8 +215,8 @@ def test_get_einsum():
     program = create_default()
     program.add_einsum(0)
 
-    einsum = EinsumParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
-    assert program.get_einsum() == einsum
+    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+    assert program.get_einsum() == equation
 
 
 def test_get_loop_order_unconfigured():
