@@ -1,10 +1,15 @@
 from es2hfa.parse.mapping import Mapping
+from es2hfa.parse.display import DisplayParser
 from tests.utils.parse_tree import make_uniform_shape
 
 
 def test_display():
     mapping = Mapping.from_file("tests/integration/test_input.yaml")
-    display = {"T1": {"space": ["N"], "time": ["K", "M"], "style": "shape"}}
+    display = {
+        "T1": {
+            "space": [
+                DisplayParser.parse("N")], "time": [
+                DisplayParser.parse("K.pos"), DisplayParser.parse("M.coord")]}}
 
     assert mapping.get_display() == display
 
@@ -36,8 +41,7 @@ def test_from():
         display:
             T1:
                 space: [N]
-                time: [K, M]
-                style: shape
+                time: [K.pos, M.coord]
     """
     from_file = Mapping.from_file("tests/integration/test_input.yaml")
     from_str = Mapping.from_str(yaml)

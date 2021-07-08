@@ -77,7 +77,7 @@ class Equation:
             raise ValueError(self.output +
                              " appears multiple times in the einsum")
 
-    def make_iter_expr(self, tensors: List[Tensor]) -> Expression:
+    def make_iter_expr(self, ind: str, tensors: List[Tensor]) -> Expression:
         """
         Given a list of tensors, make the expression used to combine them
         """
@@ -118,7 +118,7 @@ class Equation:
         # If the display style is occupancy, we also need to enumerate the
         # iterations
         display = self.program.get_display()
-        if display is not None and display.get_style() == "occupancy":
+        if display is not None and display.get_style(ind) == "pos":
             arg = cast(Argument, AJust(expr))
             expr = cast(Expression, EFunc("enumerate", [arg]))
 
@@ -162,7 +162,7 @@ class Equation:
         # If the display style is occupancy, we also need to enumerate the
         # iterations
         display = self.program.get_display()
-        if display is not None and display.get_style() == "occupancy":
+        if display is not None and display.get_style(ind) == "pos":
             payload = Equation.__add_pvar(ind_var + "_pos", payload)
 
         return payload

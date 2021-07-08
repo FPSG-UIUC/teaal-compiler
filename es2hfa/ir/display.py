@@ -27,7 +27,9 @@ Intermediate representation of display information
 from collections import Counter
 
 from lark.tree import Tree
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
+
+from es2hfa.parse.utils import ParseUtils
 
 
 class Display:
@@ -36,13 +38,15 @@ class Display:
     """
 
     def __init__(self,
-                 yaml: Dict[str, Union[str, List[str]]],
+                 yaml: Dict[str, List[Tree]],
                  loop_order: List[str],
                  partitioning: Dict[str, List[Tree]],
                  out_name: str) -> None:
         """
         Build the display object
         """
+        self.styles = {}
+
         # Check the type of the space argument
         space = yaml["space"]
         if not isinstance(space, list):
@@ -51,9 +55,15 @@ class Display:
                 str(space) +
                 " on output " +
                 out_name)
-        else:
-            self.space = space
-            self.space.sort(key=loop_order.index)
+
+        # Otherwise, collect the display style information and build the list
+        # of indices
+        self.space = []
+        for tree in space:
+            ind = ParseUtils.next_str(tree)
+            self.space.append(ind)
+            self.styles[ind] = tree.data
+        self.space.sort(key=loop_order.index)
 
         # Check the type of the time argument
         time = yaml["time"]
@@ -63,33 +73,20 @@ class Display:
                 str(time) +
                 " on output " +
                 out_name)
-        else:
-            self.time = time
-            self.time.sort(key=loop_order.index)
+
+        # Otherwise, collect the display style information and build the list
+        # of indices
+        self.time = []
+        for tree in time:
+            ind = ParseUtils.next_str(tree)
+            self.time.append(ind)
+            self.styles[ind] = tree.data
+        self.time.sort(key=loop_order.index)
 
         # Now make sure that all indices are scheduled
         if Counter(loop_order) != Counter(self.space + self.time):
             raise ValueError(
                 "Incorrect schedule for display on output " +
-                out_name)
-
-        # Check the type of the style argument
-        style = yaml["style"]
-        if not isinstance(style, str):
-            raise TypeError(
-                "Display style argument must be a string, given " +
-                str(style) +
-                " on output " +
-                out_name)
-        else:
-            self.style = style
-
-        # Make sure that we are given a correct PE distribution style
-        if self.style != "shape" and self.style != "occupancy":
-            raise ValueError(
-                "Unknown display style " +
-                self.style +
-                " on output " +
                 out_name)
 
         # Find the base index name associated with the partitioned indices
@@ -114,11 +111,11 @@ class Display:
         """
         return self.space
 
-    def get_style(self) -> str:
+    def get_style(self, ind: str) -> str:
         """
-        Get the style argument of the display
+        Get the style of display for the given index
         """
-        return self.style
+        return self.styles[ind]
 
     def get_time(self) -> List[str]:
         """
@@ -132,6 +129,6 @@ class Display:
         """
         if isinstance(other, type(self)):
             return self.space == other.space and \
-                self.style == other.style and \
+                self.styles == other.styles and \
                 self.time == other.time
         return False

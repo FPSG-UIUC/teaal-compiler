@@ -69,6 +69,7 @@ class Canvas:
         # Add the space-time arguments
         space_tup = cast(Expression, ETuple(
             [self.__rel_coord(ind) for ind in display.get_space()]))
+        print(space_tup.gen())
         time_tup = cast(Expression, ETuple(
             [self.__rel_coord(ind) for ind in display.get_time()]))
         spacetime = cast(Expression, ETuple([space_tup, time_tup]))
@@ -135,13 +136,13 @@ class Canvas:
         if display is None:
             raise ValueError("Display information unspecified")
 
-        # Check if we already have the absolute coordinate
-        base = display.get_base(ind)
         ind_str = ind[0].lower() + ind[1:]
-        if base is None:
-            return cast(Expression, EVar(ind_str))
+        if display.get_style(ind) == "coord":
+            # Check if we already have the absolute coordinate
+            base = display.get_base(ind)
+            if base is None:
+                return cast(Expression, EVar(ind_str))
 
-        if display.get_style() == "shape":
             # ind - base
             ind_expr = cast(Expression, EVar(ind_str))
             base_expr = cast(Expression, EVar(base[0].lower() + base[1:]))
@@ -149,7 +150,7 @@ class Canvas:
 
             return cast(Expression, sub)
 
-        elif display.get_style() == "occupancy":
+        elif display.get_style(ind) == "pos":
             # ind_pos
             return cast(Expression, EVar(ind_str + "_pos"))
 

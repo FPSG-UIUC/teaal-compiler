@@ -4,6 +4,7 @@
 
 ## Minor Changes
 
+- [ ] Use partitioning parser instead of `make_uniform_shape` for all relevant tests
 - [ ] Add all other integration tests
 - [ ] Clean up tests
     - Which example tests actually test something unique?
@@ -17,7 +18,6 @@
     - [ ] Figure out how to remove existing containers
     - [ ] Figure out how to check if you have access to a Github repository
     - [ ] Add pip install command (`RUN access='command' && pip install ...`)
-- [ ] Make display style per-index with default as position space
 
 ## Planning
 

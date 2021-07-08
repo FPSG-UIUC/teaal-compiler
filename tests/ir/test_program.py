@@ -3,6 +3,7 @@ import pytest
 from es2hfa.ir.display import Display
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.display import DisplayParser
 from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
@@ -74,7 +75,7 @@ def create_rank_ordered():
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
-def create_displayed(time, style):
+def create_displayed(time):
     yaml = """
     einsum:
         declaration:
@@ -87,8 +88,7 @@ def create_displayed(time, style):
         display:
             Z:
                 space: [N]
-                time: """ + time + """
-                """ + style
+                time: """ + time
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
@@ -195,10 +195,15 @@ def test_get_display_unspecified():
 
 
 def test_get_display_specified():
-    program = create_displayed("[K, M]", "style: shape")
+    program = create_displayed("[K.pos, M.coord]")
     program.add_einsum(0)
 
-    yaml = {"space": ["N"], "time": ["M", "K"], "style": "shape"}
+    yaml = {
+        "space": [
+            DisplayParser.parse("N")],
+        "time": [
+            DisplayParser.parse("M.coord"),
+            DisplayParser.parse("K.pos")]}
     display = Display(yaml, program.get_loop_order(), {},
                       program.get_output().root_name())
     assert program.get_display() == display

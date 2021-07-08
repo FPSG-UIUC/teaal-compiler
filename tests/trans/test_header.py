@@ -126,8 +126,7 @@ def test_make_header_displayed():
         display:
             Z:
                 space: [N]
-                time: [K, M]
-                style: shape
+                time: [K.pos, M.coord]
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)

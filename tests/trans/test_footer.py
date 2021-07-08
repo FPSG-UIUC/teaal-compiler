@@ -80,8 +80,7 @@ def test_make_footer_display():
     display = """
             Z:
                 space: [N]
-                time: [K, M]
-                style: shape
+                time: [K.pos, M.coord]
     """
     hfa = "displayCanvas(canvas)"
     assert_make_footer("", "", display, hfa)
@@ -96,7 +95,6 @@ def test_make_footer_all():
             Z:
                 space: [N2, N1]
                 time: [K, M, N0]
-                style: shape
     """
     hfa = "Z_MN2N1N0 = Z_N2N1MN0.swizzleRanks(rank_ids=[\"M\", \"N2\", \"N1\", \"N0\"])\n" + \
           "tmp0 = Z_MN2N1N0\n" + \

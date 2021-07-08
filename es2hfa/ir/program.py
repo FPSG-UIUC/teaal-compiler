@@ -102,7 +102,7 @@ class Program:
             self.loop_order = self.__default_loop_order()
 
         # Get the display information
-        display: Optional[Dict[str, Union[str, List[str]]]] = None
+        display: Optional[Dict[str, List[Tree]]] = None
         if output.root_name() in self.mapping.get_display().keys():
             display = self.mapping.get_display()[output.root_name()]
 

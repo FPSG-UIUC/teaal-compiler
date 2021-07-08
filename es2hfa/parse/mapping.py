@@ -27,6 +27,7 @@ Parse the input YAML
 from lark.tree import Tree
 from typing import Dict, List, Optional, Union
 
+from es2hfa.parse.display import DisplayParser
 from es2hfa.parse.partitioning import PartitioningParser
 from es2hfa.parse.yaml import YamlParser
 
@@ -41,7 +42,7 @@ class Mapping:
         Read the YAML input
         """
         # If a mapping exists, parse the mapping
-        display = None
+        display: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         loop_orders = None
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         rank_orders = None
@@ -49,8 +50,16 @@ class Mapping:
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
-            if "display" in mapping.keys():
-                display = mapping["display"]
+            if "display" in mapping.keys() and mapping["display"] is not None:
+                display = {}
+                for tensor, info in mapping["display"].items():
+                    display[tensor] = {}
+
+                    for stamp, inds in info.items():
+                        display[tensor][stamp] = []
+                        for ind in inds:
+                            display[tensor][stamp].append(
+                                DisplayParser.parse(ind))
 
             if "loop-order" in mapping.keys():
                 loop_orders = mapping["loop-order"]
@@ -106,7 +115,7 @@ class Mapping:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get_display(self) -> Dict[str, Dict[str, Union[str, List[str]]]]:
+    def get_display(self) -> Dict[str, Dict[str, List[Tree]]]:
         """
         Get the display information
         """

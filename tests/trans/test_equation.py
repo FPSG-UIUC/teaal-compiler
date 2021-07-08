@@ -99,8 +99,7 @@ def make_display(style):
         display:
             A:
                 space: []
-                time: [I]
-                style: """ + style
+                time: [I.""" + style + """]"""
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
     program = Program(einsum, mapping)
@@ -128,7 +127,7 @@ def test_tensor_in_out():
 def test_make_iter_expr_no_tensors():
     _, eqn = make_basic()
     with pytest.raises(ValueError) as excinfo:
-        eqn.make_iter_expr([])
+        eqn.make_iter_expr(None, [])
 
     assert str(excinfo.value) == "Must iterate over at least one tensor"
 
@@ -136,46 +135,46 @@ def test_make_iter_expr_no_tensors():
 def test_make_iter_expr():
     graph, eqn = make_basic()
 
-    _, tensors = graph.peek()
+    ind, tensors = graph.peek()
     iter_expr = "b_i & (c_i & d_i)"
 
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_output():
     graph, eqn = make_output()
 
-    _, tensors = graph.peek()
+    ind, tensors = graph.peek()
     iter_expr = "a_i << (b_i & (c_i & d_i))"
 
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_mult_terms():
     graph, eqn = make_mult_terms()
 
-    _, tensors = graph.peek()
+    ind, tensors = graph.peek()
     iter_expr = "a_i << ((b_i & c_i) | ((d_i & e_i) | f_i))"
 
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
-def test_make_iter_display_shape():
-    graph, eqn = make_display("shape")
+def test_make_iter_display_coord():
+    graph, eqn = make_display("coord")
 
-    _, tensors = graph.peek()
+    ind, tensors = graph.peek()
     iter_expr = "b_i & (c_i & d_i)"
 
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
-def test_make_iter_expr_display_occupancy():
-    graph, eqn = make_display("occupancy")
+def test_make_iter_expr_display_pos():
+    graph, eqn = make_display("pos")
 
-    _, tensors = graph.peek()
+    ind, tensors = graph.peek()
     iter_expr = "enumerate(b_i & (c_i & d_i))"
 
-    assert eqn.make_iter_expr(tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
 def test_make_payload_no_tensors():
@@ -214,8 +213,8 @@ def test_make_payload_mult_terms():
     assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
-def test_make_payload_display_shape():
-    graph, eqn = make_display("shape")
+def test_make_payload_display_coord():
+    graph, eqn = make_display("coord")
 
     ind, tensors = graph.pop()
     payload = "i, (b_val, (c_val, d_val))"
@@ -223,8 +222,8 @@ def test_make_payload_display_shape():
     assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
-def test_make_payload_display_occupancy():
-    graph, eqn = make_display("occupancy")
+def test_make_payload_display_pos():
+    graph, eqn = make_display("pos")
 
     ind, tensors = graph.pop()
     payload = "i_pos, (i, (b_val, (c_val, d_val)))"

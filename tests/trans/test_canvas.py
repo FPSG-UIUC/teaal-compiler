@@ -34,8 +34,7 @@ def create_displayed():
         display:
             Z:
                 space: [N]
-                time: [K, M]
-                style: shape
+                time: [K.pos, M.coord]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -57,9 +56,8 @@ def create_partitioned(style):
             Z: [N2, K, N1, M, N0]
         display:
             Z:
-                space: [N2, N1]
-                time: [K, M, N0]
-                style: """ + style
+                space: [N2.""" + style + """, N1.""" + style + """]
+                time: [K.""" + style + """, M.""" + style + """, N0.""" + style + """]"""
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
@@ -73,7 +71,7 @@ def test_create_canvas():
 
 
 def test_create_canvas_partitioned():
-    program = create_partitioned("shape")
+    program = create_partitioned("coord")
     program.add_einsum(0)
     for tensor in program.get_tensors():
         program.apply_partitioning(tensor)
@@ -117,12 +115,12 @@ def test_add_activity():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n,), (k, m)))"
+    hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (k_pos, m)))"
     assert canvas.add_activity().gen(0) == hfa
 
 
-def test_add_activity_partitioned_space():
-    program = create_partitioned("shape")
+def test_add_activity_partitioned_coord():
+    program = create_partitioned("coord")
     program.add_einsum(0)
     for tensor in program.get_tensors():
         program.apply_partitioning(tensor)
@@ -135,8 +133,8 @@ def test_add_activity_partitioned_space():
     assert canvas.add_activity().gen(0) == hfa
 
 
-def test_add_activity_partitioned_occupancy():
-    program = create_partitioned("occupancy")
+def test_add_activity_partitioned_pos():
+    program = create_partitioned("pos")
     program.add_einsum(0)
     for tensor in program.get_tensors():
         program.apply_partitioning(tensor)
@@ -145,7 +143,7 @@ def test_add_activity_partitioned_occupancy():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m), (n2, k, n1, n0), (n2, n1, m, n0), spacetime=((n2, n1_pos), (k, m, n0_pos)))"
+    hfa = "canvas.addActivity((k, m), (n2, k, n1, n0), (n2, n1, m, n0), spacetime=((n2_pos, n1_pos), (k_pos, m_pos, n0_pos)))"
     assert canvas.add_activity().gen(0) == hfa
 
 

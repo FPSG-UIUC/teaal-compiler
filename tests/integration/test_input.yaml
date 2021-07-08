@@ -23,5 +23,4 @@ mapping:
     display:
         T1:
             space: [N]
-            time: [K, M]
-            style: shape
+            time: [K.pos, M.coord]

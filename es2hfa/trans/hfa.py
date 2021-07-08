@@ -95,7 +95,7 @@ class HFA:
             return cast(Statement, bottom)
 
         # Otherwise, get the information for the for loop
-        expr = eqn.make_iter_expr(tensors)
+        expr = eqn.make_iter_expr(ind, tensors)
         _, tensors = graph.pop()
         payload = eqn.make_payload(ind, tensors)
 
