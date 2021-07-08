@@ -33,7 +33,7 @@ from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.partitioning import Partitioner
-from es2hfa.trans.utils import Utils
+from es2hfa.trans.utils import TransUtils
 
 
 class Header:
@@ -45,7 +45,7 @@ class Header:
     def make_header(
             program: Program,
             canvas: Canvas,
-            utils: Utils) -> Statement:
+            trans_utils: TransUtils) -> Statement:
         """
         Create the header for a given einsum
 
@@ -56,13 +56,13 @@ class Header:
 
         # First, create the output tensor
         output = program.get_output()
-        out_arg = Utils.build_rank_ids(output)
+        out_arg = TransUtils.build_rank_ids(output)
         out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
         out_assn = SAssign(output.tensor_name(), out_constr)
         header.add(cast(Statement, out_assn))
 
         # Create a partitioner
-        partitioner = Partitioner(program, utils)
+        partitioner = Partitioner(program, trans_utils)
 
         # Get the tensors we need to generate headers for
         tensors = program.get_tensors()
@@ -79,7 +79,7 @@ class Header:
 
             # Emit code to perform the swizzle if necessary
             if old_name != new_name:
-                header.add(Utils.build_swizzle(tensor, old_name))
+                header.add(TransUtils.build_swizzle(tensor, old_name))
 
             # Emit code to get the root fiber
             get_root_call = cast(Expression, EMethod(new_name, "getRoot", []))

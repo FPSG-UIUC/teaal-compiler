@@ -5,7 +5,7 @@ from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.partitioning import Partitioner
-from es2hfa.trans.utils import Utils
+from es2hfa.trans.utils import TransUtils
 
 
 def assert_partition(tensor, parts, hfa):
@@ -24,7 +24,7 @@ def assert_partition(tensor, parts, hfa):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    partitioner = Partitioner(program, Utils())
+    partitioner = Partitioner(program, TransUtils())
     assert partitioner.partition(tensor).gen(depth=0) == hfa
 
 
@@ -82,7 +82,7 @@ def assert_unpartition(part, hfa):
     for tensor in program.get_tensors():
         program.apply_partitioning(tensor)
 
-    partitioner = Partitioner(program, Utils())
+    partitioner = Partitioner(program, TransUtils())
     assert partitioner.unpartition(program.get_output()).gen(0) == hfa
 
 

@@ -24,7 +24,7 @@ SOFTWARE.
 Representation of how tensors and variables are combined
 """
 
-from typing import cast, Dict, Generator, List, Optional
+from typing import cast, Dict, List, Optional
 
 from es2hfa.hfa.arg import AJust
 from es2hfa.hfa.base import *
@@ -34,6 +34,7 @@ from es2hfa.hfa.payload import *
 from es2hfa.hfa.stmt import SIAssign
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.utils import ParseUtils
 
 
 class Equation:
@@ -55,12 +56,11 @@ class Equation:
         for term in einsum.find_data("times"):
             self.terms.append(cast(List[str], []))
             self.vars.append([])
+
             for var in term.find_data("var"):
-                self.vars[-1].append(next(cast(Generator,
-                                               var.scan_values(lambda _: True))))
+                self.vars[-1].append(ParseUtils.next_str(var))
             for tensor in term.find_data("tensor"):
-                self.terms[-1].append(next(cast(Generator,
-                                           tensor.scan_values(lambda _: True))))
+                self.terms[-1].append(ParseUtils.next_str(tensor))
 
         # Now create the reverse dictionary of factors to term #
         self.term_dict: Dict[str, int] = {}
@@ -72,11 +72,7 @@ class Equation:
                 self.term_dict[factor] = i
 
         # Finally, get the name of the output
-        self.output = next(
-            cast(
-                Generator, next(
-                    einsum.find_data("output")).scan_values(
-                    lambda _: True)))
+        self.output = ParseUtils.next_str(next(einsum.find_data("output")))
         if self.output in self.term_dict.keys():
             raise ValueError(self.output +
                              " appears multiple times in the einsum")

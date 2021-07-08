@@ -27,12 +27,13 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import cast, Dict, Generator, List, Optional, Union
+from typing import cast, Dict, List, Optional, Union
 
 from es2hfa.ir.display import Display
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
+from es2hfa.parse.utils import ParseUtils
 
 
 class Program:
@@ -251,7 +252,7 @@ class Program:
         """
         Given a parse tree, get the appropriate tensor
         """
-        name = next(cast(Generator, tensor.scan_values(lambda _: True)))
+        name = ParseUtils.next_str(tensor)
         if name not in self.tensors.keys():
             raise ValueError("Undeclared tensor: " + name)
 

@@ -3,7 +3,7 @@ from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.header import Header
-from es2hfa.trans.utils import Utils
+from es2hfa.trans.utils import TransUtils
 from tests.utils.parse_tree import make_uniform_shape
 
 
@@ -29,7 +29,11 @@ def test_make_header():
           "z_m = Z_MN.getRoot()\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
-    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(
+        program,
+        canvas,
+        TransUtils()).gen(
+        depth=0) == hfa
 
 
 def test_make_header_swizzle():
@@ -53,7 +57,11 @@ def test_make_header_swizzle():
           "a_m = A_MK.getRoot()\n" + \
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
           "b_n = B_NK.getRoot()"
-    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(
+        program,
+        canvas,
+        TransUtils()).gen(
+        depth=0) == hfa
 
 
 def test_make_header_partitioned():
@@ -97,7 +105,11 @@ def test_make_header_partitioned():
           "B_K2K1K0N.setRankIds(rank_ids=[\"K2\", \"K1\", \"K0\", \"N\"])\n" + \
           "B_NK2K1K0 = B_K2K1K0N.swizzleRanks(rank_ids=[\"N\", \"K2\", \"K1\", \"K0\"])\n" + \
           "b_n = B_NK2K1K0.getRoot()"
-    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(
+        program,
+        canvas,
+        TransUtils()).gen(
+        depth=0) == hfa
 
 
 def test_make_header_displayed():
@@ -128,4 +140,8 @@ def test_make_header_displayed():
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
-    assert Header.make_header(program, canvas, Utils()).gen(depth=0) == hfa
+    assert Header.make_header(
+        program,
+        canvas,
+        TransUtils()).gen(
+        depth=0) == hfa

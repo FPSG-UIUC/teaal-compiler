@@ -31,7 +31,7 @@ from es2hfa.hfa.stmt import SBlock
 from es2hfa.ir.program import Program
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.partitioning import Partitioner
-from es2hfa.trans.utils import Utils
+from es2hfa.trans.utils import TransUtils
 
 
 class Footer:
@@ -43,7 +43,7 @@ class Footer:
     def make_footer(
             program: Program,
             canvas: Canvas,
-            utils: Utils) -> Statement:
+            trans_utils: TransUtils) -> Statement:
         """
         Create the footer for the given einsum
 
@@ -63,10 +63,10 @@ class Footer:
 
         # Generate undo swizzle code if necessary
         if curr_name != part_name:
-            footer.add(Utils.build_swizzle(output, curr_name))
+            footer.add(TransUtils.build_swizzle(output, curr_name))
 
         # Now, undo partitioning
-        partitioner = Partitioner(program, utils)
+        partitioner = Partitioner(program, trans_utils)
         footer.add(partitioner.unpartition(program.get_output()))
 
         # After reseting the output tensor, make sure that it still knows that

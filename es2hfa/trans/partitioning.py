@@ -23,7 +23,7 @@ SOFTWARE.
 
 Translate the partitiong specification
 """
-from typing import cast, Generator
+from typing import cast
 
 from lark.tree import Tree
 
@@ -34,7 +34,8 @@ from es2hfa.hfa.op import OAdd, OFDiv, OSub
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
-from es2hfa.trans.utils import Utils
+from es2hfa.parse.utils import ParseUtils
+from es2hfa.trans.utils import TransUtils
 
 
 class Partitioner:
@@ -42,12 +43,12 @@ class Partitioner:
     Generate the HFA code for the partitioning information
     """
 
-    def __init__(self, program: Program, utils: Utils) -> None:
+    def __init__(self, program: Program, trans_utils: TransUtils) -> None:
         """
         Create a partitioner for a given program
         """
         self.program = program
-        self.utils = utils
+        self.trans_utils = trans_utils
 
     def partition(self, tensor: Tensor) -> Statement:
         """
@@ -64,7 +65,12 @@ class Partitioner:
         # Rename the variable
         old_name = tensor.tensor_name()
         old_expr = cast(Expression, EVar(old_name))
-        block.add(cast(Statement, SAssign(self.utils.next_tmp(), old_expr)))
+        block.add(
+            cast(
+                Statement,
+                SAssign(
+                    self.trans_utils.next_tmp(),
+                    old_expr)))
 
         # Emit the partitioning code
         for i, ind in reversed(list(enumerate(tensor.get_inds()))):
@@ -88,11 +94,11 @@ class Partitioner:
         # Rename the tensor
         self.program.apply_partitioning(tensor)
         part_name = tensor.tensor_name()
-        tmp_expr = cast(Expression, EVar(self.utils.curr_tmp()))
+        tmp_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
 
         # Rename the rank_ids
-        block.add(Utils.build_set_rank_ids(tensor))
+        block.add(TransUtils.build_set_rank_ids(tensor))
 
         return cast(Statement, block)
 
@@ -119,7 +125,7 @@ class Partitioner:
             cast(
                 Statement,
                 SAssign(
-                    self.utils.next_tmp(),
+                    self.trans_utils.next_tmp(),
                     part_name_expr)))
 
         # For each dimension
@@ -134,17 +140,20 @@ class Partitioner:
             arg3 = AParam("coord_style", cast(Expression, EString("absolute")))
             args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
 
-            flat_call = EMethod(self.utils.curr_tmp(), "flattenRanks", args)
+            flat_call = EMethod(
+                self.trans_utils.curr_tmp(),
+                "flattenRanks",
+                args)
             flat_assn = SAssign(
-                self.utils.next_tmp(), cast(
+                self.trans_utils.next_tmp(), cast(
                     Expression, flat_call))
 
             block.add(cast(Statement, flat_assn))
 
         # Switch back to tensor name and rename the rank_ids
-        tmp_name_expr = cast(Expression, EVar(self.utils.curr_tmp()))
+        tmp_name_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(new_name, tmp_name_expr)))
-        block.add(Utils.build_set_rank_ids(tensor))
+        block.add(TransUtils.build_set_rank_ids(tensor))
 
         return cast(Statement, block)
 
@@ -156,7 +165,7 @@ class Partitioner:
         total size of the dimension
         """
         # Build the step
-        parts = next(cast(Generator, part.scan_values(lambda _: True)))
+        parts = ParseUtils.next_int(part)
 
         # Ceiling divide: (dim - 1) // parts + 1
         dim_expr = cast(Expression, EVar(dim))
@@ -184,8 +193,10 @@ class Partitioner:
         args = [cast(Argument, arg1), cast(Argument, arg2)]
 
         # Build the call to splitUniform()
-        part_call = EMethod(self.utils.curr_tmp(), "splitUniform", args)
-        part_assn = SAssign(self.utils.next_tmp(), cast(Expression, part_call))
+        part_call = EMethod(self.trans_utils.curr_tmp(), "splitUniform", args)
+        part_assn = SAssign(
+            self.trans_utils.next_tmp(), cast(
+                Expression, part_call))
 
         return cast(Statement, part_assn)
 
@@ -194,7 +205,7 @@ class Partitioner:
         Partition with a uniform shape
         """
         # Build the step
-        step = next(cast(Generator, part.scan_values(lambda _: True)))
+        step = ParseUtils.next_int(part)
 
         # Build the splitUniform()
         return self._split_uniform(cast(Expression, EInt(step)), depth)
