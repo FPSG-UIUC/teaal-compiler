@@ -3,7 +3,8 @@ import pytest
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 
 
 def test_peek_rank0():
@@ -14,7 +15,7 @@ def test_peek_rank0():
         expressions:
             - A[] = b
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     graph = IterationGraph(program)
 
@@ -34,7 +35,7 @@ def test_peek_default():
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     graph = IterationGraph(program)
 
@@ -57,7 +58,7 @@ def test_peek_order():
         loop-order:
             A: [J, K, I]
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
@@ -80,7 +81,7 @@ def test_pop_default():
         expressions:
             - A[i, j] = sum(K).(B[i, k] * C[j, k])
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     graph = IterationGraph(program)
 
@@ -108,7 +109,7 @@ def test_pop_order():
         loop-order:
             A: [J, K, I]
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
     for tensor in program.get_tensors():

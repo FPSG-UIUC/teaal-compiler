@@ -31,7 +31,8 @@ from typing import cast, Dict, Generator, List, Optional, Union
 
 from es2hfa.ir.display import Display
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 
 
 class Program:
@@ -39,21 +40,22 @@ class Program:
     Store tensor metadata and configure the metadata for specific einsums
     """
 
-    def __init__(self, input_: Input) -> None:
+    def __init__(self, einsum: Einsum, mapping: Mapping) -> None:
         """
         Construct the metadata for tensors
         """
-        self.input = input_
+        self.einsum = einsum
+        self.mapping = mapping
 
         # Get all tensors
         self.tensors = {}
-        declaration = self.input.get_declaration()
+        declaration = self.einsum.get_declaration()
         for ten_name in declaration:
             tensor = Tensor(ten_name, declaration[ten_name])
             self.tensors[tensor.root_name()] = tensor
 
         # Replace the tensors whose rank order is specified
-        rank_orders = self.input.get_rank_orders()
+        rank_orders = self.mapping.get_rank_orders()
         for ord_name in rank_orders:
             tensor = Tensor(ord_name, rank_orders[ord_name])
             if tensor.root_name() not in self.tensors.keys():
@@ -61,7 +63,7 @@ class Program:
 
             self.tensors[tensor.root_name()] = tensor
 
-        self.einsum: Optional[Tree] = None
+        self.equation: Optional[Tree] = None
         self.es_tensors: List[Tensor] = []
         self.loop_order: Optional[List[str]] = None
         self.partitioning: Optional[Dict[str, List[Tree]]] = None
@@ -71,27 +73,27 @@ class Program:
         """
         Configure the program for the ith Einsum
         """
-        self.einsum = self.input.get_expressions()[i]
+        self.equation = self.einsum.get_expressions()[i]
 
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
-        output = self.__get_tensor(next(self.einsum.find_data("output")))
+        output = self.__get_tensor(next(self.equation.find_data("output")))
         output.set_is_output(True)
         self.es_tensors.append(output)
 
         # Add the rest of the tensors
-        for tensor_tree in self.einsum.find_data("tensor"):
+        for tensor_tree in self.equation.find_data("tensor"):
             self.es_tensors.append(self.__get_tensor(tensor_tree))
 
         # Store the partitioning information
-        partitioning = self.input.get_partitioning()
+        partitioning = self.mapping.get_partitioning()
         if output.root_name() in partitioning.keys():
             self.partitioning = partitioning[output.root_name()]
         else:
             self.partitioning = {}
 
         # Store the loop order
-        loop_orders = self.input.get_loop_orders()
+        loop_orders = self.mapping.get_loop_orders()
         if output.root_name() in loop_orders.keys():
             self.loop_order = loop_orders[output.root_name()]
 
@@ -100,8 +102,8 @@ class Program:
 
         # Get the display information
         display: Optional[Dict[str, Union[str, List[str]]]] = None
-        if output.root_name() in self.input.get_display().keys():
-            display = self.input.get_display()[output.root_name()]
+        if output.root_name() in self.mapping.get_display().keys():
+            display = self.mapping.get_display()[output.root_name()]
 
         if display is not None:
             # Build the display object
@@ -154,11 +156,11 @@ class Program:
         Get the parse tree representation of the einsum
         """
         # Make sure that the program is configured
-        if self.einsum is None:
+        if self.equation is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return self.einsum
+        return self.equation
 
     def get_loop_order(self) -> List[str]:
         """
@@ -221,7 +223,7 @@ class Program:
         """
         Compute the default loop order
         """
-        if self.einsum is None:
+        if self.equation is None:
             raise ValueError("Must first set the einsum")
 
         if self.partitioning is None:
@@ -229,7 +231,7 @@ class Program:
 
         loop_order = self.es_tensors[0].get_inds().copy()
 
-        for sum_ in self.einsum.find_data("sum"):
+        for sum_ in self.equation.find_data("sum"):
             loop_order += list(next(sum_.find_data("sinds")
                                     ).scan_values(lambda _: True))
 

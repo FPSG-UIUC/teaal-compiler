@@ -2,7 +2,8 @@ import pytest
 
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.equation import Equation
 from tests.utils.parse_tree import make_plus
 
@@ -18,8 +19,9 @@ def make_basic():
         expressions:
             - "A[] = sum(I).(B[i] * C[i] * D[i])"
     """
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
     program.add_einsum(0)
 
     return IterationGraph(program), Equation(program)
@@ -36,8 +38,9 @@ def make_output():
         expressions:
             - "A[I] = B[i] * C[i] * D[i]"
     """
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
     program.add_einsum(0)
 
     return IterationGraph(program), Equation(program)
@@ -56,8 +59,9 @@ def make_mult_terms():
         expressions:
             - "A[I] = B[i] * C[i] + D[i] * E[i] + F[i]"
     """
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
     program.add_einsum(0)
 
     return IterationGraph(program), Equation(program)
@@ -73,8 +77,9 @@ def make_other(einsum):
             D: [I]
         expressions:
             - """ + einsum
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
     program.add_einsum(0)
 
     return program
@@ -96,8 +101,9 @@ def make_display(style):
                 space: []
                 time: [I]
                 style: """ + style
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
     program.add_einsum(0)
 
     return IterationGraph(program), Equation(program)

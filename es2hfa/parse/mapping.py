@@ -21,39 +21,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Parse the input YAML file
+Parse the input YAML
 """
 
 from lark.tree import Tree
 from typing import Dict, List, Optional, Union
 
-from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.partitioning import PartitioningParser
 from es2hfa.parse.yaml import YamlParser
 
 
-class Input:
+class Mapping:
     """
-    Parse the input YAML file into the input to the compiler
+    Parse the input YAML for the compiler
     """
 
     def __init__(self, yaml: dict) -> None:
         """
-        Read the YAML file input
+        Read the YAML input
         """
-        # Parse the Einsums
-        self.declaration = yaml["einsum"]["declaration"]
-
-        self.exprs = [EquationParser.parse(expr)
-                      for expr in yaml["einsum"]["expressions"]]
-
         # If a mapping exists, parse the mapping
         display = None
         loop_orders = None
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         rank_orders = None
-
-        print(yaml)
 
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
@@ -102,36 +93,24 @@ class Input:
             self.rank_orders = rank_orders
 
     @classmethod
-    def from_file(cls, filename: str) -> "Input":
+    def from_file(cls, filename: str) -> "Mapping":
         """
-        Construct a new Input from a YAML file
+        Construct a new Mapping from a YAML file
         """
         return cls(YamlParser.parse_file(filename))
 
     @classmethod
-    def from_str(cls, string: str) -> "Input":
+    def from_str(cls, string: str) -> "Mapping":
         """
-        Construct a new Input from a string in the YAML format
+        Construct a new Mapping from a string in the YAML format
         """
         return cls(YamlParser.parse_str(string))
-
-    def get_declaration(self) -> Dict[str, List[str]]:
-        """
-        Get the declaration
-        """
-        return self.declaration
 
     def get_display(self) -> Dict[str, Dict[str, Union[str, List[str]]]]:
         """
         Get the display information
         """
         return self.display
-
-    def get_expressions(self) -> List[Tree]:
-        """
-        Get the expressions (Einsums)
-        """
-        return self.exprs
 
     def get_loop_orders(self) -> Dict[str, List[str]]:
         """
@@ -154,11 +133,10 @@ class Input:
 
     def __eq__(self, other: object) -> bool:
         """
-        The == operator for Inputs
+        The == operator for Mappings
         """
         if isinstance(other, type(self)):
-            return self.declaration == other.declaration and \
-                self.exprs == other.exprs and \
+            return self.display == other.display and \
                 self.loop_orders == other.loop_orders and \
                 self.partitioning == other.partitioning and \
                 self.rank_orders == other.rank_orders

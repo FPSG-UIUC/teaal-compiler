@@ -1,4 +1,5 @@
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.hfa import HFA
 
 
@@ -35,8 +36,9 @@ def test_integration():
     for test_name in test_names:
         filename = 'tests/integration/' + test_name
 
-        input_ = Input.from_file(filename + ".yaml")
-        output = str(HFA(input_))
+        einsum = Einsum.from_file(filename + ".yaml")
+        mapping = Mapping.from_file(filename + ".yaml")
+        output = str(HFA(einsum, mapping))
 
         hfa = read_hfa(filename + ".hfa")
         assert output == hfa, test_name + " integration test failed!"

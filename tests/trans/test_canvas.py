@@ -1,7 +1,8 @@
 import pytest
 
 from es2hfa.ir.program import Program
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.canvas import Canvas
 
 
@@ -15,7 +16,7 @@ def create_default():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def create_displayed():
@@ -36,7 +37,7 @@ def create_displayed():
                 time: [K, M]
                 style: shape
     """
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def create_partitioned(style):
@@ -59,7 +60,7 @@ def create_partitioned(style):
                 space: [N2, N1]
                 time: [K, M, N0]
                 style: """ + style
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def test_create_canvas():

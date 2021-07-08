@@ -30,7 +30,8 @@ from es2hfa.hfa.base import Statement
 from es2hfa.hfa.stmt import SBlock, SFor
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
@@ -43,15 +44,15 @@ class HFA:
     Translate a given Einsum into the corresponding HFA code
     """
 
-    def __init__(self, input_: Input) -> None:
+    def __init__(self, einsum: Einsum, mapping: Mapping) -> None:
         """
         Perform the Einsum to HFA translation
         """
-        program = Program(input_)
+        program = Program(einsum, mapping)
         utils = Utils()
 
         code = SBlock([])
-        for i in range(len(input_.get_expressions())):
+        for i in range(len(einsum.get_expressions())):
             # Add Einsum to program
             program.add_einsum(i)
 

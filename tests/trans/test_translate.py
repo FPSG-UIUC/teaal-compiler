@@ -1,17 +1,22 @@
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.hfa import HFA
 
 
 def test_translate_no_loops():
-    input_ = Input.from_file("tests/integration/test_translate_no_loops.yaml")
+    einsum = Einsum.from_file("tests/integration/test_translate_no_loops.yaml")
+    mapping = Mapping.from_file(
+        "tests/integration/test_translate_no_loops.yaml")
     hfa = "A_ = Tensor(rank_ids=[])\n" +\
           "a_ref = A_.getRoot()\n" + \
           "a_ref += b"
-    assert str(HFA(input_)) == hfa
+    assert str(HFA(einsum, mapping)) == hfa
 
 
 def test_translate_defaults():
-    input_ = Input.from_file("tests/integration/test_input_no_mapping.yaml")
+    einsum = Einsum.from_file("tests/integration/test_input_no_mapping.yaml")
+    mapping = Mapping.from_file(
+        "tests/integration/test_input_no_mapping.yaml")
     hfa = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "t1_m = T1_MN.getRoot()\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
@@ -29,11 +34,12 @@ def test_translate_defaults():
           "for m, (z_n, (_, t1_n, c_n)) in z_m << (t1_m | c_m):\n" + \
           "    for n, (z_ref, (_, t1_val, c_val)) in z_n << (t1_n | c_n):\n" + \
           "        z_ref += t1_val + c_val"
-    assert str(HFA(input_)) == hfa
+    assert str(HFA(einsum, mapping)) == hfa
 
 
 def test_translate_specified():
-    input_ = Input.from_file("tests/integration/test_input.yaml")
+    einsum = Einsum.from_file("tests/integration/test_input.yaml")
+    mapping = Mapping.from_file("tests/integration/test_input.yaml")
     hfa = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "T1_NM = T1_MN.swizzleRanks(rank_ids=[\"N\", \"M\"])\n" + \
           "t1_n = T1_NM.getRoot()\n" + \
@@ -89,4 +95,4 @@ def test_translate_specified():
           "tmp17 = tmp16.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "Z_NM = tmp17\n" + \
           "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
-    assert str(HFA(input_)) == hfa
+    assert str(HFA(einsum, mapping)) == hfa

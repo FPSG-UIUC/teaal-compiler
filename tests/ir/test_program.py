@@ -4,7 +4,8 @@ from es2hfa.ir.display import Display
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.equation import EquationParser
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from tests.utils.parse_tree import make_uniform_shape
 
 
@@ -19,7 +20,7 @@ def create_default():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def create_loop_ordered():
@@ -35,7 +36,7 @@ def create_loop_ordered():
         loop-order:
             Z: [K, N, M]
     """
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def create_partitioned():
@@ -53,7 +54,7 @@ def create_partitioned():
                 K: [uniform_shape(6), uniform_shape(3)]
                 M: [uniform_shape(5)]
     """
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def create_rank_ordered():
@@ -70,7 +71,7 @@ def create_rank_ordered():
             Z: [N, M]
             A: [M, K]
     """
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def create_displayed(time, style):
@@ -88,7 +89,7 @@ def create_displayed(time, style):
                 space: [N]
                 time: """ + time + """
                 """ + style
-    return Program(Input.from_str(yaml))
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def test_missing_decl():
@@ -103,9 +104,10 @@ def test_missing_decl():
             A: []
             B: []
     """
-    input_ = Input.from_str(yaml)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
     with pytest.raises(ValueError) as excinfo:
-        Program(input_)
+        Program(einsum, mapping)
     assert str(excinfo.value) == "Undeclared tensor: B"
 
 
@@ -118,7 +120,7 @@ def test_add_einsum_missing_decl():
         expressions:
             - A[] = B[] + C[]
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
     with pytest.raises(ValueError) as excinfo:
         program.add_einsum(0)
@@ -374,8 +376,9 @@ def test_default_loop_order_unconfigured():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
     with pytest.raises(ValueError) as excinfo:
         program._Program__default_loop_order()
     assert str(excinfo.value) == "Must first set the einsum"
@@ -392,9 +395,10 @@ def test_default_loop_order_no_partitioning():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
-    input_ = Input.from_str(yaml)
-    program = Program(input_)
-    program.einsum = input_.get_expressions()[0]
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+    program.equation = einsum.get_expressions()[0]
     with pytest.raises(ValueError) as excinfo:
         program._Program__default_loop_order()
     assert str(excinfo.value) == "Must configure partitioning before loop order"

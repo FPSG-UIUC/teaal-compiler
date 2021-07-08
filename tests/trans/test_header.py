@@ -1,5 +1,6 @@
 from es2hfa.ir.program import Program
-from es2hfa.parse.input import Input
+from es2hfa.parse.einsum import Einsum
+from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.canvas import Canvas
 from es2hfa.trans.header import Header
 from es2hfa.trans.utils import Utils
@@ -20,7 +21,7 @@ def test_make_header():
         loop-order:
             Z: [K, M, N]
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     canvas = Canvas(program)
 
@@ -42,7 +43,7 @@ def test_make_header_swizzle():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     canvas = Canvas(program)
 
@@ -71,7 +72,7 @@ def test_make_header_partitioned():
                 K: [uniform_shape(6), uniform_shape(3)]
                 M: [uniform_shape(5)]
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     canvas = Canvas(program)
 
@@ -116,7 +117,7 @@ def test_make_header_displayed():
                 time: [K, M]
                 style: shape
     """
-    program = Program(Input.from_str(yaml))
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     canvas = Canvas(program)
 

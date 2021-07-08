@@ -32,7 +32,8 @@ if __name__ == "__main__":  # pragma: no cover
         sys.path.append(path)
 
     # Import the necessary classes
-    from es2hfa.parse.input import Input
+    from es2hfa.parse.einsum import Einsum
+    from es2hfa.parse.mapping import Mapping
     from es2hfa.trans.hfa import HFA
 
     # Make sure we are given exactly one argument
@@ -41,6 +42,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # Translate
     else:
-        input_ = Input.from_file(sys.argv[1])
-        hfa = HFA(input_)
+        einsum = Einsum.from_file(sys.argv[1])
+        mapping = Mapping.from_file(sys.argv[1])
+        hfa = HFA(einsum, mapping)
         print(hfa)
