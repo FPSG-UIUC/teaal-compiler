@@ -4,6 +4,9 @@
 
 ## Minor Changes
 
+- [ ] Fix `hfa-compiler-notebooks` repo to use new interface
+    - [ ] Change notebooks
+    - [ ] Change prelude.py
 - [ ] Use partitioning parser instead of `make_uniform_shape` for all relevant tests
 - [ ] Add all other integration tests
 - [ ] Clean up tests
@@ -13,6 +16,7 @@
 
 ## Major Changes
 
+- [ ] Use Joel's Javascript code for filling cells
 - [ ] Integration with the HFA docker environment
     - [ ] Clone docker repository and figure out how to build
     - [ ] Figure out how to remove existing containers
@@ -21,6 +25,7 @@
 
 ## Planning
 
+- [ ] Think about how to represent slip
 - [ ] Plan other types of partitioning
 
 ## Other
