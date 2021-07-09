@@ -69,7 +69,6 @@ class Canvas:
         # Add the space-time arguments
         space_tup = cast(Expression, ETuple(
             [self.__rel_coord(ind) for ind in display.get_space()]))
-        print(space_tup.gen())
         time_tup = cast(Expression, ETuple(
             [self.__rel_coord(ind) for ind in display.get_time()]))
         spacetime = cast(Expression, ETuple([space_tup, time_tup]))
