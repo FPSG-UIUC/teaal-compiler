@@ -138,14 +138,15 @@ class Canvas:
         ind_str = ind[0].lower() + ind[1:]
         if spacetime.get_style(ind) == "coord":
             # Check if we already have the absolute coordinate
-            base = spacetime.get_base(ind)
-            if base is None:
+            offset = spacetime.get_offset(ind)
+            if offset is None:
                 return cast(Expression, EVar(ind_str))
 
-            # ind - base
+            # ind - offset
             ind_expr = cast(Expression, EVar(ind_str))
-            base_expr = cast(Expression, EVar(base[0].lower() + base[1:]))
-            sub = EBinOp(ind_expr, cast(Operator, OSub()), base_expr)
+            offset_expr = cast(Expression,
+                               EVar(offset[0].lower() + offset[1:]))
+            sub = EBinOp(ind_expr, cast(Operator, OSub()), offset_expr)
 
             return cast(Expression, sub)
 

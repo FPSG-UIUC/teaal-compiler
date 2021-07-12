@@ -8,6 +8,11 @@ def test_ebinop():
     assert binop.gen() == "a + b"
 
 
+def test_ecomp():
+    comp = EComp(EVar("a"), "a", EFunc("range", [AJust(EInt(5))]))
+    assert comp.gen() == "[a for a in range(5)]"
+
+
 def test_efield():
     field = EField("foo", "bar")
     assert field.gen() == "foo.bar"

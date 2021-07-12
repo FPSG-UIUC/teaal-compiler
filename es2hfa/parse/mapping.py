@@ -42,10 +42,11 @@ class Mapping:
         Read the YAML input
         """
         # If a mapping exists, parse the mapping
-        spacetime: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         loop_orders = None
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         rank_orders = None
+        # Use type dict, since the dictionary is very heterogeneous
+        spacetime: Optional[dict] = None
 
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
@@ -56,11 +57,16 @@ class Mapping:
                 for tensor, info in mapping["spacetime"].items():
                     spacetime[tensor] = {}
 
-                    for stamp, inds in info.items():
+                    # Parse the space and time stamps
+                    for stamp in ["space", "time"]:
                         spacetime[tensor][stamp] = []
-                        for ind in inds:
+                        for ind in info[stamp]:
                             spacetime[tensor][stamp].append(
                                 SpaceTimeParser.parse(ind))
+
+                    # Store any other optimizations
+                    if "opt" in info.keys():
+                        spacetime[tensor]["opt"] = info["opt"]
 
             if "loop-order" in mapping.keys():
                 loop_orders = mapping["loop-order"]

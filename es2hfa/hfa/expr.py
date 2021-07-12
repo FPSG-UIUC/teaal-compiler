@@ -52,6 +52,25 @@ class EBinOp:
 
 
 @Expression.register
+class EComp:
+    """
+    An HFA list comprehension
+    """
+
+    def __init__(self, elem: Expression, var: str, iter_: Expression) -> None:
+        self.elem = elem
+        self.var = var
+        self.iter = iter_
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EComp
+        """
+        return "[" + self.elem.gen() + " for " + self.var + \
+            " in " + self.iter.gen() + "]"
+
+
+@Expression.register
 class EField:
     """
     An HFA object field access

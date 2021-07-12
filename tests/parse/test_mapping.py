@@ -4,14 +4,23 @@ from tests.utils.parse_tree import make_uniform_shape
 
 
 def test_spacetime():
-    mapping = Mapping.from_file("tests/integration/test_input.yaml")
+    yaml = """
+    mapping:
+        spacetime:
+            T1:
+                space: [M0]
+                time: [M1.pos, M2.coord]
+                opt: slip
+    """
+    mapping = Mapping.from_str(yaml)
     spacetime = {
         "T1": {
             "space": [
-                SpaceTimeParser.parse("N")],
+                SpaceTimeParser.parse("M0")],
             "time": [
-                SpaceTimeParser.parse("K.pos"),
-                SpaceTimeParser.parse("M.coord")]}}
+                SpaceTimeParser.parse("M1.pos"),
+                SpaceTimeParser.parse("M2.coord")],
+            "opt": "slip"}}
 
     assert mapping.get_spacetime() == spacetime
 

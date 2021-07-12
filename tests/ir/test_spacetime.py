@@ -43,15 +43,15 @@ def test_bad_spacetime():
     assert str(excinfo.value) == "Incorrect schedule for spacetime on output Z"
 
 
-def test_get_base():
+def test_get_offset():
     yaml = create_yaml(["N", "M"], ["K"])
     parts = {"M": make_uniform_shape([6, 3]), "N": make_uniform_shape([5])}
     spacetime = SpaceTime(yaml, ["M", "N", "K"], parts, "Z")
 
-    assert spacetime.get_base("M0") == "M1"
-    assert spacetime.get_base("M1") == "M2"
-    assert spacetime.get_base("M2") is None
-    assert spacetime.get_base("K") is None
+    assert spacetime.get_offset("M0") == "M1"
+    assert spacetime.get_offset("M1") == "M2"
+    assert spacetime.get_offset("M2") is None
+    assert spacetime.get_offset("K") is None
 
 
 def test_get_space():
