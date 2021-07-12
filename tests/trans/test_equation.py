@@ -96,7 +96,7 @@ def make_display(style):
         expressions:
             - "A[] = sum(I).(B[i] * C[i] * D[i])"
     mapping:
-        display:
+        spacetime:
             A:
                 space: []
                 time: [I.""" + style + """]"""

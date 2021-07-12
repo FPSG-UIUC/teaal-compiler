@@ -24,7 +24,7 @@ mapping:
 #             K: [uniform_shape(3)]
 #     loop-order:
 #         T1: [K1, M, N, K0]
-#     display:
+#     spacetime:
 #         T1:
 #             space: [K0]
 #             time: [K1, M, N]

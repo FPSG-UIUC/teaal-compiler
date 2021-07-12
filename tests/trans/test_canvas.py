@@ -19,7 +19,7 @@ def create_default():
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
-def create_displayed():
+def create_spacetimeed():
     yaml = """
     einsum:
         declaration:
@@ -31,7 +31,7 @@ def create_displayed():
     mapping:
         loop-order:
             Z: [K, M, N]
-        display:
+        spacetime:
             Z:
                 space: [N]
                 time: [K.pos, M.coord]
@@ -54,7 +54,7 @@ def create_partitioned(style):
                 N: [uniform_shape(6), uniform_shape(3)]
         loop-order:
             Z: [N2, K, N1, M, N0]
-        display:
+        spacetime:
             Z:
                 space: [N2.""" + style + """, N1.""" + style + """]
                 time: [K.""" + style + """, M.""" + style + """, N0.""" + style + """]"""
@@ -62,7 +62,7 @@ def create_partitioned(style):
 
 
 def test_create_canvas():
-    program = create_displayed()
+    program = create_spacetimeed()
     program.add_einsum(0)
     canvas = Canvas(program)
 
@@ -95,7 +95,7 @@ def test_add_activity_no_canvas():
         excinfo.value) == "Unconfigured canvas. Make sure to first call create_canvas()"
 
 
-def test_add_activity_no_display():
+def test_add_activity_no_spacetime():
     program = create_default()
     program.add_einsum(0)
 
@@ -105,11 +105,11 @@ def test_add_activity_no_display():
     with pytest.raises(ValueError) as excinfo:
         canvas.add_activity()
 
-    assert str(excinfo.value) == "Display information unspecified"
+    assert str(excinfo.value) == "SpaceTime information unspecified"
 
 
 def test_add_activity():
-    program = create_displayed()
+    program = create_spacetimeed()
     program.add_einsum(0)
 
     canvas = Canvas(program)
@@ -160,7 +160,7 @@ def test_display_canvas_no_canvas():
 
 
 def test_display_canvas():
-    program = create_displayed()
+    program = create_spacetimeed()
     program.add_einsum(0)
 
     canvas = Canvas(program)
@@ -171,7 +171,7 @@ def test_display_canvas():
 
 
 def test_displayable_true():
-    program = create_displayed()
+    program = create_spacetimeed()
     program.add_einsum(0)
     canvas = Canvas(program)
 
@@ -186,11 +186,11 @@ def test_displayable_false():
     assert not canvas.displayable()
 
 
-def test_rel_coord_no_display():
+def test_rel_coord_no_spacetime():
     program = create_default()
     program.add_einsum(0)
     canvas = Canvas(program)
 
     with pytest.raises(ValueError) as excinfo:
         canvas._Canvas__rel_coord("K")
-    assert str(excinfo.value) == "Display information unspecified"
+    assert str(excinfo.value) == "SpaceTime information unspecified"

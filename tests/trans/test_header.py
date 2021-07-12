@@ -123,7 +123,7 @@ def test_make_header_displayed():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
-        display:
+        spacetime:
             Z:
                 space: [N]
                 time: [K.pos, M.coord]

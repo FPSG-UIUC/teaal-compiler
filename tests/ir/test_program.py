@@ -1,9 +1,9 @@
 import pytest
 
-from es2hfa.ir.display import Display
+from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.display import DisplayParser
+from es2hfa.parse.spacetime import SpaceTimeParser
 from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
@@ -85,7 +85,7 @@ def create_displayed(time):
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
-        display:
+        spacetime:
             Z:
                 space: [N]
                 time: """ + time
@@ -179,34 +179,34 @@ def test_apply_partitiong_mapped():
     assert program.get_tensors()[2] == Tensor("B", ["K2", "K1", "K0", "N"])
 
 
-def test_get_display_unconfigured():
+def test_get_spacetime_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_display()
+        program.get_spacetime()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_get_display_unspecified():
+def test_get_spacetime_unspecified():
     program = create_default()
     program.add_einsum(0)
-    assert program.get_display() is None
+    assert program.get_spacetime() is None
 
 
-def test_get_display_specified():
+def test_get_spacetime_specified():
     program = create_displayed("[K.pos, M.coord]")
     program.add_einsum(0)
 
     yaml = {
         "space": [
-            DisplayParser.parse("N")],
+            SpaceTimeParser.parse("N")],
         "time": [
-            DisplayParser.parse("M.coord"),
-            DisplayParser.parse("K.pos")]}
-    display = Display(yaml, program.get_loop_order(), {},
-                      program.get_output().root_name())
-    assert program.get_display() == display
+            SpaceTimeParser.parse("M.coord"),
+            SpaceTimeParser.parse("K.pos")]}
+    spacetime = SpaceTime(yaml, program.get_loop_order(), {},
+                          program.get_output().root_name())
+    assert program.get_spacetime() == spacetime
 
 
 def test_get_einsum_unconfigured():
@@ -341,7 +341,7 @@ def test_reset():
     program.reset()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_display()
+        program.get_spacetime()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 

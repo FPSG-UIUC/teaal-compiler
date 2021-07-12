@@ -22,7 +22,7 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
         """ + partitioning + """
         loop-order:
             Z: """ + loop_order + """
-        display:
+        spacetime:
         """ + display
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)

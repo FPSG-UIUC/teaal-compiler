@@ -27,7 +27,7 @@ Parse the input YAML
 from lark.tree import Tree
 from typing import Dict, List, Optional, Union
 
-from es2hfa.parse.display import DisplayParser
+from es2hfa.parse.spacetime import SpaceTimeParser
 from es2hfa.parse.partitioning import PartitioningParser
 from es2hfa.parse.yaml import YamlParser
 
@@ -42,7 +42,7 @@ class Mapping:
         Read the YAML input
         """
         # If a mapping exists, parse the mapping
-        display: Optional[Dict[str, Dict[str, List[Tree]]]] = None
+        spacetime: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         loop_orders = None
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         rank_orders = None
@@ -50,16 +50,17 @@ class Mapping:
         if "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
-            if "display" in mapping.keys() and mapping["display"] is not None:
-                display = {}
-                for tensor, info in mapping["display"].items():
-                    display[tensor] = {}
+            if "spacetime" in mapping.keys(
+            ) and mapping["spacetime"] is not None:
+                spacetime = {}
+                for tensor, info in mapping["spacetime"].items():
+                    spacetime[tensor] = {}
 
                     for stamp, inds in info.items():
-                        display[tensor][stamp] = []
+                        spacetime[tensor][stamp] = []
                         for ind in inds:
-                            display[tensor][stamp].append(
-                                DisplayParser.parse(ind))
+                            spacetime[tensor][stamp].append(
+                                SpaceTimeParser.parse(ind))
 
             if "loop-order" in mapping.keys():
                 loop_orders = mapping["loop-order"]
@@ -81,10 +82,10 @@ class Mapping:
             if "rank-order" in mapping.keys():
                 rank_orders = mapping["rank-order"]
 
-        if display is None:
-            self.display = {}
+        if spacetime is None:
+            self.spacetime = {}
         else:
-            self.display = display
+            self.spacetime = spacetime
 
         if loop_orders is None:
             self.loop_orders = {}
@@ -115,11 +116,11 @@ class Mapping:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get_display(self) -> Dict[str, Dict[str, List[Tree]]]:
+    def get_spacetime(self) -> Dict[str, Dict[str, List[Tree]]]:
         """
-        Get the display information
+        Get the spacetime information
         """
-        return self.display
+        return self.spacetime
 
     def get_loop_orders(self) -> Dict[str, List[str]]:
         """
@@ -145,7 +146,7 @@ class Mapping:
         The == operator for Mappings
         """
         if isinstance(other, type(self)):
-            return self.display == other.display and \
+            return self.spacetime == other.spacetime and \
                 self.loop_orders == other.loop_orders and \
                 self.partitioning == other.partitioning and \
                 self.rank_orders == other.rank_orders

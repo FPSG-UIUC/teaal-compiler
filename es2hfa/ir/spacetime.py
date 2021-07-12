@@ -32,7 +32,7 @@ from typing import Dict, List, Optional
 from es2hfa.parse.utils import ParseUtils
 
 
-class Display:
+class SpaceTime:
     """
     An abstract representation of the display(/canvas/graphics) information
     """
@@ -51,7 +51,7 @@ class Display:
         space = yaml["space"]
         if not isinstance(space, list):
             raise TypeError(
-                "Display space argument must be a list, given " +
+                "SpaceTime space argument must be a list, given " +
                 str(space) +
                 " on output " +
                 out_name)
@@ -69,7 +69,7 @@ class Display:
         time = yaml["time"]
         if not isinstance(time, list):
             raise TypeError(
-                "Display time argument must be a list, given " +
+                "SpaceTime time argument must be a list, given " +
                 str(time) +
                 " on output " +
                 out_name)
@@ -86,7 +86,7 @@ class Display:
         # Now make sure that all indices are scheduled
         if Counter(loop_order) != Counter(self.space + self.time):
             raise ValueError(
-                "Incorrect schedule for display on output " +
+                "Incorrect schedule for spacetime on output " +
                 out_name)
 
         # Find the base index name associated with the partitioned indices
@@ -125,7 +125,7 @@ class Display:
 
     def __eq__(self, other: object) -> bool:
         """
-        The == operator for Displays
+        The == operator for SpaceTimes
         """
         if isinstance(other, type(self)):
             return self.space == other.space and \

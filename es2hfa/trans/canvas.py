@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Translate the canvas display information
+Translate the canvas spacetime information
 """
 from typing import cast, List, Optional
 
@@ -54,9 +54,9 @@ class Canvas:
             raise ValueError(
                 "Unconfigured canvas. Make sure to first call create_canvas()")
 
-        display = self.program.get_display()
-        if display is None:
-            raise ValueError("Display information unspecified")
+        spacetime = self.program.get_spacetime()
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
 
         # Create tensor index arguments
         args = []
@@ -68,11 +68,11 @@ class Canvas:
 
         # Add the space-time arguments
         space_tup = cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in display.get_space()]))
+            [self.__rel_coord(ind) for ind in spacetime.get_space()]))
         time_tup = cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in display.get_time()]))
-        spacetime = cast(Expression, ETuple([space_tup, time_tup]))
-        args.append(cast(Argument, AParam("spacetime", spacetime)))
+            [self.__rel_coord(ind) for ind in spacetime.get_time()]))
+        spacetime_tup = cast(Expression, ETuple([space_tup, time_tup]))
+        args.append(cast(Argument, AParam("spacetime", spacetime_tup)))
 
         # Create call to add activity
         add = cast(Expression, EMethod("canvas", "addActivity", args))
@@ -122,23 +122,23 @@ class Canvas:
         Returns True if the program contains the information necessary to
         display the Einsum
         """
-        display = self.program.get_display()
-        return display is not None
+        spacetime = self.program.get_spacetime()
+        return spacetime is not None
 
     def __rel_coord(self, ind: str) -> Expression:
         """
         Get the relative coordinate for this index (important for PE distribution)
         """
-        display = self.program.get_display()
+        spacetime = self.program.get_spacetime()
 
-        # Make sure we have a display (needed to unwrap the Optional)
-        if display is None:
-            raise ValueError("Display information unspecified")
+        # Make sure we have a spacetime (needed to unwrap the Optional)
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
 
         ind_str = ind[0].lower() + ind[1:]
-        if display.get_style(ind) == "coord":
+        if spacetime.get_style(ind) == "coord":
             # Check if we already have the absolute coordinate
-            base = display.get_base(ind)
+            base = spacetime.get_base(ind)
             if base is None:
                 return cast(Expression, EVar(ind_str))
 
@@ -149,11 +149,11 @@ class Canvas:
 
             return cast(Expression, sub)
 
-        elif display.get_style(ind) == "pos":
+        elif spacetime.get_style(ind) == "pos":
             # ind_pos
             return cast(Expression, EVar(ind_str + "_pos"))
 
         else:
-            # Note: there is no good way to test this error. Bad display styles
-            # should be caught by the Display
-            raise ValueError("Unknown display style")  # pragma: no cover
+            # Note: there is no good way to test this error. Bad spacetime styles
+            # should be caught by the SpaceTime
+            raise ValueError("Unknown spacetime style")  # pragma: no cover

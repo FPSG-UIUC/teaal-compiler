@@ -115,10 +115,10 @@ class Equation:
                         output_tensor.fiber_name())), cast(
                     Operator, OLtLt()), expr)
 
-        # If the display style is occupancy, we also need to enumerate the
+        # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
-        display = self.program.get_display()
-        if display is not None and display.get_style(ind) == "pos":
+        spacetime = self.program.get_spacetime()
+        if spacetime is not None and spacetime.get_style(ind) == "pos":
             arg = cast(Argument, AJust(expr))
             expr = cast(Expression, EFunc("enumerate", [arg]))
 
@@ -159,10 +159,10 @@ class Equation:
         ind_var = ind[0].lower() + ind[1:]
         payload = Equation.__add_pvar(ind_var, payload)
 
-        # If the display style is occupancy, we also need to enumerate the
+        # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
-        display = self.program.get_display()
-        if display is not None and display.get_style(ind) == "pos":
+        spacetime = self.program.get_spacetime()
+        if spacetime is not None and spacetime.get_style(ind) == "pos":
             payload = Equation.__add_pvar(ind_var + "_pos", payload)
 
         return payload
