@@ -51,6 +51,56 @@ def test_siassign():
     assert iassign.gen(2) == "        i += j"
 
 
+def test_sif():
+    s1 = SAssign("a", EVar("w"))
+    s2 = SAssign("b", EVar("x"))
+    s3 = SAssign("c", EVar("y"))
+    s4 = SAssign("d", EVar("z"))
+    if_ = SIf((EVar("i"), s1), [(EVar("j"), s2), (EVar("k"), s3)], s4)
+    code = "        if i:\n" + \
+           "            a = w\n" + \
+           "        elif j:\n" + \
+           "            b = x\n" + \
+           "        elif k:\n" + \
+           "            c = y\n" + \
+           "        else:\n" + \
+           "            d = z"
+    assert if_.gen(2) == code
+
+
+def test_sif_no_elif():
+    s1 = SAssign("a", EVar("w"))
+    s4 = SAssign("d", EVar("z"))
+    if_ = SIf((EVar("i"), s1), [], s4)
+    code = "        if i:\n" + \
+           "            a = w\n" + \
+           "        else:\n" + \
+           "            d = z"
+    assert if_.gen(2) == code
+
+
+def test_sif_no_else():
+    s1 = SAssign("a", EVar("w"))
+    s2 = SAssign("b", EVar("x"))
+    s3 = SAssign("c", EVar("y"))
+    if_ = SIf((EVar("i"), s1), [(EVar("j"), s2), (EVar("k"), s3)], None)
+    code = "        if i:\n" + \
+           "            a = w\n" + \
+           "        elif j:\n" + \
+           "            b = x\n" + \
+           "        elif k:\n" + \
+           "            c = y"
+    assert if_.gen(2) == code
+
+
+def test_sif_just_if():
+    s1 = SAssign("a", EVar("w"))
+    if_ = SIf((EVar("i"), s1), [], None)
+    code = "        if i:\n" + \
+           "            a = w"
+    assert if_.gen(2) == code
+
+
 def tst_sreturn():
     return_ = SReturn(EVar("foo"))
     assert return_.gen(2) == "        return foo"

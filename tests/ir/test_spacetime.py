@@ -5,7 +5,7 @@ from es2hfa.parse.spacetime import SpaceTimeParser
 from tests.utils.parse_tree import make_uniform_shape
 
 
-def create_yaml(space, time):
+def create_yaml(space, time, opt=None):
     space_trees = []
     for string in space:
         space_trees.append(SpaceTimeParser.parse(string))
@@ -14,7 +14,11 @@ def create_yaml(space, time):
     for string in time:
         time_trees.append(SpaceTimeParser.parse(string))
 
-    return {"space": space_trees, "time": time_trees}
+    spacetime = {"space": space_trees, "time": time_trees}
+    if opt is not None:
+        spacetime["opt"] = opt
+
+    return spacetime
 
 
 def test_bad_space():
@@ -43,6 +47,13 @@ def test_bad_spacetime():
     assert str(excinfo.value) == "Incorrect schedule for spacetime on output Z"
 
 
+def test_bad_opt():
+    yaml = {"space": [], "time": [], "opt": "foo"}
+    with pytest.raises(ValueError) as excinfo:
+        SpaceTime(yaml, [], {}, "Z")
+    assert str(excinfo.value) == "Unknown spacetime optimization foo on output Z"
+
+
 def test_get_offset():
     yaml = create_yaml(["N", "M"], ["K"])
     parts = {"M": make_uniform_shape([6, 3]), "N": make_uniform_shape([5])}
@@ -52,6 +63,18 @@ def test_get_offset():
     assert spacetime.get_offset("M1") == "M2"
     assert spacetime.get_offset("M2") is None
     assert spacetime.get_offset("K") is None
+
+
+def test_get_slip_false():
+    yaml = create_yaml(["N", "M"], ["K"])
+    spacetime = SpaceTime(yaml, ["M", "N", "K"], {}, "Z")
+    assert not spacetime.get_slip()
+
+
+def test_get_slip_true():
+    yaml = create_yaml(["N", "M"], ["K"], "slip")
+    spacetime = SpaceTime(yaml, ["M", "N", "K"], {}, "Z")
+    assert spacetime.get_slip()
 
 
 def test_get_space():

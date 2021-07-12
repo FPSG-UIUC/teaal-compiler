@@ -24,9 +24,26 @@ SOFTWARE.
 HFA AST and code generation for HFA expressions
 """
 
-from typing import List
+from typing import Dict, List
 
 from es2hfa.hfa.base import Argument, Expression, Operator
+
+
+@Expression.register
+class EAccess:
+    """
+    An access into a list or dictionary
+    """
+
+    def __init__(self, var: str, ind: Expression) -> None:
+        self.var = var
+        self.ind = ind
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EAccess
+        """
+        return self.var + "[" + self.ind.gen() + "]"
 
 
 @Expression.register
@@ -68,6 +85,25 @@ class EComp:
         """
         return "[" + self.elem.gen() + " for " + self.var + \
             " in " + self.iter.gen() + "]"
+
+
+@Expression.register
+class EDict:
+    """
+    An HFA dictionary
+    """
+
+    def __init__(self, dict_: Dict[Expression, Expression]):
+        self.dict = dict_
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EDict
+        """
+        items = []
+        for key, val in self.dict.items():
+            items.append(key.gen() + ": " + val.gen())
+        return "{" + ", ".join(items) + "}"
 
 
 @Expression.register

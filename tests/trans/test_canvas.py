@@ -19,7 +19,7 @@ def create_default():
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
-def create_spacetimeed():
+def create_spacetime():
     yaml = """
     einsum:
         declaration:
@@ -62,7 +62,7 @@ def create_partitioned(style):
 
 
 def test_create_canvas():
-    program = create_spacetimeed()
+    program = create_spacetime()
     program.add_einsum(0)
     canvas = Canvas(program)
 
@@ -109,7 +109,7 @@ def test_add_activity_no_spacetime():
 
 
 def test_add_activity():
-    program = create_spacetimeed()
+    program = create_spacetime()
     program.add_einsum(0)
 
     canvas = Canvas(program)
@@ -160,7 +160,7 @@ def test_display_canvas_no_canvas():
 
 
 def test_display_canvas():
-    program = create_spacetimeed()
+    program = create_spacetime()
     program.add_einsum(0)
 
     canvas = Canvas(program)
@@ -168,22 +168,6 @@ def test_display_canvas():
 
     hfa = "displayCanvas(canvas)"
     assert canvas.display_canvas().gen(0) == hfa
-
-
-def test_displayable_true():
-    program = create_spacetimeed()
-    program.add_einsum(0)
-    canvas = Canvas(program)
-
-    assert canvas.displayable()
-
-
-def test_displayable_false():
-    program = create_default()
-    program.add_einsum(0)
-    canvas = Canvas(program)
-
-    assert not canvas.displayable()
 
 
 def test_rel_coord_no_spacetime():

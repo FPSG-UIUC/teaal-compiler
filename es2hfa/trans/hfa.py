@@ -32,7 +32,7 @@ from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.canvas import Canvas
+from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
 from es2hfa.trans.header import Header
@@ -56,19 +56,19 @@ class HFA:
             # Add Einsum to program
             program.add_einsum(i)
 
-            # Create a canvas
-            canvas = Canvas(program)
+            # Create a graphics object
+            graphics = Graphics(program)
 
             # Build the header
-            code.add(Header.make_header(program, canvas, trans_utils))
+            code.add(Header.make_header(program, graphics, trans_utils))
 
             # Build the loop nests
             graph = IterationGraph(program)
             eqn = Equation(program)
-            code.add(HFA.__build_loop_nest(graph, eqn, canvas))
+            code.add(HFA.__build_loop_nest(graph, eqn, graphics))
 
             # Build the footer
-            code.add(Footer.make_footer(program, canvas, trans_utils))
+            code.add(Footer.make_footer(program, graphics, trans_utils))
 
             program.reset()
 
@@ -78,7 +78,7 @@ class HFA:
     def __build_loop_nest(
             graph: IterationGraph,
             eqn: Equation,
-            canvas: Canvas) -> Statement:
+            graphics: Graphics) -> Statement:
         """
         Recursively build the loop nest
         """
@@ -88,9 +88,8 @@ class HFA:
         if not ind:
             bottom = SBlock([eqn.make_update()])
 
-            # Add the canvas information if possible
-            if canvas.displayable():
-                bottom.add(canvas.add_activity())
+            # Add the graphics information if possible
+            bottom.add(graphics.make_body())
 
             return cast(Statement, bottom)
 
@@ -100,7 +99,7 @@ class HFA:
         payload = eqn.make_payload(ind, tensors)
 
         # Recurse for the for loop body
-        body = HFA.__build_loop_nest(graph, eqn, canvas)
+        body = HFA.__build_loop_nest(graph, eqn, graphics)
 
         return cast(Statement, SFor(payload, expr, body))
 

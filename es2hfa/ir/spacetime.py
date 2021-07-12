@@ -38,7 +38,7 @@ class SpaceTime:
     """
 
     def __init__(self,
-                 yaml: Dict[str, List[Tree]],
+                 yaml: dict,
                  loop_order: List[str],
                  partitioning: Dict[str, List[Tree]],
                  out_name: str) -> None:
@@ -83,43 +83,29 @@ class SpaceTime:
             self.styles[ind] = tree.data
         self.time.sort(key=loop_order.index)
 
-        # Now make sure that all indices are scheduled
+        # Make sure that all indices are scheduled
         if Counter(loop_order) != Counter(self.space + self.time):
             raise ValueError(
                 "Incorrect schedule for spacetime on output " +
                 out_name)
-
-        # Find the size associated with the partitioned indices
-        self.sizes = {}
-        self.slippable = set()
-        for ind in partitioning:
-            size = [1]
-            slippable = True
-
-            # Get partitioning information
-            for part in partitioning[ind]:
-                if part.data == "uniform_shape":
-                    size.insert(-1, ParseUtils.next_int(part))
-                # Uniform shape is currently the only partitioning style with
-                # a known number of PEs at compile time
-                else:
-                    slippable = False
-
-            parts = len(partitioning[ind])
-            if slippable:
-                # Store the sizes
-                for i in range(parts):
-                    self.sizes[ind + str(i)] = size[parts - i - 1]
-
-                # Store whether or not slip is possible on this index
-                for i in range(parts - 1):
-                    self.slippable.add([ind + str(i)])
 
         # Find the offset index name associated with the partitioned indices
         self.offsets = {}
         for ind in partitioning:
             for i in range(len(partitioning[ind])):
                 self.offsets[ind + str(i)] = ind + str(i + 1)
+
+        # Store slip if it is specified
+        self.slip = False
+        if "opt" in yaml.keys():
+            if yaml["opt"] == "slip":
+                self.slip = True
+            elif yaml["opt"] is not None:
+                raise ValueError(
+                    "Unknown spacetime optimization " +
+                    yaml["opt"] +
+                    " on output " +
+                    out_name)
 
     def get_offset(self, ind: str) -> Optional[str]:
         """
@@ -130,6 +116,12 @@ class SpaceTime:
         if ind in self.offsets:
             return self.offsets[ind]
         return None
+
+    def get_slip(self) -> bool:
+        """
+        Returns true if slip should be implemented
+        """
+        return self.slip
 
     def get_space(self) -> List[str]:
         """

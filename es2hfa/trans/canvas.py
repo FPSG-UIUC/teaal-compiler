@@ -117,14 +117,6 @@ class Canvas:
         call = cast(Expression, EFunc("displayCanvas", [canvas]))
         return cast(Statement, SExpr(call))
 
-    def displayable(self) -> bool:
-        """
-        Returns True if the program contains the information necessary to
-        display the Einsum
-        """
-        spacetime = self.program.get_spacetime()
-        return spacetime is not None
-
     def __rel_coord(self, ind: str) -> Expression:
         """
         Get the relative coordinate for this index (important for PE distribution)

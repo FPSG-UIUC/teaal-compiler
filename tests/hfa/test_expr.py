@@ -3,6 +3,11 @@ from es2hfa.hfa.op import OAdd
 from es2hfa.hfa.arg import AJust
 
 
+def test_eaccess():
+    access = EAccess("A", EVar("i"))
+    assert access.gen() == "A[i]"
+
+
 def test_ebinop():
     binop = EBinOp(EVar("a"), OAdd(), EVar("b"))
     assert binop.gen() == "a + b"
@@ -11,6 +16,11 @@ def test_ebinop():
 def test_ecomp():
     comp = EComp(EVar("a"), "a", EFunc("range", [AJust(EInt(5))]))
     assert comp.gen() == "[a for a in range(5)]"
+
+
+def test_edict():
+    dict_ = EDict({EString("A"): EInt(5), EString("B"): EInt(10)})
+    assert dict_.gen() == "{\"A\": 5, \"B\": 10}"
 
 
 def test_efield():

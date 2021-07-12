@@ -122,7 +122,7 @@ class Mapping:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get_spacetime(self) -> Dict[str, Dict[str, List[Tree]]]:
+    def get_spacetime(self) -> dict:
         """
         Get the spacetime information
         """
