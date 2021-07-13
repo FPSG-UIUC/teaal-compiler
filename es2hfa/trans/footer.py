@@ -29,7 +29,7 @@ from typing import cast
 from es2hfa.hfa.base import Statement
 from es2hfa.hfa.stmt import SBlock
 from es2hfa.ir.program import Program
-from es2hfa.trans.canvas import Canvas
+from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.partitioning import Partitioner
 from es2hfa.trans.utils import TransUtils
 
@@ -42,7 +42,7 @@ class Footer:
     @staticmethod
     def make_footer(
             program: Program,
-            canvas: Canvas,
+            graphics: Graphics,
             trans_utils: TransUtils) -> Statement:
         """
         Create the footer for the given einsum
@@ -73,8 +73,7 @@ class Footer:
         # it is the output
         output.set_is_output(True)
 
-        # Display the canvas if necessary
-        if canvas.displayable():
-            footer.add(canvas.display_canvas())
+        # Display the graphics if necessary
+        footer.add(graphics.make_footer())
 
         return cast(Statement, footer)

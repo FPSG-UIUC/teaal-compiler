@@ -1,7 +1,7 @@
 from es2hfa.ir.program import Program
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.canvas import Canvas
+from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.header import Header
 from es2hfa.trans.utils import TransUtils
 from tests.utils.parse_tree import make_uniform_shape
@@ -23,7 +23,7 @@ def test_make_header():
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
-    canvas = Canvas(program)
+    graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
@@ -31,7 +31,7 @@ def test_make_header():
           "b_k = B_KN.getRoot()"
     assert Header.make_header(
         program,
-        canvas,
+        graphics,
         TransUtils()).gen(
         depth=0) == hfa
 
@@ -49,7 +49,7 @@ def test_make_header_swizzle():
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
-    canvas = Canvas(program)
+    graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
@@ -59,7 +59,7 @@ def test_make_header_swizzle():
           "b_n = B_NK.getRoot()"
     assert Header.make_header(
         program,
-        canvas,
+        graphics,
         TransUtils()).gen(
         depth=0) == hfa
 
@@ -82,7 +82,7 @@ def test_make_header_partitioned():
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
-    canvas = Canvas(program)
+    graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "tmp0 = Z_MN\n" + \
@@ -107,7 +107,7 @@ def test_make_header_partitioned():
           "b_n = B_NK2K1K0.getRoot()"
     assert Header.make_header(
         program,
-        canvas,
+        graphics,
         TransUtils()).gen(
         depth=0) == hfa
 
@@ -123,14 +123,14 @@ def test_make_header_displayed():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
-        display:
+        spacetime:
             Z:
                 space: [N]
                 time: [K.pos, M.coord]
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
-    canvas = Canvas(program)
+    graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
@@ -141,6 +141,6 @@ def test_make_header_displayed():
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
     assert Header.make_header(
         program,
-        canvas,
+        graphics,
         TransUtils()).gen(
         depth=0) == hfa

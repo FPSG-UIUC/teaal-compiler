@@ -24,7 +24,7 @@ SOFTWARE.
 HFA AST and code generation for HFA statements
 """
 
-from typing import List
+from typing import List, Optional, Tuple
 
 from es2hfa.hfa.base import Expression, Operator, Payload, Statement
 from es2hfa.hfa.expr import EVar
@@ -148,6 +148,40 @@ class SIAssign:
         Generate the HFA output for an SIAssign
         """
         return "    " * depth + self.var + " " + self.op.gen() + "= " + self.expr.gen()
+
+
+@Statement.register
+class SIf:
+    """
+    An if statement
+    """
+
+    def __init__(self,
+                 if_: Tuple[Expression,
+                            Statement],
+                 elifs: List[Tuple[Expression,
+                                   Statement]],
+                 else_: Optional[Statement]) -> None:
+        self.if_ = if_
+        self.elifs = elifs
+        self.else_ = else_
+
+    def gen(self, depth: int) -> str:
+        """
+        Generate the HFA output for an SIf
+        """
+        out = "    " * depth
+        out += "if " + self.if_[0].gen() + ":\n" + self.if_[1].gen(depth + 1)
+
+        for cond, stmt in self.elifs:
+            out += "\n" + "    " * depth
+            out += "elif " + cond.gen() + ":\n" + stmt.gen(depth + 1)
+
+        if self.else_ is not None:
+            out += "\n" + "    " * depth
+            out += "else:\n" + self.else_.gen(depth + 1)
+
+        return out
 
 
 @Statement.register

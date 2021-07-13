@@ -15,7 +15,7 @@ mapping:
         Z: [N, M]
     loop-order:
         T1: [K, N, M]
-    display:
+    spacetime:
         T1:
             space: [N]
             time: [K.pos, M.coord]

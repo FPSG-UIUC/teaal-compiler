@@ -32,13 +32,13 @@ from typing import Dict, List, Optional
 from es2hfa.parse.utils import ParseUtils
 
 
-class Display:
+class SpaceTime:
     """
     An abstract representation of the display(/canvas/graphics) information
     """
 
     def __init__(self,
-                 yaml: Dict[str, List[Tree]],
+                 yaml: dict,
                  loop_order: List[str],
                  partitioning: Dict[str, List[Tree]],
                  out_name: str) -> None:
@@ -51,7 +51,7 @@ class Display:
         space = yaml["space"]
         if not isinstance(space, list):
             raise TypeError(
-                "Display space argument must be a list, given " +
+                "SpaceTime space argument must be a list, given " +
                 str(space) +
                 " on output " +
                 out_name)
@@ -69,7 +69,7 @@ class Display:
         time = yaml["time"]
         if not isinstance(time, list):
             raise TypeError(
-                "Display time argument must be a list, given " +
+                "SpaceTime time argument must be a list, given " +
                 str(time) +
                 " on output " +
                 out_name)
@@ -83,27 +83,45 @@ class Display:
             self.styles[ind] = tree.data
         self.time.sort(key=loop_order.index)
 
-        # Now make sure that all indices are scheduled
+        # Make sure that all indices are scheduled
         if Counter(loop_order) != Counter(self.space + self.time):
             raise ValueError(
-                "Incorrect schedule for display on output " +
+                "Incorrect schedule for spacetime on output " +
                 out_name)
 
-        # Find the base index name associated with the partitioned indices
-        self.bases = {}
+        # Find the offset index name associated with the partitioned indices
+        self.offsets = {}
         for ind in partitioning:
             for i in range(len(partitioning[ind])):
-                self.bases[ind + str(i)] = ind + str(i + 1)
+                self.offsets[ind + str(i)] = ind + str(i + 1)
 
-    def get_base(self, ind: str) -> Optional[str]:
+        # Store slip if it is specified
+        self.slip = False
+        if "opt" in yaml.keys():
+            if yaml["opt"] == "slip":
+                self.slip = True
+            elif yaml["opt"] is not None:
+                raise ValueError(
+                    "Unknown spacetime optimization " +
+                    yaml["opt"] +
+                    " on output " +
+                    out_name)
+
+    def get_offset(self, ind: str) -> Optional[str]:
         """
-        Get the base index name associated with a given index
+        Get the offset index name associated with a given index
 
         Used to convert from absolute coordinates to relative coordinates
         """
-        if ind in self.bases:
-            return self.bases[ind]
+        if ind in self.offsets:
+            return self.offsets[ind]
         return None
+
+    def get_slip(self) -> bool:
+        """
+        Returns true if slip should be implemented
+        """
+        return self.slip
 
     def get_space(self) -> List[str]:
         """
@@ -125,7 +143,7 @@ class Display:
 
     def __eq__(self, other: object) -> bool:
         """
-        The == operator for Displays
+        The == operator for SpaceTimes
         """
         if isinstance(other, type(self)):
             return self.space == other.space and \

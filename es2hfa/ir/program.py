@@ -29,7 +29,7 @@ from collections import Counter
 from lark.tree import Tree
 from typing import cast, Dict, List, Optional, Union
 
-from es2hfa.ir.display import Display
+from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
@@ -68,7 +68,7 @@ class Program:
         self.es_tensors: List[Tensor] = []
         self.loop_order: Optional[List[str]] = None
         self.partitioning: Optional[Dict[str, List[Tree]]] = None
-        self.display: Optional[Display] = None
+        self.spacetime: Optional[SpaceTime] = None
 
     def add_einsum(self, i: int) -> None:
         """
@@ -101,18 +101,18 @@ class Program:
         if self.loop_order is None:
             self.loop_order = self.__default_loop_order()
 
-        # Get the display information
-        display: Optional[Dict[str, List[Tree]]] = None
-        if output.root_name() in self.mapping.get_display().keys():
-            display = self.mapping.get_display()[output.root_name()]
+        # Get the spacetime information
+        spacetime: Optional[Dict[str, List[Tree]]] = None
+        if output.root_name() in self.mapping.get_spacetime().keys():
+            spacetime = self.mapping.get_spacetime()[output.root_name()]
 
-        if display is not None:
-            # Build the display object
+        if spacetime is not None:
+            # Build the spacetime object
             # Unfortunately, mypy is not smart enough to figure out that
             # self.loop_order is always a list at this point
             loop_order = cast(List[str], self.loop_order)
-            self.display = Display(
-                display,
+            self.spacetime = SpaceTime(
+                spacetime,
                 loop_order,
                 self.partitioning,
                 output.root_name())
@@ -139,18 +139,18 @@ class Program:
 
         tensor.partition(self.partitioning)
 
-    def get_display(self) -> Optional[Display]:
+    def get_spacetime(self) -> Optional[SpaceTime]:
         """
-        Get the display information for this kernel, should it exist
+        Get the spacetime information for this kernel, should it exist
         """
         # Make sure the program is configured
-        # Note: we have to check another field, since it is possible for display
+        # Note: we have to check another field, since it is possible for spacetime
         # to be empty even in a configured program
         if self.loop_order is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return self.display
+        return self.spacetime
 
     def get_einsum(self) -> Tree:
         """
@@ -218,7 +218,7 @@ class Program:
         self.es_tensors = []
         self.loop_order = None
         self.partitioning = None
-        self.display = None
+        self.spacetime = None
 
     def __default_loop_order(self) -> List[str]:
         """

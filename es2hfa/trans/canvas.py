@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Translate the canvas display information
+Translate the canvas spacetime information
 """
 from typing import cast, List, Optional
 
 from es2hfa.hfa.arg import AJust, AParam
 from es2hfa.hfa.base import Argument, Expression, Operator, Statement
-from es2hfa.hfa.expr import EBinOp, EFunc, EMethod, ETuple, EVar
+from es2hfa.hfa.expr import EAccess, EBinOp, EFunc, EInt, EMethod, ETuple, EVar
 from es2hfa.hfa.op import OSub
 from es2hfa.hfa.stmt import SAssign, SExpr
 from es2hfa.ir.program import Program
@@ -54,9 +54,9 @@ class Canvas:
             raise ValueError(
                 "Unconfigured canvas. Make sure to first call create_canvas()")
 
-        display = self.program.get_display()
-        if display is None:
-            raise ValueError("Display information unspecified")
+        spacetime = self.program.get_spacetime()
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
 
         # Create tensor index arguments
         args = []
@@ -66,15 +66,26 @@ class Canvas:
             arg = AJust(cast(Expression, ETuple(access)))
             args.append(cast(Argument, arg))
 
-        # Add the space-time arguments
-        space_tup = cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in display.get_space()]))
-        time_tup = cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in display.get_time()]))
-        spacetime = cast(Expression, ETuple([space_tup, time_tup]))
-        args.append(cast(Argument, AParam("spacetime", spacetime)))
+        # Get the space and time tuples
+        space = self.get_space_tuple()
 
-        # Create call to add activity
+        # If slip, the timestamp is actually (timestamps[space] - 1,)
+        if spacetime.get_slip():
+            acc = cast(Expression, EAccess("timestamps", space))
+            sub = cast(Operator, OSub())
+            one = cast(Expression, EInt(1))
+            bop = cast(Expression, EBinOp(acc, sub, one))
+            time = cast(Expression, ETuple([bop]))
+
+        # Otherwise, it is just the time tuple
+        else:
+            time = self.get_time_tuple()
+
+        # Add the space-time arguments
+        spacetime_tup = cast(Expression, ETuple([space, time]))
+        args.append(cast(Argument, AParam("spacetime", spacetime_tup)))
+
+        # Create call to addActivity
         add = cast(Expression, EMethod("canvas", "addActivity", args))
 
         # Create the corresponding statement
@@ -117,43 +128,58 @@ class Canvas:
         call = cast(Expression, EFunc("displayCanvas", [canvas]))
         return cast(Statement, SExpr(call))
 
-    def displayable(self) -> bool:
+    def get_space_tuple(self) -> Expression:
         """
-        Returns True if the program contains the information necessary to
-        display the Einsum
+        Get the space stamp tuple for this mapping
         """
-        display = self.program.get_display()
-        return display is not None
+        spacetime = self.program.get_spacetime()
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
+
+        return cast(Expression, ETuple(
+            [self.__rel_coord(ind) for ind in spacetime.get_space()]))
+
+    def get_time_tuple(self) -> Expression:
+        """
+        Get the time stamp tuple for this mapping
+        """
+        spacetime = self.program.get_spacetime()
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
+
+        return cast(Expression, ETuple(
+            [self.__rel_coord(ind) for ind in spacetime.get_time()]))
 
     def __rel_coord(self, ind: str) -> Expression:
         """
         Get the relative coordinate for this index (important for PE distribution)
         """
-        display = self.program.get_display()
+        spacetime = self.program.get_spacetime()
 
-        # Make sure we have a display (needed to unwrap the Optional)
-        if display is None:
-            raise ValueError("Display information unspecified")
+        # Make sure we have a spacetime (needed to unwrap the Optional)
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
 
         ind_str = ind[0].lower() + ind[1:]
-        if display.get_style(ind) == "coord":
+        if spacetime.get_style(ind) == "coord":
             # Check if we already have the absolute coordinate
-            base = display.get_base(ind)
-            if base is None:
+            offset = spacetime.get_offset(ind)
+            if offset is None:
                 return cast(Expression, EVar(ind_str))
 
-            # ind - base
+            # ind - offset
             ind_expr = cast(Expression, EVar(ind_str))
-            base_expr = cast(Expression, EVar(base[0].lower() + base[1:]))
-            sub = EBinOp(ind_expr, cast(Operator, OSub()), base_expr)
+            offset_expr = cast(Expression,
+                               EVar(offset[0].lower() + offset[1:]))
+            sub = EBinOp(ind_expr, cast(Operator, OSub()), offset_expr)
 
             return cast(Expression, sub)
 
-        elif display.get_style(ind) == "pos":
+        elif spacetime.get_style(ind) == "pos":
             # ind_pos
             return cast(Expression, EVar(ind_str + "_pos"))
 
         else:
-            # Note: there is no good way to test this error. Bad display styles
-            # should be caught by the Display
-            raise ValueError("Unknown display style")  # pragma: no cover
+            # Note: there is no good way to test this error. Bad spacetime styles
+            # should be caught by the SpaceTime
+            raise ValueError("Unknown spacetime style")  # pragma: no cover

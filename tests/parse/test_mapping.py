@@ -1,22 +1,34 @@
 from es2hfa.parse.mapping import Mapping
-from es2hfa.parse.display import DisplayParser
+from es2hfa.parse.spacetime import SpaceTimeParser
 from tests.utils.parse_tree import make_uniform_shape
 
 
-def test_display():
-    mapping = Mapping.from_file("tests/integration/test_input.yaml")
-    display = {
+def test_spacetime():
+    yaml = """
+    mapping:
+        spacetime:
+            T1:
+                space: [M0]
+                time: [M1.pos, M2.coord]
+                opt: slip
+    """
+    mapping = Mapping.from_str(yaml)
+    spacetime = {
         "T1": {
             "space": [
-                DisplayParser.parse("N")], "time": [
-                DisplayParser.parse("K.pos"), DisplayParser.parse("M.coord")]}}
+                SpaceTimeParser.parse("M0")],
+            "time": [
+                SpaceTimeParser.parse("M1.pos"),
+                SpaceTimeParser.parse("M2.coord")],
+            "opt": "slip"}}
 
-    assert mapping.get_display() == display
+    assert mapping.get_spacetime() == spacetime
 
 
-def test_display_missing():
-    mapping = Mapping.from_file("tests/integration/test_input_no_display.yaml")
-    assert mapping.get_display() == {}
+def test_spacetime_missing():
+    mapping = Mapping.from_file(
+        "tests/integration/test_input_no_spacetime.yaml")
+    assert mapping.get_spacetime() == {}
 
 
 def test_eq():
@@ -38,7 +50,7 @@ def test_from():
             Z:
                 M: [uniform_shape(4), uniform_shape(2)]
                 N: [uniform_shape(6), uniform_shape(3)]
-        display:
+        spacetime:
             T1:
                 space: [N]
                 time: [K.pos, M.coord]
@@ -65,7 +77,7 @@ def test_loop_orders_missing():
 def test_no_mapping():
     mapping = Mapping.from_file("tests/integration/test_input_no_mapping.yaml")
 
-    assert mapping.get_display() == {}
+    assert mapping.get_spacetime() == {}
     assert mapping.get_loop_orders() == {}
     assert mapping.get_partitioning() == {}
     assert mapping.get_rank_orders() == {}

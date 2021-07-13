@@ -2,7 +2,7 @@ from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.canvas import Canvas
+from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.footer import Footer
 from es2hfa.trans.utils import TransUtils
 
@@ -22,13 +22,13 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
         """ + partitioning + """
         loop-order:
             Z: """ + loop_order + """
-        display:
+        spacetime:
         """ + display
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    canvas = Canvas(program)
-    canvas.create_canvas()
+    graphics = Graphics(program)
+    graphics.make_header()
 
     for tensor in program.get_tensors():
         program.apply_partitioning(tensor)
@@ -36,7 +36,7 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
 
     assert Footer.make_footer(
         program,
-        canvas,
+        graphics,
         TransUtils()).gen(
         depth=0) == hfa
 

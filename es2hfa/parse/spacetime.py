@@ -21,16 +21,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Lexing and parsing for the display mapping information
+Lexing and parsing for the spacetime mapping information
 """
 
 from lark import Lark
 from lark.tree import Tree
 
 
-class DisplayParser:
+class SpaceTimeParser:
     """
-    Lexing and parsing for display mapping information
+    Lexing and parsing for spacetime mapping information
     """
     grammar = """
         ?start: NAME -> pos
@@ -46,4 +46,4 @@ class DisplayParser:
 
     @staticmethod
     def parse(info: str) -> Tree:
-        return DisplayParser.parser.parse(info)
+        return SpaceTimeParser.parser.parse(info)

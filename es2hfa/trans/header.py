@@ -31,7 +31,7 @@ from es2hfa.hfa.expr import EFunc, EMethod
 from es2hfa.hfa.stmt import SAssign, SBlock
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
-from es2hfa.trans.canvas import Canvas
+from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.partitioning import Partitioner
 from es2hfa.trans.utils import TransUtils
 
@@ -44,7 +44,7 @@ class Header:
     @staticmethod
     def make_header(
             program: Program,
-            canvas: Canvas,
+            graphics: Graphics,
             trans_utils: TransUtils) -> Statement:
         """
         Create the header for a given einsum
@@ -86,8 +86,7 @@ class Header:
             fiber_name = tensor.fiber_name()
             header.add(cast(Statement, SAssign(fiber_name, get_root_call)))
 
-        # Generate canvas creation if needed
-        if canvas.displayable():
-            header.add(canvas.create_canvas())
+        # Generate graphics if needed
+        header.add(graphics.make_header())
 
         return cast(Statement, header)
