@@ -107,6 +107,15 @@ class SpaceTime:
                     " on output " +
                     out_name)
 
+    def emit_pos(self, ind: str) -> bool:
+        """
+        Return true if the ind_pos variable needs to be emitted
+        """
+        if self.get_style(ind) == "coord":
+            return False
+
+        return not self.get_slip() or ind in self.space
+
     def get_offset(self, ind: str) -> Optional[str]:
         """
         Get the offset index name associated with a given index

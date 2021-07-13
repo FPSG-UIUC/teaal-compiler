@@ -54,6 +54,30 @@ def test_bad_opt():
     assert str(excinfo.value) == "Unknown spacetime optimization foo on output Z"
 
 
+def test_emit_pos_coord():
+    yaml = create_yaml([], ["M.coord"])
+    spacetime = SpaceTime(yaml, ["M"], {}, "Z")
+    assert not spacetime.emit_pos("M")
+
+
+def test_emit_pos_no_opt():
+    yaml = create_yaml([], ["M.pos"])
+    spacetime = SpaceTime(yaml, ["M"], {}, "Z")
+    assert spacetime.emit_pos("M")
+
+
+def test_emit_pos_slip_time():
+    yaml = create_yaml([], ["M.pos"], "slip")
+    spacetime = SpaceTime(yaml, ["M"], {}, "Z")
+    assert not spacetime.emit_pos("M")
+
+
+def test_emit_pos_slip_space():
+    yaml = create_yaml(["M.pos"], [], "slip")
+    spacetime = SpaceTime(yaml, ["M"], {}, "Z")
+    assert spacetime.emit_pos("M")
+
+
 def test_get_offset():
     yaml = create_yaml(["N", "M"], ["K"])
     parts = {"M": make_uniform_shape([6, 3]), "N": make_uniform_shape([5])}
