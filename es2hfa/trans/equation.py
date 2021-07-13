@@ -118,7 +118,7 @@ class Equation:
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.get_style(ind) == "pos":
+        if spacetime is not None and spacetime.emit_pos(ind):
             arg = cast(Argument, AJust(expr))
             expr = cast(Expression, EFunc("enumerate", [arg]))
 
@@ -162,7 +162,7 @@ class Equation:
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.get_style(ind) == "pos":
+        if spacetime is not None and spacetime.emit_pos(ind):
             payload = Equation.__add_pvar(ind_var + "_pos", payload)
 
         return payload

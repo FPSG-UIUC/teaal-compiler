@@ -85,7 +85,7 @@ def make_other(einsum):
     return program
 
 
-def make_display(style):
+def make_display(style, opt):
     yaml = """
     einsum:
         declaration:
@@ -99,7 +99,8 @@ def make_display(style):
         spacetime:
             A:
                 space: []
-                time: [I.""" + style + """]"""
+                time: [I.""" + style + """]
+                opt: """ + opt
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
     program = Program(einsum, mapping)
@@ -160,7 +161,7 @@ def test_make_iter_expr_mult_terms():
 
 
 def test_make_iter_display_coord():
-    graph, eqn = make_display("coord")
+    graph, eqn = make_display("coord", "")
 
     ind, tensors = graph.peek()
     iter_expr = "b_i & (c_i & d_i)"
@@ -169,10 +170,19 @@ def test_make_iter_display_coord():
 
 
 def test_make_iter_expr_display_pos():
-    graph, eqn = make_display("pos")
+    graph, eqn = make_display("pos", "")
 
     ind, tensors = graph.peek()
     iter_expr = "enumerate(b_i & (c_i & d_i))"
+
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_display_slip():
+    graph, eqn = make_display("pos", "slip")
+
+    ind, tensors = graph.peek()
+    iter_expr = "b_i & (c_i & d_i)"
 
     assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
@@ -214,7 +224,7 @@ def test_make_payload_mult_terms():
 
 
 def test_make_payload_display_coord():
-    graph, eqn = make_display("coord")
+    graph, eqn = make_display("coord", "")
 
     ind, tensors = graph.pop()
     payload = "i, (b_val, (c_val, d_val))"
@@ -223,10 +233,19 @@ def test_make_payload_display_coord():
 
 
 def test_make_payload_display_pos():
-    graph, eqn = make_display("pos")
+    graph, eqn = make_display("pos", "")
 
     ind, tensors = graph.pop()
     payload = "i_pos, (i, (b_val, (c_val, d_val)))"
+
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
+
+
+def test_make_payload_display_slip():
+    graph, eqn = make_display("pos", "slip")
+
+    ind, tensors = graph.pop()
+    payload = "i, (b_val, (c_val, d_val))"
 
     assert eqn.make_payload(ind, tensors).gen(False) == payload
 

@@ -1,13 +1,18 @@
 einsum:
     declaration:
-        A: [I, J]
-        B: [I, K]
-        C: [J, K]
+        A: [M]
+        Z: [M]
     expressions:
-        - A[i, j] = sum(K).(B[i, k] * C[j, k])
+        - Z[m] = A[m]
 mapping:
-    loop-order:
-        A: [J, K, I]
+    partitioning:
+        Z:
+            M: [uniform_shape(6), uniform_shape(3)]
+    spacetime:
+        Z:
+            space: [M1.coord, M0.coord]
+            time: [M2.coord]
+            opt: slip
 # einsum:
 #     declaration:
 #         A: [K, M]
