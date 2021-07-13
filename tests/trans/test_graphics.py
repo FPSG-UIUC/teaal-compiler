@@ -53,6 +53,17 @@ def test_make_body_no_opt():
     assert graphics.make_body().gen(0) == hfa
 
 
+def test_make_body_slip():
+    graphics = create_spacetime("slip")
+    graphics.make_header()
+    hfa = "if (n_pos,) in timestamps.keys():\n" + \
+          "    timestamps[(n_pos,)] += 1\n" + \
+          "else:\n" + \
+          "    timestamps[(n_pos,)] = 1\n" + \
+          "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
+    assert graphics.make_body().gen(0) == hfa
+
+
 def test_make_footer_none():
     graphics = create_default()
     assert graphics.make_footer().gen(0) == ""
@@ -73,4 +84,11 @@ def test_make_header_none():
 def test_make_header_no_opt():
     graphics = create_spacetime("")
     hfa = "canvas = createCanvas(A_KM, B_KN, Z_MN)"
+    assert graphics.make_header().gen(0) == hfa
+
+
+def test_make_header_slip():
+    graphics = create_spacetime("slip")
+    hfa = "canvas = createCanvas(A_KM, B_KN, Z_MN)\n" + \
+          "timestamps = {}"
     assert graphics.make_header().gen(0) == hfa

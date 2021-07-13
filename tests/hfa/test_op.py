@@ -16,6 +16,11 @@ def test_ofdiv():
     assert fdiv.gen() == "//"
 
 
+def test_oin():
+    in_ = OIn()
+    assert in_.gen() == "in"
+
+
 def test_oltlt():
     ltlt = OLtLt()
     assert ltlt.gen() == "<<"

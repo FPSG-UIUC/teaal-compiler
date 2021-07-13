@@ -68,6 +68,19 @@ class OFDiv:
 
 
 @Operator.register
+class OIn:
+    """
+    The HFA in operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for the OIn operator
+        """
+        return "in"
+
+
+@Operator.register
 class OLtLt:
     """
     The HFA less-than less-than operator

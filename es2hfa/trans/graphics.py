@@ -26,9 +26,12 @@ Translate all relevant graphics information
 
 from typing import cast
 
-from es2hfa.hfa.base import Statement
-from es2hfa.hfa.stmt import SBlock
+from es2hfa.hfa.base import Expression, Operator, Statement
+from es2hfa.hfa.expr import EBinOp, EDict, EInt, EMethod
+from es2hfa.hfa.op import OAdd, OIn
+from es2hfa.hfa.stmt import SAssign, SBlock, SIAssign, SIf
 from es2hfa.ir.program import Program
+from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.trans.canvas import Canvas
 
 
@@ -48,16 +51,42 @@ class Graphics:
         """
         Create the code for adding computations inside the loopnest
         """
-        if self.__displayable():
-            return self.canvas.add_activity()
-        else:
-            return cast(Statement, SBlock([]))
+        body = SBlock([])
+        spacetime = self.program.get_spacetime()
+
+        if spacetime is not None:
+            # If we are using slip, increment the timestamp
+            if spacetime.get_slip():
+
+                # If this is the first time we are seeing the space stamp
+                keys = cast(Expression, EMethod("timestamps", "keys", []))
+                in_ = cast(Operator, OIn())
+                space_tup = self.canvas.get_space_tuple()
+                cond = cast(Expression, EBinOp(space_tup, in_, keys))
+
+                # Then add 1
+                # TODO: This is a hack!!!!!
+                acc = "timestamps[" + space_tup.gen() + "]"
+                add = cast(Operator, OAdd())
+                one = cast(Expression, EInt(1))
+                then = cast(Statement, SIAssign(acc, add, one))
+
+                # Otherwise add it to the dictionary
+                else_ = cast(Statement, SAssign(acc, one))
+
+                if_ = cast(Statement, SIf((cond, then), [], else_))
+                body.add(if_)
+
+            body.add(self.canvas.add_activity())
+
+        return cast(Statement, body)
 
     def make_footer(self) -> Statement:
         """
         Create the loop footer for graphics
         """
-        if self.__displayable():
+        spacetime = self.program.get_spacetime()
+        if spacetime is not None:
             return self.canvas.display_canvas()
         else:
             return cast(Statement, SBlock([]))
@@ -66,15 +95,17 @@ class Graphics:
         """
         Create the loop header for graphics
         """
-        if self.__displayable():
-            return self.canvas.create_canvas()
-        else:
-            return cast(Statement, SBlock([]))
+        header = SBlock([])
 
-    def __displayable(self) -> bool:
-        """
-        Returns True if the program contains the information necessary to
-        display the Einsum
-        """
+        # If displayable, add the graphics information
         spacetime = self.program.get_spacetime()
-        return spacetime is not None
+        if spacetime is not None:
+            header.add(self.canvas.create_canvas())
+
+            # Create the timestamp dictionary if we want slip
+            if spacetime.get_slip():
+                dict_ = cast(Expression, EDict({}))
+                assign = cast(Statement, SAssign("timestamps", dict_))
+                header.add(assign)
+
+        return cast(Statement, header)

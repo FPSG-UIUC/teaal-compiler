@@ -61,6 +61,27 @@ def create_partitioned(style):
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
+def create_slip():
+    yaml = """
+    einsum:
+        declaration:
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        loop-order:
+            Z: [K, M, N]
+        spacetime:
+            Z:
+                space: [N]
+                time: [K.pos, M.coord]
+                opt: slip
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+
+
 def test_create_canvas():
     program = create_spacetime()
     program.add_einsum(0)
@@ -147,6 +168,17 @@ def test_add_activity_partitioned_pos():
     assert canvas.add_activity().gen(0) == hfa
 
 
+def test_add_activity_slip():
+    program = create_slip()
+    program.add_einsum(0)
+
+    canvas = Canvas(program)
+    canvas.create_canvas()
+
+    hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
+    assert canvas.add_activity().gen(0) == hfa
+
+
 def test_display_canvas_no_canvas():
     program = create_default()
     program.add_einsum(0)
@@ -168,6 +200,48 @@ def test_display_canvas():
 
     hfa = "displayCanvas(canvas)"
     assert canvas.display_canvas().gen(0) == hfa
+
+
+def test_get_space_tuple():
+    program = create_spacetime()
+    program.add_einsum(0)
+    canvas = Canvas(program)
+
+    hfa = "(n_pos,)"
+    assert canvas.get_space_tuple().gen() == hfa
+
+
+def test_get_space_tuple_no_spacetime():
+    program = create_default()
+    program.add_einsum(0)
+    canvas = Canvas(program)
+
+    with pytest.raises(ValueError) as excinfo:
+        canvas.get_space_tuple()
+
+    assert str(
+        excinfo.value) == "SpaceTime information unspecified"
+
+
+def test_get_time_tuple():
+    program = create_spacetime()
+    program.add_einsum(0)
+    canvas = Canvas(program)
+
+    hfa = "(k_pos, m)"
+    assert canvas.get_time_tuple().gen() == hfa
+
+
+def test_get_time_tuple_no_spacetime():
+    program = create_default()
+    program.add_einsum(0)
+    canvas = Canvas(program)
+
+    with pytest.raises(ValueError) as excinfo:
+        canvas.get_time_tuple()
+
+    assert str(
+        excinfo.value) == "SpaceTime information unspecified"
 
 
 def test_rel_coord_no_spacetime():

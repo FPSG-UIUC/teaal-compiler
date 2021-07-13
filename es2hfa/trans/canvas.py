@@ -27,7 +27,7 @@ from typing import cast, List, Optional
 
 from es2hfa.hfa.arg import AJust, AParam
 from es2hfa.hfa.base import Argument, Expression, Operator, Statement
-from es2hfa.hfa.expr import EBinOp, EFunc, EMethod, ETuple, EVar
+from es2hfa.hfa.expr import EAccess, EBinOp, EFunc, EInt, EMethod, ETuple, EVar
 from es2hfa.hfa.op import OSub
 from es2hfa.hfa.stmt import SAssign, SExpr
 from es2hfa.ir.program import Program
@@ -66,15 +66,26 @@ class Canvas:
             arg = AJust(cast(Expression, ETuple(access)))
             args.append(cast(Argument, arg))
 
+        # Get the space and time tuples
+        space = self.get_space_tuple()
+
+        # If slip, the timestamp is actually (timestamps[space] - 1,)
+        if spacetime.get_slip():
+            acc = cast(Expression, EAccess("timestamps", space))
+            sub = cast(Operator, OSub())
+            one = cast(Expression, EInt(1))
+            bop = cast(Expression, EBinOp(acc, sub, one))
+            time = cast(Expression, ETuple([bop]))
+
+        # Otherwise, it is just the time tuple
+        else:
+            time = self.get_time_tuple()
+
         # Add the space-time arguments
-        space_tup = cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in spacetime.get_space()]))
-        time_tup = cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in spacetime.get_time()]))
-        spacetime_tup = cast(Expression, ETuple([space_tup, time_tup]))
+        spacetime_tup = cast(Expression, ETuple([space, time]))
         args.append(cast(Argument, AParam("spacetime", spacetime_tup)))
 
-        # Create call to add activity
+        # Create call to addActivity
         add = cast(Expression, EMethod("canvas", "addActivity", args))
 
         # Create the corresponding statement
@@ -116,6 +127,28 @@ class Canvas:
         canvas = cast(Argument, AJust(cast(Expression, EVar("canvas"))))
         call = cast(Expression, EFunc("displayCanvas", [canvas]))
         return cast(Statement, SExpr(call))
+
+    def get_space_tuple(self) -> Expression:
+        """
+        Get the space stamp tuple for this mapping
+        """
+        spacetime = self.program.get_spacetime()
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
+
+        return cast(Expression, ETuple(
+            [self.__rel_coord(ind) for ind in spacetime.get_space()]))
+
+    def get_time_tuple(self) -> Expression:
+        """
+        Get the time stamp tuple for this mapping
+        """
+        spacetime = self.program.get_spacetime()
+        if spacetime is None:
+            raise ValueError("SpaceTime information unspecified")
+
+        return cast(Expression, ETuple(
+            [self.__rel_coord(ind) for ind in spacetime.get_time()]))
 
     def __rel_coord(self, ind: str) -> Expression:
         """

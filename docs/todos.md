@@ -4,6 +4,10 @@
 
 ## Minor Changes
 
+- [ ] Fix `SAssign` in `make_body`
+    - [ ] Make an assignable type
+    - [ ] Transition all SAssign and SIAssign to use the new type
+    - [ ] Switch `Graphics.make_body()` to use a dictionary access
 - [ ] Fix `hfa-compiler-notebooks` repo to use new interface
     - [ ] Change notebooks
     - [ ] Change prelude.py
