@@ -40,6 +40,19 @@ class Argument(metaclass=abc.ABCMeta):
         raise NotImplementedError  # pragma: no cover
 
 
+class Assignable(metaclass=abc.ABCMeta):
+    """
+    Assignable interface
+    """
+
+    @abc.abstractmethod
+    def gen(self) -> str:
+        """
+        Generate the HFA code for this Assignable
+        """
+        raise NotImplementedError  # pragma: no cover
+
+
 class Expression(metaclass=abc.ABCMeta):
     """
     Expression interface

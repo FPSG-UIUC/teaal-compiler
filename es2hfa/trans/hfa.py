@@ -26,8 +26,7 @@ Translate an Einsum to the corresponding HFA code
 
 from typing import cast, List, Optional
 
-from es2hfa.hfa.base import Statement
-from es2hfa.hfa.stmt import SBlock, SFor
+from es2hfa.hfa import *
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
 from es2hfa.parse.einsum import Einsum

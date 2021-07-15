@@ -26,8 +26,7 @@ Translate the footer below the loop nest
 
 from typing import cast
 
-from es2hfa.hfa.base import Statement
-from es2hfa.hfa.stmt import SBlock
+from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.partitioning import Partitioner

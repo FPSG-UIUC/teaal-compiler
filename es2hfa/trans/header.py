@@ -26,10 +26,7 @@ Translate the header above the HFA loop nest
 
 from typing import cast
 
-from es2hfa.hfa.arg import AJust
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EBool, EFunc, EMethod
-from es2hfa.hfa.stmt import SAssign, SBlock, SExpr
+from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.graphics import Graphics
@@ -57,9 +54,10 @@ class Header:
 
         # First, create the output tensor
         output = program.get_output()
+        out_name = cast(Assignable, AVar(output.tensor_name()))
         out_arg = TransUtils.build_rank_ids(output)
         out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
-        out_assn = SAssign(output.tensor_name(), out_constr)
+        out_assn = SAssign(out_name, out_constr)
         header.add(cast(Statement, out_assn))
 
         # Set the output tensor to be mutable
@@ -94,7 +92,7 @@ class Header:
 
             # Emit code to get the root fiber
             get_root_call = cast(Expression, EMethod(new_name, "getRoot", []))
-            fiber_name = tensor.fiber_name()
+            fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
             header.add(cast(Statement, SAssign(fiber_name, get_root_call)))
 
         # Generate graphics if needed

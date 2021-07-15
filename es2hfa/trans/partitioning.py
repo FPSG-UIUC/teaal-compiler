@@ -27,11 +27,7 @@ from typing import cast
 
 from lark.tree import Tree
 
-from es2hfa.hfa.arg import AJust, AParam
-from es2hfa.hfa.base import Argument, Expression, Operator, Statement
-from es2hfa.hfa.expr import EBinOp, EInt, EMethod, EParens, EString, EVar
-from es2hfa.hfa.op import OAdd, OFDiv, OSub
-from es2hfa.hfa.stmt import SAssign, SBlock
+from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
@@ -63,14 +59,10 @@ class Partitioner:
         block = SBlock([])
 
         # Rename the variable
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
         old_name = tensor.tensor_name()
         old_expr = cast(Expression, EVar(old_name))
-        block.add(
-            cast(
-                Statement,
-                SAssign(
-                    self.trans_utils.next_tmp(),
-                    old_expr)))
+        block.add(cast(Statement, SAssign(next_tmp, old_expr)))
 
         # Emit the partitioning code
         for i, ind in reversed(list(enumerate(tensor.get_inds()))):
@@ -93,7 +85,7 @@ class Partitioner:
 
         # Rename the tensor
         self.program.apply_partitioning(tensor)
-        part_name = tensor.tensor_name()
+        part_name = cast(Assignable, AVar(tensor.tensor_name()))
         tmp_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
 
@@ -109,7 +101,6 @@ class Partitioner:
         # Get the tensor names
         part_name = tensor.tensor_name()
         tensor.reset()
-        new_name = tensor.tensor_name()
 
         # Get the partitioning
         partitioning = self.program.get_partitioning(tensor)
@@ -120,13 +111,9 @@ class Partitioner:
             return cast(Statement, block)
 
         # Switch to name tmp
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
         part_name_expr = cast(Expression, EVar(part_name))
-        block.add(
-            cast(
-                Statement,
-                SAssign(
-                    self.trans_utils.next_tmp(),
-                    part_name_expr)))
+        block.add(cast(Statement, SAssign(next_tmp, part_name_expr)))
 
         # For each dimension
         for i, ind in enumerate(tensor.get_inds()):
@@ -134,23 +121,21 @@ class Partitioner:
                 continue
 
             # Flatten the rank
+            curr_tmp = self.trans_utils.curr_tmp()
+            next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
             arg1 = AParam("depth", cast(Expression, EInt(i)))
             arg2 = AParam("levels", cast(
                 Expression, EInt(len(partitioning[ind]))))
             arg3 = AParam("coord_style", cast(Expression, EString("absolute")))
             args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
 
-            flat_call = EMethod(
-                self.trans_utils.curr_tmp(),
-                "flattenRanks",
-                args)
-            flat_assn = SAssign(
-                self.trans_utils.next_tmp(), cast(
-                    Expression, flat_call))
+            flat_call = EMethod(curr_tmp, "flattenRanks", args)
+            flat_assn = SAssign(next_tmp, cast(Expression, flat_call))
 
             block.add(cast(Statement, flat_assn))
 
         # Switch back to tensor name and rename the rank_ids
+        new_name = cast(Assignable, AVar(tensor.tensor_name()))
         tmp_name_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(new_name, tmp_name_expr)))
         block.add(TransUtils.build_set_rank_ids(tensor))
@@ -194,9 +179,8 @@ class Partitioner:
 
         # Build the call to splitUniform()
         part_call = EMethod(self.trans_utils.curr_tmp(), "splitUniform", args)
-        part_assn = SAssign(
-            self.trans_utils.next_tmp(), cast(
-                Expression, part_call))
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
+        part_assn = SAssign(next_tmp, cast(Expression, part_call))
 
         return cast(Statement, part_assn)
 

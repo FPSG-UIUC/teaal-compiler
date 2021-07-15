@@ -26,12 +26,7 @@ Representation of how tensors and variables are combined
 
 from typing import cast, Dict, List, Optional
 
-from es2hfa.hfa.arg import AJust
-from es2hfa.hfa.base import *
-from es2hfa.hfa.expr import EBinOp, EFunc, EParens, EVar
-from es2hfa.hfa.op import *
-from es2hfa.hfa.payload import *
-from es2hfa.hfa.stmt import SIAssign
+from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
@@ -198,8 +193,9 @@ class Equation:
                     product))
 
         # Create the final statement
-        return cast(Statement, SIAssign(self.output[0].lower(
-        ) + self.output[1:] + "_ref", cast(Operator, OAdd()), sum_))
+        out_name = self.output[0].lower() + self.output[1:] + "_ref"
+        out_var = cast(Assignable, AVar(out_name))
+        return cast(Statement, SIAssign(out_var, cast(Operator, OAdd()), sum_))
 
     @staticmethod
     def __add_operator(

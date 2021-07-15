@@ -26,10 +26,7 @@ Translate all relevant graphics information
 
 from typing import cast
 
-from es2hfa.hfa.base import Expression, Operator, Statement
-from es2hfa.hfa.expr import EBinOp, EDict, EInt, EMethod
-from es2hfa.hfa.op import OAdd, OIn
-from es2hfa.hfa.stmt import SAssign, SBlock, SIAssign, SIf
+from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.trans.canvas import Canvas
@@ -65,8 +62,7 @@ class Graphics:
                 cond = cast(Expression, EBinOp(space_tup, in_, keys))
 
                 # Then add 1
-                # TODO: This is a hack!!!!!
-                acc = "timestamps[" + space_tup.gen() + "]"
+                acc = cast(Assignable, AAccess("timestamps", space_tup))
                 add = cast(Operator, OAdd())
                 one = cast(Expression, EInt(1))
                 then = cast(Statement, SIAssign(acc, add, one))
@@ -105,7 +101,8 @@ class Graphics:
             # Create the timestamp dictionary if we want slip
             if spacetime.get_slip():
                 dict_ = cast(Expression, EDict({}))
-                assign = cast(Statement, SAssign("timestamps", dict_))
+                timestamps = cast(Assignable, AVar("timestamps"))
+                assign = cast(Statement, SAssign(timestamps, dict_))
                 header.add(assign)
 
         return cast(Statement, header)

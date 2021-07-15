@@ -26,25 +26,25 @@ HFA AST and code generation for HFA statements
 
 from typing import List, Optional, Tuple
 
-from es2hfa.hfa.base import Expression, Operator, Payload, Statement
+from es2hfa.hfa.base import Assignable, Expression, Operator, Payload, Statement
 from es2hfa.hfa.expr import EVar
 
 
 @Statement.register
 class SAssign:
     """
-    A variable assignment
+    An assignment
     """
 
-    def __init__(self, var: str, expr: Expression) -> None:
-        self.var = var
+    def __init__(self, assn: Assignable, expr: Expression) -> None:
+        self.assn = assn
         self.expr = expr
 
     def gen(self, depth: int) -> str:
         """
         Generate the HFA output for an SAssign
         """
-        return "    " * depth + self.var + " = " + self.expr.gen()
+        return "    " * depth + self.assn.gen() + " = " + self.expr.gen()
 
 
 @Statement.register
@@ -135,11 +135,15 @@ class SFunc:
 @Statement.register
 class SIAssign:
     """
-    A variable assignment that updates a variable in place, e.g. i += j
+    An assignment that updates an object in place, e.g. i += j
     """
 
-    def __init__(self, var: str, op: Operator, expr: Expression) -> None:
-        self.var = var
+    def __init__(
+            self,
+            assn: Assignable,
+            op: Operator,
+            expr: Expression) -> None:
+        self.assn = assn
         self.op = op
         self.expr = expr
 
@@ -147,7 +151,8 @@ class SIAssign:
         """
         Generate the HFA output for an SIAssign
         """
-        return "    " * depth + self.var + " " + self.op.gen() + "= " + self.expr.gen()
+        return "    " * depth + self.assn.gen() + " " + self.op.gen() + \
+            "= " + self.expr.gen()
 
 
 @Statement.register
