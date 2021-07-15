@@ -4,10 +4,8 @@
 
 ## Minor Changes
 
-- [ ] Fix `SAssign` in `make_body`
-    - [ ] Make an assignable type
-    - [ ] Transition all SAssign and SIAssign to use the new type
-    - [ ] Switch `Graphics.make_body()` to use a dictionary access
+- [ ] Set output tensor to be mutable
+- [ ] Preserve spacetime ordering
 - [ ] Use partitioning parser instead of `make_uniform_shape` for all relevant tests
 - [ ] Add all other integration tests
 - [ ] Clean up tests
@@ -17,9 +15,13 @@
 
 ## Major Changes
 
-- [ ] Use Joel's Javascript code for filling cells
 - [ ] Integration with the HFA docker environment
     - [ ] Figure out how updated Dockerfile should be committed
+- [ ] Add display specification to specify displaying tensors (which ones) or canvas
+- [ ] Fix `SAssign` in `make_body`
+    - [ ] Make an assignable type
+    - [ ] Transition all SAssign and SIAssign to use the new type
+    - [ ] Switch `Graphics.make_body()` to use a dictionary access
 
 ## Planning
 

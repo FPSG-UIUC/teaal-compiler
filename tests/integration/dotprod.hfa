@@ -1,4 +1,5 @@
 Z_ = Tensor(rank_ids=[])
+Z_.setMutable(True)
 z_ref = Z_.getRoot()
 a_k = A_K.getRoot()
 b_k = B_K.getRoot()

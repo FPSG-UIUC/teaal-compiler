@@ -13,6 +13,11 @@ def test_ebinop():
     assert binop.gen() == "a + b"
 
 
+def test_ebool():
+    bool_ = EBool(True)
+    assert bool_.gen() == "True"
+
+
 def test_ecomp():
     comp = EComp(EVar("a"), "a", EFunc("range", [AJust(EInt(5))]))
     assert comp.gen() == "[a for a in range(5)]"

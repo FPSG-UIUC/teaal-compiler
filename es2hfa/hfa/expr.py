@@ -69,6 +69,22 @@ class EBinOp:
 
 
 @Expression.register
+class EBool:
+    """
+    An HFA boolean variable
+    """
+
+    def __init__(self, bool_: bool) -> None:
+        self.bool = bool_
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an EBool
+        """
+        return str(self.bool)
+
+
+@Expression.register
 class EComp:
     """
     An HFA list comprehension

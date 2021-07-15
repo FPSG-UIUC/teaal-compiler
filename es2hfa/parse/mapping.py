@@ -121,12 +121,6 @@ class Mapping:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get_spacetime(self) -> dict:
-        """
-        Get the spacetime information
-        """
-        return self.spacetime
-
     def get_loop_orders(self) -> Dict[str, List[str]]:
         """
         Get the dictionary from output tensors to loop orders
@@ -145,6 +139,12 @@ class Mapping:
         Get any rank orders specified
         """
         return self.rank_orders
+
+    def get_spacetime(self) -> dict:
+        """
+        Get the spacetime information
+        """
+        return self.spacetime
 
     def __eq__(self, other: object) -> bool:
         """

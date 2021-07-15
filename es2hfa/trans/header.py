@@ -26,9 +26,10 @@ Translate the header above the HFA loop nest
 
 from typing import cast
 
-from es2hfa.hfa.base import Expression, Statement
-from es2hfa.hfa.expr import EFunc, EMethod
-from es2hfa.hfa.stmt import SAssign, SBlock
+from es2hfa.hfa.arg import AJust
+from es2hfa.hfa.base import Argument, Expression, Statement
+from es2hfa.hfa.expr import EBool, EFunc, EMethod
+from es2hfa.hfa.stmt import SAssign, SBlock, SExpr
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.graphics import Graphics
@@ -60,6 +61,16 @@ class Header:
         out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
         out_assn = SAssign(output.tensor_name(), out_constr)
         header.add(cast(Statement, out_assn))
+
+        # Set the output tensor to be mutable
+        true_arg = cast(Argument, AJust(cast(Expression, EBool(True))))
+        mutable_call = cast(
+            Expression,
+            EMethod(
+                output.tensor_name(),
+                "setMutable",
+                [true_arg]))
+        header.add(cast(Statement, SExpr(mutable_call)))
 
         # Create a partitioner
         partitioner = Partitioner(program, trans_utils)

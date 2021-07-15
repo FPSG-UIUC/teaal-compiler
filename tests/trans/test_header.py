@@ -26,6 +26,7 @@ def test_make_header():
     graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "Z_MN.setMutable(True)\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
@@ -52,6 +53,7 @@ def test_make_header_swizzle():
     graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "Z_MN.setMutable(True)\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
           "a_m = A_MK.getRoot()\n" + \
@@ -85,6 +87,7 @@ def test_make_header_partitioned():
     graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "Z_MN.setMutable(True)\n" + \
           "tmp0 = Z_MN\n" + \
           "tmp1 = tmp0.splitUniform(5, depth=0)\n" + \
           "Z_M1M0N = tmp1\n" + \
@@ -133,6 +136,7 @@ def test_make_header_displayed():
     graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "Z_MN.setMutable(True)\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
           "a_m = A_MK.getRoot()\n" + \

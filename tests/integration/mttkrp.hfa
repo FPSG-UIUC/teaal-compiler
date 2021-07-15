@@ -1,4 +1,5 @@
 Z_MN = Tensor(rank_ids=["M", "N"])
+Z_MN.setMutable(True)
 z_m = Z_MN.getRoot()
 a_m = A_MKJ.getRoot()
 B_NK = B_KN.swizzleRanks(rank_ids=["N", "K"])
