@@ -19,10 +19,7 @@
 
 - [ ] Use Joel's Javascript code for filling cells
 - [ ] Integration with the HFA docker environment
-    - [ ] Clone docker repository and figure out how to build
-    - [ ] Figure out how to remove existing containers
-    - [ ] Figure out how to check if you have access to a Github repository
-    - [ ] Add pip install command (`RUN access='command' && pip install ...`)
+    - [ ] Figure out how updated Dockerfile should be committed
 
 ## Planning
 

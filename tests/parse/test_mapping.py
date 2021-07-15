@@ -3,31 +3,13 @@ from es2hfa.parse.spacetime import SpaceTimeParser
 from tests.utils.parse_tree import make_uniform_shape
 
 
-def test_spacetime():
-    yaml = """
-    mapping:
-        spacetime:
-            T1:
-                space: [M0]
-                time: [M1.pos, M2.coord]
-                opt: slip
-    """
-    mapping = Mapping.from_str(yaml)
-    spacetime = {
-        "T1": {
-            "space": [
-                SpaceTimeParser.parse("M0")],
-            "time": [
-                SpaceTimeParser.parse("M1.pos"),
-                SpaceTimeParser.parse("M2.coord")],
-            "opt": "slip"}}
+def test_empty():
+    mapping = Mapping.from_str("")
 
-    assert mapping.get_spacetime() == spacetime
-
-
-def test_spacetime_missing():
-    mapping = Mapping.from_file(
-        "tests/integration/test_input_no_spacetime.yaml")
+    assert mapping.get_loop_orders() == {}
+    assert mapping.get_partitioning() == {}
+    assert mapping.get_rank_orders() == {}
+    assert mapping.get_rank_orders() == {}
     assert mapping.get_spacetime() == {}
 
 
@@ -111,3 +93,31 @@ def test_rank_orders_missing():
         "tests/integration/test_input_no_rank_order.yaml")
     tensors = {}
     assert mapping.get_rank_orders() == tensors
+
+
+def test_spacetime():
+    yaml = """
+    mapping:
+        spacetime:
+            T1:
+                space: [M0]
+                time: [M1.pos, M2.coord]
+                opt: slip
+    """
+    mapping = Mapping.from_str(yaml)
+    spacetime = {
+        "T1": {
+            "space": [
+                SpaceTimeParser.parse("M0")],
+            "time": [
+                SpaceTimeParser.parse("M1.pos"),
+                SpaceTimeParser.parse("M2.coord")],
+            "opt": "slip"}}
+
+    assert mapping.get_spacetime() == spacetime
+
+
+def test_spacetime_missing():
+    mapping = Mapping.from_file(
+        "tests/integration/test_input_no_spacetime.yaml")
+    assert mapping.get_spacetime() == {}

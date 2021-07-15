@@ -37,18 +37,17 @@ class Mapping:
     Parse the input YAML for the compiler
     """
 
-    def __init__(self, yaml: dict) -> None:
+    def __init__(self, yaml: Optional[dict]) -> None:
         """
         Read the YAML input
         """
-        # If a mapping exists, parse the mapping
         loop_orders = None
         partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
         rank_orders = None
         # Use type dict, since the dictionary is very heterogeneous
         spacetime: Optional[dict] = None
 
-        if "mapping" in yaml.keys():
+        if yaml is not None and "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
             if "spacetime" in mapping.keys(
