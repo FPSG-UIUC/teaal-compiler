@@ -15,10 +15,6 @@
 - [ ] Integration with the HFA docker environment
     - [ ] Figure out how updated Dockerfile should be committed
 - [ ] Add display specification to specify displaying tensors (which ones) or canvas
-- [ ] Fix `SAssign` in `make_body`
-    - [ ] Make an assignable type
-    - [ ] Transition all SAssign and SIAssign to use the new type
-    - [ ] Switch `Graphics.make_body()` to use a dictionary access
 
 ## Planning
 
