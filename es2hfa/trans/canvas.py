@@ -25,11 +25,7 @@ Translate the canvas spacetime information
 """
 from typing import cast, List, Optional
 
-from es2hfa.hfa.arg import AJust, AParam
-from es2hfa.hfa.base import Argument, Expression, Operator, Statement
-from es2hfa.hfa.expr import EAccess, EBinOp, EFunc, EInt, EMethod, ETuple, EVar
-from es2hfa.hfa.op import OSub
-from es2hfa.hfa.stmt import SAssign, SExpr
+from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 
@@ -113,7 +109,8 @@ class Canvas:
         create = cast(Expression, EFunc("createCanvas", args))
 
         # Build the assignment
-        return cast(Statement, SAssign("canvas", create))
+        canvas_name = cast(Assignable, AVar("canvas"))
+        return cast(Statement, SAssign(canvas_name, create))
 
     def display_canvas(self) -> Statement:
         """

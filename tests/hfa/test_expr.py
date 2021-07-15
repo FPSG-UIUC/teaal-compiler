@@ -1,6 +1,4 @@
-from es2hfa.hfa.expr import *
-from es2hfa.hfa.op import OAdd
-from es2hfa.hfa.arg import AJust
+from es2hfa.hfa import *
 
 
 def test_eaccess():

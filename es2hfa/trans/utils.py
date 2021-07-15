@@ -26,10 +26,7 @@ Useful functions for generating HFA code
 
 from typing import cast
 
-from es2hfa.hfa.arg import AParam
-from es2hfa.hfa.base import Argument, Expression, Statement
-from es2hfa.hfa.expr import EList, EMethod, EString
-from es2hfa.hfa.stmt import SAssign, SExpr
+from es2hfa.hfa import *
 from es2hfa.ir.tensor import Tensor
 
 
@@ -71,7 +68,8 @@ class TransUtils:
                 old_name,
                 "swizzleRanks",
                 [arg]))
-        return cast(Statement, SAssign(tensor.tensor_name(), swizzle_call))
+        new_name_assn = cast(Assignable, AVar(tensor.tensor_name()))
+        return cast(Statement, SAssign(new_name_assn, swizzle_call))
 
     def curr_tmp(self) -> str:
         """

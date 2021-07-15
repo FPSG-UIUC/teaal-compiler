@@ -1,4 +1,4 @@
-from es2hfa.hfa.op import *
+from es2hfa.hfa import *
 
 
 def test_oadd():

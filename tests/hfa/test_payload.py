@@ -1,4 +1,4 @@
-from es2hfa.hfa.payload import *
+from es2hfa.hfa import *
 
 
 def test_ptuple_parens():

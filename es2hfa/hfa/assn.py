@@ -20,14 +20,58 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+HFA AST and code generation for expressions that can be assigned to
 """
 
-# HFA code generation __init__
+from es2hfa.hfa.base import Assignable, Expression
 
-from .arg import *
-from .assn import *
-from .base import *
-from .expr import *
-from .op import *
-from .payload import *
-from .stmt import *
+
+@Assignable.register
+class AAccess:
+    """
+    An access into a list or dictionary
+    """
+
+    def __init__(self, var: str, ind: Expression) -> None:
+        self.var = var
+        self.ind = ind
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an AAccess
+        """
+        return self.var + "[" + self.ind.gen() + "]"
+
+
+@Assignable.register
+class AField:
+    """
+    An HFA object field access
+    """
+
+    def __init__(self, obj: str, field: str):
+        self.obj = obj
+        self.field = field
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an AField
+        """
+        return self.obj + "." + self.field
+
+
+@Assignable.register
+class AVar:
+    """
+    An HFA variable
+    """
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for an AVar
+        """
+        return self.name

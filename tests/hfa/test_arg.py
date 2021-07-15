@@ -1,5 +1,4 @@
-from es2hfa.hfa.arg import *
-from es2hfa.hfa.expr import EVar
+from es2hfa.hfa import *
 
 
 def test_ajust():
