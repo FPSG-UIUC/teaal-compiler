@@ -202,8 +202,8 @@ def test_get_spacetime_specified():
         "space": [
             SpaceTimeParser.parse("N")],
         "time": [
-            SpaceTimeParser.parse("M.coord"),
-            SpaceTimeParser.parse("K.pos")]}
+            SpaceTimeParser.parse("K.pos"),
+            SpaceTimeParser.parse("M.coord")]}
     spacetime = SpaceTime(yaml, program.get_loop_order(), {},
                           program.get_output().root_name())
     assert program.get_spacetime() == spacetime

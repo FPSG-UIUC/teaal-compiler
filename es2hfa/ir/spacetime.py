@@ -63,7 +63,6 @@ class SpaceTime:
             ind = ParseUtils.next_str(tree)
             self.space.append(ind)
             self.styles[ind] = tree.data
-        self.space.sort(key=loop_order.index)
 
         # Check the type of the time argument
         time = yaml["time"]
@@ -81,7 +80,6 @@ class SpaceTime:
             ind = ParseUtils.next_str(tree)
             self.time.append(ind)
             self.styles[ind] = tree.data
-        self.time.sort(key=loop_order.index)
 
         # Make sure that all indices are scheduled
         if Counter(loop_order) != Counter(self.space + self.time):

@@ -4,9 +4,6 @@
 
 ## Minor Changes
 
-- [ ] Set output tensor to be mutable
-- [ ] Preserve spacetime ordering
-- [ ] Use partitioning parser instead of `make_uniform_shape` for all relevant tests
 - [ ] Add all other integration tests
 - [ ] Clean up tests
     - Which example tests actually test something unique?

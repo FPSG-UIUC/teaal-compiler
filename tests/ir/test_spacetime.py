@@ -104,7 +104,7 @@ def test_get_slip_true():
 def test_get_space():
     yaml = create_yaml(["N", "M"], ["K"])
     spacetime = SpaceTime(yaml, ["M", "N", "K"], {}, "Z")
-    assert spacetime.get_space() == ["M", "N"]
+    assert spacetime.get_space() == ["N", "M"]
 
 
 def test_get_style():
@@ -118,7 +118,7 @@ def test_get_style():
 def test_get_time():
     yaml = create_yaml(["M"], ["K", "N"])
     spacetime = SpaceTime(yaml, ["M", "N", "K"], {}, "Z")
-    assert spacetime.get_time() == ["N", "K"]
+    assert spacetime.get_time() == ["K", "N"]
 
 
 def test_eq():
