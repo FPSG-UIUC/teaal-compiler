@@ -8,7 +8,6 @@ def test_translate_no_loops():
     mapping = Mapping.from_file(
         "tests/integration/test_translate_no_loops.yaml")
     hfa = "A_ = Tensor(rank_ids=[])\n" + \
-          "A_.setMutable(True)\n" + \
           "a_ref = A_.getRoot()\n" + \
           "a_ref += b"
     assert str(HFA(einsum, mapping)) == hfa
@@ -19,7 +18,6 @@ def test_translate_defaults():
     mapping = Mapping.from_file(
         "tests/integration/test_input_no_mapping.yaml")
     hfa = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
-          "T1_MN.setMutable(True)\n" + \
           "t1_m = T1_MN.getRoot()\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
           "a_m = A_MK.getRoot()\n" + \
@@ -30,7 +28,6 @@ def test_translate_defaults():
           "        for k, (a_val, b_val) in a_k & b_k:\n" + \
           "            t1_ref += a_val * b_val\n" + \
           "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
-          "Z_MN.setMutable(True)\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "t1_m = T1_MN.getRoot()\n" + \
           "c_m = C_MN.getRoot()\n" + \
@@ -44,7 +41,6 @@ def test_translate_specified():
     einsum = Einsum.from_file("tests/integration/test_input.yaml")
     mapping = Mapping.from_file("tests/integration/test_input.yaml")
     hfa = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
-          "T1_MN.setMutable(True)\n" + \
           "T1_NM = T1_MN.swizzleRanks(rank_ids=[\"N\", \"M\"])\n" + \
           "t1_n = T1_NM.getRoot()\n" + \
           "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
@@ -59,7 +55,6 @@ def test_translate_specified():
           "T1_MN = T1_NM.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
           "displayCanvas(canvas)\n" + \
           "Z_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
-          "Z_NM.setMutable(True)\n" + \
           "tmp0 = Z_NM\n" + \
           "tmp1 = tmp0.splitUniform(4, depth=1)\n" + \
           "tmp2 = tmp1.splitUniform(2, depth=2)\n" + \

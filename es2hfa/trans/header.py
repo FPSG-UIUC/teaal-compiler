@@ -60,16 +60,6 @@ class Header:
         out_assn = SAssign(out_name, out_constr)
         header.add(cast(Statement, out_assn))
 
-        # Set the output tensor to be mutable
-        true_arg = cast(Argument, AJust(cast(Expression, EBool(True))))
-        mutable_call = cast(
-            Expression,
-            EMethod(
-                output.tensor_name(),
-                "setMutable",
-                [true_arg]))
-        header.add(cast(Statement, SExpr(mutable_call)))
-
         # Create a partitioner
         partitioner = Partitioner(program, trans_utils)
 

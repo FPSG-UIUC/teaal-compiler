@@ -1,5 +1,4 @@
 T1_IJ = Tensor(rank_ids=["I", "J"])
-T1_IJ.setMutable(True)
 t1_i = T1_IJ.getRoot()
 a_i = A_IJK.getRoot()
 b_k = B_KL.getRoot()
@@ -9,7 +8,6 @@ for i, (t1_j, a_j) in t1_i << a_i:
             for l, b_val in b_l:
                 t1_ref += a_val * b_val
 D_I = Tensor(rank_ids=["I"])
-D_I.setMutable(True)
 d_i = D_I.getRoot()
 c_i = C_IJ.getRoot()
 t1_i = T1_IJ.getRoot()
