@@ -68,7 +68,7 @@ class Footer:
         partitioner = Partitioner(program, trans_utils)
         footer.add(partitioner.unpartition(program.get_output()))
 
-        # After reseting the output tensor, make sure that it still knows that
+        # After resetting the output tensor, make sure that it still knows that
         # it is the output
         output.set_is_output(True)
 

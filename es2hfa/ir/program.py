@@ -72,7 +72,7 @@ class Program:
 
     def add_einsum(self, i: int) -> None:
         """
-        Configure the program for the ith Einsum
+        Configure the program for the i'th Einsum
         """
         self.equation = self.einsum.get_expressions()[i]
 
