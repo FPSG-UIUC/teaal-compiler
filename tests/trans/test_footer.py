@@ -31,7 +31,7 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
     graphics.make_header()
 
     for tensor in program.get_tensors():
-        program.apply_partitioning(tensor)
+        program.apply_all_partitioning(tensor)
         program.apply_loop_order(tensor)
 
     assert Footer.make_footer(

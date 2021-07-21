@@ -55,8 +55,8 @@ def test_dynamic_part_during_static():
     """
     with pytest.raises(ValueError) as excinfo:
         assert_partition(tensor, part, "")
-    assert str(
-        excinfo.value) == "Dynamic or unknown partitioning style: uniform_occupancy"
+    assert str(excinfo.value) \
+        == "Dynamic or unknown partitioning style: uniform_occupancy"
 
 
 def test_uniform_shape():
@@ -91,7 +91,7 @@ def assert_unpartition(part, hfa):
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_partitioning(tensor)
+        program.apply_all_partitioning(tensor)
 
     partitioner = Partitioner(program, TransUtils())
     assert partitioner.unpartition(program.get_output()).gen(0) == hfa

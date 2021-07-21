@@ -81,7 +81,7 @@ class Partitioner:
                         part.data)
 
         # Rename the tensor
-        self.program.apply_partitioning(tensor)
+        self.program.apply_static_partitioning(tensor)
         part_name = cast(Assignable, AVar(tensor.tensor_name()))
         tmp_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))

@@ -27,8 +27,9 @@ Intermediate representation of the display information
 from collections import Counter
 
 from lark.tree import Tree
-from typing import Dict, List, Optional
+from typing import List, Optional
 
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.parse.utils import ParseUtils
 
 
@@ -40,7 +41,7 @@ class SpaceTime:
     def __init__(self,
                  yaml: dict,
                  loop_order: List[str],
-                 partitioning: Dict[str, List[Tree]],
+                 partitioning: Partitioning,
                  out_name: str) -> None:
         """
         Build the display object
@@ -89,8 +90,8 @@ class SpaceTime:
 
         # Find the offset index name associated with the partitioned indices
         self.offsets = {}
-        for ind in partitioning:
-            for i in range(len(partitioning[ind])):
+        for ind, parts in partitioning.get_all_parts().items():
+            for i in range(len(parts)):
                 self.offsets[ind + str(i)] = ind + str(i + 1)
 
         # Store slip if it is specified

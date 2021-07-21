@@ -57,7 +57,7 @@ class Footer:
         # To do this, we need to reset, and then re-apply partitioning, to get
         # the unswizzled name
         output.reset()
-        program.apply_partitioning(output)
+        program.apply_all_partitioning(output)
         part_name = output.tensor_name()
 
         # Generate undo swizzle code if necessary

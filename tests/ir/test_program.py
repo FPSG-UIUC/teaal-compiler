@@ -1,5 +1,6 @@
 import pytest
 
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
@@ -52,8 +53,8 @@ def create_partitioned():
     mapping:
         partitioning:
             Z:
-                K: [uniform_shape(6), uniform_shape(3)]
-                M: [uniform_shape(5)]
+                K: [uniform_occupancy(A.5)]
+                M: [uniform_shape(6), uniform_shape(3)]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -154,29 +155,55 @@ def test_apply_loop_order_ordered():
     assert program.get_tensors()[0] == Z
 
 
-def test_apply_partitioning_unconfigured():
+def test_apply_all_partitioning_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_partitioning(Tensor("A", ["K", "M"]))
+        program.apply_all_partitioning(Tensor("A", ["K", "M"]))
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_apply_partitioning_default():
+def test_apply_all_partitioning_default():
     program = create_default()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensors()[2])
+    program.apply_all_partitioning(program.get_tensors()[1])
 
-    assert program.get_tensors()[2] == Tensor("B", ["K", "N"])
+    assert program.get_tensors()[1] == Tensor("A", ["K", "M"])
 
 
-def test_apply_partitiong_mapped():
+def test_apply_all_partitioning_mapped():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensors()[2])
+    program.apply_all_partitioning(program.get_tensors()[1])
 
-    assert program.get_tensors()[2] == Tensor("B", ["K2", "K1", "K0", "N"])
+    assert program.get_tensors()[1] == Tensor(
+        "A", ["K1", "K0", "M2", "M1", "M0"])
+
+
+def test_apply_static_partitioning_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.apply_static_partitioning(Tensor("A", ["K", "M"]))
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_apply_static_partitioning_default():
+    program = create_default()
+    program.add_einsum(0)
+    program.apply_static_partitioning(program.get_tensors()[1])
+
+    assert program.get_tensors()[1] == Tensor("A", ["K", "M"])
+
+
+def test_apply_static_partitioning_mapped():
+    program = create_partitioned()
+    program.add_einsum(0)
+    program.apply_static_partitioning(program.get_tensors()[1])
+
+    assert program.get_tensors()[1] == Tensor("A", ["K", "M2", "M1", "M0"])
 
 
 def test_get_spacetime_unconfigured():
@@ -204,7 +231,7 @@ def test_get_spacetime_specified():
         "time": [
             SpaceTimeParser.parse("K.pos"),
             SpaceTimeParser.parse("M.coord")]}
-    spacetime = SpaceTime(yaml, program.get_loop_order(), {},
+    spacetime = SpaceTime(yaml, program.get_loop_order(), Partitioning({}),
                           program.get_output().root_name())
     assert program.get_spacetime() == spacetime
 
@@ -252,7 +279,7 @@ def test_get_loop_order_ordered():
 def test_get_loop_order_default_partitioned():
     program = create_partitioned()
     program.add_einsum(0)
-    assert program.get_loop_order() == ["M1", "M0", "N", "K2", "K1", "K0"]
+    assert program.get_loop_order() == ["M2", "M1", "M0", "N", "K1", "K0"]
 
 
 def test_get_output_unconfigured():
@@ -294,8 +321,8 @@ def test_get_partitioning_mapped():
     program = create_partitioned()
     program.add_einsum(0)
 
-    assert program.get_partitioning(Tensor("B", ["K", "N"])) == {
-        "K": make_uniform_shape([6, 3])}
+    assert program.get_partitioning(Tensor("Z", ["M", "N"])) == {
+        "M": make_uniform_shape([6, 3])}
 
 
 def test_get_tensors_unconfigured():

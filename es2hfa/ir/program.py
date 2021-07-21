@@ -29,6 +29,7 @@ from collections import Counter
 from lark.tree import Tree
 from typing import cast, Dict, List, Optional, Union
 
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
@@ -67,7 +68,7 @@ class Program:
         self.equation: Optional[Tree] = None
         self.es_tensors: List[Tensor] = []
         self.loop_order: Optional[List[str]] = None
-        self.partitioning: Optional[Dict[str, List[Tree]]] = None
+        self.partitioning: Optional[Partitioning] = None
         self.spacetime: Optional[SpaceTime] = None
 
     def add_einsum(self, i: int) -> None:
@@ -89,9 +90,9 @@ class Program:
         # Store the partitioning information
         partitioning = self.mapping.get_partitioning()
         if output.root_name() in partitioning.keys():
-            self.partitioning = partitioning[output.root_name()]
+            self.partitioning = Partitioning(partitioning[output.root_name()])
         else:
-            self.partitioning = {}
+            self.partitioning = Partitioning({})
 
         # Store the loop order
         loop_orders = self.mapping.get_loop_orders()
@@ -128,16 +129,29 @@ class Program:
 
         tensor.swizzle(cast(List[Optional[str]], self.loop_order))
 
-    def apply_partitioning(self, tensor: Tensor) -> None:
+    def apply_all_partitioning(self, tensor: Tensor) -> None:
         """
-        Partition the tensor according to the schedule given in add_einsum()
+        Partition the tensor according to the partitioning given in
+        add_einsum()
         """
         # Make sure that the program is configured
         if self.partitioning is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        tensor.partition(self.partitioning)
+        tensor.partition(self.partitioning.get_all_parts())
+
+    def apply_static_partitioning(self, tensor: Tensor) -> None:
+        """
+        Partition the tensor according to the static partitioning given in
+        add_einsum()
+        """
+        # Make sure that the program is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        tensor.partition(self.partitioning.get_static_parts())
 
     def get_spacetime(self) -> Optional[SpaceTime]:
         """
@@ -194,8 +208,9 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return {ind: parts for ind, parts in self.partitioning.items()
-                if ind in tensor.get_inds()}
+        return {
+            ind: parts for ind,
+            parts in self.partitioning.get_all_parts().items() if ind in tensor.get_inds()}
 
     def get_tensors(self) -> List[Tensor]:
         """
@@ -236,7 +251,7 @@ class Program:
             loop_order += list(next(sum_.find_data("sinds")
                                     ).scan_values(lambda _: True))
 
-        for ind, parts in self.partitioning.items():
+        for ind, parts in self.partitioning.get_all_parts().items():
             # Remove the old index
             i = loop_order.index(ind)
             loop_order.pop(i)

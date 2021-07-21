@@ -27,8 +27,6 @@ Intermediate representation of the partitioning information
 from lark.tree import Tree
 from typing import Dict, List
 
-from es2hfa.ir.tensor import Tensor
-
 
 class Partitioning:
     """
@@ -39,7 +37,9 @@ class Partitioning:
         """
         Create a new representation of the partitioning information
         """
+        self.dyn_parts = {}
         self.static_parts = {}
+
         # Filter the partitioning information into the dimensions that can
         # be partitioned statically vs dynamically
         for ind, parts in partitioning.items():
@@ -61,6 +61,23 @@ class Partitioning:
             # Add the partitioning specification to the appropriate dictionary
             if static:
                 self.static_parts[ind] = parts
+            else:
+                self.dyn_parts[ind] = parts
+
+        self.all_parts = {**self.static_parts, **self.dyn_parts}
+
+    def get_all_parts(self) -> Dict[str, List[Tree]]:
+        """
+        Get the partitioning information for all partitioned dimensions
+        """
+        return self.all_parts
+
+    def get_dyn_parts(self) -> Dict[str, List[Tree]]:
+        """
+        Get the partitioning information for all dynamically partitioned
+        dimensions
+        """
+        return self.dyn_parts
 
     def get_static_parts(self) -> Dict[str, List[Tree]]:
         """

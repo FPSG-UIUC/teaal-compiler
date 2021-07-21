@@ -87,7 +87,6 @@ class Mapping:
                     if "opt" in info.keys():
                         spacetime[tensor]["opt"] = info["opt"]
 
-
         if loop_orders is None:
             self.loop_orders = {}
         else:
@@ -107,7 +106,6 @@ class Mapping:
             self.spacetime = {}
         else:
             self.spacetime = spacetime
-
 
     @classmethod
     def from_file(cls, filename: str) -> "Mapping":
