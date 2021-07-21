@@ -76,12 +76,9 @@ class Partitioner:
                 elif part.data == "nway_shape":
                     block.add(self._nway_shape(ind, part, i))
                 else:
-                    # Note: there is no good way to test this error. Bad
-                    # partitioning styles should be caught by the
-                    # PartitioningParser
                     raise ValueError(
-                        "Unknown partitioning style: " +
-                        part.data)  # pragma: no cover
+                        "Dynamic or unknown partitioning style: " +
+                        part.data)
 
         # Rename the tensor
         self.program.apply_partitioning(tensor)

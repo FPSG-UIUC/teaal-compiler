@@ -33,9 +33,11 @@ class PartitioningParser:
     Lexing and parsing for partitioning mapping information
     """
     grammar = """
-        ?start: "uniform_shape(" NUMBER ")" -> uniform_shape
-              | "nway_shape(" NUMBER ")" -> nway_shape
+        ?start: "nway_shape(" NUMBER ")" -> nway_shape
+              | "uniform_occupancy(" NAME "." NUMBER ")" -> uniform_occupancy
+              | "uniform_shape(" NUMBER ")" -> uniform_shape
 
+        %import common.CNAME -> NAME
         %import common.SIGNED_NUMBER -> NUMBER
         %import common.WS_INLINE
 

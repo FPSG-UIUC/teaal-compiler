@@ -50,23 +50,6 @@ class Mapping:
         if yaml is not None and "mapping" in yaml.keys():
             mapping = yaml["mapping"]
 
-            if "spacetime" in mapping.keys(
-            ) and mapping["spacetime"] is not None:
-                spacetime = {}
-                for tensor, info in mapping["spacetime"].items():
-                    spacetime[tensor] = {}
-
-                    # Parse the space and time stamps
-                    for stamp in ["space", "time"]:
-                        spacetime[tensor][stamp] = []
-                        for ind in info[stamp]:
-                            spacetime[tensor][stamp].append(
-                                SpaceTimeParser.parse(ind))
-
-                    # Store any other optimizations
-                    if "opt" in info.keys():
-                        spacetime[tensor]["opt"] = info["opt"]
-
             if "loop-order" in mapping.keys():
                 loop_orders = mapping["loop-order"]
 
@@ -87,10 +70,23 @@ class Mapping:
             if "rank-order" in mapping.keys():
                 rank_orders = mapping["rank-order"]
 
-        if spacetime is None:
-            self.spacetime = {}
-        else:
-            self.spacetime = spacetime
+            if "spacetime" in mapping.keys(
+            ) and mapping["spacetime"] is not None:
+                spacetime = {}
+                for tensor, info in mapping["spacetime"].items():
+                    spacetime[tensor] = {}
+
+                    # Parse the space and time stamps
+                    for stamp in ["space", "time"]:
+                        spacetime[tensor][stamp] = []
+                        for ind in info[stamp]:
+                            spacetime[tensor][stamp].append(
+                                SpaceTimeParser.parse(ind))
+
+                    # Store any other optimizations
+                    if "opt" in info.keys():
+                        spacetime[tensor]["opt"] = info["opt"]
+
 
         if loop_orders is None:
             self.loop_orders = {}
@@ -106,6 +102,12 @@ class Mapping:
             self.rank_orders = {}
         else:
             self.rank_orders = rank_orders
+
+        if spacetime is None:
+            self.spacetime = {}
+        else:
+            self.spacetime = spacetime
+
 
     @classmethod
     def from_file(cls, filename: str) -> "Mapping":

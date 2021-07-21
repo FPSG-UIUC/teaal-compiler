@@ -33,21 +33,6 @@ def test_no_partitioning():
     assert_partition(tensor, "", "")
 
 
-def test_uniform_shape():
-    tensor = Tensor("B", ["K", "N"])
-    part = """
-                M: [uniform_shape(5)]
-                N: [uniform_shape(6), uniform_shape(3)]
-    """
-    hfa = "tmp0 = B_KN\n" + \
-          "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
-          "tmp2 = tmp1.splitUniform(3, depth=2)\n" + \
-          "B_KN2N1N0 = tmp2\n" + \
-          "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
-
-    assert_partition(tensor, part, hfa)
-
-
 def test_nway_shape():
     tensor = Tensor("B", ["K", "N"])
     part = """
@@ -57,6 +42,32 @@ def test_nway_shape():
     hfa = "tmp0 = B_KN\n" + \
           "tmp1 = tmp0.splitUniform((N - 1) // 6 + 1, depth=1)\n" + \
           "tmp2 = tmp1.splitUniform((N - 1) // 3 + 1, depth=1)\n" + \
+          "B_KN2N1N0 = tmp2\n" + \
+          "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
+
+    assert_partition(tensor, part, hfa)
+
+
+def test_dynamic_part_during_static():
+    tensor = Tensor("B", ["K", "N"])
+    part = """
+                K: [uniform_occupancy(A.5)]
+    """
+    with pytest.raises(ValueError) as excinfo:
+        assert_partition(tensor, part, "")
+    assert str(
+        excinfo.value) == "Dynamic or unknown partitioning style: uniform_occupancy"
+
+
+def test_uniform_shape():
+    tensor = Tensor("B", ["K", "N"])
+    part = """
+                M: [uniform_shape(5)]
+                N: [uniform_shape(6), uniform_shape(3)]
+    """
+    hfa = "tmp0 = B_KN\n" + \
+          "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
+          "tmp2 = tmp1.splitUniform(3, depth=2)\n" + \
           "B_KN2N1N0 = tmp2\n" + \
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
