@@ -40,14 +40,6 @@ def test_bad_time():
         excinfo.value) == "SpaceTime time argument must be a list, given b on output Z"
 
 
-def test_bad_spacetime():
-    yaml = create_yaml(["N"], ["K", "N"])
-
-    with pytest.raises(ValueError) as excinfo:
-        SpaceTime(yaml, ["M", "N", "K"], Partitioning({}), "Z")
-    assert str(excinfo.value) == "Incorrect schedule for spacetime on output Z"
-
-
 def test_bad_opt():
     yaml = {"space": [], "time": [], "opt": "foo"}
     with pytest.raises(ValueError) as excinfo:

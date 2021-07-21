@@ -24,9 +24,6 @@ SOFTWARE.
 Intermediate representation of the display information
 """
 
-from collections import Counter
-
-from lark.tree import Tree
 from typing import List, Optional
 
 from es2hfa.ir.partitioning import Partitioning
@@ -44,7 +41,7 @@ class SpaceTime:
                  partitioning: Partitioning,
                  out_name: str) -> None:
         """
-        Build the display object
+        Build the spacetime object
         """
         self.styles = {}
 
@@ -81,12 +78,6 @@ class SpaceTime:
             ind = ParseUtils.next_str(tree)
             self.time.append(ind)
             self.styles[ind] = tree.data
-
-        # Make sure that all indices are scheduled
-        if Counter(loop_order) != Counter(self.space + self.time):
-            raise ValueError(
-                "Incorrect schedule for spacetime on output " +
-                out_name)
 
         # Find the offset index name associated with the partitioned indices
         self.offsets = {}
