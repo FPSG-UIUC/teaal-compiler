@@ -11,13 +11,12 @@
 
 ## Major Changes
 
-- [ ] Integration with the HFA docker environment
-    - [ ] Figure out how updated Dockerfile should be committed
+- [ ] Add occupancy-based partitioning
 - [ ] Add display specification to specify displaying tensors (which ones) or canvas
 
 ## Planning
 
-- [ ] Plan other types of partitioning
+- [ ] How should we specify multiple levels of occupancy-based partitioning
 
 ## Other
 

@@ -145,9 +145,6 @@ class Partitioner:
     def _nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
         """
         Partition into the given number of partitions in coordinate space
-
-        TODO: strange behavior if number of partitions is not a multiple of the
-        total size of the dimension
         """
         # Build the step
         parts = ParseUtils.next_int(part)
