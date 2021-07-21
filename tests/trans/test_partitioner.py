@@ -4,7 +4,7 @@ from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.partitioning import Partitioner
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
