@@ -53,10 +53,10 @@ def test_make_header_swizzle():
     graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
-          "z_m = Z_MN.getRoot()\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
-          "a_m = A_MK.getRoot()\n" + \
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
+          "z_m = Z_MN.getRoot()\n" + \
+          "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()"
     assert Header.make_header(
         program,
@@ -86,7 +86,6 @@ def test_make_header_partitioned():
     graphics = Graphics(program)
 
     hfa = "Z_M1M0N = Tensor(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
-          "z_m1 = Z_M1M0N.getRoot()\n" + \
           "tmp0 = A_KM\n" + \
           "tmp1 = tmp0.splitUniform(5, depth=1)\n" + \
           "tmp2 = tmp1.splitUniform(6, depth=0)\n" + \
@@ -94,13 +93,14 @@ def test_make_header_partitioned():
           "A_K2K1K0M1M0 = tmp3\n" + \
           "A_K2K1K0M1M0.setRankIds(rank_ids=[\"K2\", \"K1\", \"K0\", \"M1\", \"M0\"])\n" + \
           "A_M1M0K2K1K0 = A_K2K1K0M1M0.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"K2\", \"K1\", \"K0\"])\n" + \
-          "a_m1 = A_M1M0K2K1K0.getRoot()\n" + \
           "tmp4 = B_KN\n" + \
           "tmp5 = tmp4.splitUniform(6, depth=0)\n" + \
           "tmp6 = tmp5.splitUniform(3, depth=1)\n" + \
           "B_K2K1K0N = tmp6\n" + \
           "B_K2K1K0N.setRankIds(rank_ids=[\"K2\", \"K1\", \"K0\", \"N\"])\n" + \
           "B_NK2K1K0 = B_K2K1K0N.swizzleRanks(rank_ids=[\"N\", \"K2\", \"K1\", \"K0\"])\n" + \
+          "z_m1 = Z_M1M0N.getRoot()\n" + \
+          "a_m1 = A_M1M0K2K1K0.getRoot()\n" + \
           "b_n = B_NK2K1K0.getRoot()"
     assert Header.make_header(
         program,
@@ -130,10 +130,10 @@ def test_make_header_displayed():
     graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
-          "z_m = Z_MN.getRoot()\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
-          "a_m = A_MK.getRoot()\n" + \
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
+          "z_m = Z_MN.getRoot()\n" + \
+          "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
     assert Header.make_header(

@@ -64,9 +64,6 @@ class Header:
         out_assn = SAssign(out_name, out_constr)
         header.add(cast(Statement, out_assn))
 
-        # Emit code to get the root fiber
-        header.add(Header.__get_root(output))
-
         # Get the tensors we need to generate headers for
         tensors = program.get_tensors().copy()
         tensors.remove(output)
@@ -75,7 +72,7 @@ class Header:
         for ind in program.get_partitioning().get_static_parts():
             program.start_partitioning(ind)
 
-        # Generate the header for each tensor
+        # Modify each of the input tensors if necessary
         for tensor in tensors:
             # Partition if necessary
             header.add(partitioner.partition(tensor))
@@ -89,24 +86,14 @@ class Header:
             if old_name != new_name:
                 header.add(TransUtils.build_swizzle(tensor, old_name))
 
-            # Emit code to get the root fiber
-            header.add(Header.__get_root(tensor))
+        # Emit code to get the root fiber
+        for tensor in program.get_tensors():
+            get_root_call = EMethod(tensor.tensor_name(), "getRoot", [])
+            call_expr = cast(Expression, get_root_call)
+            fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
+            header.add(cast(Statement, SAssign(fiber_name, call_expr)))
 
         # Generate graphics if needed
         header.add(graphics.make_header())
 
         return cast(Statement, header)
-
-    @staticmethod
-    def __get_root(tensor: Tensor) -> Statement:
-        """
-        Generate code to get the root fiber of a tensor
-        """
-        get_root_call = cast(
-            Expression,
-            EMethod(
-                tensor.tensor_name(),
-                "getRoot",
-                []))
-        fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
-        return cast(Statement, SAssign(fiber_name, get_root_call))
