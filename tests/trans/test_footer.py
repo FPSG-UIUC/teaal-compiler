@@ -31,8 +31,7 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
     graphics = Graphics(program)
     graphics.make_header()
 
-    # TODO: Are we sure this should be static partitioning?
-    for ind in program.get_all_static_partitioning():
+    for ind in program.get_all_partitioning():
         program.start_partitioning(ind)
 
     for tensor in program.get_tensors():

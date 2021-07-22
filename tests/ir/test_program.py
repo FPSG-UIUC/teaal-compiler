@@ -198,6 +198,31 @@ def test_apply_static_partitioning_mapped():
     assert program.get_tensors()[1] == Tensor("A", ["K", "M2", "M1", "M0"])
 
 
+def test_get_all_partitioning_unconfigured():
+    program = create_partitioned()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_all_partitioning()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_all_partitioning_mapped():
+    program = create_partitioned()
+    program.add_einsum(0)
+
+    yaml = """
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_occupancy(A.5)]
+                M: [uniform_shape(6), uniform_shape(3)]
+    """
+    dict_ = Mapping.from_str(yaml).get_partitioning()["Z"]
+
+    assert program.get_all_partitioning() == dict_
+
+
 def test_get_all_static_partitioning_unconfigured():
     program = create_partitioned()
 

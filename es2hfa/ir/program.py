@@ -168,6 +168,16 @@ class Program:
 
         tensor.partition(self.partitioning.get_static_parts())
 
+    def get_all_partitioning(self) -> Dict[str, List[Tree]]:
+        """
+        Get all partitioning information
+        """
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        return self.partitioning.get_all_parts()
+
     def get_all_static_partitioning(self) -> Dict[str, List[Tree]]:
         """
         Get all static partitioning information
