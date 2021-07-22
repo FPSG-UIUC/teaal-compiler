@@ -130,6 +130,18 @@ class Program:
 
         tensor.partition(self.partitioning.get_all_parts())
 
+    def apply_dyn_partitioning(self, tensor: Tensor, ind: str) -> None:
+        """
+        Partition the tensor according to the dynamic partitioning given in
+        add_einsum() for the given rank
+        """
+        # Make sure that the program is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        tensor.partition({ind: self.partitioning.get_dyn_parts()[ind]})
+
     def apply_loop_order(self, tensor: Tensor) -> None:
         """
         Swizzle the given tensor with the loop order
@@ -141,20 +153,6 @@ class Program:
 
         tensor.swizzle(
             cast(List[Optional[str]], self.loop_order.get_loop_order()))
-
-    def apply_dyn_partitioning(self, tensor: Tensor, ind: str) -> None:
-        """
-        Partition the tensor according to the dynamic partitioning given in
-        add_einsum() for the given rank
-
-        TODO: Test
-        """
-        # Make sure that the program is configured
-        if self.partitioning is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        tensor.partition({ind: self.partitioning.get_dyn_parts()[ind]})
 
     def apply_static_partitioning(self, tensor: Tensor) -> None:
         """

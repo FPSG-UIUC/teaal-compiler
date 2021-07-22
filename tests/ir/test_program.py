@@ -154,6 +154,23 @@ def test_apply_all_partitioning_mapped():
         "A", ["K1", "K0", "M2", "M1", "M0"])
 
 
+def test_apply_dyn_partitioning_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.apply_dyn_partitioning(Tensor("A", ["K", "M"]), "K")
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_apply_dyn_partitioning_():
+    program = create_partitioned()
+    program.add_einsum(0)
+    program.apply_dyn_partitioning(program.get_tensors()[1], "K")
+
+    assert program.get_tensors()[1] == Tensor("A", ["K1", "K0", "M"])
+
+
 def test_apply_loop_order_unconfigured():
     program = create_default()
 

@@ -7,6 +7,37 @@ from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 
 
+def test_config():
+    yaml = """
+    einsum:
+        declaration:
+            A: [I, J]
+            B: [I, K]
+            C: [J, K]
+        expressions:
+            - A[i, j] = sum(K).(B[i, k] * C[j, k])
+    mapping:
+        loop-order:
+            A: [K, J1, I, J0]
+        partitioning:
+            A:
+                J: [uniform_occupancy(B.5)]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    graph = IterationGraph(program)
+    graph.pop()
+    assert graph.peek()[0] == "J"
+
+    program.start_partitioning("J")
+    for tensor in program.get_tensors():
+        program.apply_dyn_partitioning(tensor, "J")
+
+    graph.config()
+    assert graph.peek()[0] == "J1"
+
+
 def test_peek_rank0():
     yaml = """
     einsum:
