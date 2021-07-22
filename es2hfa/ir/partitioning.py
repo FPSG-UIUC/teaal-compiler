@@ -25,7 +25,7 @@ Intermediate representation of the partitioning information
 """
 
 from lark.tree import Tree
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class Partitioning:
@@ -33,15 +33,18 @@ class Partitioning:
     An abstract representation of the partitioning information
     """
 
-    def __init__(self, partitioning: Dict[str, List[Tree]]) -> None:
+    def __init__(self,
+                 partitioning: Dict[str,
+                                    List[Tree]],
+                 inds: List[str]) -> None:
         """
         Create a new representation of the partitioning information
         """
+        # Filter the partitioning information into the dimensions that can
+        # be partitioned statically vs dynamically
         self.dyn_parts = {}
         self.static_parts = {}
 
-        # Filter the partitioning information into the dimensions that can
-        # be partitioned statically vs dynamically
         for ind, parts in partitioning.items():
 
             # Continue if this dimension is not actually partitioned
@@ -66,11 +69,36 @@ class Partitioning:
 
         self.all_parts = {**self.static_parts, **self.dyn_parts}
 
+        # Build a dictionary from final index name to an optional index name
+        # where the value is determined by:
+        # - If the dimension is unpartitioned, the value is the same as the key
+        # - If the dimension has already been partitioned, value == key
+        # - If the dimension will be partitioned
+        #    - If this is the largest index name in this original dimension, the
+        #      the value is the initial dimension name
+        #    - If this is not the largest index name in this original dimension,
+        #      the value is None
+        self.curr_ind_name: Dict[str, Optional[str]] = {}
+        for ind in inds:
+            if ind in self.all_parts.keys():
+                for i in range(len(self.all_parts[ind]) - 1):
+                    self.curr_ind_name[ind + str(i)] = None
+                final_ind = ind + str(len(self.all_parts[ind]) - 1)
+                self.curr_ind_name[final_ind] = final_ind
+            else:
+                self.curr_ind_name[ind] = ind
+
     def get_all_parts(self) -> Dict[str, List[Tree]]:
         """
         Get the partitioning information for all partitioned dimensions
         """
         return self.all_parts
+
+    def get_curr_ind_name(self, ind: str) -> Optional[str]:
+        """
+        Get the index name of this index in the current loop order
+        """
+        return self.curr_ind_name[ind]
 
     def get_dyn_parts(self) -> Dict[str, List[Tree]]:
         """

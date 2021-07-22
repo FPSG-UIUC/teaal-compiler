@@ -20,7 +20,7 @@ def test_mixed_partitioning():
     dict_ = parse_partitioning(parts)
 
     with pytest.raises(ValueError) as excinfo:
-        Partitioning(dict_["Z"])
+        Partitioning(dict_["Z"], ["M", "N", "K"])
     assert str(excinfo.value) \
         == "Dimension K cannot be partitioned both statically and dynamically"
 
@@ -32,7 +32,7 @@ def test_get_all_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     dict_ = parse_partitioning(all_parts)["Z"]
-    partitioning = Partitioning(dict_)
+    partitioning = Partitioning(dict_, ["M", "N", "K"])
     assert partitioning.get_all_parts() == dict_
 
 
@@ -42,7 +42,9 @@ def test_get_dynamic_partitioning():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(parse_partitioning(all_parts)["Z"])
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
 
     dyn_parts = """
                 M: [uniform_occupancy(A.6)]
@@ -58,7 +60,9 @@ def test_get_static_partitioning():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(parse_partitioning(all_parts)["Z"])
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
 
     static_parts = """
                 K: [uniform_shape(4)]
@@ -75,6 +79,8 @@ def test_skip_empty_partitioning():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(parse_partitioning(all_parts)["Z"])
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
 
     assert "K" not in partitioning.get_all_parts()

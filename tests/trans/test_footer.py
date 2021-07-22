@@ -4,6 +4,7 @@ from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.footer import Footer
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
@@ -37,7 +38,7 @@ def assert_make_footer(loop_order, partitioning, display, hfa):
     assert Footer.make_footer(
         program,
         graphics,
-        TransUtils()).gen(
+        Partitioner(program, TransUtils())).gen(
         depth=0) == hfa
 
     return program

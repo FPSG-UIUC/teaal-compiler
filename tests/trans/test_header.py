@@ -3,6 +3,7 @@ from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.header import Header
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 from tests.utils.parse_tree import make_uniform_shape
 
@@ -32,7 +33,7 @@ def test_make_header():
     assert Header.make_header(
         program,
         graphics,
-        TransUtils()).gen(
+        Partitioner(program, TransUtils())).gen(
         depth=0) == hfa
 
 
@@ -60,7 +61,7 @@ def test_make_header_swizzle():
     assert Header.make_header(
         program,
         graphics,
-        TransUtils()).gen(
+        Partitioner(program, TransUtils())).gen(
         depth=0) == hfa
 
 
@@ -108,7 +109,7 @@ def test_make_header_partitioned():
     assert Header.make_header(
         program,
         graphics,
-        TransUtils()).gen(
+        Partitioner(program, TransUtils())).gen(
         depth=0) == hfa
 
 
@@ -142,5 +143,5 @@ def test_make_header_displayed():
     assert Header.make_header(
         program,
         graphics,
-        TransUtils()).gen(
+        Partitioner(program, TransUtils())).gen(
         depth=0) == hfa

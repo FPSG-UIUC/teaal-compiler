@@ -43,7 +43,7 @@ class Header:
     def make_header(
             program: Program,
             graphics: Graphics,
-            trans_utils: TransUtils) -> Statement:
+            partitioner: Partitioner) -> Statement:
         """
         Create the header for a given einsum
 
@@ -59,9 +59,6 @@ class Header:
         out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
         out_assn = SAssign(out_name, out_constr)
         header.add(cast(Statement, out_assn))
-
-        # Create a partitioner
-        partitioner = Partitioner(program, trans_utils)
 
         # Get the tensors we need to generate headers for
         tensors = program.get_tensors()

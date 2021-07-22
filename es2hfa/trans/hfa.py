@@ -35,6 +35,7 @@ from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
 from es2hfa.trans.header import Header
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
@@ -58,8 +59,11 @@ class HFA:
             # Create a graphics object
             graphics = Graphics(program)
 
+            # Create a partitioner
+            partitioner = Partitioner(program, trans_utils)
+
             # Build the header
-            code.add(Header.make_header(program, graphics, trans_utils))
+            code.add(Header.make_header(program, graphics, partitioner))
 
             # Build the loop nests
             graph = IterationGraph(program)
@@ -67,7 +71,7 @@ class HFA:
             code.add(HFA.__build_loop_nest(graph, eqn, graphics))
 
             # Build the footer
-            code.add(Footer.make_footer(program, graphics, trans_utils))
+            code.add(Footer.make_footer(program, graphics, partitioner))
 
             program.reset()
 

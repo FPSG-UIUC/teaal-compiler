@@ -42,7 +42,7 @@ class Footer:
     def make_footer(
             program: Program,
             graphics: Graphics,
-            trans_utils: TransUtils) -> Statement:
+            partitioner: Partitioner) -> Statement:
         """
         Create the footer for the given einsum
 
@@ -63,9 +63,6 @@ class Footer:
         # Generate undo swizzle code if necessary
         if curr_name != part_name:
             footer.add(TransUtils.build_swizzle(output, curr_name))
-
-        # Now, undo partitioning
-        partitioner = Partitioner(program, trans_utils)
         footer.add(partitioner.unpartition(program.get_output()))
 
         # After resetting the output tensor, make sure that it still knows that

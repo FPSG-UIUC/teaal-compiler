@@ -37,7 +37,6 @@ class SpaceTime:
 
     def __init__(self,
                  yaml: dict,
-                 loop_order: List[str],
                  partitioning: Partitioning,
                  out_name: str) -> None:
         """

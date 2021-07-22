@@ -65,9 +65,10 @@ class Program:
 
             self.tensors[tensor.root_name()] = tensor
 
+        self.curr_loop_order: Optional[List[str]] = None
         self.equation: Optional[Tree] = None
         self.es_tensors: List[Tensor] = []
-        self.loop_order: Optional[List[str]] = None
+        self.final_loop_order: Optional[List[str]] = None
         self.partitioning: Optional[Partitioning] = None
         self.spacetime: Optional[SpaceTime] = None
 
@@ -89,18 +90,23 @@ class Program:
 
         # Store the partitioning information
         partitioning = self.mapping.get_partitioning()
+        inds = self.__get_unpartitioned_inds()
         if output.root_name() in partitioning.keys():
-            self.partitioning = Partitioning(partitioning[output.root_name()])
+            self.partitioning = Partitioning(
+                partitioning[output.root_name()], inds)
         else:
-            self.partitioning = Partitioning({})
+            self.partitioning = Partitioning({}, inds)
 
         # Store the loop order
         loop_orders = self.mapping.get_loop_orders()
         if output.root_name() in loop_orders.keys():
-            self.loop_order = loop_orders[output.root_name()]
+            self.final_loop_order = loop_orders[output.root_name()]
 
-        if self.loop_order is None:
-            self.loop_order = self.__default_loop_order()
+        if self.final_loop_order is None:
+            self.final_loop_order = self.__default_loop_order()
+
+        # TODO: Fix
+        self.curr_loop_order = self.final_loop_order.copy()
 
         # Get the spacetime information
         spacetime: Optional[Dict[str, List[Tree]]] = None
@@ -109,25 +115,8 @@ class Program:
 
         if spacetime is not None:
             # Build the spacetime object
-            # Unfortunately, mypy is not smart enough to figure out that
-            # self.loop_order is always a list at this point
-            loop_order = cast(List[str], self.loop_order)
             self.spacetime = SpaceTime(
-                spacetime,
-                loop_order,
-                self.partitioning,
-                output.root_name())
-
-    def apply_loop_order(self, tensor: Tensor) -> None:
-        """
-        Swizzle the given tensor with the loop order
-        """
-        # Make sure that the program is configured
-        if self.loop_order is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        tensor.swizzle(cast(List[Optional[str]], self.loop_order))
+                spacetime, self.partitioning, output.root_name())
 
     def apply_all_partitioning(self, tensor: Tensor) -> None:
         """
@@ -141,6 +130,31 @@ class Program:
 
         tensor.partition(self.partitioning.get_all_parts())
 
+    def apply_loop_order(self, tensor: Tensor) -> None:
+        """
+        Swizzle the given tensor with the loop order
+        """
+        # Make sure that the program is configured
+        if self.curr_loop_order is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        tensor.swizzle(cast(List[Optional[str]], self.curr_loop_order))
+
+    def apply_dyn_partitioning(self, tensor: Tensor, ind: str) -> None:
+        """
+        Partition the tensor according to the dynamic partitioning given in
+        add_einsum() for the given rank
+
+        TODO: Test
+        """
+        # Make sure that the program is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        tensor.partition({ind: self.partitioning.get_dyn_parts()[ind]})
+
     def apply_static_partitioning(self, tensor: Tensor) -> None:
         """
         Partition the tensor according to the static partitioning given in
@@ -153,6 +167,15 @@ class Program:
 
         tensor.partition(self.partitioning.get_static_parts())
 
+    def start_partitioning(self, ind: str) -> None:
+        """
+        Indicate that we are partitioning the given dimension
+
+        Specifically updates the loop_order
+        TODO: Test
+        """
+        pass
+
     def get_spacetime(self) -> Optional[SpaceTime]:
         """
         Get the spacetime information for this kernel, should it exist
@@ -160,7 +183,7 @@ class Program:
         # Make sure the program is configured
         # Note: we have to check another field, since it is possible for spacetime
         # to be empty even in a configured program
-        if self.loop_order is None:
+        if self.curr_loop_order is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
@@ -182,18 +205,18 @@ class Program:
         Get the loop order used for this kernel
         """
         # Make sure that the program is configured
-        if self.loop_order is None:
+        if self.curr_loop_order is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return self.loop_order
+        return self.curr_loop_order
 
     def get_output(self) -> Tensor:
         """
         Get the output tensor used for this kernel
         """
         # Make sure that the program is configured
-        if self.loop_order is None:
+        if self.curr_loop_order is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
@@ -230,8 +253,9 @@ class Program:
         for tensor in self.es_tensors:
             tensor.reset()
 
+        self.curr_loop_order = None
         self.es_tensors = []
-        self.loop_order = None
+        self.final_loop_order = None
         self.partitioning = None
         self.spacetime = None
 
@@ -239,17 +263,10 @@ class Program:
         """
         Compute the default loop order
         """
-        if self.equation is None:
-            raise ValueError("Must first set the einsum")
-
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
-        loop_order = self.es_tensors[0].get_inds().copy()
-
-        for sum_ in self.equation.find_data("sum"):
-            loop_order += list(next(sum_.find_data("sinds")
-                                    ).scan_values(lambda _: True))
+        loop_order = self.__get_unpartitioned_inds()
 
         for ind, parts in self.partitioning.get_all_parts().items():
             # Remove the old index
@@ -272,3 +289,18 @@ class Program:
             raise ValueError("Undeclared tensor: " + name)
 
         return self.tensors[name]
+
+    def __get_unpartitioned_inds(self) -> List[str]:
+        """
+        Get the names of the indices before partitioning
+        """
+        if self.equation is None:
+            raise ValueError("Must first set the einsum")
+
+        inds = self.es_tensors[0].get_inds().copy()
+
+        for sum_ in self.equation.find_data("sum"):
+            inds += list(next(sum_.find_data("sinds")
+                              ).scan_values(lambda _: True))
+
+        return inds
