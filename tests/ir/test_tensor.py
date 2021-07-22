@@ -12,6 +12,29 @@ def test_repeat_inds():
         excinfo.value) == "All indices must be unique; given A: [I, J, I]"
 
 
+def test_from_tensor_init():
+    parent = Tensor("A", ["I", "J", "K"])
+    child = Tensor.from_tensor(parent)
+    assert parent == child
+
+
+def test_from_tensor_is_output():
+    parent = Tensor("A", ["I", "J", "K"])
+    parent.set_is_output(True)
+    child = Tensor.from_tensor(parent)
+    assert parent == child
+
+
+def test_from_tensor_intermediate():
+    parent = Tensor("A", ["I", "J", "K"])
+    parent.pop()
+
+    child = Tensor.from_tensor(parent)
+    corr = Tensor("A", ["J", "K"])
+
+    assert child == corr
+
+
 def test_fiber_name_ind():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.fiber_name() == "a_i"

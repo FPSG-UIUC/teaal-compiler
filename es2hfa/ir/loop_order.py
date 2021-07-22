@@ -67,7 +67,7 @@ class LoopOrder:
         # Update the current loop order
         self.update_loop_order()
 
-    def get_loop_order(self) -> List[str]:
+    def get_curr_loop_order(self) -> List[str]:
         """
         Get the current loop order
         """
@@ -77,6 +77,17 @@ class LoopOrder:
                 "Unconfigured loop order. Make sure to first call add_loop_order()")
 
         return self.curr_loop_order
+
+    def get_final_loop_order(self) -> List[str]:
+        """
+        Get the final loop order
+        """
+        # Make sure that the final loop order has been set
+        if self.final_loop_order is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add_loop_order()")
+
+        return self.final_loop_order
 
     def get_unpartitioned_inds(self) -> List[str]:
         """

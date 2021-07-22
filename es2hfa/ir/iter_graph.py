@@ -52,8 +52,8 @@ class IterationGraph:
         """
         # Add a None to the end of the loop_order for the bottom of the loop
         # nest
-        self.loop_order = cast(List[Optional[str]],
-                               self.program.get_loop_order().copy()) + [None]
+        loop_order = self.program.get_curr_loop_order()
+        self.loop_order = cast(List[Optional[str]], loop_order.copy()) + [None]
 
         # Place the tensors in the appropriate locations in the iteration graph
         self.graph: List[List[Tensor]] = []

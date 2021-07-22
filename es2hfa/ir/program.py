@@ -152,7 +152,7 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         tensor.swizzle(
-            cast(List[Optional[str]], self.loop_order.get_loop_order()))
+            cast(List[Optional[str]], self.loop_order.get_curr_loop_order()))
 
     def apply_static_partitioning(self, tensor: Tensor) -> None:
         """
@@ -166,6 +166,17 @@ class Program:
 
         tensor.partition(self.partitioning.get_static_parts())
 
+    def get_curr_loop_order(self) -> List[str]:
+        """
+        Get the currently known loop order used for this kernel
+        """
+        # Make sure that the program is configured
+        if self.loop_order is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        return self.loop_order.get_curr_loop_order()
+
     def get_einsum(self) -> Tree:
         """
         Get the parse tree representation of the einsum
@@ -177,16 +188,16 @@ class Program:
 
         return self.equation
 
-    def get_loop_order(self) -> List[str]:
+    def get_final_loop_order(self) -> List[str]:
         """
-        Get the loop order used for this kernel
+        Get the final loop order used for this kernel
         """
         # Make sure that the program is configured
         if self.loop_order is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return self.loop_order.get_loop_order()
+        return self.loop_order.get_final_loop_order()
 
     def get_output(self) -> Tensor:
         """
@@ -241,6 +252,7 @@ class Program:
         for tensor in self.es_tensors:
             tensor.reset()
 
+        self.equation = None
         self.es_tensors = []
         self.loop_order = None
         self.partitioning = None
