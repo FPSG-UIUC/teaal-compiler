@@ -81,10 +81,9 @@ class Partitioning:
         self.curr_ind_name: Dict[str, Optional[str]] = {}
         for ind in inds:
             if ind in self.all_parts.keys():
-                for i in range(len(self.all_parts[ind]) - 1):
+                for i in range(len(self.all_parts[ind])):
                     self.curr_ind_name[ind + str(i)] = None
-                final_ind = ind + str(len(self.all_parts[ind]) - 1)
-                self.curr_ind_name[final_ind] = final_ind
+                self.curr_ind_name[ind + str(len(self.all_parts[ind]))] = ind
             else:
                 self.curr_ind_name[ind] = ind
 
@@ -113,6 +112,14 @@ class Partitioning:
         dimensions
         """
         return self.static_parts
+
+    def partition_dim(self, ind: str) -> None:
+        """
+        Update the partitioning information to include the fact that the given
+        dimension has been partitioned
+        """
+        for i in range(len(self.all_parts[ind]) + 1):
+            self.curr_ind_name[ind + str(i)] = ind + str(i)
 
     @staticmethod
     def __is_static(part: Tree):

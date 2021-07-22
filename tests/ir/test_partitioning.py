@@ -36,6 +36,20 @@ def test_get_all_partitioning():
     assert partitioning.get_all_parts() == dict_
 
 
+def test_get_curr_ind_name():
+    all_parts = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning.get_curr_ind_name("K") == "K"
+    assert partitioning.get_curr_ind_name("N2") == "N"
+    assert partitioning.get_curr_ind_name("M0") is None
+
+
 def test_get_dynamic_partitioning():
     all_parts = """
                 K: [uniform_shape(4)]
@@ -84,3 +98,21 @@ def test_skip_empty_partitioning():
             "M", "N", "K"])
 
     assert "K" not in partitioning.get_all_parts()
+
+
+def test_partition_dim():
+    all_parts = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    partitioning.partition_dim("N")
+
+    assert partitioning.get_curr_ind_name("K") == "K"
+    assert partitioning.get_curr_ind_name("N2") == "N2"
+    assert partitioning.get_curr_ind_name("N1") == "N1"
+    assert partitioning.get_curr_ind_name("N0") == "N0"
+    assert partitioning.get_curr_ind_name("M0") is None
