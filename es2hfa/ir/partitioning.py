@@ -25,7 +25,9 @@ Intermediate representation of the partitioning information
 """
 
 from lark.tree import Tree
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
+
+from es2hfa.ir.tensor import Tensor
 
 
 class Partitioning:
@@ -112,6 +114,17 @@ class Partitioning:
         dimensions
         """
         return self.static_parts
+
+    def get_tensor_spec(self, tensor: Tensor,
+                        inds: Set[str]) -> Dict[str, List[Tree]]:
+        """
+        Get the partitioning for a specific tensor
+        """
+        partitioning = {}
+        for ind, part in self.all_parts.items():
+            if ind in inds and ind in tensor.get_inds():
+                partitioning[ind] = part
+        return partitioning
 
     def partition_dim(self, ind: str) -> None:
         """

@@ -23,7 +23,7 @@ SOFTWARE.
 
 Translate the partitiong specification
 """
-from typing import cast
+from typing import cast, Set
 
 from lark.tree import Tree
 
@@ -46,12 +46,12 @@ class Partitioner:
         self.program = program
         self.trans_utils = trans_utils
 
-    def partition(self, tensor: Tensor) -> Statement:
+    def partition(self, tensor: Tensor, inds: Set[str]) -> Statement:
         """
         Partition the given tensor according to the stored program
         """
         # Check if we need to partition at all
-        partitioning = self.__get_partitioning(tensor)
+        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, inds)
         if not partitioning:
             return cast(Statement, SBlock([]))
 
@@ -103,7 +103,8 @@ class Partitioner:
         tensor.reset()
 
         # Get the partitioning
-        partitioning = self.__get_partitioning(tensor)
+        inds = set(self.program.get_partitioning().get_all_parts().keys())
+        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, inds)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])
@@ -181,6 +182,11 @@ class Partitioner:
 
         return cast(Statement, part_assn)
 
+    # def __uniform_occupancy(self, tensor: Tensor) -> Statement:
+    #     """
+    #     Partition with a uniform occupancy
+    #     """
+
     def __uniform_shape(self, part: Tree, depth: int) -> Statement:
         """
         Partition with a uniform shape
@@ -190,10 +196,3 @@ class Partitioner:
 
         # Build the splitUniform()
         return self.__split_uniform(cast(Expression, EInt(step)), depth)
-
-    def __get_partitioning(self, tensor: Tensor) -> Dict[str, List[Tree]]:
-        """
-        Get the partitioning for a specific tensor
-        """
-        return {ind: part for ind, part in self.program.get_partitioning(
-        ).get_static_parts().items() if ind in tensor.get_inds()}

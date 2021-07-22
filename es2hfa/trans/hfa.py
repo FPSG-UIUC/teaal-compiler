@@ -63,7 +63,8 @@ class HFA:
             partitioner = Partitioner(program, trans_utils)
 
             # Build the header
-            code.add(Header.make_header(program, graphics, partitioner))
+            header = Header(program, partitioner)
+            code.add(header.make_global_header(graphics))
 
             # Build the loop nests
             graph = IterationGraph(program)

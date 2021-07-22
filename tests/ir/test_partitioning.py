@@ -1,6 +1,7 @@
 import pytest
 
 from es2hfa.ir.partitioning import Partitioning
+from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.mapping import Mapping
 
 
@@ -85,6 +86,27 @@ def test_get_static_partitioning():
     static = parse_partitioning(static_parts)["Z"]
 
     assert partitioning.get_static_parts() == static
+
+
+def test_get_tensor_spec():
+    all_parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    used_parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_occupancy(A.6)]
+    """
+    used = parse_partitioning(used_parts)["Z"]
+
+    tensor = Tensor("A", ["J", "K", "M", "N"])
+
+    assert partitioning.get_tensor_spec(tensor, {"K", "M"}) == used
 
 
 def test_partition_dim():

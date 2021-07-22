@@ -25,7 +25,8 @@ def assert_partition(tensor, parts, hfa):
     program.add_einsum(0)
 
     partitioner = Partitioner(program, TransUtils())
-    assert partitioner.partition(tensor).gen(depth=0) == hfa
+    inds = program.get_partitioning().get_all_parts().keys()
+    assert partitioner.partition(tensor, inds).gen(depth=0) == hfa
 
 
 def test_no_partitioning():

@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the header above the HFA loop nest
 """
 
-from typing import cast
+from typing import cast, Set
 
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
@@ -36,14 +36,23 @@ from es2hfa.trans.utils import TransUtils
 
 class Header:
     """
-    Generate the HFA code for the header above the loop nest
+    Generate the HFA code for loop headers
     """
 
-    @staticmethod
-    def make_header(
-            program: Program,
-            graphics: Graphics,
-            partitioner: Partitioner) -> Statement:
+    def __init__(self, program: Program, partitioner: Partitioner) -> None:
+        """
+        Construct a new Header object
+        """
+        self.program = program
+        self.partitioner = partitioner
+
+    # def make_dyn_part_header(self, ind: str) -> Statement:
+    #     """
+    #     Create the loop header for a dynamically partitioned dimension
+    #     """
+
+
+    def make_global_header(self, graphics: Graphics) -> Statement:
         """
         Create the header for a given einsum
 
@@ -53,9 +62,9 @@ class Header:
         header = SBlock([])
 
         # Configure the output tensor
-        output = program.get_output()
-        program.apply_all_partitioning(output)
-        program.apply_final_loop_order(output)
+        output = self.program.get_output()
+        self.program.apply_all_partitioning(output)
+        self.program.apply_final_loop_order(output)
 
         # Create the output tensor
         out_name = cast(Assignable, AVar(output.tensor_name()))
@@ -65,35 +74,53 @@ class Header:
         header.add(cast(Statement, out_assn))
 
         # Get the tensors we need to generate headers for
-        tensors = program.get_tensors().copy()
+        tensors = self.program.get_tensors().copy()
         tensors.remove(output)
 
         # Prepare to partition all static dimensions
-        for ind in program.get_partitioning().get_static_parts():
-            program.start_partitioning(ind)
+        partitioning = self.program.get_partitioning().get_static_parts()
+        for ind in partitioning:
+            self.program.start_partitioning(ind)
 
         # Modify each of the input tensors if necessary
         for tensor in tensors:
-            # Partition if necessary
-            header.add(partitioner.partition(tensor))
-
-            # Swizzle for a concordant traversal
-            old_name = tensor.tensor_name()
-            program.apply_curr_loop_order(tensor)
-            new_name = tensor.tensor_name()
-
-            # Emit code to perform the swizzle if necessary
-            if old_name != new_name:
-                header.add(TransUtils.build_swizzle(tensor, old_name))
+            header.add(self.__format_tensor(tensor, set(partitioning.keys())))
 
         # Emit code to get the root fiber
-        for tensor in program.get_tensors():
-            get_root_call = EMethod(tensor.tensor_name(), "getRoot", [])
-            call_expr = cast(Expression, get_root_call)
-            fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
-            header.add(cast(Statement, SAssign(fiber_name, call_expr)))
+        for tensor in self.program.get_tensors():
+            header.add(Header.__get_root(tensor))
 
         # Generate graphics if needed
         header.add(graphics.make_header())
 
         return cast(Statement, header)
+
+    def __format_tensor(self, tensor: Tensor, inds: Set[str]) -> Statement:
+        """
+        Format the tensor according
+        """
+        header = SBlock([])
+
+        # Partition if necessary
+        header.add(self.partitioner.partition(tensor, inds))
+
+        # Swizzle for a concordant traversal
+        old_name = tensor.tensor_name()
+        self.program.apply_curr_loop_order(tensor)
+        new_name = tensor.tensor_name()
+
+        # Emit code to perform the swizzle if necessary
+        if old_name != new_name:
+            header.add(TransUtils.build_swizzle(tensor, old_name))
+
+        return cast(Statement, header)
+
+    @staticmethod
+    def __get_root(tensor: Tensor) -> Statement:
+        """
+        Get the root fiber for the given tensor
+        """
+        get_root_call = EMethod(tensor.tensor_name(), "getRoot", [])
+        call_expr = cast(Expression, get_root_call)
+        fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
+        return cast(Statement, SAssign(fiber_name, call_expr))

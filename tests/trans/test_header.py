@@ -8,7 +8,7 @@ from es2hfa.trans.utils import TransUtils
 from tests.utils.parse_tree import make_uniform_shape
 
 
-def test_make_header():
+def test_make_global_header():
     yaml = """
     einsum:
         declaration:
@@ -30,14 +30,11 @@ def test_make_header():
           "z_m = Z_MN.getRoot()\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
-    assert Header.make_header(
-        program,
-        graphics,
-        Partitioner(program, TransUtils())).gen(
-        depth=0) == hfa
+    header = Header(program, Partitioner(program, TransUtils()))
+    assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
-def test_make_header_swizzle():
+def test_make_global_header_swizzle():
     yaml = """
     einsum:
         declaration:
@@ -58,14 +55,11 @@ def test_make_header_swizzle():
           "z_m = Z_MN.getRoot()\n" + \
           "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()"
-    assert Header.make_header(
-        program,
-        graphics,
-        Partitioner(program, TransUtils())).gen(
-        depth=0) == hfa
+    header = Header(program, Partitioner(program, TransUtils()))
+    assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
-def test_make_header_partitioned():
+def test_make_global_header_partitioned():
     yaml = """
     einsum:
         declaration:
@@ -102,14 +96,11 @@ def test_make_header_partitioned():
           "z_m1 = Z_M1M0N.getRoot()\n" + \
           "a_m1 = A_M1M0K2K1K0.getRoot()\n" + \
           "b_n = B_NK2K1K0.getRoot()"
-    assert Header.make_header(
-        program,
-        graphics,
-        Partitioner(program, TransUtils())).gen(
-        depth=0) == hfa
+    header = Header(program, Partitioner(program, TransUtils()))
+    assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
-def test_make_header_displayed():
+def test_make_global_header_displayed():
     yaml = """
     einsum:
         declaration:
@@ -136,8 +127,5 @@ def test_make_header_displayed():
           "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
-    assert Header.make_header(
-        program,
-        graphics,
-        Partitioner(program, TransUtils())).gen(
-        depth=0) == hfa
+    header = Header(program, Partitioner(program, TransUtils()))
+    assert header.make_global_header(graphics).gen(depth=0) == hfa
