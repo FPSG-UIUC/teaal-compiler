@@ -52,8 +52,12 @@ class Header:
         """
         header = SBlock([])
 
-        # First, create the output tensor
+        # Configure the output tensor
         output = program.get_output()
+        # program.apply_all_partitioning(output)
+        # program.apply_final_loop_order
+
+        # Create the output tensor
         out_name = cast(Assignable, AVar(output.tensor_name()))
         out_arg = TransUtils.build_rank_ids(output)
         out_constr = cast(Expression, EFunc("Tensor", [out_arg]))
@@ -74,7 +78,7 @@ class Header:
 
             # Swizzle for a concordant traversal
             old_name = tensor.tensor_name()
-            program.apply_loop_order(tensor)
+            program.apply_curr_loop_order(tensor)
             new_name = tensor.tensor_name()
 
             # Emit code to perform the swizzle if necessary

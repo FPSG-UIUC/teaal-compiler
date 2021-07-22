@@ -93,7 +93,7 @@ def test_peek_order():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
     graph = IterationGraph(program)
 
     results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
@@ -144,7 +144,7 @@ def test_pop_order():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
     graph = IterationGraph(program)
 
     A = Tensor("A", ["J", "I"])

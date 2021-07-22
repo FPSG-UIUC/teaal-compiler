@@ -100,7 +100,7 @@ def test_create_canvas_partitioned():
 
     for tensor in program.get_tensors():
         program.apply_static_partitioning(tensor)
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
 
     canvas = Canvas(program)
 
@@ -153,7 +153,7 @@ def test_add_activity_partitioned_coord():
 
     for tensor in program.get_tensors():
         program.apply_all_partitioning(tensor)
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
 
     canvas = Canvas(program)
     canvas.create_canvas()
@@ -171,7 +171,7 @@ def test_add_activity_partitioned_pos():
 
     for tensor in program.get_tensors():
         program.apply_all_partitioning(tensor)
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
 
     canvas = Canvas(program)
     canvas.create_canvas()

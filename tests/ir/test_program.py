@@ -171,23 +171,54 @@ def test_apply_dyn_partitioning_():
     assert program.get_tensors()[1] == Tensor("A", ["K1", "K0", "M"])
 
 
-def test_apply_loop_order_unconfigured():
+def test_apply_curr_loop_order_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_loop_order(Tensor("A", ["K", "M"]))
+        program.apply_curr_loop_order(Tensor("A", ["K", "M"]))
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_apply_loop_order():
+def test_apply_curr_loop_order():
     program = create_loop_ordered()
     program.add_einsum(0)
-    program.apply_loop_order(program.get_tensors()[0])
+    program.apply_curr_loop_order(program.get_output())
 
     Z = Tensor("Z", ["N", "M"])
     Z.set_is_output(True)
-    assert program.get_tensors()[0] == Z
+    assert program.get_output() == Z
+
+
+def test_apply_final_loop_order_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.apply_final_loop_order(Tensor("A", ["K", "M"]))
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_apply_final_loop_order():
+    program = create_loop_ordered()
+    program.add_einsum(0)
+    program.apply_final_loop_order(program.get_output())
+
+    Z = Tensor("Z", ["N", "M"])
+    Z.set_is_output(True)
+    assert program.get_output() == Z
+
+
+def test_apply_final_loop_order_partitioned():
+    program = create_partitioned()
+    program.add_einsum(0)
+
+    program.apply_all_partitioning(program.get_output())
+    program.apply_final_loop_order(program.get_output())
+
+    Z = Tensor("Z", ["M2", "M1", "M0", "N"])
+    Z.set_is_output(True)
+    assert program.get_output() == Z
 
 
 def test_apply_static_partitioning_unconfigured():
@@ -383,7 +414,7 @@ def test_reset():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
 
     program.reset()
 
