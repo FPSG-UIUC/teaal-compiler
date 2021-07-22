@@ -87,19 +87,6 @@ def test_get_static_partitioning():
     assert partitioning.get_static_parts() == static
 
 
-def test_skip_empty_partitioning():
-    all_parts = """
-                K: []
-                M: [uniform_occupancy(A.6)]
-                N: [uniform_shape(2), nway_shape(7)]
-    """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
-
-    assert "K" not in partitioning.get_all_parts()
-
-
 def test_partition_dim():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
@@ -116,3 +103,101 @@ def test_partition_dim():
     assert partitioning.get_curr_ind_name("N1") == "N1"
     assert partitioning.get_curr_ind_name("N0") == "N0"
     assert partitioning.get_curr_ind_name("M0") is None
+
+
+def test_skip_empty_partitioning():
+    all_parts = """
+                K: []
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert "K" not in partitioning.get_all_parts()
+
+
+def test_eq():
+    all_parts = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning1 = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    partitioning2 = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning1 == partitioning2
+
+
+def test_neq_curr_ind_name():
+    all_parts = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning1 = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+    partitioning1.partition_dim("N")
+
+    partitioning2 = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning1 != partitioning2
+
+
+def test_neq_dyn_parts():
+    parts1 = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning1 = Partitioning(
+        parse_partitioning(parts1)["Z"], [
+            "M", "N", "K"])
+
+    parts2 = """
+                M: [uniform_occupancy(A.5)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning2 = Partitioning(
+        parse_partitioning(parts2)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning1 != partitioning2
+
+
+def test_neq_static_parts():
+    parts1 = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(3), nway_shape(7)]
+    """
+    partitioning1 = Partitioning(
+        parse_partitioning(parts1)["Z"], [
+            "M", "N", "K"])
+
+    parts2 = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning2 = Partitioning(
+        parse_partitioning(parts2)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning1 != partitioning2
+
+
+def test_neq_obj():
+    all_parts = """
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning1 = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning1 != "foo"

@@ -121,6 +121,18 @@ class Partitioning:
         for i in range(len(self.all_parts[ind]) + 1):
             self.curr_ind_name[ind + str(i)] = ind + str(i)
 
+    def __eq__(self, other):
+        """
+        The == operator for Partitionings
+        """
+
+        if isinstance(other, type(self)):
+            return self.curr_ind_name == other.curr_ind_name and \
+                self.dyn_parts == other.dyn_parts and \
+                self.static_parts == other.static_parts
+
+        return False
+
     @staticmethod
     def __is_static(part: Tree):
         """

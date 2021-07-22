@@ -64,7 +64,7 @@ class Header:
         tensors = program.get_tensors()
 
         # Prepare to partition all static dimensions
-        for ind in program.get_all_static_partitioning():
+        for ind in program.get_partitioning().get_static_parts():
             program.start_partitioning(ind)
 
         # Generate the header for each tensor

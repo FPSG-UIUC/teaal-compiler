@@ -168,26 +168,6 @@ class Program:
 
         tensor.partition(self.partitioning.get_static_parts())
 
-    def get_all_partitioning(self) -> Dict[str, List[Tree]]:
-        """
-        Get all partitioning information
-        """
-        if self.partitioning is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        return self.partitioning.get_all_parts()
-
-    def get_all_static_partitioning(self) -> Dict[str, List[Tree]]:
-        """
-        Get all static partitioning information
-        """
-        if self.partitioning is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        return self.partitioning.get_static_parts()
-
     def get_einsum(self) -> Tree:
         """
         Get the parse tree representation of the einsum
@@ -221,19 +201,16 @@ class Program:
 
         return self.es_tensors[0]
 
-    def get_partitioning(self, tensor: Tensor) -> Dict[str, List[Tree]]:
+    def get_partitioning(self) -> Partitioning:
         """
-        Get all of the partitioning information relevant for a given tensor
+        Get the partitioning information for the current Einsum
         """
         # Make sure that the program is configured
         if self.partitioning is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        # TODO: Fix!!!
-        return {
-            ind: parts for ind,
-            parts in self.partitioning.get_all_parts().items() if ind in tensor.get_inds()}
+        return self.partitioning
 
     def get_spacetime(self) -> Optional[SpaceTime]:
         """

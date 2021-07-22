@@ -51,7 +51,7 @@ class Partitioner:
         Partition the given tensor according to the stored program
         """
         # Check if we need to partition at all
-        partitioning = self.program.get_partitioning(tensor)
+        partitioning = self.__get_partitioning(tensor)
         if not partitioning:
             return cast(Statement, SBlock([]))
 
@@ -72,13 +72,16 @@ class Partitioner:
 
             for j, part in enumerate(partitioning[ind]):
                 if part.data == "uniform_shape":
-                    block.add(self._uniform_shape(part, i + j))
+                    block.add(self.__uniform_shape(part, i + j))
                 elif part.data == "nway_shape":
-                    block.add(self._nway_shape(ind, part, i))
+                    block.add(self.__nway_shape(ind, part, i))
                 else:
+                    # Note: there is no good way to test this error. Bad
+                    # partitioning styles should be caught by the
+                    # Partitioning
                     raise ValueError(
-                        "Dynamic or unknown partitioning style: " +
-                        part.data)
+                        "Unknown partitioning style: " +
+                        part.data)  # pragma: no cover
 
         # Rename the tensor
         self.program.apply_static_partitioning(tensor)
@@ -100,7 +103,7 @@ class Partitioner:
         tensor.reset()
 
         # Get the partitioning
-        partitioning = self.program.get_partitioning(tensor)
+        partitioning = self.__get_partitioning(tensor)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])
@@ -139,7 +142,7 @@ class Partitioner:
 
         return cast(Statement, block)
 
-    def _nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
+    def __nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
         """
         Partition into the given number of partitions in coordinate space
         """
@@ -160,9 +163,9 @@ class Partitioner:
         step = EBinOp(cast(Expression, fdiv), cast(Operator, OAdd()), one_expr)
 
         # Build the splitUniform
-        return self._split_uniform(cast(Expression, step), depth)
+        return self.__split_uniform(cast(Expression, step), depth)
 
-    def _split_uniform(self, step: Expression, depth: int) -> Statement:
+    def __split_uniform(self, step: Expression, depth: int) -> Statement:
         """
         Build a call to splitUniform
         """
@@ -178,7 +181,7 @@ class Partitioner:
 
         return cast(Statement, part_assn)
 
-    def _uniform_shape(self, part: Tree, depth: int) -> Statement:
+    def __uniform_shape(self, part: Tree, depth: int) -> Statement:
         """
         Partition with a uniform shape
         """
@@ -186,4 +189,11 @@ class Partitioner:
         step = ParseUtils.next_int(part)
 
         # Build the splitUniform()
-        return self._split_uniform(cast(Expression, EInt(step)), depth)
+        return self.__split_uniform(cast(Expression, EInt(step)), depth)
+
+    def __get_partitioning(self, tensor: Tensor) -> Dict[str, List[Tree]]:
+        """
+        Get the partitioning for a specific tensor
+        """
+        return {ind: part for ind, part in self.program.get_partitioning(
+        ).get_static_parts().items() if ind in tensor.get_inds()}

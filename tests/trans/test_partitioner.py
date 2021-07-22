@@ -48,17 +48,6 @@ def test_nway_shape():
     assert_partition(tensor, part, hfa)
 
 
-def test_dynamic_part_during_static():
-    tensor = Tensor("B", ["K", "N"])
-    part = """
-                K: [uniform_occupancy(A.5)]
-    """
-    with pytest.raises(ValueError) as excinfo:
-        assert_partition(tensor, part, "")
-    assert str(excinfo.value) \
-        == "Dynamic or unknown partitioning style: uniform_occupancy"
-
-
 def test_uniform_shape():
     tensor = Tensor("B", ["K", "N"])
     part = """
