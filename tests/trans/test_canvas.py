@@ -95,11 +95,13 @@ def test_create_canvas_partitioned():
     program = create_partitioned("coord")
     program.add_einsum(0)
 
-    for ind in program.get_partitioning().get_static_parts():
+    static_parts = program.get_partitioning().get_static_parts()
+    for ind in static_parts:
         program.start_partitioning(ind)
 
     for tensor in program.get_tensors():
-        program.apply_static_partitioning(tensor)
+        for ind in static_parts:
+            program.apply_partitioning(tensor, ind)
         program.apply_curr_loop_order(tensor)
 
     canvas = Canvas(program)

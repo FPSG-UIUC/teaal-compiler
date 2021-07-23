@@ -71,10 +71,15 @@ class Partitioner:
                 continue
 
             for j, part in enumerate(partitioning[ind]):
-                if part.data == "uniform_shape":
-                    block.add(self.__uniform_shape(part, i + j))
-                elif part.data == "nway_shape":
+                if part.data == "nway_shape":
                     block.add(self.__nway_shape(ind, part, i))
+
+                elif part.data == "uniform_occupancy":
+                    block.add(self.__uniform_occupancy(tensor, part))
+
+                elif part.data == "uniform_shape":
+                    block.add(self.__uniform_shape(part, i + j))
+
                 else:
                     # Note: there is no good way to test this error. Bad
                     # partitioning styles should be caught by the
@@ -83,8 +88,10 @@ class Partitioner:
                         "Unknown partitioning style: " +
                         part.data)  # pragma: no cover
 
+            # Finally, update the tensor with this partition
+            self.program.apply_partitioning(tensor, ind)
+
         # Rename the tensor
-        self.program.apply_static_partitioning(tensor)
         part_name = cast(Assignable, AVar(tensor.tensor_name()))
         tmp_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
@@ -166,6 +173,34 @@ class Partitioner:
         # Build the splitUniform
         return self.__split_uniform(cast(Expression, step), depth)
 
+    def __split_equal(self, size: int) -> Statement:
+        """
+        Build call to splitEqual
+        """
+        arg = cast(Argument, AJust(cast(Expression, EInt(size))))
+        part_call = EMethod(self.trans_utils.curr_tmp(), "splitEqual", [arg])
+
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
+        part_assn = SAssign(next_tmp, cast(Expression, part_call))
+
+        return cast(Statement, part_assn)
+
+    def __split_follower(self, leader: str) -> Statement:
+        """
+        Build a call to splitNonUniform
+        """
+        fiber = EVar(self.program.get_tensor(leader).fiber_name())
+        arg = cast(Argument, AJust(cast(Expression, fiber)))
+        part_call = EMethod(
+            self.trans_utils.curr_tmp(),
+            "splitNonUniform",
+            [arg])
+
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
+        part_assn = SAssign(next_tmp, cast(Expression, part_call))
+
+        return cast(Statement, part_assn)
+
     def __split_uniform(self, step: Expression, depth: int) -> Statement:
         """
         Build a call to splitUniform
@@ -182,10 +217,17 @@ class Partitioner:
 
         return cast(Statement, part_assn)
 
-    # def __uniform_occupancy(self, tensor: Tensor) -> Statement:
-    #     """
-    #     Partition with a uniform occupancy
-    #     """
+    def __uniform_occupancy(self, tensor: Tensor, part: Tree) -> Statement:
+        """
+        Partition with a uniform occupancy
+        """
+        leader = ParseUtils.find_str(part, "leader")
+        size = ParseUtils.find_int(part, "size")
+
+        if tensor.root_name() == leader:
+            return self.__split_equal(size)
+        else:
+            return self.__split_follower(leader)
 
     def __uniform_shape(self, part: Tree, depth: int) -> Statement:
         """

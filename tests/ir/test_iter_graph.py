@@ -32,7 +32,7 @@ def test_config():
 
     program.start_partitioning("J")
     for tensor in program.get_tensors():
-        program.apply_dyn_partitioning(tensor, "J")
+        program.apply_partitioning(tensor, "J")
 
     graph.config()
     assert graph.peek()[0] == "J1"

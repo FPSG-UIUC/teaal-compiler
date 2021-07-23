@@ -69,6 +69,29 @@ def test_get_dynamic_partitioning():
     assert partitioning.get_dyn_parts() == dyn
 
 
+def test_get_leader():
+    parts = """
+                M: [uniform_occupancy(A.6)]
+    """
+    partitioning = Partitioning(parse_partitioning(parts)["Z"], ["M"])
+
+    part = partitioning.get_all_parts()["M"][0]
+    assert partitioning.get_leader(part) == "A"
+
+
+def test_get_leader_bad_style():
+    parts = """
+                M: [uniform_shape(6)]
+    """
+    partitioning = Partitioning(parse_partitioning(parts)["Z"], ["M"])
+
+    part = partitioning.get_all_parts()["M"][0]
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.get_leader(part)
+
+    assert str(excinfo.value) == "Style uniform_shape has no leader"
+
+
 def test_get_static_partitioning():
     all_parts = """
                 K: [uniform_shape(4)]

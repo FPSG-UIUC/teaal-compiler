@@ -9,6 +9,12 @@ from es2hfa.trans.utils import TransUtils
 
 
 def assert_partition(tensor, parts, hfa):
+    program, partitioner = build_partitioner(tensor, parts)
+    inds = program.get_partitioning().get_all_parts().keys()
+    assert partitioner.partition(tensor, inds).gen(depth=0) == hfa
+
+
+def build_partitioner(tensor, parts):
     yaml = """
     einsum:
         declaration:
@@ -25,8 +31,7 @@ def assert_partition(tensor, parts, hfa):
     program.add_einsum(0)
 
     partitioner = Partitioner(program, TransUtils())
-    inds = program.get_partitioning().get_all_parts().keys()
-    assert partitioner.partition(tensor, inds).gen(depth=0) == hfa
+    return program, partitioner
 
 
 def test_no_partitioning():
@@ -47,6 +52,34 @@ def test_nway_shape():
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, part, hfa)
+
+
+def test_uniform_occupancy_leader():
+    tensor = Tensor("A", ["K", "M"])
+    part = """
+                K: [uniform_occupancy(A.5)]
+    """
+    hfa = "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitEqual(5)\n" + \
+          "A_K1K0M = tmp1\n" + \
+          "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
+
+    assert_partition(tensor, part, hfa)
+
+
+def test_uniform_occupancy_follower():
+    tensor = Tensor("B", ["K", "N"])
+    part = """
+                K: [uniform_occupancy(A.5)]
+    """
+    hfa = "tmp0 = B_KN\n" + \
+          "tmp1 = tmp0.splitNonUniform(a_k1)\n" + \
+          "B_K1K0N = tmp1\n" + \
+          "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])"
+
+    program, partitioner = build_partitioner(tensor, part)
+    program.apply_partitioning(program.get_tensor("A"), "K")
+    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
 
 
 def test_uniform_shape():

@@ -6,6 +6,7 @@
 
 - [ ] Add tests to make sure that `get_all_parts` is used in the correct locations (vs `get_static_parts` and `get_dyn_parts`)
 - [ ] Add public interface to top-level `es2hfa` import
+- [ ] Get rid of `make_uniform_shape` and instead use parsers
 - [ ] Clean up tests
     - Which example tests actually test something unique?
     - All tests should use the [tensor naming conventions](./tensor_naming.md)

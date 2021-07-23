@@ -34,8 +34,12 @@ class PartitioningParser:
     """
     grammar = """
         ?start: "nway_shape(" NUMBER ")" -> nway_shape
-              | "uniform_occupancy(" NAME "." NUMBER ")" -> uniform_occupancy
+              | "uniform_occupancy(" leader "." size ")" -> uniform_occupancy
               | "uniform_shape(" NUMBER ")" -> uniform_shape
+
+        ?leader: NAME -> leader
+
+        ?size: NUMBER -> size
 
         %import common.CNAME -> NAME
         %import common.SIGNED_NUMBER -> NUMBER

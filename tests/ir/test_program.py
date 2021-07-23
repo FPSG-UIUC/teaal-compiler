@@ -154,23 +154,6 @@ def test_apply_all_partitioning_mapped():
         "A", ["K1", "K0", "M2", "M1", "M0"])
 
 
-def test_apply_dyn_partitioning_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.apply_dyn_partitioning(Tensor("A", ["K", "M"]), "K")
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_apply_dyn_partitioning_():
-    program = create_partitioned()
-    program.add_einsum(0)
-    program.apply_dyn_partitioning(program.get_tensors()[1], "K")
-
-    assert program.get_tensors()[1] == Tensor("A", ["K1", "K0", "M"])
-
-
 def test_apply_curr_loop_order_unconfigured():
     program = create_default()
 
@@ -221,27 +204,19 @@ def test_apply_final_loop_order_partitioned():
     assert program.get_output() == Z
 
 
-def test_apply_static_partitioning_unconfigured():
+def test_apply_partitioning_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_static_partitioning(Tensor("A", ["K", "M"]))
+        program.apply_partitioning(Tensor("A", ["K", "M"]), "K")
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_apply_static_partitioning_default():
-    program = create_default()
-    program.add_einsum(0)
-    program.apply_static_partitioning(program.get_tensors()[1])
-
-    assert program.get_tensors()[1] == Tensor("A", ["K", "M"])
-
-
-def test_apply_static_partitioning_mapped():
+def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_static_partitioning(program.get_tensors()[1])
+    program.apply_partitioning(program.get_tensors()[1], "M")
 
     assert program.get_tensors()[1] == Tensor("A", ["K", "M2", "M1", "M0"])
 
@@ -374,6 +349,34 @@ def test_get_spacetime_specified():
     spacetime = SpaceTime(yaml, Partitioning(
         {}, ["M", "N", "K"]), program.get_output().root_name())
     assert program.get_spacetime() == spacetime
+
+
+def test_get_tensor_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_tensor("Z")
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_tensor():
+    program = create_default()
+    program.add_einsum(0)
+
+    Z = Tensor("Z", ["M", "N"])
+    Z.set_is_output(True)
+
+    assert program.get_tensor("Z") == Z
+
+
+def test_get_tensor_missing_tensor():
+    program = create_default()
+    program.add_einsum(0)
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_tensor("C")
+    assert str(excinfo.value) == "Unknown tensor C"
 
 
 def test_get_tensors_unconfigured():

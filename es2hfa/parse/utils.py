@@ -32,13 +32,21 @@ class ParseUtils:
     """
     Class to wrap parse tree utilities
     """
+    @staticmethod
+    def find_int(tree: Tree, data: str) -> int:
+        """
+        Find the next subtree with the given data and get the next integer
+        token from that subtree
+        """
+        return ParseUtils.next_int(next(tree.find_data(data)))
 
     @staticmethod
-    def next_str(tree: Tree) -> str:
+    def find_str(tree: Tree, data: str) -> str:
         """
-        Get the next token in the tree
+        Find the next subtree with the given data and get the next string token
+        from that subtree
         """
-        return str(next(cast(Generator, tree.scan_values(lambda _: True))))
+        return ParseUtils.next_str(next(tree.find_data(data)))
 
     @staticmethod
     def next_int(tree: Tree) -> int:
@@ -46,3 +54,10 @@ class ParseUtils:
         Get the next token in the tree
         """
         return int(next(cast(Generator, tree.scan_values(lambda _: True))))
+
+    @staticmethod
+    def next_str(tree: Tree) -> str:
+        """
+        Get the next token in the tree
+        """
+        return str(next(cast(Generator, tree.scan_values(lambda _: True))))

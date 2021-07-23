@@ -130,18 +130,6 @@ class Program:
 
         tensor.partition(self.partitioning.get_all_parts())
 
-    def apply_dyn_partitioning(self, tensor: Tensor, ind: str) -> None:
-        """
-        Partition the tensor according to the dynamic partitioning given in
-        add_einsum() for the given rank
-        """
-        # Make sure that the program is configured
-        if self.partitioning is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        tensor.partition({ind: self.partitioning.get_dyn_parts()[ind]})
-
     def apply_curr_loop_order(self, tensor: Tensor) -> None:
         """
         Swizzle the given tensor with the loop order
@@ -166,17 +154,17 @@ class Program:
         tensor.swizzle(
             cast(List[Optional[str]], self.loop_order.get_final_loop_order()))
 
-    def apply_static_partitioning(self, tensor: Tensor) -> None:
+    def apply_partitioning(self, tensor: Tensor, ind: str) -> None:
         """
-        Partition the tensor according to the static partitioning given in
-        add_einsum()
+        Partition the tensor according to the partitioning given in
+        add_einsum() for the given rank
         """
         # Make sure that the program is configured
         if self.partitioning is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        tensor.partition(self.partitioning.get_static_parts())
+        tensor.partition({ind: self.partitioning.get_all_parts()[ind]})
 
     def get_curr_loop_order(self) -> List[str]:
         """
@@ -246,6 +234,21 @@ class Program:
 
         return self.spacetime
 
+    def get_tensor(self, root_name: str) -> Tensor:
+        """
+        Get a tensor currently being used from its root name
+        """
+        # Make sure that the program is configured
+        if not self.es_tensors:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        for tensor in self.es_tensors:
+            if tensor.root_name() == root_name:
+                return tensor
+
+        raise ValueError("Unknown tensor " + root_name)
+
     def get_tensors(self) -> List[Tensor]:
         """
         Get the tensors used in an einsum
@@ -261,7 +264,7 @@ class Program:
         """
         Unconfigure the program and corresponding tensors
         """
-        for tensor in self.es_tensors:
+        for tensor in self.tensors.values():
             tensor.reset()
 
         self.equation = None

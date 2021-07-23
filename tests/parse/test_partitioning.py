@@ -10,7 +10,9 @@ def test_nway_shape():
 
 
 def test_uniform_occupancy():
-    tree = Tree("uniform_occupancy", [Token("NAME", "A"), Token("NUMBER", 6)])
+    leader = Tree("leader", [Token("NAME", "A")])
+    size = Tree("size", [Token("NUMBER", 6)])
+    tree = Tree("uniform_occupancy", [leader, size])
     assert PartitioningParser.parse("uniform_occupancy(A.6)") == tree
 
 

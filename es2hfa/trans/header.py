@@ -51,7 +51,6 @@ class Header:
     #     Create the loop header for a dynamically partitioned dimension
     #     """
 
-
     def make_global_header(self, graphics: Graphics) -> Statement:
         """
         Create the header for a given einsum

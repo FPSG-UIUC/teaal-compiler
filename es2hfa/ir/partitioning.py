@@ -28,6 +28,7 @@ from lark.tree import Tree
 from typing import Dict, List, Optional, Set
 
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.utils import ParseUtils
 
 
 class Partitioning:
@@ -107,6 +108,15 @@ class Partitioning:
         dimensions
         """
         return self.dyn_parts
+
+    def get_leader(self, part: Tree) -> str:
+        """
+        Return the leader tensor for this partitioning
+        """
+        if part.data == "uniform_occupancy":
+            return ParseUtils.find_str(part, "leader")
+
+        raise ValueError("Style " + part.data + " has no leader")
 
     def get_static_parts(self) -> Dict[str, List[Tree]]:
         """
