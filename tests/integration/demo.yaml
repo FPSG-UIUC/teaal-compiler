@@ -1,20 +1,14 @@
 einsum:
     declaration:
-        C: [M, N]
-        T1: [M, N]
+        A: [K, M]
+        B: [K, N]
         Z: [M, N]
     expressions:
-        - Z[m, n] = T1[m, n] + C[m, n]
+        - Z[m, n] = sum(K).(A[k, m] * B[k, n])
 mapping:
-    rank-order:
-        C: [N, M]
-        Z: [N, M]
-    loop-order:
-        Z: [M2, N2, M1, N1, M0, N0]
     partitioning:
         Z:
-            M: [uniform_shape(4), uniform_shape(2)]
-            N: [uniform_shape(6), uniform_shape(3)]
+            K: [uniform_shape(5)]
 # einsum:
 #     declaration:
 #         A: [K, M]

@@ -4,7 +4,7 @@ a_i = A_IJK.getRoot()
 b_k = B_KL.getRoot()
 for i, (t1_j, a_j) in t1_i << a_i:
     for j, (t1_ref, a_k) in t1_j << a_j:
-        for k, (b_l, a_val) in b_k & a_k:
+        for k, (a_val, b_l) in a_k & b_k:
             for l, b_val in b_l:
                 t1_ref += a_val * b_val
 D_I = Tensor(rank_ids=["I"])

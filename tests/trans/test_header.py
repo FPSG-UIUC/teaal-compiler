@@ -8,7 +8,7 @@ from es2hfa.trans.utils import TransUtils
 from tests.utils.parse_tree import make_uniform_shape
 
 
-def build_program(mapping):
+def build_header(mapping):
     yaml = """
     einsum:
         declaration:
@@ -41,7 +41,7 @@ def test_make_global_header():
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
 
-    header, graphics = build_program(mapping)
+    header, graphics = build_header(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
@@ -53,7 +53,7 @@ def test_make_global_header_swizzle():
           "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()"
 
-    header, graphics = build_program("")
+    header, graphics = build_header("")
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
@@ -83,7 +83,7 @@ def test_make_global_header_partitioned():
           "a_m1 = A_M1M0K2K1K0.getRoot()\n" + \
           "b_n = B_NK2K1K0.getRoot()"
 
-    header, graphics = build_program(mapping)
+    header, graphics = build_header(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
@@ -103,12 +103,12 @@ def test_make_global_header_displayed():
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
 
-    header, graphics = build_program(mapping)
+    header, graphics = build_header(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
 def test_make_loop_header_empty():
-    header, _ = build_program("")
+    header, _ = build_header("")
     assert header.make_loop_header("M").gen(depth=0) == ""
 
 
@@ -126,7 +126,7 @@ def test_make_loop_header_leader():
           "A_M1M0K.setRankIds(rank_ids=[\"M1\", \"M0\", \"K\"])\n" + \
           "a_m1 = A_M1M0K.getRoot()"
 
-    header, graphics = build_program(mapping)
+    header, graphics = build_header(mapping)
     header.make_global_header(graphics)
     assert header.make_loop_header("M").gen(depth=0) == hfa
 
@@ -153,6 +153,6 @@ def test_make_loop_header_follower():
           "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
           "b_k1 = B_K1K0N.getRoot()"
 
-    header, graphics = build_program(mapping)
+    header, graphics = build_header(mapping)
     header.make_global_header(graphics)
     assert header.make_loop_header("K").gen(depth=0) == hfa

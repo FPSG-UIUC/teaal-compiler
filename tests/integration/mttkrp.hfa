@@ -8,5 +8,5 @@ c_n = C_NJ.getRoot()
 for m, (z_n, a_k) in z_m << a_m:
     for n, (z_ref, (b_k, c_j)) in z_n << (b_n & c_n):
         for k, (a_j, b_val) in a_k & b_k:
-            for j, (c_val, a_val) in c_j & a_j:
+            for j, (a_val, c_val) in a_j & c_j:
                 z_ref += a_val * b_val * c_val

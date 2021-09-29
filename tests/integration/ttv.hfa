@@ -4,5 +4,5 @@ a_m = A_MNK.getRoot()
 b_k = B_K.getRoot()
 for m, (z_n, a_n) in z_m << a_m:
     for n, (z_ref, a_k) in z_n << a_n:
-        for k, (b_val, a_val) in b_k & a_k:
+        for k, (a_val, b_val) in a_k & b_k:
             z_ref += a_val * b_val

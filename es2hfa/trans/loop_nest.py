@@ -30,6 +30,7 @@ from es2hfa.hfa import *
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.graphics import Graphics
+from es2hfa.trans.header import Header
 
 
 class LoopNest:
@@ -39,9 +40,10 @@ class LoopNest:
 
     @staticmethod
     def make_loop_nest(
-            graph: IterationGraph,
             eqn: Equation,
-            graphics: Graphics) -> Statement:
+            graph: IterationGraph,
+            graphics: Graphics,
+            header: Header) -> Statement:
         """
         Recursively build the loop nest
         """
@@ -56,12 +58,23 @@ class LoopNest:
 
             return cast(Statement, bottom)
 
-        # Otherwise, get the information for the for loop
-        expr = eqn.make_iter_expr(ind, tensors)
+        # Otherwise, build a for loop
+        loop_nest = SBlock([])
+
+        # Generate the loop header
+        loop_nest.add(header.make_loop_header(ind))
+
+        # Update the iteration graph and get the new tensors
+        graph.config()
+        ind, tensors = graph.peek()
+
+        # Get the information for the for loop
+        expr = eqn.make_iter_expr(cast(str, ind), tensors)
         _, tensors = graph.pop()
-        payload = eqn.make_payload(ind, tensors)
+        payload = eqn.make_payload(cast(str, ind), tensors)
 
         # Recurse for the for loop body
-        body = LoopNest.make_loop_nest(graph, eqn, graphics)
+        body = LoopNest.make_loop_nest(eqn, graph, graphics, header)
+        loop_nest.add(cast(Statement, SFor(payload, expr, body)))
 
-        return cast(Statement, SFor(payload, expr, body))
+        return cast(Statement, loop_nest)
