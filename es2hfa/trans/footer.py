@@ -63,7 +63,8 @@ class Footer:
         # Generate undo swizzle code if necessary
         if curr_name != part_name:
             footer.add(TransUtils.build_swizzle(output, curr_name))
-        footer.add(partitioner.unpartition(program.get_output()))
+
+        footer.add(partitioner.unpartition(output))
 
         # After resetting the output tensor, make sure that it still knows that
         # it is the output

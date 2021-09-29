@@ -29,6 +29,7 @@ from typing import cast, Set
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.utils import ParseUtils
 from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
@@ -46,11 +47,6 @@ class Header:
         self.program = program
         self.partitioner = partitioner
 
-    # def make_dyn_part_header(self, ind: str) -> Statement:
-    #     """
-    #     Create the loop header for a dynamically partitioned dimension
-    #     """
-
     def make_global_header(self, graphics: Graphics) -> Statement:
         """
         Create the header for a given einsum
@@ -59,6 +55,11 @@ class Header:
         modifies the tensors in the program for the current einsum
         """
         header = SBlock([])
+
+        # Prepare to partition all static dimensions
+        partitioning = self.program.get_partitioning().get_static_parts()
+        for ind in partitioning:
+            self.program.start_partitioning(ind)
 
         # Configure the output tensor
         output = self.program.get_output()
@@ -76,11 +77,6 @@ class Header:
         tensors = self.program.get_tensors().copy()
         tensors.remove(output)
 
-        # Prepare to partition all static dimensions
-        partitioning = self.program.get_partitioning().get_static_parts()
-        for ind in partitioning:
-            self.program.start_partitioning(ind)
-
         # Modify each of the input tensors if necessary
         for tensor in tensors:
             header.add(self.__format_tensor(tensor, set(partitioning.keys())))
@@ -91,6 +87,38 @@ class Header:
 
         # Generate graphics if needed
         header.add(graphics.make_header())
+
+        return cast(Statement, header)
+
+    def make_loop_header(self, ind: str) -> Statement:
+        """
+        Create an individual loop header
+        """
+        header = SBlock([])
+
+        # If this dimension is not dynamically partitioned, we are done
+        dyn_parts = self.program.get_partitioning().get_dyn_parts()
+        if ind not in dyn_parts.keys():
+            return cast(Statement, header)
+
+        # Otherwise, we assume leader-follower style partitioning with a clear
+        # leader
+        self.program.start_partitioning(ind)
+        leader_name = ParseUtils.find_str(dyn_parts[ind][0], "leader")
+        leader = self.program.get_tensor(leader_name)
+
+        # Partition the leader first
+        header.add(self.partitioner.partition(leader, {ind}))
+        header.add(self.__get_root(leader))
+
+        # Partition all follower tensors
+        tensors = self.program.get_tensors().copy()
+        tensors.remove(leader)
+        tensors.remove(self.program.get_output())
+
+        for tensor in tensors:
+            header.add(self.partitioner.partition(tensor, {ind}))
+            header.add(self.__get_root(tensor))
 
         return cast(Statement, header)
 

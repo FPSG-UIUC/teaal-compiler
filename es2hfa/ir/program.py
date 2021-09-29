@@ -27,7 +27,7 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import cast, Dict, List, Optional, Union
+from typing import cast, Dict, List, Optional
 
 from es2hfa.ir.loop_order import LoopOrder
 from es2hfa.ir.partitioning import Partitioning
@@ -159,6 +159,7 @@ class Program:
         Partition the tensor according to the partitioning given in
         add_einsum() for the given rank
         """
+
         # Make sure that the program is configured
         if self.partitioning is None:
             raise ValueError(
@@ -282,8 +283,13 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
+        # Update the partitioning and loop order
         self.partitioning.partition_dim(ind)
         self.loop_order.update_loop_order()
+
+        # Prepare each of the tensors
+        self.es_tensors = [Tensor.from_tensor(
+            tensor) for tensor in self.es_tensors]
 
     def __get_tensor(self, tensor: Tree) -> Tensor:
         """
