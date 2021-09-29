@@ -42,6 +42,16 @@ def test_from():
     assert from_file == from_str
 
 
+def test_just_mapping():
+    mapping = Mapping.from_str("mapping:")
+
+    assert mapping.get_loop_orders() == {}
+    assert mapping.get_partitioning() == {}
+    assert mapping.get_rank_orders() == {}
+    assert mapping.get_rank_orders() == {}
+    assert mapping.get_spacetime() == {}
+
+
 def test_loop_orders():
     mapping = Mapping.from_file("tests/integration/test_input.yaml")
     assert mapping.get_loop_orders() == {

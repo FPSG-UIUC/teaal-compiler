@@ -47,7 +47,8 @@ class Mapping:
         # Use type dict, since the dictionary is very heterogeneous
         spacetime: Optional[dict] = None
 
-        if yaml is not None and "mapping" in yaml.keys():
+        if yaml is not None and "mapping" in yaml.keys() and \
+                yaml["mapping"] is not None:
             mapping = yaml["mapping"]
 
             if "loop-order" in mapping.keys():

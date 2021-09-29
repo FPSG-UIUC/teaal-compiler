@@ -8,7 +8,7 @@ from es2hfa.trans.utils import TransUtils
 from tests.utils.parse_tree import make_uniform_shape
 
 
-def test_make_global_header():
+def build_program(mapping):
     yaml = """
     einsum:
         declaration:
@@ -19,65 +19,51 @@ def test_make_global_header():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
-        loop-order:
-            Z: [K, M, N]
-    """
+    """ + mapping
+
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     graphics = Graphics(program)
+
+    header = Header(program, Partitioner(program, TransUtils()))
+
+    return header, graphics
+
+
+def test_make_global_header():
+    mapping = """
+        loop-order:
+            Z: [K, M, N]
+    """
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
-    header = Header(program, Partitioner(program, TransUtils()))
+
+    header, graphics = build_program(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
 def test_make_global_header_swizzle():
-    yaml = """
-    einsum:
-        declaration:
-            Z: [M, N]
-            A: [K, M]
-            B: [K, N]
-            C: [M, N]
-        expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
-    """
-    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
-    program.add_einsum(0)
-    graphics = Graphics(program)
-
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
           "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
           "z_m = Z_MN.getRoot()\n" + \
           "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()"
-    header = Header(program, Partitioner(program, TransUtils()))
+
+    header, graphics = build_program("")
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
 def test_make_global_header_partitioned():
-    yaml = """
-    einsum:
-        declaration:
-            Z: [M, N]
-            A: [K, M]
-            B: [K, N]
-            C: [M, N]
-        expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
-    mapping:
+    mapping = """
         partitioning:
             Z:
                 K: [uniform_shape(6), uniform_shape(3)]
                 M: [uniform_shape(5)]
     """
-    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
-    program.add_einsum(0)
-    graphics = Graphics(program)
 
     hfa = "Z_M1M0N = Tensor(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
           "tmp0 = A_KM\n" + \
@@ -96,29 +82,18 @@ def test_make_global_header_partitioned():
           "z_m1 = Z_M1M0N.getRoot()\n" + \
           "a_m1 = A_M1M0K2K1K0.getRoot()\n" + \
           "b_n = B_NK2K1K0.getRoot()"
-    header = Header(program, Partitioner(program, TransUtils()))
+
+    header, graphics = build_program(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
 def test_make_global_header_displayed():
-    yaml = """
-    einsum:
-        declaration:
-            Z: [M, N]
-            A: [K, M]
-            B: [K, N]
-            C: [M, N]
-        expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
-    mapping:
+    mapping = """
         spacetime:
             Z:
                 space: [N]
                 time: [K.pos, M.coord]
     """
-    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
-    program.add_einsum(0)
-    graphics = Graphics(program)
 
     hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
           "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
@@ -127,5 +102,57 @@ def test_make_global_header_displayed():
           "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
-    header = Header(program, Partitioner(program, TransUtils()))
+
+    header, graphics = build_program(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
+
+
+def test_make_loop_header_empty():
+    header, _ = build_program("")
+    assert header.make_loop_header("M").gen(depth=0) == ""
+
+
+def test_make_loop_header_leader():
+    mapping = """
+        partitioning:
+            Z:
+                M: [uniform_occupancy(A.6)]
+    """
+
+    hfa = "A_MK = Tensor.fromFiber(a_m)\n" + \
+          "tmp0 = A_MK\n" + \
+          "tmp1 = tmp0.splitEqual(6)\n" + \
+          "A_M1M0K = tmp1\n" + \
+          "A_M1M0K.setRankIds(rank_ids=[\"M1\", \"M0\", \"K\"])\n" + \
+          "a_m1 = A_M1M0K.getRoot()"
+
+    header, graphics = build_program(mapping)
+    header.make_global_header(graphics)
+    assert header.make_loop_header("M").gen(depth=0) == hfa
+
+
+def test_make_loop_header_follower():
+    mapping = """
+        loop-order:
+            Z: [K1, K0, M, N]
+        partitioning:
+            Z:
+                K: [uniform_occupancy(A.6)]
+    """
+
+    hfa = "A_KM = Tensor.fromFiber(a_k)\n" + \
+          "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitEqual(6)\n" + \
+          "A_K1K0M = tmp1\n" + \
+          "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
+          "a_k1 = A_K1K0M.getRoot()\n" + \
+          "B_KN = Tensor.fromFiber(b_k)\n" + \
+          "tmp2 = B_KN\n" + \
+          "tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
+          "B_K1K0N = tmp3\n" + \
+          "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
+          "b_k1 = B_K1K0N.getRoot()"
+
+    header, graphics = build_program(mapping)
+    header.make_global_header(graphics)
+    assert header.make_loop_header("K").gen(depth=0) == hfa

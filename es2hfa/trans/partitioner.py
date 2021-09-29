@@ -221,7 +221,7 @@ class Partitioner:
         """
         Partition with a uniform occupancy
         """
-        leader = ParseUtils.find_str(part, "leader")
+        leader = self.program.get_partitioning().get_leader(part)
         size = ParseUtils.find_int(part, "size")
 
         if tensor.root_name() == leader:

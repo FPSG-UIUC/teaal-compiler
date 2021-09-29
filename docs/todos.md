@@ -14,10 +14,13 @@
 - [ ] Update naming scheme
     - [ ] `ind` -> `rank_id`
     - [ ] `dim` or `dimension` -> `rank`
+- [ ] Is ir.Partitioning `get_leader()` even necessary?
 
 ## Major Changes
 
 - [ ] Add occupancy-based partitioning
+- [ ] Switch to comma-separated partitioning fields
+- [ ] Update Tensor.fromFiber to copy if it already has an owning rank
 - [ ] Add display specification to specify displaying tensors (which ones) or canvas
 
 ## Planning

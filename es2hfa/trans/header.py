@@ -108,6 +108,7 @@ class Header:
         leader = self.program.get_tensor(leader_name)
 
         # Partition the leader first
+        header.add(self.__get_tensor_from_fiber(leader))
         header.add(self.partitioner.partition(leader, {ind}))
         header.add(self.__get_root(leader))
 
@@ -117,8 +118,10 @@ class Header:
         tensors.remove(self.program.get_output())
 
         for tensor in tensors:
-            header.add(self.partitioner.partition(tensor, {ind}))
-            header.add(self.__get_root(tensor))
+            if ind in tensor.get_inds():
+                header.add(self.__get_tensor_from_fiber(tensor))
+                header.add(self.partitioner.partition(tensor, {ind}))
+                header.add(self.__get_root(tensor))
 
         return cast(Statement, header)
 
@@ -151,3 +154,16 @@ class Header:
         call_expr = cast(Expression, get_root_call)
         fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
         return cast(Statement, SAssign(fiber_name, call_expr))
+
+    @staticmethod
+    def __get_tensor_from_fiber(tensor: Tensor) -> Statement:
+        """
+        Get a tensor from the current fiber
+        """
+        fiber_name = cast(Expression, EVar(tensor.fiber_name()))
+        fiber_name_arg = cast(Argument, AJust(fiber_name))
+        from_fiber = EMethod("Tensor", "fromFiber", [fiber_name_arg])
+        from_fiber_expr = cast(Expression, from_fiber)
+
+        tensor_name = cast(Assignable, AVar(tensor.tensor_name()))
+        return cast(Statement, SAssign(tensor_name, from_fiber_expr))
