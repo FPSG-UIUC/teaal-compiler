@@ -96,26 +96,29 @@ def test_dynamic_partitioning():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
+        loop-order:
+            Z: [N, K1, M, K0]
         partitioning:
             Z:
-                K: [uniform_occupancy(A.5)]
+                K: [uniform_occupancy(A.6)]
     """
 
-    hfa = "for m, (z_n, a_k) in z_m << a_m:\n" + \
-          "    for n, (z_ref, b_k) in z_n << b_n:\n" + \
-          "        A_K = Tensor.fromFiber(a_k)\n" + \
-          "        tmp0 = A_K\n" + \
-          "        tmp1 = tmp0.splitEqual(5)\n" + \
-          "        A_K1K0 = tmp1\n" + \
-          "        A_K1K0.setRankIds(rank_ids=[\"K1\", \"K0\"])\n" + \
-          "        a_k1 = A_K1K0.getRoot()\n" + \
-          "        B_K = Tensor.fromFiber(b_k)\n" + \
-          "        tmp2 = B_K\n" + \
-          "        tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
-          "        B_K1K0 = tmp3\n" + \
-          "        B_K1K0.setRankIds(rank_ids=[\"K1\", \"K0\"])\n" + \
-          "        b_k1 = B_K1K0.getRoot()\n" + \
-          "        for k1, (a_k0, b_k0) in a_k1 & b_k1:\n" + \
+    hfa = "for n, (z_m, b_k) in z_n << b_n:\n" + \
+          "    A_KM = Tensor.fromFiber(a_k)\n" + \
+          "    tmp0 = A_KM\n" + \
+          "    tmp1 = tmp0.splitEqual(6)\n" + \
+          "    A_K1K0M = tmp1\n" + \
+          "    A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
+          "    A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])\n" + \
+          "    a_k1 = A_K1MK0.getRoot()\n" + \
+          "    B_K = Tensor.fromFiber(b_k)\n" + \
+          "    tmp2 = B_K\n" + \
+          "    tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
+          "    B_K1K0 = tmp3\n" + \
+          "    B_K1K0.setRankIds(rank_ids=[\"K1\", \"K0\"])\n" + \
+          "    b_k1 = B_K1K0.getRoot()\n" + \
+          "    for k1, (a_m, b_k0) in a_k1 & b_k1:\n" + \
+          "        for m, (z_ref, a_k0) in z_m << a_m:\n" + \
           "            for k0, (a_val, b_val) in a_k0 & b_k0:\n" + \
           "                z_ref += a_val * b_val"
 

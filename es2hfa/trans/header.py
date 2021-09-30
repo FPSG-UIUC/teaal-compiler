@@ -109,18 +109,19 @@ class Header:
 
         # Partition the leader first
         header.add(self.__get_tensor_from_fiber(leader))
-        header.add(self.partitioner.partition(leader, {ind}))
+        header.add(self.__format_tensor(leader, {ind}))
         header.add(self.__get_root(leader))
 
-        # Partition all follower tensors
+        # Find all follower tensors
         tensors = self.program.get_tensors().copy()
         tensors.remove(leader)
         tensors.remove(self.program.get_output())
 
+        # Partition the follower tensors
         for tensor in tensors:
             if ind in tensor.get_inds():
                 header.add(self.__get_tensor_from_fiber(tensor))
-                header.add(self.partitioner.partition(tensor, {ind}))
+                header.add(self.__format_tensor(tensor, {ind}))
                 header.add(self.__get_root(tensor))
 
         return cast(Statement, header)

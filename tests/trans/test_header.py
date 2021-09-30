@@ -1,3 +1,4 @@
+from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
@@ -27,7 +28,7 @@ def build_header(mapping):
 
     header = Header(program, Partitioner(program, TransUtils()))
 
-    return header, graphics
+    return header, graphics, program
 
 
 def test_make_global_header():
@@ -41,7 +42,7 @@ def test_make_global_header():
           "a_k = A_KM.getRoot()\n" + \
           "b_k = B_KN.getRoot()"
 
-    header, graphics = build_header(mapping)
+    header, graphics, _ = build_header(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
@@ -53,7 +54,7 @@ def test_make_global_header_swizzle():
           "a_m = A_MK.getRoot()\n" + \
           "b_n = B_NK.getRoot()"
 
-    header, graphics = build_header("")
+    header, graphics, _ = build_header("")
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
@@ -83,7 +84,7 @@ def test_make_global_header_partitioned():
           "a_m1 = A_M1M0K2K1K0.getRoot()\n" + \
           "b_n = B_NK2K1K0.getRoot()"
 
-    header, graphics = build_header(mapping)
+    header, graphics, _ = build_header(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
@@ -103,12 +104,12 @@ def test_make_global_header_displayed():
           "b_n = B_NK.getRoot()\n" + \
           "canvas = createCanvas(A_MK, B_NK, Z_MN)"
 
-    header, graphics = build_header(mapping)
+    header, graphics, _ = build_header(mapping)
     assert header.make_global_header(graphics).gen(depth=0) == hfa
 
 
 def test_make_loop_header_empty():
-    header, _ = build_header("")
+    header, _, _ = build_header("")
     assert header.make_loop_header("M").gen(depth=0) == ""
 
 
@@ -126,7 +127,7 @@ def test_make_loop_header_leader():
           "A_M1M0K.setRankIds(rank_ids=[\"M1\", \"M0\", \"K\"])\n" + \
           "a_m1 = A_M1M0K.getRoot()"
 
-    header, graphics = build_header(mapping)
+    header, graphics, _ = build_header(mapping)
     header.make_global_header(graphics)
     assert header.make_loop_header("M").gen(depth=0) == hfa
 
@@ -153,6 +154,38 @@ def test_make_loop_header_follower():
           "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
           "b_k1 = B_K1K0N.getRoot()"
 
-    header, graphics = build_header(mapping)
+    header, graphics, _ = build_header(mapping)
     header.make_global_header(graphics)
+    assert header.make_loop_header("K").gen(depth=0) == hfa
+
+
+def test_make_loop_header_swizzle():
+    mapping = """
+        loop-order:
+            Z: [N, K1, M, K0]
+        partitioning:
+            Z:
+                K: [uniform_occupancy(A.6)]
+    """
+
+    hfa = "A_KM = Tensor.fromFiber(a_k)\n" + \
+          "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitEqual(6)\n" + \
+          "A_K1K0M = tmp1\n" + \
+          "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
+          "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])\n" + \
+          "a_k1 = A_K1MK0.getRoot()\n" + \
+          "B_K = Tensor.fromFiber(b_k)\n" + \
+          "tmp2 = B_K\n" + \
+          "tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
+          "B_K1K0 = tmp3\n" + \
+          "B_K1K0.setRankIds(rank_ids=[\"K1\", \"K0\"])\n" + \
+          "b_k1 = B_K1K0.getRoot()"
+
+    header, graphics, program = build_header(mapping)
+    header.make_global_header(graphics)
+
+    graph = IterationGraph(program)
+    graph.pop()
+
     assert header.make_loop_header("K").gen(depth=0) == hfa

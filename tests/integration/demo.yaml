@@ -6,9 +6,11 @@ einsum:
     expressions:
         - Z[m, n] = sum(K).(A[k, m] * B[k, n])
 mapping:
+    loop-order:
+        Z: [N, K1, M, K0]
     partitioning:
         Z:
-            K: [uniform_shape(5)]
+            K: [uniform_occupancy(A.6)]
 # einsum:
 #     declaration:
 #         A: [K, M]

@@ -39,12 +39,13 @@ class IterationGraph:
         """
         Construct a new IterationGraph
         """
-        # Configure the iteration graph
         self.program = program
-        self.config()
 
         # Track the current location in the iteration graph
         self.pos = 0
+
+        # Configure the iteration graph
+        self.config()
 
     def config(self) -> None:
         """
