@@ -1,7 +1,7 @@
 Z_IK = Tensor(rank_ids=["I", "K"])
+B_KJ = B_JK.swizzleRanks(rank_ids=["K", "J"])
 z_i = Z_IK.getRoot()
 a_i = A_IJ.getRoot()
-B_KJ = B_JK.swizzleRanks(rank_ids=["K", "J"])
 b_k = B_KJ.getRoot()
 for i, (z_k, a_j) in z_i << a_i:
     for k, (z_ref, b_j) in z_k << b_k:

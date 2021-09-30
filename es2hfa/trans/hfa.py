@@ -35,6 +35,8 @@ from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
 from es2hfa.trans.header import Header
+from es2hfa.trans.loop_nest import LoopNest
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
@@ -58,49 +60,24 @@ class HFA:
             # Create a graphics object
             graphics = Graphics(program)
 
+            # Create a partitioner
+            partitioner = Partitioner(program, trans_utils)
+
             # Build the header
-            code.add(Header.make_header(program, graphics, trans_utils))
+            header = Header(program, partitioner)
+            code.add(header.make_global_header(graphics))
 
             # Build the loop nests
             graph = IterationGraph(program)
             eqn = Equation(program)
-            code.add(HFA.__build_loop_nest(graph, eqn, graphics))
+            code.add(LoopNest.make_loop_nest(eqn, graph, graphics, header))
 
             # Build the footer
-            code.add(Footer.make_footer(program, graphics, trans_utils))
+            code.add(Footer.make_footer(program, graphics, partitioner))
 
             program.reset()
 
         self.hfa = cast(Statement, code)
-
-    @staticmethod
-    def __build_loop_nest(
-            graph: IterationGraph,
-            eqn: Equation,
-            graphics: Graphics) -> Statement:
-        """
-        Recursively build the loop nest
-        """
-        ind, tensors = graph.peek()
-
-        # If we are at the bottom of the loop nest, build the update
-        if not ind:
-            bottom = SBlock([eqn.make_update()])
-
-            # Add the graphics information if possible
-            bottom.add(graphics.make_body())
-
-            return cast(Statement, bottom)
-
-        # Otherwise, get the information for the for loop
-        expr = eqn.make_iter_expr(ind, tensors)
-        _, tensors = graph.pop()
-        payload = eqn.make_payload(ind, tensors)
-
-        # Recurse for the for loop body
-        body = HFA.__build_loop_nest(graph, eqn, graphics)
-
-        return cast(Statement, SFor(payload, expr, body))
 
     def __str__(self) -> str:
         """

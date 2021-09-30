@@ -29,7 +29,7 @@ from typing import cast
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.trans.graphics import Graphics
-from es2hfa.trans.partitioning import Partitioner
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
@@ -42,7 +42,7 @@ class Footer:
     def make_footer(
             program: Program,
             graphics: Graphics,
-            trans_utils: TransUtils) -> Statement:
+            partitioner: Partitioner) -> Statement:
         """
         Create the footer for the given einsum
 
@@ -57,16 +57,14 @@ class Footer:
         # To do this, we need to reset, and then re-apply partitioning, to get
         # the unswizzled name
         output.reset()
-        program.apply_partitioning(output)
+        program.apply_all_partitioning(output)
         part_name = output.tensor_name()
 
         # Generate undo swizzle code if necessary
         if curr_name != part_name:
             footer.add(TransUtils.build_swizzle(output, curr_name))
 
-        # Now, undo partitioning
-        partitioner = Partitioner(program, trans_utils)
-        footer.add(partitioner.unpartition(program.get_output()))
+        footer.add(partitioner.unpartition(output))
 
         # After resetting the output tensor, make sure that it still knows that
         # it is the output

@@ -23,7 +23,7 @@ SOFTWARE.
 
 Translate the partitiong specification
 """
-from typing import cast
+from typing import cast, Set
 
 from lark.tree import Tree
 
@@ -46,12 +46,12 @@ class Partitioner:
         self.program = program
         self.trans_utils = trans_utils
 
-    def partition(self, tensor: Tensor) -> Statement:
+    def partition(self, tensor: Tensor, inds: Set[str]) -> Statement:
         """
         Partition the given tensor according to the stored program
         """
         # Check if we need to partition at all
-        partitioning = self.program.get_partitioning(tensor)
+        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, inds)
         if not partitioning:
             return cast(Statement, SBlock([]))
 
@@ -71,20 +71,27 @@ class Partitioner:
                 continue
 
             for j, part in enumerate(partitioning[ind]):
-                if part.data == "uniform_shape":
-                    block.add(self._uniform_shape(part, i + j))
-                elif part.data == "nway_shape":
-                    block.add(self._nway_shape(ind, part, i))
+                if part.data == "nway_shape":
+                    block.add(self.__nway_shape(ind, part, i))
+
+                elif part.data == "uniform_occupancy":
+                    block.add(self.__uniform_occupancy(tensor, part))
+
+                elif part.data == "uniform_shape":
+                    block.add(self.__uniform_shape(part, i + j))
+
                 else:
                     # Note: there is no good way to test this error. Bad
                     # partitioning styles should be caught by the
-                    # PartitioningParser
+                    # Partitioning
                     raise ValueError(
                         "Unknown partitioning style: " +
                         part.data)  # pragma: no cover
 
+            # Finally, update the tensor with this partition
+            self.program.apply_partitioning(tensor, ind)
+
         # Rename the tensor
-        self.program.apply_partitioning(tensor)
         part_name = cast(Assignable, AVar(tensor.tensor_name()))
         tmp_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
         block.add(cast(Statement, SAssign(part_name, tmp_expr)))
@@ -103,7 +110,8 @@ class Partitioner:
         tensor.reset()
 
         # Get the partitioning
-        partitioning = self.program.get_partitioning(tensor)
+        inds = set(self.program.get_partitioning().get_all_parts().keys())
+        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, inds)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])
@@ -142,7 +150,7 @@ class Partitioner:
 
         return cast(Statement, block)
 
-    def _nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
+    def __nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
         """
         Partition into the given number of partitions in coordinate space
         """
@@ -163,9 +171,37 @@ class Partitioner:
         step = EBinOp(cast(Expression, fdiv), cast(Operator, OAdd()), one_expr)
 
         # Build the splitUniform
-        return self._split_uniform(cast(Expression, step), depth)
+        return self.__split_uniform(cast(Expression, step), depth)
 
-    def _split_uniform(self, step: Expression, depth: int) -> Statement:
+    def __split_equal(self, size: int) -> Statement:
+        """
+        Build call to splitEqual
+        """
+        arg = cast(Argument, AJust(cast(Expression, EInt(size))))
+        part_call = EMethod(self.trans_utils.curr_tmp(), "splitEqual", [arg])
+
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
+        part_assn = SAssign(next_tmp, cast(Expression, part_call))
+
+        return cast(Statement, part_assn)
+
+    def __split_follower(self, leader: str) -> Statement:
+        """
+        Build a call to splitNonUniform
+        """
+        fiber = EVar(self.program.get_tensor(leader).fiber_name())
+        arg = cast(Argument, AJust(cast(Expression, fiber)))
+        part_call = EMethod(
+            self.trans_utils.curr_tmp(),
+            "splitNonUniform",
+            [arg])
+
+        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
+        part_assn = SAssign(next_tmp, cast(Expression, part_call))
+
+        return cast(Statement, part_assn)
+
+    def __split_uniform(self, step: Expression, depth: int) -> Statement:
         """
         Build a call to splitUniform
         """
@@ -181,7 +217,19 @@ class Partitioner:
 
         return cast(Statement, part_assn)
 
-    def _uniform_shape(self, part: Tree, depth: int) -> Statement:
+    def __uniform_occupancy(self, tensor: Tensor, part: Tree) -> Statement:
+        """
+        Partition with a uniform occupancy
+        """
+        leader = self.program.get_partitioning().get_leader(part)
+        size = ParseUtils.find_int(part, "size")
+
+        if tensor.root_name() == leader:
+            return self.__split_equal(size)
+        else:
+            return self.__split_follower(leader)
+
+    def __uniform_shape(self, part: Tree, depth: int) -> Statement:
         """
         Partition with a uniform shape
         """
@@ -189,4 +237,4 @@ class Partitioner:
         step = ParseUtils.next_int(part)
 
         # Build the splitUniform()
-        return self._split_uniform(cast(Expression, EInt(step)), depth)
+        return self.__split_uniform(cast(Expression, EInt(step)), depth)

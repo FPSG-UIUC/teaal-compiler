@@ -67,7 +67,7 @@ class Equation:
                 self.term_dict[factor] = i
 
         # Finally, get the name of the output
-        self.output = ParseUtils.next_str(next(einsum.find_data("output")))
+        self.output = ParseUtils.find_str(einsum, "output")
         if self.output in self.term_dict.keys():
             raise ValueError(self.output +
                              " appears multiple times in the einsum")

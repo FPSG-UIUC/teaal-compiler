@@ -39,38 +39,57 @@ class IterationGraph:
         """
         Construct a new IterationGraph
         """
+        self.program = program
+
+        # Track the current location in the iteration graph
+        self.pos = 0
+
+        # Configure the iteration graph
+        self.config()
+
+    def config(self) -> None:
+        """
+        Configure the iteration graph
+        """
         # Add a None to the end of the loop_order for the bottom of the loop
         # nest
-        self.loop_order = cast(List[Optional[str]],
-                               program.get_loop_order().copy()) + [None]
+        loop_order = self.program.get_curr_loop_order()
+        self.loop_order = cast(List[Optional[str]], loop_order.copy()) + [None]
 
         # Place the tensors in the appropriate locations in the iteration graph
         self.graph: List[List[Tensor]] = []
         for ind in self.loop_order:
             self.graph.append([])
-            for tensor in program.get_tensors():
+            for tensor in self.program.get_tensors():
                 if tensor.peek() == ind:
                     self.graph[-1].append(tensor)
+
+        # Note that our position in the iteration graph should not move if we
+        # are doing an update
 
     def peek(self) -> Tuple[Optional[str], List[Tensor]]:
         """
         Peek at the next iteration
         """
-        ind = self.loop_order[0]
-        return ind, self.graph[0]
+        ind = self.loop_order[self.pos]
+        return ind, self.graph[self.pos]
 
     def pop(self) -> Tuple[Optional[str], List[Tensor]]:
         """
         Pop the next iteration off the graph
         """
         # Pop off the next iteration
-        ind = self.loop_order.pop(0)
-        tensors = self.graph.pop(0)
+        ind = self.loop_order[self.pos]
+        tensors = self.graph[self.pos]
+        self.graph[self.pos] = []
 
         # Update each of the tensors and re-insert them into the graph at the
         # appropriate location
         for tensor in tensors:
             tensor.pop()
             self.graph[self.loop_order.index(tensor.peek())].append(tensor)
+
+        # Update the position in the iteration graph
+        self.pos += 1
 
         return ind, tensors

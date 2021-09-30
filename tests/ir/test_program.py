@@ -1,5 +1,6 @@
 import pytest
 
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
@@ -52,8 +53,8 @@ def create_partitioned():
     mapping:
         partitioning:
             Z:
-                K: [uniform_shape(6), uniform_shape(3)]
-                M: [uniform_shape(5)]
+                K: [uniform_occupancy(A.5)]
+                M: [uniform_shape(6), uniform_shape(3)]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -127,56 +128,197 @@ def test_add_einsum_missing_decl():
     assert str(excinfo.value) == "Undeclared tensor: C"
 
 
-def test_apply_loop_order_unconfigured():
+def test_apply_all_partitioning_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_loop_order(Tensor("A", ["K", "M"]))
+        program.apply_all_partitioning(Tensor("A", ["K", "M"]))
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_apply_loop_order_default():
+def test_apply_all_partitioning_default():
     program = create_default()
     program.add_einsum(0)
-    program.apply_loop_order(program.get_tensors()[2])
+    program.apply_all_partitioning(program.get_tensors()[1])
 
-    assert program.get_tensors()[2] == Tensor("B", ["N", "K"])
+    assert program.get_tensors()[1] == Tensor("A", ["K", "M"])
 
 
-def test_apply_loop_order_ordered():
+def test_apply_all_partitioning_mapped():
+    program = create_partitioned()
+    program.add_einsum(0)
+    program.apply_all_partitioning(program.get_tensors()[1])
+
+    assert program.get_tensors()[1] == Tensor(
+        "A", ["K1", "K0", "M2", "M1", "M0"])
+
+
+def test_apply_curr_loop_order_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.apply_curr_loop_order(Tensor("A", ["K", "M"]))
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_apply_curr_loop_order():
     program = create_loop_ordered()
     program.add_einsum(0)
-    program.apply_loop_order(program.get_tensors()[0])
+    program.apply_curr_loop_order(program.get_output())
 
     Z = Tensor("Z", ["N", "M"])
     Z.set_is_output(True)
-    assert program.get_tensors()[0] == Z
+    assert program.get_output() == Z
+
+
+def test_apply_final_loop_order_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.apply_final_loop_order(Tensor("A", ["K", "M"]))
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_apply_final_loop_order():
+    program = create_loop_ordered()
+    program.add_einsum(0)
+    program.apply_final_loop_order(program.get_output())
+
+    Z = Tensor("Z", ["N", "M"])
+    Z.set_is_output(True)
+    assert program.get_output() == Z
+
+
+def test_apply_final_loop_order_partitioned():
+    program = create_partitioned()
+    program.add_einsum(0)
+
+    program.apply_all_partitioning(program.get_output())
+    program.apply_final_loop_order(program.get_output())
+
+    Z = Tensor("Z", ["M2", "M1", "M0", "N"])
+    Z.set_is_output(True)
+    assert program.get_output() == Z
 
 
 def test_apply_partitioning_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_partitioning(Tensor("A", ["K", "M"]))
+        program.apply_partitioning(Tensor("A", ["K", "M"]), "K")
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_apply_partitioning_default():
-    program = create_default()
-    program.add_einsum(0)
-    program.apply_partitioning(program.get_tensors()[2])
-
-    assert program.get_tensors()[2] == Tensor("B", ["K", "N"])
-
-
-def test_apply_partitiong_mapped():
+def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensors()[2])
+    program.apply_partitioning(program.get_tensors()[1], "M")
 
-    assert program.get_tensors()[2] == Tensor("B", ["K2", "K1", "K0", "N"])
+    assert program.get_tensors()[1] == Tensor("A", ["K", "M2", "M1", "M0"])
+
+
+def test_get_curr_loop_order_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_curr_loop_order()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_curr_loop_order():
+    program = create_loop_ordered()
+    program.add_einsum(0)
+
+    assert program.get_curr_loop_order() == ["K", "N", "M"]
+
+
+def test_get_curr_loop_order_partitioned():
+    program = create_partitioned()
+    program.add_einsum(0)
+    assert program.get_curr_loop_order() == ["M", "N", "K"]
+
+    program.start_partitioning("M")
+    assert program.get_curr_loop_order() == ["M2", "M1", "M0", "N", "K"]
+
+
+def test_get_einsum_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_einsum()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_einsum():
+    program = create_default()
+    program.add_einsum(0)
+
+    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+    assert program.get_einsum() == equation
+
+
+def test_get_final_loop_order_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_final_loop_order()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_final_loop_order():
+    program = create_loop_ordered()
+    program.add_einsum(0)
+
+    assert program.get_final_loop_order() == ["K", "N", "M"]
+
+
+def test_get_final_loop_order_partitioned():
+    program = create_partitioned()
+    program.add_einsum(0)
+    assert program.get_final_loop_order() == [
+        "M2", "M1", "M0", "N", "K1", "K0"]
+
+
+def test_get_output_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_output()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_output():
+    program = create_default()
+    program.add_einsum(0)
+
+    result = Tensor("Z", ["M", "N"])
+    result.set_is_output(True)
+
+    assert program.get_output() == result
+
+
+def test_get_partitioning_unconfigured():
+    program = create_partitioned()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_partitioning()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_partitioning():
+    program = create_default()
+    program.add_einsum(0)
+
+    assert program.get_partitioning() == Partitioning({}, ["M", "N", "K"])
 
 
 def test_get_spacetime_unconfigured():
@@ -204,98 +346,37 @@ def test_get_spacetime_specified():
         "time": [
             SpaceTimeParser.parse("K.pos"),
             SpaceTimeParser.parse("M.coord")]}
-    spacetime = SpaceTime(yaml, program.get_loop_order(), {},
-                          program.get_output().root_name())
+    spacetime = SpaceTime(yaml, Partitioning(
+        {}, ["M", "N", "K"]), program.get_output().root_name())
     assert program.get_spacetime() == spacetime
 
 
-def test_get_einsum_unconfigured():
+def test_get_tensor_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_einsum()
+        program.get_tensor("Z")
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_get_einsum():
+def test_get_tensor():
     program = create_default()
     program.add_einsum(0)
 
-    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
-    assert program.get_einsum() == equation
+    Z = Tensor("Z", ["M", "N"])
+    Z.set_is_output(True)
+
+    assert program.get_tensor("Z") == Z
 
 
-def test_get_loop_order_unconfigured():
+def test_get_tensor_missing_tensor():
     program = create_default()
+    program.add_einsum(0)
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_loop_order()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_loop_order_default():
-    program = create_default()
-    program.add_einsum(0)
-
-    assert program.get_loop_order() == ["M", "N", "K"]
-
-
-def test_get_loop_order_ordered():
-    program = create_loop_ordered()
-    program.add_einsum(0)
-
-    assert program.get_loop_order() == ["K", "N", "M"]
-
-
-def test_get_loop_order_default_partitioned():
-    program = create_partitioned()
-    program.add_einsum(0)
-    assert program.get_loop_order() == ["M1", "M0", "N", "K2", "K1", "K0"]
-
-
-def test_get_output_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_output()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_output():
-    program = create_default()
-    program.add_einsum(0)
-
-    result = Tensor("Z", ["M", "N"])
-    result.set_is_output(True)
-
-    assert program.get_output() == result
-
-
-def test_get_partitioning_unconfigured():
-    program = create_partitioned()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_partitioning(Tensor("A", ["K", "M"]))
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_partitioning_default():
-    program = create_default()
-    program.add_einsum(0)
-
-    assert program.get_partitioning(Tensor("A", ["K", "M"])) == {}
-
-
-def test_get_partitioning_mapped():
-    program = create_partitioned()
-    program.add_einsum(0)
-
-    assert program.get_partitioning(Tensor("B", ["K", "N"])) == {
-        "K": make_uniform_shape([6, 3])}
+        program.get_tensor("C")
+    assert str(excinfo.value) == "Unknown tensor C"
 
 
 def test_get_tensors_unconfigured():
@@ -336,22 +417,22 @@ def test_reset():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_loop_order(tensor)
+        program.apply_curr_loop_order(tensor)
 
     program.reset()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_spacetime()
+        program.get_curr_loop_order()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_loop_order()
+        program.get_einsum()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_partitioning(Tensor("A", ["M", "K"]))
+        program.get_partitioning()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
@@ -370,40 +451,33 @@ def test_reset():
     assert program.get_tensors() == [Z, A, B]
 
 
-def test_default_loop_order_unconfigured():
-    yaml = """
-    einsum:
-        declaration:
-            Z: [M, N]
-            A: [K, M]
-            B: [K, N]
-            C: [M, N]
-        expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
-    """
-    einsum = Einsum.from_str(yaml)
-    mapping = Mapping.from_str(yaml)
-    program = Program(einsum, mapping)
+def test_start_partitioning_unconfigured():
+    program = create_partitioned()
+
     with pytest.raises(ValueError) as excinfo:
-        program._Program__default_loop_order()
-    assert str(excinfo.value) == "Must first set the einsum"
+        program.start_partitioning("M")
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_default_loop_order_no_partitioning():
-    yaml = """
-    einsum:
-        declaration:
-            Z: [M, N]
-            A: [K, M]
-            B: [K, N]
-            C: [M, N]
-        expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
-    """
-    einsum = Einsum.from_str(yaml)
-    mapping = Mapping.from_str(yaml)
-    program = Program(einsum, mapping)
-    program.equation = einsum.get_expressions()[0]
-    with pytest.raises(ValueError) as excinfo:
-        program._Program__default_loop_order()
-    assert str(excinfo.value) == "Must configure partitioning before loop order"
+def test_start_partitioning_mapped():
+    program = create_partitioned()
+    program.add_einsum(0)
+
+    program.start_partitioning("M")
+
+    assert program.get_curr_loop_order() == ["M2", "M1", "M0", "N", "K"]
+
+
+def test_start_partitioning_dynamic():
+    program = create_partitioned()
+    program.add_einsum(0)
+
+    for tensor in program.get_tensors():
+        program.apply_curr_loop_order(tensor)
+        tensor.pop()
+
+    program.start_partitioning("K")
+
+    assert program.get_tensor("A") == Tensor("A", ["K"])
+    assert program.get_tensor("B") == Tensor("B", ["K"])

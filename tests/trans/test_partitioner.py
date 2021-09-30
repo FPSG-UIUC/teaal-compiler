@@ -4,11 +4,17 @@ from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.partitioning import Partitioner
+from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
 def assert_partition(tensor, parts, hfa):
+    program, partitioner = build_partitioner(tensor, parts)
+    inds = program.get_partitioning().get_all_parts().keys()
+    assert partitioner.partition(tensor, inds).gen(depth=0) == hfa
+
+
+def build_partitioner(tensor, parts):
     yaml = """
     einsum:
         declaration:
@@ -25,27 +31,12 @@ def assert_partition(tensor, parts, hfa):
     program.add_einsum(0)
 
     partitioner = Partitioner(program, TransUtils())
-    assert partitioner.partition(tensor).gen(depth=0) == hfa
+    return program, partitioner
 
 
 def test_no_partitioning():
     tensor = Tensor("B", ["I", "K"])
     assert_partition(tensor, "", "")
-
-
-def test_uniform_shape():
-    tensor = Tensor("B", ["K", "N"])
-    part = """
-                M: [uniform_shape(5)]
-                N: [uniform_shape(6), uniform_shape(3)]
-    """
-    hfa = "tmp0 = B_KN\n" + \
-          "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
-          "tmp2 = tmp1.splitUniform(3, depth=2)\n" + \
-          "B_KN2N1N0 = tmp2\n" + \
-          "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
-
-    assert_partition(tensor, part, hfa)
 
 
 def test_nway_shape():
@@ -57,6 +48,49 @@ def test_nway_shape():
     hfa = "tmp0 = B_KN\n" + \
           "tmp1 = tmp0.splitUniform((N - 1) // 6 + 1, depth=1)\n" + \
           "tmp2 = tmp1.splitUniform((N - 1) // 3 + 1, depth=1)\n" + \
+          "B_KN2N1N0 = tmp2\n" + \
+          "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
+
+    assert_partition(tensor, part, hfa)
+
+
+def test_uniform_occupancy_leader():
+    tensor = Tensor("A", ["K", "M"])
+    part = """
+                K: [uniform_occupancy(A.5)]
+    """
+    hfa = "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitEqual(5)\n" + \
+          "A_K1K0M = tmp1\n" + \
+          "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
+
+    assert_partition(tensor, part, hfa)
+
+
+def test_uniform_occupancy_follower():
+    tensor = Tensor("B", ["K", "N"])
+    part = """
+                K: [uniform_occupancy(A.5)]
+    """
+    hfa = "tmp0 = B_KN\n" + \
+          "tmp1 = tmp0.splitNonUniform(a_k1)\n" + \
+          "B_K1K0N = tmp1\n" + \
+          "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])"
+
+    program, partitioner = build_partitioner(tensor, part)
+    program.apply_partitioning(program.get_tensor("A"), "K")
+    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
+
+
+def test_uniform_shape():
+    tensor = Tensor("B", ["K", "N"])
+    part = """
+                M: [uniform_shape(5)]
+                N: [uniform_shape(6), uniform_shape(3)]
+    """
+    hfa = "tmp0 = B_KN\n" + \
+          "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
+          "tmp2 = tmp1.splitUniform(3, depth=2)\n" + \
           "B_KN2N1N0 = tmp2\n" + \
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
@@ -80,7 +114,7 @@ def assert_unpartition(part, hfa):
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_partitioning(tensor)
+        program.apply_all_partitioning(tensor)
 
     partitioner = Partitioner(program, TransUtils())
     assert partitioner.unpartition(program.get_output()).gen(0) == hfa

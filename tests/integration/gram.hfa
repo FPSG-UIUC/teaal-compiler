@@ -8,10 +8,10 @@ for i, (g0_i_, a_j) in g0_i << a_i:
             for k, (a_val, b0_val) in a_k & b0_k:
                 g0_ref += a_val * b0_val
 G1_JJ_ = Tensor(rank_ids=["J", "J_"])
-g1_j = G1_JJ_.getRoot()
 A_JIK = A_IJK.swizzleRanks(rank_ids=["J", "I", "K"])
-a_j = A_JIK.getRoot()
 B1_J_IK = B1_IJ_K.swizzleRanks(rank_ids=["J_", "I", "K"])
+g1_j = G1_JJ_.getRoot()
+a_j = A_JIK.getRoot()
 b1_j_ = B1_J_IK.getRoot()
 for j, (g1_j_, a_i) in g1_j << a_j:
     for j_, (g1_ref, b1_i) in g1_j_ << b1_j_:
@@ -19,10 +19,10 @@ for j, (g1_j_, a_i) in g1_j << a_j:
             for k, (a_val, b1_val) in a_k & b1_k:
                 g1_ref += a_val * b1_val
 G2_KK_ = Tensor(rank_ids=["K", "K_"])
-g2_k = G2_KK_.getRoot()
 A_KIJ = A_IJK.swizzleRanks(rank_ids=["K", "I", "J"])
-a_k = A_KIJ.getRoot()
 B2_K_IJ = B2_IJK_.swizzleRanks(rank_ids=["K_", "I", "J"])
+g2_k = G2_KK_.getRoot()
+a_k = A_KIJ.getRoot()
 b2_k_ = B2_K_IJ.getRoot()
 for k, (g2_k_, a_i) in g2_k << a_k:
     for k_, (g2_ref, b2_i) in g2_k_ << b2_k_:

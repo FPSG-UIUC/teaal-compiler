@@ -50,6 +50,16 @@ class Tensor:
         self.ind_ptr = 0
         self.is_output = False
 
+    @classmethod
+    def from_tensor(cls, parent: "Tensor") -> "Tensor":
+        """
+        Construct a new Tensor from the current fiber
+        """
+        child = cls(parent.root_name(), parent.get_inds()[parent.ind_ptr:])
+        child.set_is_output(parent.get_is_output())
+
+        return child
+
     def fiber_name(self) -> str:
         """
         Return the current fiber name for this tensor
@@ -73,6 +83,12 @@ class Tensor:
         Return a (capitalized) list of indices for this tensor
         """
         return self.inds
+
+    def get_is_output(self) -> bool:
+        """
+        Returns true if this tensor is an output tensor
+        """
+        return self.is_output
 
     def partition(self, partitioning: Dict[str, List[Tree]]) -> None:
         """

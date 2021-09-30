@@ -21,14 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Intermediate representation of display information
+Intermediate representation of the display information
 """
 
-from collections import Counter
+from typing import List, Optional
 
-from lark.tree import Tree
-from typing import Dict, List, Optional
-
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.parse.utils import ParseUtils
 
 
@@ -39,11 +37,10 @@ class SpaceTime:
 
     def __init__(self,
                  yaml: dict,
-                 loop_order: List[str],
-                 partitioning: Dict[str, List[Tree]],
+                 partitioning: Partitioning,
                  out_name: str) -> None:
         """
-        Build the display object
+        Build the spacetime object
         """
         self.styles = {}
 
@@ -81,16 +78,10 @@ class SpaceTime:
             self.time.append(ind)
             self.styles[ind] = tree.data
 
-        # Make sure that all indices are scheduled
-        if Counter(loop_order) != Counter(self.space + self.time):
-            raise ValueError(
-                "Incorrect schedule for spacetime on output " +
-                out_name)
-
         # Find the offset index name associated with the partitioned indices
         self.offsets = {}
-        for ind in partitioning:
-            for i in range(len(partitioning[ind])):
+        for ind, parts in partitioning.get_all_parts().items():
+            for i in range(len(parts)):
                 self.offsets[ind + str(i)] = ind + str(i + 1)
 
         # Store slip if it is specified
