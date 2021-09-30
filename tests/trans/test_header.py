@@ -120,7 +120,7 @@ def test_make_loop_header_leader():
                 M: [uniform_occupancy(A.6)]
     """
 
-    hfa = "A_MK = Tensor.fromFiber(a_m)\n" + \
+    hfa = "A_MK = Tensor.fromFiber(rank_ids=[\"M\", \"K\"], fiber=a_m)\n" + \
           "tmp0 = A_MK\n" + \
           "tmp1 = tmp0.splitEqual(6)\n" + \
           "A_M1M0K = tmp1\n" + \
@@ -141,13 +141,13 @@ def test_make_loop_header_follower():
                 K: [uniform_occupancy(A.6)]
     """
 
-    hfa = "A_KM = Tensor.fromFiber(a_k)\n" + \
+    hfa = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)\n" + \
           "tmp0 = A_KM\n" + \
           "tmp1 = tmp0.splitEqual(6)\n" + \
           "A_K1K0M = tmp1\n" + \
           "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
           "a_k1 = A_K1K0M.getRoot()\n" + \
-          "B_KN = Tensor.fromFiber(b_k)\n" + \
+          "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k)\n" + \
           "tmp2 = B_KN\n" + \
           "tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
           "B_K1K0N = tmp3\n" + \
@@ -168,14 +168,14 @@ def test_make_loop_header_swizzle():
                 K: [uniform_occupancy(A.6)]
     """
 
-    hfa = "A_KM = Tensor.fromFiber(a_k)\n" + \
+    hfa = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)\n" + \
           "tmp0 = A_KM\n" + \
           "tmp1 = tmp0.splitEqual(6)\n" + \
           "A_K1K0M = tmp1\n" + \
           "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
           "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])\n" + \
           "a_k1 = A_K1MK0.getRoot()\n" + \
-          "B_K = Tensor.fromFiber(b_k)\n" + \
+          "B_K = Tensor.fromFiber(rank_ids=[\"K\"], fiber=b_k)\n" + \
           "tmp2 = B_K\n" + \
           "tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
           "B_K1K0 = tmp3\n" + \

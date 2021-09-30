@@ -104,14 +104,14 @@ def test_dynamic_partitioning():
     """
 
     hfa = "for n, (z_m, b_k) in z_n << b_n:\n" + \
-          "    A_KM = Tensor.fromFiber(a_k)\n" + \
+          "    A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)\n" + \
           "    tmp0 = A_KM\n" + \
           "    tmp1 = tmp0.splitEqual(6)\n" + \
           "    A_K1K0M = tmp1\n" + \
           "    A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
           "    A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])\n" + \
           "    a_k1 = A_K1MK0.getRoot()\n" + \
-          "    B_K = Tensor.fromFiber(b_k)\n" + \
+          "    B_K = Tensor.fromFiber(rank_ids=[\"K\"], fiber=b_k)\n" + \
           "    tmp2 = B_K\n" + \
           "    tmp3 = tmp2.splitNonUniform(a_k1)\n" + \
           "    B_K1K0 = tmp3\n" + \

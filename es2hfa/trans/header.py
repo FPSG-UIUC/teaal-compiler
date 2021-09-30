@@ -161,9 +161,13 @@ class Header:
         """
         Get a tensor from the current fiber
         """
+        inds = [cast(Expression, EString(ind)) for ind in tensor.get_inds()]
+        inds_list = cast(Expression, EList(inds))
         fiber_name = cast(Expression, EVar(tensor.fiber_name()))
-        fiber_name_arg = cast(Argument, AJust(fiber_name))
-        from_fiber = EMethod("Tensor", "fromFiber", [fiber_name_arg])
+        args = [cast(Argument, AParam("rank_ids", inds_list)),
+                cast(Argument, AParam("fiber", fiber_name))]
+
+        from_fiber = EMethod("Tensor", "fromFiber", args)
         from_fiber_expr = cast(Expression, from_fiber)
 
         tensor_name = cast(Assignable, AVar(tensor.tensor_name()))
