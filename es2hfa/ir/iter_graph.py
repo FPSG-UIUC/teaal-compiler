@@ -87,7 +87,12 @@ class IterationGraph:
         # appropriate location
         for tensor in tensors:
             tensor.pop()
-            self.graph[self.loop_order.index(tensor.peek())].append(tensor)
+
+            # The output tensor may not have the correct indices right now, it
+            # is fine to just drop it from the iteration graph because it will
+            # be re-inserted after the config()
+            if not tensor.get_is_output() or tensor.peek() in self.loop_order:
+                self.graph[self.loop_order.index(tensor.peek())].append(tensor)
 
         # Update the position in the iteration graph
         self.pos += 1

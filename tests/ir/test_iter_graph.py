@@ -156,3 +156,45 @@ def test_pop_order():
     assert graph.pop() == ("K", [B, C])
     assert graph.pop() == ("I", [A, B])
     assert graph.peek() == (None, [C, A, B])
+
+
+def test_pop_occupancy_partitioning():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_occupancy(A.5)]
+                N: [uniform_occupancy(B.6)]
+        loop-order:
+            Z: [M1, N1, K, M0, N0]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    for tensor in program.get_tensors():
+        program.apply_curr_loop_order(tensor)
+    graph = IterationGraph(program)
+
+    # First apply all partitioning/loop order to the output tensor
+    output = program.get_output()
+    program.apply_all_partitioning(output)
+    program.apply_final_loop_order(output)
+
+    # Apply the partitioning to the A tensor
+    program.start_partitioning("M")
+    A = next(tensor for tensor in program.get_tensors()
+             if tensor.root_name() == "A")
+    program.apply_partitioning(A, "M")
+
+    # Reconfigure the graph
+    graph.config()
+
+    # Make sure that there are no errors on pop
+    assert graph.pop()[0] == "M1"

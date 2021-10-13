@@ -14,6 +14,8 @@
 - [ ] Update naming scheme
     - [ ] `ind` -> `rank_id`
     - [ ] `dim` or `dimension` -> `rank`
+    - [ ] Call display spacetime
+- [ ] Introduce .coord in spacetime notebook before .pos/default
 
 ## Major Changes
 
@@ -31,4 +33,3 @@
 - [ ] How should we specify multiple levels of occupancy-based partitioning
 
 ## Other
-
