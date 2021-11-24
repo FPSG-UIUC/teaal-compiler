@@ -287,9 +287,9 @@ class Program:
         self.partitioning.partition_dim(ind)
         self.loop_order.update_loop_order()
 
-        # Prepare each of the tensors
-        self.es_tensors = [Tensor.from_tensor(
-            tensor) for tensor in self.es_tensors]
+        # Prepare each of the input tensors
+        self.es_tensors = [self.es_tensors[0]] + \
+            [Tensor.from_tensor(tensor) for tensor in self.es_tensors[1:]]
 
     def __get_tensor(self, tensor: Tree) -> Tensor:
         """

@@ -89,7 +89,7 @@ def test_translate_specified():
     assert str(HFA(einsum, mapping)) == hfa
 
 
-def test_hfa_hmmm():
+def test_hfa_dyn_part():
     yaml = """
     einsum:
         declaration:
@@ -128,3 +128,8 @@ def test_hfa_hmmm():
           "tmp3 = tmp2.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
           "T1_MKN = tmp3\n" + \
           "T1_MKN.setRankIds(rank_ids=[\"M\", \"K\", \"N\"])"
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    assert str(HFA(einsum, mapping)) == hfa
