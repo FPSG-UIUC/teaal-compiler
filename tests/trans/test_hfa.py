@@ -87,3 +87,44 @@ def test_translate_specified():
           "Z_NM = tmp12\n" + \
           "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
     assert str(HFA(einsum, mapping)) == hfa
+
+
+def test_hfa_hmmm():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            T1: [K, M, N]
+        expressions:
+            - T1[k, m, n] = A[k, m] * B[k, n]
+    mapping:
+        rank-order:
+            A: [K, M]
+            B: [K, N]
+            T1: [M, K, N]
+        partitioning:
+            T1:
+                M: [uniform_occupancy(A.16)]
+    """
+
+    hfa = "T1_M1M0KN = Tensor(rank_ids=[\"M1\", \"M0\", \"K\", \"N\"])\n" + \
+          "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
+          "t1_m1 = T1_M1M0KN.getRoot()\n" + \
+          "a_m = A_MK.getRoot()\n" + \
+          "b_k = B_KN.getRoot()\n" + \
+          "A_MK = Tensor.fromFiber(rank_ids=[\"M\", \"K\"], fiber=a_m)\n" + \
+          "tmp0 = A_MK\n" + \
+          "tmp1 = tmp0.splitEqual(16)\n" + \
+          "A_M1M0K = tmp1\n" + \
+          "A_M1M0K.setRankIds(rank_ids=[\"M1\", \"M0\", \"K\"])\n" + \
+          "a_m1 = A_M1M0K.getRoot()\n" + \
+          "for m1, (t1_m0, a_m0) in t1_m1 << a_m1:\n" + \
+          "    for m0, (t1_k, a_k) in t1_m0 << a_m0:\n" + \
+          "        for k, (t1_n, (a_val, b_n)) in t1_k << (a_k & b_k):\n" + \
+          "            for n, (t1_ref, b_val) in t1_n << b_n:\n" + \
+          "                t1_ref += a_val * b_val\n" + \
+          "tmp2 = T1_M1M0KN\n" + \
+          "tmp3 = tmp2.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+          "T1_MKN = tmp3\n" + \
+          "T1_MKN.setRankIds(rank_ids=[\"M\", \"K\", \"N\"])"
