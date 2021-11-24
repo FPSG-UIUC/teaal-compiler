@@ -51,6 +51,18 @@ def test_get_curr_ind_name():
     assert partitioning.get_curr_ind_name("M0") is None
 
 
+def test_get_dyn_ind():
+    all_parts = """
+                M: [uniform_occupancy(A.6)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], ["M", "N", "K"])
+
+    assert partitioning.get_dyn_ind("m") == "m0"
+    assert partitioning.get_dyn_ind("m1") == "m1"
+    assert partitioning.get_dyn_ind("n") == "n"
+
+
 def test_get_dynamic_partitioning():
     all_parts = """
                 K: [uniform_shape(4)]

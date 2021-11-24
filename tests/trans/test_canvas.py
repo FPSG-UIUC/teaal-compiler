@@ -61,6 +61,27 @@ def create_partitioned(style):
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
+def create_dyn_partitioned():
+    yaml = """
+    einsum:
+        declaration:
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_occupancy(A.5)]
+        spacetime:
+            Z:
+                space: []
+                time: [K, M1, M0, N]
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+
+
 def create_slip():
     yaml = """
     einsum:
@@ -190,6 +211,18 @@ def test_add_activity_slip():
     canvas.create_canvas()
 
     hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
+    assert canvas.add_activity().gen(0) == hfa
+
+
+def test_add_activity_dyn_part():
+    program = create_dyn_partitioned()
+    program.add_einsum(0)
+    program.apply_all_partitioning(program.get_output())
+
+    canvas = Canvas(program)
+    canvas.create_canvas()
+
+    hfa = "canvas.addActivity((k, m0), (k, n), (m1, m0, n), spacetime=((), (k_pos, m1_pos, m0_pos, n_pos)))"
     assert canvas.add_activity().gen(0) == hfa
 
 

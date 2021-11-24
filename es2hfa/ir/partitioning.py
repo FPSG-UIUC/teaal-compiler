@@ -102,6 +102,15 @@ class Partitioning:
         """
         return self.curr_ind_name[ind]
 
+    def get_dyn_ind(self, ind: str) -> str:
+        """
+        Convert from a (potentially) static index name to the corresponding
+        dynamic index name
+        """
+        if ind[0].upper() + ind[1:] in self.dyn_parts.keys():
+            return ind + "0"
+        return ind
+
     def get_dyn_parts(self) -> Dict[str, List[Tree]]:
         """
         Get the partitioning information for all dynamically partitioned

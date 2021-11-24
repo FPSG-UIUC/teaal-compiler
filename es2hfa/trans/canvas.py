@@ -57,8 +57,9 @@ class Canvas:
         # Create tensor index arguments
         args = []
         for tensor in self.tensors:
-            access = [cast(Expression, EVar(ind))
-                      for ind in tensor.get_access()]
+            inds = [self.program.get_partitioning().get_dyn_ind(ind)
+                    for ind in tensor.get_access()]
+            access = [cast(Expression, EVar(ind)) for ind in inds]
             arg = AJust(cast(Expression, ETuple(access)))
             args.append(cast(Argument, arg))
 
