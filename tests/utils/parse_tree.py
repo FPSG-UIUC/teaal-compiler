@@ -10,6 +10,10 @@ def make_inds(type_, inds):
     return Tree(type_, [Token("NAME", i) for i in inds])
 
 
+def make_int(tensors, ind):
+    return Tree("int", tensors + [Token("NUMBER", ind)])
+
+
 def make_nway_shape(shapes):
     return [Tree("nway_shape", [Token("NUMBER", shape)])
             for shape in shapes]
@@ -32,7 +36,7 @@ def make_tensor(name, inds):
 
 
 def make_times(vars_):
-    return Tree("times", [make_var(var) for var in vars_])
+    return Tree("times", [Tree("single", [make_var(var)]) for var in vars_])
 
 
 def make_var(var):

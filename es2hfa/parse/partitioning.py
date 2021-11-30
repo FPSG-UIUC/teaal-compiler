@@ -42,7 +42,7 @@ class PartitioningParser:
         ?size: NUMBER -> size
 
         %import common.CNAME -> NAME
-        %import common.SIGNED_NUMBER -> NUMBER
+        %import common.NUMBER -> NUMBER
         %import common.WS_INLINE
 
         %ignore WS_INLINE

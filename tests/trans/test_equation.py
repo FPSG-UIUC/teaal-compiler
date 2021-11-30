@@ -36,7 +36,7 @@ def make_output():
             C: [I]
             D: [I]
         expressions:
-            - "A[I] = B[i] * C[i] * D[i]"
+            - "A[i] = B[i] * C[i] * D[i]"
     """
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -57,7 +57,25 @@ def make_mult_terms():
             E: [I]
             F: [I]
         expressions:
-            - "A[I] = B[i] * C[i] + D[i] * E[i] + F[i]"
+            - "A[i] = B[i] * C[i] + D[i] * E[i] + F[i]"
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    return IterationGraph(program), Equation(program)
+
+
+def make_int():
+    yaml = """
+    einsum:
+        declaration:
+            A: [M]
+            C: [M]
+            Z: [M]
+        expressions:
+            - Z[m] = int(A[m], b, C[m], 1)
     """
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -160,6 +178,15 @@ def test_make_iter_expr_mult_terms():
     assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
+def test_make_iter_expr_int():
+    graph, eqn = make_int()
+
+    ind, tensors = graph.peek()
+    iter_expr = "z_m << (a_m & c_m)"
+
+    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+
+
 def test_make_iter_display_coord():
     graph, eqn = make_display("coord", "")
 
@@ -223,6 +250,15 @@ def test_make_payload_mult_terms():
     assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
+def test_make_payload_int():
+    graph, eqn = make_int()
+
+    ind, tensors = graph.pop()
+    payload = "m, (z_ref, (a_val, c_val))"
+
+    assert eqn.make_payload(ind, tensors).gen(False) == payload
+
+
 def test_make_payload_display_coord():
     graph, eqn = make_display("coord", "")
 
@@ -267,4 +303,10 @@ def test_make_update_mult_terms():
     program = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]")
     eqn = Equation(program)
     stmt = "a_ref += b * b_val + c * c_val + d * d_val"
+    assert eqn.make_update().gen(depth=0) == stmt
+
+
+def test_make_update_int():
+    _, eqn = make_int()
+    stmt = "z_ref += b"
     assert eqn.make_update().gen(depth=0) == stmt

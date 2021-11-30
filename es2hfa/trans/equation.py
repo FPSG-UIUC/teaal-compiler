@@ -26,6 +26,9 @@ Representation of how tensors and variables are combined
 
 from typing import cast, Dict, List, Optional
 
+from lark.lexer import Token
+from lark.tree import Tree
+
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
@@ -45,17 +48,59 @@ class Equation:
         self.program = program
         einsum = self.program.get_einsum()
 
-        # First find all terms (terminals multiplied together)
+        # First find all terms (terminals multiplied or otherwise intersected
+        # together)
         self.terms: List[List[str]] = []
         self.vars: List[List[str]] = []
-        for term in einsum.find_data("times"):
+
+        self.factor_order: Dict[str, Tuple[int, int]] = {}
+        self.in_update: List[List[bool]] = []
+        for i, term in enumerate(einsum.find_data("times")):
             self.terms.append(cast(List[str], []))
             self.vars.append([])
 
-            for var in term.find_data("var"):
-                self.vars[-1].append(ParseUtils.next_str(var))
-            for tensor in term.find_data("tensor"):
-                self.terms[-1].append(ParseUtils.next_str(tensor))
+            self.in_update.append(cast(List[bool], []))
+
+            # Find all unfiltered factors
+            for single in term.find_data("single"):
+                for var in single.find_data("var"):
+                    self.vars[-1].append(ParseUtils.next_str(var))
+                    self.factor_order[self.vars[-1][-1]
+                                      ] = (i, len(self.in_update[-1]))
+                    self.in_update[-1].append(True)
+
+                for tensor in single.find_data("tensor"):
+                    self.terms[-1].append(ParseUtils.next_str(tensor))
+                    self.factor_order[self.terms[-1][-1]
+                                      ] = (i, len(self.in_update[-1]))
+                    self.in_update[-1].append(True)
+
+            # Find all factors intersected together
+            in_update_off = len(self.in_update[-1])
+            for int_ in term.find_data("int"):
+                for child in int_.children:
+                    if isinstance(child, Tree):
+                        if child.data == "var":
+                            self.vars[-1].append(ParseUtils.next_str(child))
+                            self.factor_order[self.vars[-1][-1]
+                                              ] = (i, len(self.in_update[-1]))
+                            self.in_update[-1].append(False)
+
+                        elif child.data == "tensor":
+                            self.terms[-1].append(ParseUtils.next_str(child))
+                            self.factor_order[self.terms[-1][-1]
+                                              ] = (i, len(self.in_update[-1]))
+                            self.in_update[-1].append(False)
+
+                        else:
+                            # Note: there is no way to test this error, bad
+                            # factors should be caught by the parser
+                            raise ValueError(
+                                "Unknown factor")  # pragma: no cover
+
+                    elif isinstance(child, Token):
+                        self.in_update[-1][in_update_off +
+                                           int(child.value)] = True
 
         # Now create the reverse dictionary of factors to term #
         self.term_dict: Dict[str, int] = {}
@@ -169,15 +214,13 @@ class Equation:
         # Combine the factors within a term
         products = []
         for i, term in enumerate(self.terms):
-            factors = [var for var in self.vars[i]] + \
-                [tensor[0].lower() + tensor[1:] + "_val" for tensor in term]
+            factors = [var for var in self.vars[i] if self.__in_update(var)] + \
+                [tensor[0].lower() + tensor[1:] + "_val" for tensor in term
+                    if self.__in_update(tensor)]
             product = cast(Expression, EVar(factors[0]))
             for factor in factors[1:]:
-                product = cast(
-                    Expression, EBinOp(
-                        product, cast(
-                            Operator, OMul()), cast(
-                            Expression, EVar(factor))))
+                product = cast(Expression, EBinOp(product, cast(
+                    Operator, OMul()), cast(Expression, EVar(factor))))
             products.append(product)
 
         # Combine the terms
@@ -230,6 +273,13 @@ class Equation:
             return output_tensor[0]
         else:
             return None
+
+    def __in_update(self, factor: str) -> bool:
+        """
+        Returns true if the factor should be included in the update
+        """
+        i, j = self.factor_order[factor]
+        return self.in_update[i][j]
 
     def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
         """

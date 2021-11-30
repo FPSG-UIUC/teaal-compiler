@@ -12,14 +12,9 @@ def test_einsum():
 
 def test_tensor():
     # Note: also tests inds parsing
-    tree = make_einsum(
-        make_output(
-            "A", [
-                "i", "j"]), Tree("plus", [Tree(
-                    "times", [
-                        make_tensor(
-                            "B", [
-                                "i", "j"])])]))
+    tree = make_einsum(make_output("A", ["i", "j"]),
+                       Tree("plus", [Tree("times", [Tree("single",
+                                          [make_tensor("B", ["i", "j"])])])]))
     assert EquationParser.parse("A[i, j] = B[i, j]") == tree
 
 
@@ -50,3 +45,10 @@ def test_times():
     tree = make_einsum(make_output("A", []), Tree(
         "plus", [make_times(["a", "b"])]))
     assert EquationParser.parse("A[] = a * b") == tree
+
+
+def test_int():
+    tree = make_einsum(make_output("T1", ["k", "m", "n"]), Tree("plus", [
+                       make_int([make_tensor("A", ["k", "m"]),
+                                 make_tensor("B", ["k", "n"])], 1)]))
+    # assert EquationParser.parse("T1[k, m, n] = int(A[k, m], B[k, n], 1)")

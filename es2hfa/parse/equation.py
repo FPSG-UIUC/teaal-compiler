@@ -19,6 +19,9 @@ class EquationParser:
         ?factor: NAME -> var
                | tensor
 
+        ?filter: factor -> single
+               | "int(" (factor ",")* factor "," NUMBER ")" -> int
+
         ?output: NAME "[" tinds "]"
 
         ?sum: "sum(" sinds ")." factor
@@ -28,11 +31,12 @@ class EquationParser:
 
         ?tensor: NAME "[" tinds "]"
 
-        ?term: (factor "*")* factor -> times
+        ?term: (filter "*")* filter -> times
 
         ?tinds: [NAME ("," NAME)*] -> tinds
 
         %import common.CNAME -> NAME
+        %import common.NUMBER -> NUMBER
         %import common.WS_INLINE
 
         %ignore WS_INLINE

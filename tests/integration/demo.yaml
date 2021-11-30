@@ -2,12 +2,17 @@ einsum:
     declaration:
         A: [K, M]
         B: [K, N]
-        O_p: [K, M, N]
-        O: [M, N]
+        T1: [K, M, N]
+        Z: [M, N]
     expressions:
-        - O_p[k, m, n] = A[k, m] * B[k, n]
-        - O[m, n] = sum(K).O_p[k, m, n]
+        - T1[k, m, n] = int(A[k, m], B[k, n], 1)
+        - Z[m, n] = sum(K).(T1[k, m, n] * A[k, m])
 mapping:
+    rank-order:
+        A: [M, K]
+        B: [K, N]
+        T1: [M, K, N]
+        Z: [M, N]
     loop-order:
-        O_p: [M, K, N]
-        O: [
+        T1: [M, K, N]
+        Z: [M, N, K]
