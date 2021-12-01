@@ -77,8 +77,8 @@ class Equation:
 
             # Find all factors intersected together
             in_update_off = len(self.in_update[-1])
-            for int_ in term.find_data("int"):
-                for child in int_.children:
+            for dot in term.find_data("dot"):
+                for child in dot.children:
                     if isinstance(child, Tree):
                         if child.data == "var":
                             self.vars[-1].append(ParseUtils.next_str(child))

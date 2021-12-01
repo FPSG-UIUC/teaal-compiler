@@ -10,8 +10,8 @@ def make_inds(type_, inds):
     return Tree(type_, [Token("NAME", i) for i in inds])
 
 
-def make_int(tensors, ind):
-    return Tree("int", tensors + [Token("NUMBER", ind)])
+def make_dot(tensors, ind):
+    return Tree("dot", tensors + [Token("NUMBER", ind)])
 
 
 def make_nway_shape(shapes):

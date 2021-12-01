@@ -20,7 +20,7 @@ class EquationParser:
                | tensor
 
         ?filter: factor -> single
-               | "int(" (factor ",")* factor "," NUMBER ")" -> int
+               | "dot(" (factor ",")* factor "," NUMBER ")" -> dot
 
         ?output: NAME "[" tinds "]"
 

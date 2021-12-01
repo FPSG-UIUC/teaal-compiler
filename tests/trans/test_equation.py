@@ -67,7 +67,7 @@ def make_mult_terms():
     return IterationGraph(program), Equation(program)
 
 
-def make_int():
+def make_dot():
     yaml = """
     einsum:
         declaration:
@@ -75,7 +75,7 @@ def make_int():
             C: [M]
             Z: [M]
         expressions:
-            - Z[m] = int(A[m], b, C[m], 1)
+            - Z[m] = dot(A[m], b, C[m], 1)
     """
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -178,8 +178,8 @@ def test_make_iter_expr_mult_terms():
     assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
 
 
-def test_make_iter_expr_int():
-    graph, eqn = make_int()
+def test_make_iter_expr_dot():
+    graph, eqn = make_dot()
 
     ind, tensors = graph.peek()
     iter_expr = "z_m << (a_m & c_m)"
@@ -250,8 +250,8 @@ def test_make_payload_mult_terms():
     assert eqn.make_payload(ind, tensors).gen(False) == payload
 
 
-def test_make_payload_int():
-    graph, eqn = make_int()
+def test_make_payload_dot():
+    graph, eqn = make_dot()
 
     ind, tensors = graph.pop()
     payload = "m, (z_ref, (a_val, c_val))"
@@ -306,7 +306,7 @@ def test_make_update_mult_terms():
     assert eqn.make_update().gen(depth=0) == stmt
 
 
-def test_make_update_int():
-    _, eqn = make_int()
+def test_make_update_dot():
+    _, eqn = make_dot()
     stmt = "z_ref += b"
     assert eqn.make_update().gen(depth=0) == stmt
