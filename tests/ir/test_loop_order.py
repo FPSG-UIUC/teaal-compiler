@@ -23,7 +23,7 @@ def build_partitioning(loop_order, parts):
             Z:
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["Z"]
-    return Partitioning(dict_, loop_order.get_unpartitioned_inds())
+    return Partitioning(dict_, loop_order.get_unpartitioned_ranks())
 
 
 def test_add_loop_order_specified_no_partitioning():
@@ -81,9 +81,9 @@ def test_default_loop_order_after_partitioning():
         "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
 
 
-def test_get_unpartitioned_inds():
+def test_get_unpartitioned_ranks():
     loop_order = build_loop_order()
-    assert loop_order.get_unpartitioned_inds() == ["M", "N", "K"]
+    assert loop_order.get_unpartitioned_ranks() == ["M", "N", "K"]
 
 
 def test_get_curr_loop_order_unconfigured():

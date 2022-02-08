@@ -46,12 +46,12 @@ class Partitioner:
         self.program = program
         self.trans_utils = trans_utils
 
-    def partition(self, tensor: Tensor, inds: Set[str]) -> Statement:
+    def partition(self, tensor: Tensor, ranks: Set[str]) -> Statement:
         """
         Partition the given tensor according to the stored program
         """
         # Check if we need to partition at all
-        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, inds)
+        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, ranks)
         if not partitioning:
             return cast(Statement, SBlock([]))
 
@@ -65,14 +65,14 @@ class Partitioner:
         block.add(cast(Statement, SAssign(next_tmp, old_expr)))
 
         # Emit the partitioning code
-        for i, ind in reversed(list(enumerate(tensor.get_inds()))):
+        for i, rank in reversed(list(enumerate(tensor.get_ranks()))):
             # Continue if no partitioning across this dimension
-            if ind not in partitioning.keys():
+            if rank not in partitioning.keys():
                 continue
 
-            for j, part in enumerate(partitioning[ind]):
+            for j, part in enumerate(partitioning[rank]):
                 if part.data == "nway_shape":
-                    block.add(self.__nway_shape(ind, part, i))
+                    block.add(self.__nway_shape(rank, part, i))
 
                 elif part.data == "uniform_occupancy":
                     block.add(self.__uniform_occupancy(tensor, part))
@@ -89,7 +89,7 @@ class Partitioner:
                         part.data)  # pragma: no cover
 
             # Finally, update the tensor with this partition
-            self.program.apply_partitioning(tensor, ind)
+            self.program.apply_partitioning(tensor, rank)
 
         # Rename the tensor
         part_name = cast(Assignable, AVar(tensor.tensor_name()))
@@ -110,8 +110,8 @@ class Partitioner:
         tensor.reset()
 
         # Get the partitioning
-        inds = set(self.program.get_partitioning().get_all_parts().keys())
-        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, inds)
+        ranks = set(self.program.get_partitioning().get_all_parts().keys())
+        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, ranks)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])
@@ -124,8 +124,8 @@ class Partitioner:
         block.add(cast(Statement, SAssign(next_tmp, part_name_expr)))
 
         # For each dimension
-        for i, ind in enumerate(tensor.get_inds()):
-            if ind not in partitioning.keys():
+        for i, rank in enumerate(tensor.get_ranks()):
+            if rank not in partitioning.keys():
                 continue
 
             # Flatten the rank
@@ -133,7 +133,7 @@ class Partitioner:
             next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
             arg1 = AParam("depth", cast(Expression, EInt(i)))
             arg2 = AParam("levels", cast(
-                Expression, EInt(len(partitioning[ind]))))
+                Expression, EInt(len(partitioning[rank]))))
             arg3 = AParam("coord_style", cast(Expression, EString("absolute")))
             args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
 

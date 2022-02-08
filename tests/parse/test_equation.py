@@ -11,7 +11,7 @@ def test_einsum():
 
 
 def test_tensor():
-    # Note: also tests inds parsing
+    # Note: also tests ranks parsing
     tree = make_einsum(make_output("A", ["i", "j"]),
                        Tree("plus", [Tree("times", [Tree("single",
                                           [make_tensor("B", ["i", "j"])])])]))
@@ -35,7 +35,7 @@ def test_plus():
 
 
 def test_sum_expr():
-    sum_ = Tree("sum", [make_inds("sinds", ["K", "L"]),
+    sum_ = Tree("sum", [make_ranks("sranks", ["K", "L"]),
                 make_plus(["a", "b"])])
     tree = make_einsum(make_output("A", []), sum_)
     assert EquationParser.parse("A[] = sum(K, L).(a + b)") == tree

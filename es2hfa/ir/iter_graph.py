@@ -58,10 +58,10 @@ class IterationGraph:
 
         # Place the tensors in the appropriate locations in the iteration graph
         self.graph: List[List[Tensor]] = []
-        for ind in self.loop_order:
+        for rank in self.loop_order:
             self.graph.append([])
             for tensor in self.program.get_tensors():
-                if tensor.peek() == ind:
+                if tensor.peek() == rank:
                     self.graph[-1].append(tensor)
 
         # Note that our position in the iteration graph should not move if we
@@ -71,15 +71,15 @@ class IterationGraph:
         """
         Peek at the next iteration
         """
-        ind = self.loop_order[self.pos]
-        return ind, self.graph[self.pos]
+        rank = self.loop_order[self.pos]
+        return rank, self.graph[self.pos]
 
     def pop(self) -> Tuple[Optional[str], List[Tensor]]:
         """
         Pop the next iteration off the graph
         """
         # Pop off the next iteration
-        ind = self.loop_order[self.pos]
+        rank = self.loop_order[self.pos]
         tensors = self.graph[self.pos]
         self.graph[self.pos] = []
 
@@ -88,7 +88,7 @@ class IterationGraph:
         for tensor in tensors:
             tensor.pop()
 
-            # The output tensor may not have the correct indices right now, it
+            # The output tensor may not have the correct ranks right now, it
             # is fine to just drop it from the iteration graph because it will
             # be re-inserted after the config()
             if not tensor.get_is_output() or tensor.peek() in self.loop_order:
@@ -97,4 +97,4 @@ class IterationGraph:
         # Update the position in the iteration graph
         self.pos += 1
 
-        return ind, tensors
+        return rank, tensors

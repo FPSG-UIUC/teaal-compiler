@@ -58,8 +58,8 @@ class Header:
 
         # Prepare to partition all static dimensions
         partitioning = self.program.get_partitioning().get_static_parts()
-        for ind in partitioning:
-            self.program.start_partitioning(ind)
+        for rank in partitioning:
+            self.program.start_partitioning(rank)
 
         # Configure the output tensor
         output = self.program.get_output()
@@ -90,7 +90,7 @@ class Header:
 
         return cast(Statement, header)
 
-    def make_loop_header(self, ind: str) -> Statement:
+    def make_loop_header(self, rank: str) -> Statement:
         """
         Create an individual loop header
         """
@@ -98,18 +98,18 @@ class Header:
 
         # If this dimension is not dynamically partitioned, we are done
         dyn_parts = self.program.get_partitioning().get_dyn_parts()
-        if ind not in dyn_parts.keys():
+        if rank not in dyn_parts.keys():
             return cast(Statement, header)
 
         # Otherwise, we assume leader-follower style partitioning with a clear
         # leader
-        self.program.start_partitioning(ind)
-        leader_name = ParseUtils.find_str(dyn_parts[ind][0], "leader")
+        self.program.start_partitioning(rank)
+        leader_name = ParseUtils.find_str(dyn_parts[rank][0], "leader")
         leader = self.program.get_tensor(leader_name)
 
         # Partition the leader first
         header.add(self.__get_tensor_from_fiber(leader))
-        header.add(self.__format_tensor(leader, {ind}))
+        header.add(self.__format_tensor(leader, {rank}))
         header.add(self.__get_root(leader))
 
         # Find all follower tensors
@@ -119,21 +119,21 @@ class Header:
 
         # Partition the follower tensors
         for tensor in tensors:
-            if ind in tensor.get_inds():
+            if rank in tensor.get_ranks():
                 header.add(self.__get_tensor_from_fiber(tensor))
-                header.add(self.__format_tensor(tensor, {ind}))
+                header.add(self.__format_tensor(tensor, {rank}))
                 header.add(self.__get_root(tensor))
 
         return cast(Statement, header)
 
-    def __format_tensor(self, tensor: Tensor, inds: Set[str]) -> Statement:
+    def __format_tensor(self, tensor: Tensor, ranks: Set[str]) -> Statement:
         """
         Format the tensor according
         """
         header = SBlock([])
 
         # Partition if necessary
-        header.add(self.partitioner.partition(tensor, inds))
+        header.add(self.partitioner.partition(tensor, ranks))
 
         # Swizzle for a concordant traversal
         old_name = tensor.tensor_name()
@@ -161,10 +161,11 @@ class Header:
         """
         Get a tensor from the current fiber
         """
-        inds = [cast(Expression, EString(ind)) for ind in tensor.get_inds()]
-        inds_list = cast(Expression, EList(inds))
+        ranks = [cast(Expression, EString(rank))
+                 for rank in tensor.get_ranks()]
+        ranks_list = cast(Expression, EList(ranks))
         fiber_name = cast(Expression, EVar(tensor.fiber_name()))
-        args = [cast(Argument, AParam("rank_ids", inds_list)),
+        args = [cast(Argument, AParam("rank_ids", ranks_list)),
                 cast(Argument, AParam("fiber", fiber_name))]
 
         from_fiber = EMethod("Tensor", "fromFiber", args)

@@ -6,7 +6,6 @@ from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.header import Header
 from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
-from tests.utils.parse_tree import make_uniform_shape
 
 
 def build_header(mapping):

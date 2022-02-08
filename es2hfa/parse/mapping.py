@@ -56,16 +56,16 @@ class Mapping:
 
             if "partitioning" in mapping.keys():
                 partitioning = {}
-                for tensor, inds in mapping["partitioning"].items():
+                for tensor, ranks in mapping["partitioning"].items():
                     partitioning[tensor] = {}
 
-                    if inds is None:
+                    if ranks is None:
                         continue
 
-                    for ind, parts in inds.items():
-                        partitioning[tensor][ind] = []
+                    for rank, parts in ranks.items():
+                        partitioning[tensor][rank] = []
                         for part in parts:
-                            partitioning[tensor][ind].append(
+                            partitioning[tensor][rank].append(
                                 PartitioningParser.parse(part))
 
             if "rank-order" in mapping.keys():
@@ -80,9 +80,9 @@ class Mapping:
                     # Parse the space and time stamps
                     for stamp in ["space", "time"]:
                         spacetime[tensor][stamp] = []
-                        for ind in info[stamp]:
+                        for rank in info[stamp]:
                             spacetime[tensor][stamp].append(
-                                SpaceTimeParser.parse(ind))
+                                SpaceTimeParser.parse(rank))
 
                     # Store any other optimizations
                     if "opt" in info.keys():
@@ -130,7 +130,7 @@ class Mapping:
 
     def get_partitioning(self) -> Dict[str, Dict[str, List[Tree]]]:
         """
-        Get a dictionary from output tensors to a dictionary of index variables
+        Get a dictionary from output tensors to a dictionary of rank variables
         to partitioning information
         """
         return self.partitioning

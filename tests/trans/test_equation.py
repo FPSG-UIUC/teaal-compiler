@@ -154,64 +154,64 @@ def test_make_iter_expr_no_tensors():
 def test_make_iter_expr():
     graph, eqn = make_basic()
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "b_i & (c_i & d_i)"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_output():
     graph, eqn = make_output()
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "a_i << (b_i & (c_i & d_i))"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_mult_terms():
     graph, eqn = make_mult_terms()
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "a_i << ((b_i & c_i) | ((d_i & e_i) | f_i))"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_dot():
     graph, eqn = make_dot()
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "z_m << (a_m & c_m)"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_iter_display_coord():
     graph, eqn = make_display("coord", "")
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "b_i & (c_i & d_i)"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_display_pos():
     graph, eqn = make_display("pos", "")
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "enumerate(b_i & (c_i & d_i))"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_iter_expr_display_slip():
     graph, eqn = make_display("pos", "slip")
 
-    ind, tensors = graph.peek()
+    rank, tensors = graph.peek()
     iter_expr = "b_i & (c_i & d_i)"
 
-    assert eqn.make_iter_expr(ind, tensors).gen() == iter_expr
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
 def test_make_payload_no_tensors():
@@ -226,64 +226,64 @@ def test_make_payload_no_tensors():
 def test_make_payload():
     graph, eqn = make_basic()
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "i, (b_val, (c_val, d_val))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_payload_output():
     graph, eqn = make_output()
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "i, (a_ref, (b_val, (c_val, d_val)))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_payload_mult_terms():
     graph, eqn = make_mult_terms()
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "i, (a_ref, (_, (b_val, c_val), (_, (d_val, e_val), f_val)))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_payload_dot():
     graph, eqn = make_dot()
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "m, (z_ref, (a_val, c_val))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_payload_display_coord():
     graph, eqn = make_display("coord", "")
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "i, (b_val, (c_val, d_val))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_payload_display_pos():
     graph, eqn = make_display("pos", "")
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "i_pos, (i, (b_val, (c_val, d_val)))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_payload_display_slip():
     graph, eqn = make_display("pos", "slip")
 
-    ind, tensors = graph.pop()
+    rank, tensors = graph.pop()
     payload = "i, (b_val, (c_val, d_val))"
 
-    assert eqn.make_payload(ind, tensors).gen(False) == payload
+    assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
 def test_make_update():

@@ -8,7 +8,6 @@ from es2hfa.parse.spacetime import SpaceTimeParser
 from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
-from tests.utils.parse_tree import make_uniform_shape
 
 
 def create_default():

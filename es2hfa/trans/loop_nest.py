@@ -47,10 +47,10 @@ class LoopNest:
         """
         Recursively build the loop nest
         """
-        ind, tensors = graph.peek()
+        rank, tensors = graph.peek()
 
         # If we are at the bottom of the loop nest, build the update
-        if not ind:
+        if not rank:
             bottom = SBlock([eqn.make_update()])
 
             # Add the graphics information if possible
@@ -62,16 +62,16 @@ class LoopNest:
         loop_nest = SBlock([])
 
         # Generate the loop header
-        loop_nest.add(header.make_loop_header(ind))
+        loop_nest.add(header.make_loop_header(rank))
 
         # Update the iteration graph and get the new tensors
         graph.config()
-        ind, tensors = graph.peek()
+        rank, tensors = graph.peek()
 
         # Get the information for the for loop
-        expr = eqn.make_iter_expr(cast(str, ind), tensors)
+        expr = eqn.make_iter_expr(cast(str, rank), tensors)
         _, tensors = graph.pop()
-        payload = eqn.make_payload(cast(str, ind), tensors)
+        payload = eqn.make_payload(cast(str, rank), tensors)
 
         # Recurse for the for loop body
         body = LoopNest.make_loop_nest(eqn, graph, graphics, header)

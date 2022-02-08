@@ -93,12 +93,12 @@ class Program:
 
         # Store the partitioning information
         partitioning = self.mapping.get_partitioning()
-        inds = self.loop_order.get_unpartitioned_inds()
+        ranks = self.loop_order.get_unpartitioned_ranks()
         if output.root_name() in partitioning.keys():
             self.partitioning = Partitioning(
-                partitioning[output.root_name()], inds)
+                partitioning[output.root_name()], ranks)
         else:
-            self.partitioning = Partitioning({}, inds)
+            self.partitioning = Partitioning({}, ranks)
 
         # Store the loop order
         loop_orders = self.mapping.get_loop_orders()
@@ -154,7 +154,7 @@ class Program:
         tensor.swizzle(
             cast(List[Optional[str]], self.loop_order.get_final_loop_order()))
 
-    def apply_partitioning(self, tensor: Tensor, ind: str) -> None:
+    def apply_partitioning(self, tensor: Tensor, rank: str) -> None:
         """
         Partition the tensor according to the partitioning given in
         add_einsum() for the given rank
@@ -165,7 +165,7 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        tensor.partition({ind: self.partitioning.get_all_parts()[ind]})
+        tensor.partition({rank: self.partitioning.get_all_parts()[rank]})
 
     def get_curr_loop_order(self) -> List[str]:
         """
@@ -274,7 +274,7 @@ class Program:
         self.partitioning = None
         self.spacetime = None
 
-    def start_partitioning(self, ind: str) -> None:
+    def start_partitioning(self, rank: str) -> None:
         """
         Start partitioning the dimension given
         """
@@ -284,7 +284,7 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         # Update the partitioning and loop order
-        self.partitioning.partition_dim(ind)
+        self.partitioning.partition_dim(rank)
         self.loop_order.update_loop_order()
 
         # Prepare each of the input tensors

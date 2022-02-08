@@ -70,7 +70,7 @@ pipenv run mypy es2hfa
 
 In order for the YAML parser to typecheck, you may need to add an empty
 `__init__.pyi` in the directory
-`~/.local/share/virtualenvs/hfa-compiler-<hash>/python3.6/site-packages/ruamel/yaml/`.
+`~/.local/share/virtualenvs/teaal-compiler-<hash>/lib/python3.<#>/site-packages/ruamel/yaml/`.
 
 ## Linting
 

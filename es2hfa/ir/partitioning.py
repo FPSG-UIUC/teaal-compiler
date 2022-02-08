@@ -39,7 +39,7 @@ class Partitioning:
     def __init__(self,
                  partitioning: Dict[str,
                                     List[Tree]],
-                 inds: List[str]) -> None:
+                 ranks: List[str]) -> None:
         """
         Create a new representation of the partitioning information
         """
@@ -48,7 +48,7 @@ class Partitioning:
         self.dyn_parts = {}
         self.static_parts = {}
 
-        for ind, parts in partitioning.items():
+        for rank, parts in partitioning.items():
 
             # Continue if this dimension is not actually partitioned
             if not parts:
@@ -60,35 +60,34 @@ class Partitioning:
             for part in parts[1:]:
                 if Partitioning.__is_static(part) != static:
                     raise ValueError(
-                        "Dimension " +
-                        ind +
-                        " cannot be partitioned both statically and dynamically")
+                        "Rank " + rank + " cannot be partitioned both statically and dynamically")
 
             # Add the partitioning specification to the appropriate dictionary
             if static:
-                self.static_parts[ind] = parts
+                self.static_parts[rank] = parts
             else:
-                self.dyn_parts[ind] = parts
+                self.dyn_parts[rank] = parts
 
         self.all_parts = {**self.static_parts, **self.dyn_parts}
 
-        # Build a dictionary from final index name to an optional index name
+        # Build a dictionary from final rank name to an optional rank name
         # where the value is determined by:
         # - If the dimension is unpartitioned, the value is the same as the key
         # - If the dimension has already been partitioned, value == key
         # - If the dimension will be partitioned
-        #    - If this is the largest index name in this original dimension, the
+        #    - If this is the largest rank name in this original dimension, the
         #      the value is the initial dimension name
-        #    - If this is not the largest index name in this original dimension,
+        #    - If this is not the largest rank name in this original dimension,
         #      the value is None
-        self.curr_ind_name: Dict[str, Optional[str]] = {}
-        for ind in inds:
-            if ind in self.all_parts.keys():
-                for i in range(len(self.all_parts[ind])):
-                    self.curr_ind_name[ind + str(i)] = None
-                self.curr_ind_name[ind + str(len(self.all_parts[ind]))] = ind
+        self.curr_rank_id: Dict[str, Optional[str]] = {}
+        for rank in ranks:
+            if rank in self.all_parts.keys():
+                for i in range(len(self.all_parts[rank])):
+                    self.curr_rank_id[rank + str(i)] = None
+                self.curr_rank_id[rank +
+                                  str(len(self.all_parts[rank]))] = rank
             else:
-                self.curr_ind_name[ind] = ind
+                self.curr_rank_id[rank] = rank
 
     def get_all_parts(self) -> Dict[str, List[Tree]]:
         """
@@ -96,20 +95,20 @@ class Partitioning:
         """
         return self.all_parts
 
-    def get_curr_ind_name(self, ind: str) -> Optional[str]:
+    def get_curr_rank_id(self, rank: str) -> Optional[str]:
         """
-        Get the index name of this index in the current loop order
+        Get the name of this rank in the current loop order
         """
-        return self.curr_ind_name[ind]
+        return self.curr_rank_id[rank]
 
-    def get_dyn_ind(self, ind: str) -> str:
+    def get_dyn_rank(self, rank: str) -> str:
         """
-        Convert from a (potentially) static index name to the corresponding
-        dynamic index name
+        Convert from a (potentially) static rank name to the corresponding
+        dynamic rank name
         """
-        if ind[0].upper() + ind[1:] in self.dyn_parts.keys():
-            return ind + "0"
-        return ind
+        if rank[0].upper() + rank[1:] in self.dyn_parts.keys():
+            return rank + "0"
+        return rank
 
     def get_dyn_parts(self) -> Dict[str, List[Tree]]:
         """
@@ -135,23 +134,23 @@ class Partitioning:
         return self.static_parts
 
     def get_tensor_spec(self, tensor: Tensor,
-                        inds: Set[str]) -> Dict[str, List[Tree]]:
+                        ranks: Set[str]) -> Dict[str, List[Tree]]:
         """
         Get the partitioning for a specific tensor
         """
         partitioning = {}
-        for ind, part in self.all_parts.items():
-            if ind in inds and ind in tensor.get_inds():
-                partitioning[ind] = part
+        for rank, part in self.all_parts.items():
+            if rank in ranks and rank in tensor.get_ranks():
+                partitioning[rank] = part
         return partitioning
 
-    def partition_dim(self, ind: str) -> None:
+    def partition_dim(self, rank: str) -> None:
         """
         Update the partitioning information to include the fact that the given
         dimension has been partitioned
         """
-        for i in range(len(self.all_parts[ind]) + 1):
-            self.curr_ind_name[ind + str(i)] = ind + str(i)
+        for i in range(len(self.all_parts[rank]) + 1):
+            self.curr_rank_id[rank + str(i)] = rank + str(i)
 
     def __eq__(self, other):
         """
@@ -159,7 +158,7 @@ class Partitioning:
         """
 
         if isinstance(other, type(self)):
-            return self.curr_ind_name == other.curr_ind_name and \
+            return self.curr_rank_id == other.curr_rank_id and \
                 self.dyn_parts == other.dyn_parts and \
                 self.static_parts == other.static_parts
 

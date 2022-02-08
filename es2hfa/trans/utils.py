@@ -43,7 +43,8 @@ class TransUtils:
         """
         Build the rank_ids argument
         """
-        ranks = [cast(Expression, EString(ind)) for ind in tensor.get_inds()]
+        ranks = [cast(Expression, EString(rank))
+                 for rank in tensor.get_ranks()]
         arg = AParam("rank_ids", cast(Expression, EList(ranks)))
         return cast(Argument, arg)
 

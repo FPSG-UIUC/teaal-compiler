@@ -10,8 +10,8 @@ from es2hfa.trans.utils import TransUtils
 
 def assert_partition(tensor, parts, hfa):
     program, partitioner = build_partitioner(tensor, parts)
-    inds = program.get_partitioning().get_all_parts().keys()
-    assert partitioner.partition(tensor, inds).gen(depth=0) == hfa
+    ranks = program.get_partitioning().get_all_parts().keys()
+    assert partitioner.partition(tensor, ranks).gen(depth=0) == hfa
 
 
 def build_partitioner(tensor, parts):

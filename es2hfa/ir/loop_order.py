@@ -89,17 +89,17 @@ class LoopOrder:
 
         return self.final_loop_order
 
-    def get_unpartitioned_inds(self) -> List[str]:
+    def get_unpartitioned_ranks(self) -> List[str]:
         """
-        Get the names of the indices before partitioning
+        Get the names of the ranks before partitioning
         """
-        inds = self.output.get_inds().copy()
+        ranks = self.output.get_ranks().copy()
 
         for sum_ in self.equation.find_data("sum"):
-            inds += list(next(sum_.find_data("sinds")
-                              ).scan_values(lambda _: True))
+            ranks += list(next(sum_.find_data("sranks")
+                               ).scan_values(lambda _: True))
 
-        return inds
+        return ranks
 
     def update_loop_order(self) -> None:
         """
@@ -112,10 +112,10 @@ class LoopOrder:
 
         # Compute the current loop order
         self.curr_loop_order = []
-        for ind in self.final_loop_order:
-            opt_ind = self.partitioning.get_curr_ind_name(ind)
-            if opt_ind:
-                self.curr_loop_order.append(opt_ind)
+        for rank in self.final_loop_order:
+            opt_rank = self.partitioning.get_curr_rank_id(rank)
+            if opt_rank:
+                self.curr_loop_order.append(opt_rank)
 
     def __default_loop_order(self) -> List[str]:
         """
@@ -124,16 +124,16 @@ class LoopOrder:
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
-        loop_order = self.get_unpartitioned_inds()
+        loop_order = self.get_unpartitioned_ranks()
 
-        for ind, parts in self.partitioning.get_all_parts().items():
-            # Remove the old index
-            i = loop_order.index(ind)
+        for rank, parts in self.partitioning.get_all_parts().items():
+            # Remove the old rank
+            i = loop_order.index(rank)
             loop_order.pop(i)
 
-            # Insert the new indices
-            new_inds = [ind + str(j) for j in range(len(parts) + 1)]
-            for new_ind in new_inds:
-                loop_order.insert(i, new_ind)
+            # Insert the new ranks
+            new_ranks = [rank + str(j) for j in range(len(parts) + 1)]
+            for new_rank in new_ranks:
+                loop_order.insert(i, new_rank)
 
         return loop_order

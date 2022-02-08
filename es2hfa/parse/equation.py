@@ -22,18 +22,18 @@ class EquationParser:
         ?filter: factor -> single
                | "dot(" (factor ",")* factor "," NUMBER ")" -> dot
 
-        ?output: NAME "[" tinds "]"
+        ?output: NAME "[" tranks "]"
 
-        ?sum: "sum(" sinds ")." factor
-            | "sum(" sinds ").(" expr ")"
+        ?sum: "sum(" sranks ")." factor
+            | "sum(" sranks ").(" expr ")"
 
-        ?sinds: [NAME ("," NAME)*] -> sinds
+        ?sranks: [NAME ("," NAME)*] -> sranks
 
-        ?tensor: NAME "[" tinds "]"
+        ?tensor: NAME "[" tranks "]"
 
         ?term: (filter "*")* filter -> times
 
-        ?tinds: [NAME ("," NAME)*] -> tinds
+        ?tranks: [NAME ("," NAME)*] -> tranks
 
         %import common.CNAME -> NAME
         %import common.NUMBER -> NUMBER

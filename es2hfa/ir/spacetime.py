@@ -54,12 +54,12 @@ class SpaceTime:
                 out_name)
 
         # Otherwise, collect the display style information and build the list
-        # of indices
+        # of ranks
         self.space = []
         for tree in space:
-            ind = ParseUtils.next_str(tree)
-            self.space.append(ind)
-            self.styles[ind] = tree.data
+            rank = ParseUtils.next_str(tree)
+            self.space.append(rank)
+            self.styles[rank] = tree.data
 
         # Check the type of the time argument
         time = yaml["time"]
@@ -71,18 +71,18 @@ class SpaceTime:
                 out_name)
 
         # Otherwise, collect the display style information and build the list
-        # of indices
+        # of ranks
         self.time = []
         for tree in time:
-            ind = ParseUtils.next_str(tree)
-            self.time.append(ind)
-            self.styles[ind] = tree.data
+            rank = ParseUtils.next_str(tree)
+            self.time.append(rank)
+            self.styles[rank] = tree.data
 
-        # Find the offset index name associated with the partitioned indices
+        # Find the offset rank id associated with the partitioned ranks
         self.offsets = {}
-        for ind, parts in partitioning.get_all_parts().items():
+        for rank, parts in partitioning.get_all_parts().items():
             for i in range(len(parts)):
-                self.offsets[ind + str(i)] = ind + str(i + 1)
+                self.offsets[rank + str(i)] = rank + str(i + 1)
 
         # Store slip if it is specified
         self.slip = False
@@ -96,23 +96,23 @@ class SpaceTime:
                     " on output " +
                     out_name)
 
-    def emit_pos(self, ind: str) -> bool:
+    def emit_pos(self, rank: str) -> bool:
         """
-        Return true if the ind_pos variable needs to be emitted
+        Return true if the rank_pos variable needs to be emitted
         """
-        if self.get_style(ind) == "coord":
+        if self.get_style(rank) == "coord":
             return False
 
-        return not self.get_slip() or ind in self.space
+        return not self.get_slip() or rank in self.space
 
-    def get_offset(self, ind: str) -> Optional[str]:
+    def get_offset(self, rank: str) -> Optional[str]:
         """
-        Get the offset index name associated with a given index
+        Get the offset rank id associated with a given rank
 
         Used to convert from absolute coordinates to relative coordinates
         """
-        if ind in self.offsets:
-            return self.offsets[ind]
+        if rank in self.offsets:
+            return self.offsets[rank]
         return None
 
     def get_slip(self) -> bool:
@@ -127,11 +127,11 @@ class SpaceTime:
         """
         return self.space
 
-    def get_style(self, ind: str) -> str:
+    def get_style(self, rank: str) -> str:
         """
-        Get the style of display for the given index
+        Get the style of display for the given rank
         """
-        return self.styles[ind]
+        return self.styles[rank]
 
     def get_time(self) -> List[str]:
         """

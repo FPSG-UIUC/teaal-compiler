@@ -33,21 +33,21 @@ class Tensor:
     Intermediate representation for a tensor
     """
 
-    def __init__(self, name: str, inds: List[str]) -> None:
+    def __init__(self, name: str, ranks: List[str]) -> None:
         """
-        Construct a new tensor from a name and list of indices
+        Construct a new tensor from a name and list of ranks
         """
-        # Check for no repeated indices
-        if len(inds) > len(set(inds)):
-            bad_tensor = name + ": [" + ", ".join(inds) + "]"
-            raise ValueError("All indices must be unique; given " + bad_tensor)
+        # Check for no repeated ranks
+        if len(ranks) > len(set(ranks)):
+            bad_tensor = name + ": [" + ", ".join(ranks) + "]"
+            raise ValueError("All ranks must be unique; given " + bad_tensor)
 
         self.name = name
-        self.inds = inds.copy()
-        self.init_inds = self.inds.copy()
+        self.ranks = ranks.copy()
+        self.init_ranks = self.ranks.copy()
 
-        # Set the index pointer and output status
-        self.ind_ptr = 0
+        # Set the ranks pointer and output status
+        self.rank_ptr = 0
         self.is_output = False
 
     @classmethod
@@ -55,7 +55,7 @@ class Tensor:
         """
         Construct a new Tensor from the current fiber
         """
-        child = cls(parent.root_name(), parent.get_inds()[parent.ind_ptr:])
+        child = cls(parent.root_name(), parent.get_ranks()[parent.rank_ptr:])
         child.set_is_output(parent.get_is_output())
 
         return child
@@ -65,8 +65,8 @@ class Tensor:
         Return the current fiber name for this tensor
         """
         stub = self.name[0].lower() + self.name[1:] + "_"
-        if self.ind_ptr < len(self.inds):
-            return stub + self.__get_ind()
+        if self.rank_ptr < len(self.ranks):
+            return stub + self.__get_rank()
         elif self.is_output:
             return stub + "ref"
         else:
@@ -74,15 +74,15 @@ class Tensor:
 
     def get_access(self) -> List[str]:
         """
-        Return a (lowercase) list of indices for this tensor
+        Return a (lowercase) list of ranks for this tensor
         """
-        return [ind[0].lower() + ind[1:] for ind in self.inds]
+        return [rank[0].lower() + rank[1:] for rank in self.ranks]
 
-    def get_inds(self) -> List[str]:
+    def get_ranks(self) -> List[str]:
         """
-        Return a (capitalized) list of indices for this tensor
+        Return a (capitalized) list of ranks for this tensor
         """
-        return self.inds
+        return self.ranks
 
     def get_is_output(self) -> bool:
         """
@@ -94,39 +94,39 @@ class Tensor:
         """
         Partition this tensor across all relevant dimensions
         """
-        for ind, parts in partitioning.items():
-            if ind in self.inds:
-                # Remove the old index
-                i = self.inds.index(ind)
-                self.inds.pop(i)
+        for rank, parts in partitioning.items():
+            if rank in self.ranks:
+                # Remove the old rank
+                i = self.ranks.index(rank)
+                self.ranks.pop(i)
 
-                # Insert the new indices
-                new_inds = [ind + str(j) for j in range(len(parts) + 1)]
-                for new_ind in new_inds:
-                    self.inds.insert(i, new_ind)
+                # Insert the new ranks
+                new_ranks = [rank + str(j) for j in range(len(parts) + 1)]
+                for new_rank in new_ranks:
+                    self.ranks.insert(i, new_rank)
 
     def peek(self) -> Optional[str]:
         """
-        Peek at the top index, returns None if there are no more indices
+        Peek at the top rank, returns None if there are no more ranks
         """
-        if self.ind_ptr < len(self.inds):
-            return self.inds[self.ind_ptr]
+        if self.rank_ptr < len(self.ranks):
+            return self.ranks[self.rank_ptr]
         return None
 
     def pop(self) -> str:
         """
-        Pop off the top index
+        Pop off the top rank
         """
-        ind = self.__get_ind()
-        self.ind_ptr += 1
-        return ind
+        rank = self.__get_rank()
+        self.rank_ptr += 1
+        return rank
 
     def reset(self) -> None:
         """
         Reset the tensor to its initial state
         """
-        self.ind_ptr = 0
-        self.inds = self.init_inds.copy()
+        self.rank_ptr = 0
+        self.ranks = self.init_ranks.copy()
         self.is_output = False
 
     def root_name(self) -> str:
@@ -143,15 +143,15 @@ class Tensor:
 
     def swizzle(self, loop_order: List[Optional[str]]) -> None:
         """
-        Re-order the indices of this tensor to match the given loop order
+        Re-order the ranks of this tensor to match the given loop order
         """
-        self.inds.sort(key=loop_order.index)
+        self.ranks.sort(key=loop_order.index)
 
     def tensor_name(self) -> str:
         """
         Get the current name of the tensor
         """
-        return self.name + "_" + "".join(self.inds)
+        return self.name + "_" + "".join(self.ranks)
 
     def __eq__(self, other: object) -> bool:
         """
@@ -159,13 +159,13 @@ class Tensor:
         """
         if isinstance(other, type(self)):
             return self.name == other.name and \
-                self.inds == other.inds and \
+                self.ranks == other.ranks and \
                 self.is_output == other.is_output
         return False
 
-    def __get_ind(self) -> str:
+    def __get_rank(self) -> str:
         """
-        Get the name of the current index of the tensor
+        Get the name of the current rank of the tensor
         """
-        ind = self.inds[self.ind_ptr]
-        return ind[0].lower() + ind[1:]
+        rank = self.ranks[self.rank_ptr]
+        return rank[0].lower() + rank[1:]

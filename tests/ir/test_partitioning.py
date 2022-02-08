@@ -23,7 +23,7 @@ def test_mixed_partitioning():
     with pytest.raises(ValueError) as excinfo:
         Partitioning(dict_["Z"], ["M", "N", "K"])
     assert str(excinfo.value) \
-        == "Dimension K cannot be partitioned both statically and dynamically"
+        == "Rank K cannot be partitioned both statically and dynamically"
 
 
 def test_get_all_partitioning():
@@ -37,7 +37,7 @@ def test_get_all_partitioning():
     assert partitioning.get_all_parts() == dict_
 
 
-def test_get_curr_ind_name():
+def test_get_curr_rank_id():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
@@ -46,21 +46,21 @@ def test_get_curr_ind_name():
         parse_partitioning(all_parts)["Z"], [
             "M", "N", "K"])
 
-    assert partitioning.get_curr_ind_name("K") == "K"
-    assert partitioning.get_curr_ind_name("N2") == "N"
-    assert partitioning.get_curr_ind_name("M0") is None
+    assert partitioning.get_curr_rank_id("K") == "K"
+    assert partitioning.get_curr_rank_id("N2") == "N"
+    assert partitioning.get_curr_rank_id("M0") is None
 
 
-def test_get_dyn_ind():
+def test_get_dyn_rank():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
     """
     partitioning = Partitioning(
         parse_partitioning(all_parts)["Z"], ["M", "N", "K"])
 
-    assert partitioning.get_dyn_ind("m") == "m0"
-    assert partitioning.get_dyn_ind("m1") == "m1"
-    assert partitioning.get_dyn_ind("n") == "n"
+    assert partitioning.get_dyn_rank("m") == "m0"
+    assert partitioning.get_dyn_rank("m1") == "m1"
+    assert partitioning.get_dyn_rank("n") == "n"
 
 
 def test_get_dynamic_partitioning():
@@ -155,11 +155,11 @@ def test_partition_dim():
 
     partitioning.partition_dim("N")
 
-    assert partitioning.get_curr_ind_name("K") == "K"
-    assert partitioning.get_curr_ind_name("N2") == "N2"
-    assert partitioning.get_curr_ind_name("N1") == "N1"
-    assert partitioning.get_curr_ind_name("N0") == "N0"
-    assert partitioning.get_curr_ind_name("M0") is None
+    assert partitioning.get_curr_rank_id("K") == "K"
+    assert partitioning.get_curr_rank_id("N2") == "N2"
+    assert partitioning.get_curr_rank_id("N1") == "N1"
+    assert partitioning.get_curr_rank_id("N0") == "N0"
+    assert partitioning.get_curr_rank_id("M0") is None
 
 
 def test_skip_empty_partitioning():
@@ -191,7 +191,7 @@ def test_eq():
     assert partitioning1 == partitioning2
 
 
-def test_neq_curr_ind_name():
+def test_neq_curr_rank_name():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]

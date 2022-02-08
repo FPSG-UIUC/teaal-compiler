@@ -6,12 +6,12 @@ def make_einsum(lhs, rhs):
     return Tree("einsum", [lhs, rhs])
 
 
-def make_inds(type_, inds):
-    return Tree(type_, [Token("NAME", i) for i in inds])
+def make_ranks(type_, ranks):
+    return Tree(type_, [Token("NAME", i) for i in ranks])
 
 
-def make_dot(tensors, ind):
-    return Tree("dot", tensors + [Token("NUMBER", ind)])
+def make_dot(tensors, rank):
+    return Tree("dot", tensors + [Token("NUMBER", rank)])
 
 
 def make_nway_shape(shapes):
@@ -19,20 +19,20 @@ def make_nway_shape(shapes):
             for shape in shapes]
 
 
-def make_output(name, inds):
-    return Tree("output", [Token("NAME", name), make_inds("tinds", inds)])
+def make_output(name, ranks):
+    return Tree("output", [Token("NAME", name), make_ranks("tranks", ranks)])
 
 
 def make_plus(vars_):
     return Tree("plus", [make_times([var]) for var in vars_])
 
 
-def make_sum(inds, expr):
-    return Tree("sum", [make_inds("sinds", inds), expr])
+def make_sum(ranks, expr):
+    return Tree("sum", [make_ranks("sranks", ranks), expr])
 
 
-def make_tensor(name, inds):
-    return Tree("tensor", [Token("NAME", name), make_inds("tinds", inds)])
+def make_tensor(name, ranks):
+    return Tree("tensor", [Token("NAME", name), make_ranks("tranks", ranks)])
 
 
 def make_times(vars_):

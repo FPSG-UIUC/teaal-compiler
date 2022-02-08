@@ -117,7 +117,7 @@ class Equation:
             raise ValueError(self.output +
                              " appears multiple times in the einsum")
 
-    def make_iter_expr(self, ind: str, tensors: List[Tensor]) -> Expression:
+    def make_iter_expr(self, rank: str, tensors: List[Tensor]) -> Expression:
         """
         Given a list of tensors, make the expression used to combine them
         """
@@ -158,13 +158,13 @@ class Equation:
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.emit_pos(ind):
+        if spacetime is not None and spacetime.emit_pos(rank):
             arg = cast(Argument, AJust(expr))
             expr = cast(Expression, EFunc("enumerate", [arg]))
 
         return expr
 
-    def make_payload(self, ind: str, tensors: List[Tensor]) -> Payload:
+    def make_payload(self, rank: str, tensors: List[Tensor]) -> Payload:
         """
         Given a list of tensors, construct the corresponding payload
         """
@@ -195,15 +195,15 @@ class Equation:
         if output_tensor:
             payload = Equation.__add_pvar(output_tensor.fiber_name(), payload)
 
-        # Add the index variable
-        ind_var = ind[0].lower() + ind[1:]
-        payload = Equation.__add_pvar(ind_var, payload)
+        # Add the rank variable
+        rank_var = rank[0].lower() + rank[1:]
+        payload = Equation.__add_pvar(rank_var, payload)
 
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.emit_pos(ind):
-            payload = Equation.__add_pvar(ind_var + "_pos", payload)
+        if spacetime is not None and spacetime.emit_pos(rank):
+            payload = Equation.__add_pvar(rank_var + "_pos", payload)
 
         return payload
 

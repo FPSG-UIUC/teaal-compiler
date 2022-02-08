@@ -54,12 +54,12 @@ class Canvas:
         if spacetime is None:
             raise ValueError("SpaceTime information unspecified")
 
-        # Create tensor index arguments
+        # Create tensor rank arguments
         args = []
         for tensor in self.tensors:
-            inds = [self.program.get_partitioning().get_dyn_ind(ind)
-                    for ind in tensor.get_access()]
-            access = [cast(Expression, EVar(ind)) for ind in inds]
+            ranks = [self.program.get_partitioning().get_dyn_rank(rank)
+                     for rank in tensor.get_access()]
+            access = [cast(Expression, EVar(rank)) for rank in ranks]
             arg = AJust(cast(Expression, ETuple(access)))
             args.append(cast(Argument, arg))
 
@@ -135,7 +135,7 @@ class Canvas:
             raise ValueError("SpaceTime information unspecified")
 
         return cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in spacetime.get_space()]))
+            [self.__rel_coord(rank) for rank in spacetime.get_space()]))
 
     def get_time_tuple(self) -> Expression:
         """
@@ -146,11 +146,11 @@ class Canvas:
             raise ValueError("SpaceTime information unspecified")
 
         return cast(Expression, ETuple(
-            [self.__rel_coord(ind) for ind in spacetime.get_time()]))
+            [self.__rel_coord(rank) for rank in spacetime.get_time()]))
 
-    def __rel_coord(self, ind: str) -> Expression:
+    def __rel_coord(self, rank: str) -> Expression:
         """
-        Get the relative coordinate for this index (important for PE distribution)
+        Get the relative coordinate for this rank (important for PE distribution)
         """
         spacetime = self.program.get_spacetime()
 
@@ -158,24 +158,24 @@ class Canvas:
         if spacetime is None:
             raise ValueError("SpaceTime information unspecified")
 
-        ind_str = ind[0].lower() + ind[1:]
-        if spacetime.get_style(ind) == "coord":
+        rank_str = rank[0].lower() + rank[1:]
+        if spacetime.get_style(rank) == "coord":
             # Check if we already have the absolute coordinate
-            offset = spacetime.get_offset(ind)
+            offset = spacetime.get_offset(rank)
             if offset is None:
-                return cast(Expression, EVar(ind_str))
+                return cast(Expression, EVar(rank_str))
 
-            # ind - offset
-            ind_expr = cast(Expression, EVar(ind_str))
+            # rank - offset
+            rank_expr = cast(Expression, EVar(rank_str))
             offset_expr = cast(Expression,
                                EVar(offset[0].lower() + offset[1:]))
-            sub = EBinOp(ind_expr, cast(Operator, OSub()), offset_expr)
+            sub = EBinOp(rank_expr, cast(Operator, OSub()), offset_expr)
 
             return cast(Expression, sub)
 
-        elif spacetime.get_style(ind) == "pos":
-            # ind_pos
-            return cast(Expression, EVar(ind_str + "_pos"))
+        elif spacetime.get_style(rank) == "pos":
+            # rank_pos
+            return cast(Expression, EVar(rank_str + "_pos"))
 
         else:
             # Note: there is no good way to test this error. Bad spacetime styles

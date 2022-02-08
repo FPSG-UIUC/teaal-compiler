@@ -4,12 +4,12 @@ from es2hfa.ir.tensor import Tensor
 from tests.utils.parse_tree import make_plus, make_uniform_shape
 
 
-def test_repeat_inds():
+def test_repeat_ranks():
     with pytest.raises(ValueError) as excinfo:
         Tensor("A", ["I", "J", "I"])
 
     assert str(
-        excinfo.value) == "All indices must be unique; given A: [I, J, I]"
+        excinfo.value) == "All ranks must be unique; given A: [I, J, I]"
 
 
 def test_from_tensor_init():
@@ -35,7 +35,7 @@ def test_from_tensor_intermediate():
     assert child == corr
 
 
-def test_fiber_name_ind():
+def test_fiber_name_rank():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.fiber_name() == "a_i"
 
@@ -56,9 +56,9 @@ def test_get_access():
     assert tensor.get_access() == ["i", "j"]
 
 
-def test_get_inds():
+def test_get_ranks():
     tensor = Tensor("A", ["I", "J"])
-    assert tensor.get_inds() == ["I", "J"]
+    assert tensor.get_ranks() == ["I", "J"]
 
 
 def test_partition():
@@ -66,20 +66,20 @@ def test_partition():
     partitioning = {"I": make_uniform_shape(
         [3]), "K": make_uniform_shape([4, 2])}
     tensor.partition(partitioning)
-    assert tensor.get_inds() == ["I1", "I0", "J", "K2", "K1", "K0"]
+    assert tensor.get_ranks() == ["I1", "I0", "J", "K2", "K1", "K0"]
 
 
-def test_inds_safe_after_partition():
-    inds = ["I", "J", "K"]
-    tensor = Tensor("A", inds)
+def test_ranks_safe_after_partition():
+    ranks = ["I", "J", "K"]
+    tensor = Tensor("A", ranks)
     partitioning = {"I": make_uniform_shape(
         [3]), "K": make_uniform_shape([4, 2])}
     tensor.partition(partitioning)
-    assert tensor.get_inds() == ["I1", "I0", "J", "K2", "K1", "K0"]
-    assert inds == ["I", "J", "K"]
+    assert tensor.get_ranks() == ["I1", "I0", "J", "K2", "K1", "K0"]
+    assert ranks == ["I", "J", "K"]
 
 
-def test_peek_ind():
+def test_peek_rank():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.peek() == "I"
 
@@ -152,7 +152,7 @@ def test_neq_name():
     assert tensor1 != tensor2
 
 
-def test_neq_inds():
+def test_neq_ranks():
     tensor1 = Tensor("A", ["I", "J"])
     tensor2 = Tensor("A", ["I", "K"])
     assert tensor1 != tensor2
