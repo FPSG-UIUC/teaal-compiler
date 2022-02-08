@@ -66,7 +66,7 @@ class Partitioner:
 
         # Emit the partitioning code
         for i, rank in reversed(list(enumerate(tensor.get_ranks()))):
-            # Continue if no partitioning across this dimension
+            # Continue if no partitioning across this rank
             if rank not in partitioning.keys():
                 continue
 
@@ -123,7 +123,7 @@ class Partitioner:
         part_name_expr = cast(Expression, EVar(part_name))
         block.add(cast(Statement, SAssign(next_tmp, part_name_expr)))
 
-        # For each dimension
+        # For each rank
         for i, rank in enumerate(tensor.get_ranks()):
             if rank not in partitioning.keys():
                 continue
@@ -150,20 +150,20 @@ class Partitioner:
 
         return cast(Statement, block)
 
-    def __nway_shape(self, dim: str, part: Tree, depth: int) -> Statement:
+    def __nway_shape(self, rank: str, part: Tree, depth: int) -> Statement:
         """
         Partition into the given number of partitions in coordinate space
         """
         # Build the step
         parts = ParseUtils.next_int(part)
 
-        # Ceiling divide: (dim - 1) // parts + 1
-        dim_expr = cast(Expression, EVar(dim))
+        # Ceiling divide: (rank - 1) // parts + 1
+        rank_expr = cast(Expression, EVar(rank))
         one_expr = cast(Expression, EInt(1))
         parts_expr = cast(Expression, EInt(parts))
 
-        dim_one = EBinOp(dim_expr, cast(Operator, OSub()), one_expr)
-        parens_expr = cast(Expression, EParens(cast(Expression, dim_one)))
+        rank_one = EBinOp(rank_expr, cast(Operator, OSub()), one_expr)
+        parens_expr = cast(Expression, EParens(cast(Expression, rank_one)))
         fdiv = EBinOp(
             cast(
                 Expression, parens_expr), cast(

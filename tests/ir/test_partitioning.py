@@ -144,7 +144,7 @@ def test_get_tensor_spec():
     assert partitioning.get_tensor_spec(tensor, {"K", "M"}) == used
 
 
-def test_partition_dim():
+def test_partition_rank():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
@@ -153,7 +153,7 @@ def test_partition_dim():
         parse_partitioning(all_parts)["Z"], [
             "M", "N", "K"])
 
-    partitioning.partition_dim("N")
+    partitioning.partition_rank("N")
 
     assert partitioning.get_curr_rank_id("K") == "K"
     assert partitioning.get_curr_rank_id("N2") == "N2"
@@ -199,7 +199,7 @@ def test_neq_curr_rank_name():
     partitioning1 = Partitioning(
         parse_partitioning(all_parts)["Z"], [
             "M", "N", "K"])
-    partitioning1.partition_dim("N")
+    partitioning1.partition_rank("N")
 
     partitioning2 = Partitioning(
         parse_partitioning(all_parts)["Z"], [

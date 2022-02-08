@@ -276,7 +276,7 @@ class Program:
 
     def start_partitioning(self, rank: str) -> None:
         """
-        Start partitioning the dimension given
+        Start partitioning the partition_rank given
         """
         # Make sure that the program is configured
         if self.loop_order is None or self.partitioning is None:
@@ -284,7 +284,7 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         # Update the partitioning and loop order
-        self.partitioning.partition_dim(rank)
+        self.partitioning.partition_rank(rank)
         self.loop_order.update_loop_order()
 
         # Prepare each of the input tensors

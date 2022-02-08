@@ -56,7 +56,7 @@ class Header:
         """
         header = SBlock([])
 
-        # Prepare to partition all static dimensions
+        # Prepare to partition all static ranks
         partitioning = self.program.get_partitioning().get_static_parts()
         for rank in partitioning:
             self.program.start_partitioning(rank)
@@ -96,7 +96,7 @@ class Header:
         """
         header = SBlock([])
 
-        # If this dimension is not dynamically partitioned, we are done
+        # If this rank is not dynamically partitioned, we are done
         dyn_parts = self.program.get_partitioning().get_dyn_parts()
         if rank not in dyn_parts.keys():
             return cast(Statement, header)

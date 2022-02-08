@@ -43,18 +43,18 @@ class Partitioning:
         """
         Create a new representation of the partitioning information
         """
-        # Filter the partitioning information into the dimensions that can
+        # Filter the partitioning information into the ranks that can
         # be partitioned statically vs dynamically
         self.dyn_parts = {}
         self.static_parts = {}
 
         for rank, parts in partitioning.items():
 
-            # Continue if this dimension is not actually partitioned
+            # Continue if this rank is not actually partitioned
             if not parts:
                 continue
 
-            # Make sure that the dimension is either partitioned completely
+            # Make sure that the rank is either partitioned completely
             # statically or completely dynamically
             static = Partitioning.__is_static(parts[0])
             for part in parts[1:]:
@@ -72,12 +72,12 @@ class Partitioning:
 
         # Build a dictionary from final rank name to an optional rank name
         # where the value is determined by:
-        # - If the dimension is unpartitioned, the value is the same as the key
-        # - If the dimension has already been partitioned, value == key
-        # - If the dimension will be partitioned
-        #    - If this is the largest rank name in this original dimension, the
-        #      the value is the initial dimension name
-        #    - If this is not the largest rank name in this original dimension,
+        # - If the rank is unpartitioned, the value is the same as the key
+        # - If the rank has already been partitioned, value == key
+        # - If the rank will be partitioned
+        #    - If this is the largest rank name in this original rank, the
+        #      the value is the initial rank name
+        #    - If this is not the largest rank name in this original rank,
         #      the value is None
         self.curr_rank_id: Dict[str, Optional[str]] = {}
         for rank in ranks:
@@ -91,7 +91,7 @@ class Partitioning:
 
     def get_all_parts(self) -> Dict[str, List[Tree]]:
         """
-        Get the partitioning information for all partitioned dimensions
+        Get the partitioning information for all partitioned ranks
         """
         return self.all_parts
 
@@ -113,7 +113,7 @@ class Partitioning:
     def get_dyn_parts(self) -> Dict[str, List[Tree]]:
         """
         Get the partitioning information for all dynamically partitioned
-        dimensions
+        ranks
         """
         return self.dyn_parts
 
@@ -129,7 +129,7 @@ class Partitioning:
     def get_static_parts(self) -> Dict[str, List[Tree]]:
         """
         Get the partitioning information for all statically partitioned
-        dimensions
+        ranks
         """
         return self.static_parts
 
@@ -144,10 +144,10 @@ class Partitioning:
                 partitioning[rank] = part
         return partitioning
 
-    def partition_dim(self, rank: str) -> None:
+    def partition_rank(self, rank: str) -> None:
         """
         Update the partitioning information to include the fact that the given
-        dimension has been partitioned
+        rank has been partitioned
         """
         for i in range(len(self.all_parts[rank]) + 1):
             self.curr_rank_id[rank + str(i)] = rank + str(i)

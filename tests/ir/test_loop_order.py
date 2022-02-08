@@ -72,9 +72,9 @@ def test_default_loop_order_after_partitioning():
     partitioning = build_partitioning(loop_order, parts)
     loop_order.add_loop_order(None, partitioning)
 
-    partitioning.partition_dim("K")
-    partitioning.partition_dim("M")
-    partitioning.partition_dim("N")
+    partitioning.partition_rank("K")
+    partitioning.partition_rank("M")
+    partitioning.partition_rank("N")
     loop_order.update_loop_order()
 
     assert loop_order.get_curr_loop_order() == [
@@ -128,7 +128,7 @@ def test_update_loop_order_partitioning():
     loop_order.add_loop_order(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
 
-    partitioning.partition_dim("N")
+    partitioning.partition_rank("N")
     loop_order.update_loop_order()
 
     assert loop_order.get_curr_loop_order() == ["N2", "K", "M", "N1", "N0"]

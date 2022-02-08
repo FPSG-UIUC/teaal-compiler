@@ -92,7 +92,7 @@ class Tensor:
 
     def partition(self, partitioning: Dict[str, List[Tree]]) -> None:
         """
-        Partition this tensor across all relevant dimensions
+        Partition this tensor across all relevant ranks
         """
         for rank, parts in partitioning.items():
             if rank in self.ranks:

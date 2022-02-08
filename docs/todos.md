@@ -10,10 +10,6 @@
     - Which example tests actually test something unique?
     - All tests should use the [tensor naming conventions](./tensor_naming.md)
     - Delete all unused tests except for cnn and conv2d
-- [ ] Update naming scheme
-    - [ ] `ind` -> `rank_id`
-    - [ ] `dim` or `dimension` -> `rank`
-    - [ ] Call display spacetime
 - [ ] Introduce .coord in spacetime notebook before .pos/default
 
 ## Major Changes
