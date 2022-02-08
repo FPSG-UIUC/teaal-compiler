@@ -64,7 +64,7 @@ class Tensor:
         """
         Return the current fiber name for this tensor
         """
-        stub = self.name[0].lower() + self.name[1:] + "_"
+        stub = self.name.lower() + "_"
         if self.rank_ptr < len(self.ranks):
             return stub + self.__get_rank()
         elif self.is_output:
@@ -76,7 +76,7 @@ class Tensor:
         """
         Return a (lowercase) list of ranks for this tensor
         """
-        return [rank[0].lower() + rank[1:] for rank in self.ranks]
+        return [rank.lower() for rank in self.ranks]
 
     def get_ranks(self) -> List[str]:
         """
@@ -167,5 +167,4 @@ class Tensor:
         """
         Get the name of the current rank of the tensor
         """
-        rank = self.ranks[self.rank_ptr]
-        return rank[0].lower() + rank[1:]
+        return self.ranks[self.rank_ptr].lower()

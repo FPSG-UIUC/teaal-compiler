@@ -158,7 +158,7 @@ class Canvas:
         if spacetime is None:
             raise ValueError("SpaceTime information unspecified")
 
-        rank_str = rank[0].lower() + rank[1:]
+        rank_str = rank.lower()
         if spacetime.get_style(rank) == "coord":
             # Check if we already have the absolute coordinate
             offset = spacetime.get_offset(rank)
@@ -167,8 +167,7 @@ class Canvas:
 
             # rank - offset
             rank_expr = cast(Expression, EVar(rank_str))
-            offset_expr = cast(Expression,
-                               EVar(offset[0].lower() + offset[1:]))
+            offset_expr = cast(Expression, EVar(offset.lower()))
             sub = EBinOp(rank_expr, cast(Operator, OSub()), offset_expr)
 
             return cast(Expression, sub)

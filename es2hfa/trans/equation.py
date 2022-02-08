@@ -196,7 +196,7 @@ class Equation:
             payload = Equation.__add_pvar(output_tensor.fiber_name(), payload)
 
         # Add the rank variable
-        rank_var = rank[0].lower() + rank[1:]
+        rank_var = rank.lower()
         payload = Equation.__add_pvar(rank_var, payload)
 
         # If the spacetime style is occupancy, we also need to enumerate the
@@ -215,7 +215,7 @@ class Equation:
         products = []
         for i, term in enumerate(self.terms):
             factors = [var for var in self.vars[i] if self.__in_update(var)] + \
-                [tensor[0].lower() + tensor[1:] + "_val" for tensor in term
+                [tensor.lower() + "_val" for tensor in term
                     if self.__in_update(tensor)]
             product = cast(Expression, EVar(factors[0]))
             for factor in factors[1:]:
@@ -236,7 +236,7 @@ class Equation:
                     product))
 
         # Create the final statement
-        out_name = self.output[0].lower() + self.output[1:] + "_ref"
+        out_name = self.output.lower() + "_ref"
         out_var = cast(Assignable, AVar(out_name))
         return cast(Statement, SIAssign(out_var, cast(Operator, OAdd()), sum_))
 
