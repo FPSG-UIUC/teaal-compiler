@@ -25,7 +25,9 @@ Representation of a tensor as it moves through the iteration graph
 """
 
 from lark.tree import Tree
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
+
+from es2hfa.ir.partitioning import Partitioning
 
 
 class Tensor:
@@ -90,12 +92,17 @@ class Tensor:
         """
         return self.is_output
 
-    def partition(self, partitioning: Dict[str, List[Tree]]) -> None:
+    def partition(
+            self,
+            partitioning: Partitioning,
+            ranks: Iterable[str]) -> None:
         """
         Partition this tensor across all relevant ranks
         """
-        for rank, parts in partitioning.items():
-            if rank in self.ranks:
+        all_parts = partitioning.get_all_parts()
+        for rank in ranks:
+            if rank in all_parts.keys() and rank in self.ranks:
+                parts = all_parts[rank]
                 # Remove the old rank
                 i = self.ranks.index(rank)
                 self.ranks.pop(i)

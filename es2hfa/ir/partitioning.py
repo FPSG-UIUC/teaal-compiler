@@ -25,9 +25,8 @@ Intermediate representation of the partitioning information
 """
 
 from lark.tree import Tree
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterable, List, Optional
 
-from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
 
 
@@ -105,8 +104,10 @@ class Partitioning:
         """
         Convert from a (potentially) static rank name to the corresponding
         dynamic rank name
+
+        Used for the spacetime stamp of dynamically partitioned tensors
         """
-        if rank[0].upper() + rank[1:] in self.dyn_parts.keys():
+        if rank.upper() in self.dyn_parts.keys():
             return rank + "0"
         return rank
 
@@ -133,14 +134,14 @@ class Partitioning:
         """
         return self.static_parts
 
-    def get_tensor_spec(self, tensor: Tensor,
-                        ranks: Set[str]) -> Dict[str, List[Tree]]:
+    def get_tensor_spec(self, tensor_ranks: Iterable[str],
+                        part_ranks: Iterable[str]) -> Dict[str, List[Tree]]:
         """
-        Get the partitioning for a specific tensor
+        Get the partitioning for a specific tensor's ranks
         """
         partitioning = {}
         for rank, part in self.all_parts.items():
-            if rank in ranks and rank in tensor.get_ranks():
+            if rank in part_ranks and rank in tensor_ranks:
                 partitioning[rank] = part
         return partitioning
 

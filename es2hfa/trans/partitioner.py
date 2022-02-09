@@ -51,7 +51,8 @@ class Partitioner:
         Partition the given tensor according to the stored program
         """
         # Check if we need to partition at all
-        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, ranks)
+        part_ir = self.program.get_partitioning()
+        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), ranks)
         if not partitioning:
             return cast(Statement, SBlock([]))
 
@@ -110,8 +111,9 @@ class Partitioner:
         tensor.reset()
 
         # Get the partitioning
-        ranks = set(self.program.get_partitioning().get_all_parts().keys())
-        partitioning = self.program.get_partitioning().get_tensor_spec(tensor, ranks)
+        part_ir = self.program.get_partitioning()
+        ranks = set(part_ir.get_all_parts().keys())
+        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), ranks)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])

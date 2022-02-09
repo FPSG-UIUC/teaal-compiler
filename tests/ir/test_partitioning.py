@@ -1,7 +1,6 @@
 import pytest
 
 from es2hfa.ir.partitioning import Partitioning
-from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.mapping import Mapping
 
 
@@ -139,9 +138,9 @@ def test_get_tensor_spec():
     """
     used = parse_partitioning(used_parts)["Z"]
 
-    tensor = Tensor("A", ["J", "K", "M", "N"])
+    tensor_ranks = ["J", "K", "M", "N"]
 
-    assert partitioning.get_tensor_spec(tensor, {"K", "M"}) == used
+    assert partitioning.get_tensor_spec(tensor_ranks, {"K", "M"}) == used
 
 
 def test_partition_rank():

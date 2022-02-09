@@ -128,7 +128,7 @@ class Header:
 
     def __format_tensor(self, tensor: Tensor, ranks: Set[str]) -> Statement:
         """
-        Format the tensor according
+        Partition and then swizzle as necessary
         """
         header = SBlock([])
 

@@ -1,7 +1,19 @@
 import pytest
 
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.mapping import Mapping
 from tests.utils.parse_tree import make_plus, make_uniform_shape
+
+
+def build_partitioning(parts, ranks):
+    yaml = """
+    mapping:
+        partitioning:
+            Z:
+    """ + parts
+    dict_ = Mapping.from_str(yaml).get_partitioning()
+    return Partitioning(dict_["Z"], ranks)
 
 
 def test_repeat_ranks():
@@ -62,19 +74,29 @@ def test_get_ranks():
 
 
 def test_partition():
-    tensor = Tensor("A", ["I", "J", "K"])
-    partitioning = {"I": make_uniform_shape(
-        [3]), "K": make_uniform_shape([4, 2])}
-    tensor.partition(partitioning)
+    parts = """
+                I: [uniform_shape(3)]
+                K: [uniform_shape(4), uniform_shape(2)]
+    """
+    ranks = ["I", "J", "K"]
+    partitioning = build_partitioning(parts, ranks)
+
+    tensor = Tensor("A", ranks)
+    tensor.partition(partitioning, ranks)
     assert tensor.get_ranks() == ["I1", "I0", "J", "K2", "K1", "K0"]
 
 
 def test_ranks_safe_after_partition():
+    parts = """
+                I: [uniform_shape(3)]
+                K: [uniform_shape(4), uniform_shape(2)]
+    """
     ranks = ["I", "J", "K"]
+    partitioning = build_partitioning(parts, ranks)
+
     tensor = Tensor("A", ranks)
-    partitioning = {"I": make_uniform_shape(
-        [3]), "K": make_uniform_shape([4, 2])}
-    tensor.partition(partitioning)
+    tensor.partition(partitioning, ranks)
+
     assert tensor.get_ranks() == ["I1", "I0", "J", "K2", "K1", "K0"]
     assert ranks == ["I", "J", "K"]
 
@@ -97,7 +119,8 @@ def test_pop():
 
 
 def test_reset():
-    tensor = Tensor("A", ["I", "J", "K"])
+    ranks = ["I", "J", "K"]
+    tensor = Tensor("A", ranks)
 
     tensor.set_is_output(True)
     tensor.swizzle(["J", "K", "I"])
@@ -105,13 +128,18 @@ def test_reset():
 
     tensor.reset()
 
-    assert tensor == Tensor("A", ["I", "J", "K"])
+    assert tensor == Tensor("A", ranks)
     assert tensor.fiber_name() == "a_i"
 
-    tensor.partition({"J": make_uniform_shape([4])})
+    parts = """
+                I: [uniform_shape(3)]
+                K: [uniform_shape(4), uniform_shape(2)]
+    """
+    partitioning = build_partitioning(parts, ranks)
+    tensor.partition(partitioning, ranks)
     tensor.reset()
 
-    assert tensor == Tensor("A", ["I", "J", "K"])
+    assert tensor == Tensor("A", ranks)
 
 
 def test_root_name():
