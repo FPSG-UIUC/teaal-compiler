@@ -95,20 +95,24 @@ class Tensor:
     def partition(
             self,
             partitioning: Partitioning,
-            ranks: Iterable[str]) -> None:
+            ranks: Iterable[str],
+            all_: bool) -> None:
         """
         Partition this tensor across all relevant ranks
+
+        If all_ is true, fully partition rank, if all is false, partition only
+        as far as partitioning can occur (stopped because of dynamic
+        partitioning)
         """
         all_parts = partitioning.get_all_parts()
         for rank in ranks:
             if rank in all_parts.keys() and rank in self.ranks:
-                parts = all_parts[rank]
                 # Remove the old rank
                 i = self.ranks.index(rank)
                 self.ranks.pop(i)
 
                 # Insert the new ranks
-                new_ranks = [rank + str(j) for j in range(len(parts) + 1)]
+                new_ranks = partitioning.partition_names(rank, all_)
                 for new_rank in new_ranks:
                     self.ranks.insert(i, new_rank)
 

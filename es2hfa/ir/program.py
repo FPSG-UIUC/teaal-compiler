@@ -128,7 +128,7 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        tensor.partition(self.partitioning, tensor.get_ranks())
+        tensor.partition(self.partitioning, tensor.get_ranks(), True)
 
     def apply_curr_loop_order(self, tensor: Tensor) -> None:
         """
@@ -165,7 +165,7 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        tensor.partition(self.partitioning, [rank])
+        tensor.partition(self.partitioning, [rank], False)
 
     def get_curr_loop_order(self) -> List[str]:
         """

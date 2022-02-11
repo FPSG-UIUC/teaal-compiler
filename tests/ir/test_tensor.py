@@ -73,17 +73,38 @@ def test_get_ranks():
     assert tensor.get_ranks() == ["I", "J"]
 
 
-def test_partition():
+def test_partition_all():
     parts = """
                 I: [uniform_shape(3)]
-                K: [uniform_shape(4), uniform_shape(2)]
+                K: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
     """
     ranks = ["I", "J", "K"]
     partitioning = build_partitioning(parts, ranks)
 
     tensor = Tensor("A", ranks)
-    tensor.partition(partitioning, ranks)
+    tensor.partition(partitioning, ranks, True)
     assert tensor.get_ranks() == ["I1", "I0", "J", "K2", "K1", "K0"]
+
+
+def test_partition_dyn():
+    parts = """
+                I: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+                K: [uniform_shape(6), uniform_shape(3)]
+    """
+    ranks = ["I", "J", "K"]
+    partitioning = build_partitioning(parts, ranks)
+    tensor = Tensor("A", ranks)
+
+    partitioning.partition_rank("K")
+    partitioning.partition_rank("I")
+    tensor.partition(partitioning, ranks, False)
+
+    assert tensor.get_ranks() == ["I2", "I1I", "J", "K2", "K1", "K0"]
+
+    partitioning.partition_rank("I1I")
+    tensor.partition(partitioning, {"I1I"}, False)
+
+    assert tensor.get_ranks() == ["I2", "I1", "I0", "J", "K2", "K1", "K0"]
 
 
 def test_ranks_safe_after_partition():
@@ -95,7 +116,7 @@ def test_ranks_safe_after_partition():
     partitioning = build_partitioning(parts, ranks)
 
     tensor = Tensor("A", ranks)
-    tensor.partition(partitioning, ranks)
+    tensor.partition(partitioning, ranks, True)
 
     assert tensor.get_ranks() == ["I1", "I0", "J", "K2", "K1", "K0"]
     assert ranks == ["I", "J", "K"]
@@ -136,7 +157,7 @@ def test_reset():
                 K: [uniform_shape(4), uniform_shape(2)]
     """
     partitioning = build_partitioning(parts, ranks)
-    tensor.partition(partitioning, ranks)
+    tensor.partition(partitioning, ranks, True)
     tensor.reset()
 
     assert tensor == Tensor("A", ranks)

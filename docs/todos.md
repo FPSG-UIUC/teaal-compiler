@@ -12,6 +12,7 @@
     - Delete all unused tests except for cnn and conv2d
 - [ ] Introduce .coord in spacetime notebook before .pos/default
 - [ ] Rename HFA -> HiFiber and es2hfa -> teaal
+- [ ] Allow variable names for partition sizes
 
 ## Major Changes
 
@@ -19,6 +20,7 @@
     - [x] Add single-level occupancy-based partitioning
     - [ ] Add multi-level occupancy-based partitioning
     - [ ] Add n-way occupancy-based partitioning
+    - [ ] Allow flattening
 - [ ] Allow dynamic partitioning in the coordinate space
 - [ ] Switch to comma-separated partitioning fields
 - [ ] Update Tensor.fromFiber to copy if it already has an owning rank

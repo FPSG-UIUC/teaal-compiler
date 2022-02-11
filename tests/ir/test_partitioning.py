@@ -143,9 +143,23 @@ def test_get_tensor_spec():
     assert partitioning.get_tensor_spec(tensor_ranks, {"K", "M"}) == used
 
 
+def test_partition_names():
+    all_parts = """
+                M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning.partition_names("M", True) == ["M0", "M1", "M2"]
+    assert partitioning.partition_names("N", False) == ["N0", "N1", "N2"]
+    assert partitioning.partition_names("M", False) == ["M1I", "M2"]
+
+
 def test_partition_rank():
     all_parts = """
-                M: [uniform_occupancy(A.6)]
+                M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = Partitioning(
@@ -158,7 +172,30 @@ def test_partition_rank():
     assert partitioning.get_curr_rank_id("N2") == "N2"
     assert partitioning.get_curr_rank_id("N1") == "N1"
     assert partitioning.get_curr_rank_id("N0") == "N0"
+    assert partitioning.get_curr_rank_id("M1") is None
+
+    partitioning.partition_rank("M")
+
+    assert partitioning.get_curr_rank_id("M2") == "M2"
+    assert partitioning.get_curr_rank_id("M1") == "M1I"
     assert partitioning.get_curr_rank_id("M0") is None
+
+    partitioning.partition_rank("M1I")
+    assert partitioning.get_curr_rank_id("M1") == "M1"
+    assert partitioning.get_curr_rank_id("M0") == "M0"
+
+
+def test_partition_names_after_partition_ranks():
+    all_parts = """
+                M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+    partitioning.partition_rank("M")
+
+    assert partitioning.partition_names("M1I", False) == ["M0", "M1"]
 
 
 def test_skip_empty_partitioning():

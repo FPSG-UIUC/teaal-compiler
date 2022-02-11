@@ -25,7 +25,7 @@ Intermediate representation of the partitioning information
 """
 
 from lark.tree import Tree
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from es2hfa.parse.utils import ParseUtils
 
@@ -80,13 +80,24 @@ class Partitioning:
         #      the value is None
         self.curr_rank_id: Dict[str, Optional[str]] = {}
         for rank in ranks:
+
             if rank in self.all_parts.keys():
-                for i in range(len(self.all_parts[rank])):
-                    self.curr_rank_id[rank + str(i)] = None
-                self.curr_rank_id[rank +
-                                  str(len(self.all_parts[rank]))] = rank
+                top, all_ = self.__all_names(rank)
+                for id_ in all_:
+                    self.curr_rank_id[id_] = None
+                self.curr_rank_id[top] = rank
+
             else:
                 self.curr_rank_id[rank] = rank
+
+        # For all names of intermediate ranks, e.g., K2I, save the root name
+        # of the rank so we can recover it later
+        # Remember that the top rank's intermediate name is just the root name
+        self.root_names = {}
+        for rank in self.dyn_parts.keys():
+            self.root_names[rank] = rank
+            self.root_names.update(
+                {inter: rank for inter in self.__inter_names(rank)})
 
     def get_all_parts(self) -> Dict[str, List[Tree]]:
         """
@@ -145,19 +156,56 @@ class Partitioning:
                 partitioning[rank] = part
         return partitioning
 
+    def partition_names(self, rank: str, all_: bool) -> List[str]:
+        """
+        Get the list of names that this rank will be partitioned into
+        """
+        parts = self.all_parts[rank]
+        if all_ or rank in self.static_parts.keys():
+            return [rank + str(j) for j in range(len(parts) + 1)]
+
+        else:
+            root = self.root_names[rank]
+            num_parts = len(self.dyn_parts[rank])
+
+            if num_parts == 1:
+                return [root + "0", root + "1"]
+            else:
+                return [root + str(num_parts - 1) + "I", root + str(num_parts)]
+
     def partition_rank(self, rank: str) -> None:
         """
         Update the partitioning information to include the fact that the given
         rank has been partitioned
         """
-        for i in range(len(self.all_parts[rank]) + 1):
-            self.curr_rank_id[rank + str(i)] = rank + str(i)
+        if rank in self.static_parts:
+            for id_ in self.partition_names(rank, False):
+                self.curr_rank_id[id_] = id_
 
-    def __eq__(self, other):
+        # Since we know we have all static or all dynamic partitioning, we know
+        # that we can only partition once
+        else:
+            next_, this = self.partition_names(rank, False)
+            self.curr_rank_id[this] = this
+
+            # If this is the last partitioning, we also have the final bottom
+            # rank
+            if next_[-1] == "0":
+                self.curr_rank_id[next_] = next_
+
+            # Otherwise, we currently have an intermediate rank
+            else:
+                self.curr_rank_id[next_[:-1]] = next_
+
+                # Also save the partitioning information for the intermediate
+                # rank
+                self.dyn_parts[next_] = self.dyn_parts[rank][1:]
+                self.all_parts[next_] = self.dyn_parts[rank][1:]
+
+    def __eq__(self, other) -> bool:
         """
         The == operator for Partitionings
         """
-
         if isinstance(other, type(self)):
             return self.curr_rank_id == other.curr_rank_id and \
                 self.dyn_parts == other.dyn_parts and \
@@ -165,8 +213,36 @@ class Partitioning:
 
         return False
 
+    def __all_names(self, rank: str) -> Tuple[str, List[str]]:
+        """
+        Get all names that will be associated with a rank
+        """
+        num_parts = len(self.all_parts[rank])
+
+        # If the rank is statically partitioned, we can go straight to the
+        # final rank names
+        if rank in self.static_parts.keys():
+            all_ = [rank + str(i) for i in range(num_parts + 1)]
+
+        # Otherwise, we need both the intermediate and final rank names
+        else:
+            final = [rank + str(i) for i in range(num_parts + 1)]
+            # Because we know we have all dynamic partitioning, we will need
+            # intermediate rank names for all middle ranks
+            inter = self.__inter_names(rank)
+            all_ = final + inter
+
+        return rank + str(num_parts), all_
+
+    def __inter_names(self, rank: str) -> List[str]:
+        """
+        Get the names of all intermediate ranks (e.g., K2I)
+        """
+        num_parts = len(self.all_parts[rank])
+        return [rank + str(i) + "I" for i in range(1, num_parts)]
+
     @staticmethod
-    def __is_static(part: Tree):
+    def __is_static(part: Tree) -> bool:
         """
         Return true if this style of partitioning can be performed statically
         """
