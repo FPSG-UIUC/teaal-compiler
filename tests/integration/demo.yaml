@@ -1,18 +1,13 @@
 einsum:
     declaration:
+        Z: [M, N]
         A: [K, M]
         B: [K, N]
-        T1: [K, M, N]
-        Z: [M, N]
     expressions:
-        - T1[k, m, n] = int(A[k, m], B[k, n], 1)
-        - Z[m, n] = sum(K).(T1[k, m, n] * A[k, m])
+        - Z[m, n] = sum(K).(A[k, m] * B[k, n])
 mapping:
-    rank-order:
-        A: [M, K]
-        B: [K, N]
-        T1: [M, K, N]
-        Z: [M, N]
+    partitioning:
+        Z:
+            K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
     loop-order:
-        T1: [M, K, N]
-        Z: [M, N, K]
+        Z: [K2, K1, K0, M, N]

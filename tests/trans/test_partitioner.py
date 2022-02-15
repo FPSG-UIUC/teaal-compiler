@@ -9,12 +9,12 @@ from es2hfa.trans.utils import TransUtils
 
 
 def assert_partition(tensor, parts, hfa):
-    program, partitioner = build_partitioner(tensor, parts)
+    program, partitioner = build_partitioner(parts)
     ranks = program.get_partitioning().get_all_parts().keys()
     assert partitioner.partition(tensor, ranks).gen(depth=0) == hfa
 
 
-def build_partitioner(tensor, parts):
+def build_partitioner(parts):
     yaml = """
     einsum:
         declaration:
@@ -41,7 +41,7 @@ def test_no_partitioning():
 
 def test_nway_shape():
     tensor = Tensor("B", ["K", "N"])
-    part = """
+    spec = """
                 M: [nway_shape(5)]
                 N: [nway_shape(6), nway_shape(3)]
     """
@@ -51,12 +51,12 @@ def test_nway_shape():
           "B_KN2N1N0 = tmp2\n" + \
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
-    assert_partition(tensor, part, hfa)
+    assert_partition(tensor, spec, hfa)
 
 
 def test_uniform_occupancy_leader():
     tensor = Tensor("A", ["K", "M"])
-    part = """
+    spec = """
                 K: [uniform_occupancy(A.5)]
     """
     hfa = "tmp0 = A_KM\n" + \
@@ -64,12 +64,12 @@ def test_uniform_occupancy_leader():
           "A_K1K0M = tmp1\n" + \
           "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
 
-    assert_partition(tensor, part, hfa)
+    assert_partition(tensor, spec, hfa)
 
 
 def test_uniform_occupancy_follower():
     tensor = Tensor("B", ["K", "N"])
-    part = """
+    spec = """
                 K: [uniform_occupancy(A.5)]
     """
     hfa = "tmp0 = B_KN\n" + \
@@ -77,14 +77,41 @@ def test_uniform_occupancy_follower():
           "B_K1K0N = tmp1\n" + \
           "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])"
 
-    program, partitioner = build_partitioner(tensor, part)
+    program, partitioner = build_partitioner(spec)
     program.apply_partitioning(program.get_tensor("A"), "K")
     assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
 
 
+def test_uniform_occupancy_multiple():
+    spec = """
+                K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+        loop-order:
+            Z: [K2, K1, K0, M, N]
+    """
+    hfa = "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitEqual(6)\n" + \
+          "A_K2K1IM = tmp1\n" + \
+          "A_K2K1IM.setRankIds(rank_ids=[\"K2\", \"K1I\", \"M\"])"
+
+    program, partitioner = build_partitioner(spec)
+    program.start_partitioning("K")
+    tensor = program.get_tensor("A")
+    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
+
+    hfa = "tmp2 = A_K1IM\n" + \
+          "tmp3 = tmp2.splitEqual(3)\n" + \
+          "A_K1K0M = tmp3\n" + \
+          "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
+
+    tensor.pop()
+    program.start_partitioning("K1I")
+    tensor = program.get_tensor("A")
+    assert partitioner.partition(tensor, {"K1I"}).gen(depth=0) == hfa
+
+
 def test_uniform_shape():
     tensor = Tensor("B", ["K", "N"])
-    part = """
+    spec = """
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
@@ -94,10 +121,10 @@ def test_uniform_shape():
           "B_KN2N1N0 = tmp2\n" + \
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
-    assert_partition(tensor, part, hfa)
+    assert_partition(tensor, spec, hfa)
 
 
-def assert_unpartition(part, hfa):
+def assert_unpartition(spec, hfa):
     yaml = """
     einsum:
         declaration:
@@ -109,7 +136,7 @@ def assert_unpartition(part, hfa):
     mapping:
         partitioning:
             Z:
-        """ + part
+        """ + spec
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
@@ -121,26 +148,26 @@ def assert_unpartition(part, hfa):
 
 
 def test_unpartition_none():
-    part = """
+    spec = """
                 K: [uniform_shape(5)]
     """
     hfa = ""
-    assert_unpartition(part, hfa)
+    assert_unpartition(spec, hfa)
 
 
 def test_unpartition_one():
-    part = """
+    spec = """
                 N: [uniform_shape(6), uniform_shape(3)]
     """
     hfa = "tmp0 = Z_MN2N1N0\n" + \
           "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "Z_MN = tmp1\n" + \
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
-    assert_unpartition(part, hfa)
+    assert_unpartition(spec, hfa)
 
 
 def test_unpartition_all():
-    part = """
+    spec = """
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
@@ -149,4 +176,4 @@ def test_unpartition_all():
           "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
           "Z_MN = tmp2\n" + \
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
-    assert_unpartition(part, hfa)
+    assert_unpartition(spec, hfa)

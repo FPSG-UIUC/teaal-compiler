@@ -78,6 +78,9 @@ class Partitioner:
                 elif part.data == "uniform_occupancy":
                     block.add(self.__uniform_occupancy(tensor, part))
 
+                    # Only apply one dynamic partition
+                    break
+
                 elif part.data == "uniform_shape":
                     block.add(self.__uniform_shape(part, i + j))
 
