@@ -4,4 +4,5 @@ autopep8
 mypy
 lark-parser
 ruamel-yaml
+networkx
 
