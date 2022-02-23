@@ -164,6 +164,12 @@ class FlowGraph:
 
             # Remove the node
             self.graph.remove_node(node)
+
+    def draw(self) -> None:  # pragma: no cover
+        """
+        Draw the graph
+        """
+
         plt.figure(figsize=(8, 6))
         nx.draw(
             self.graph,
