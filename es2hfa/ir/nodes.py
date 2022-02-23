@@ -25,7 +25,7 @@ Representations of all of the nodes in the FlowGraph
 """
 
 import abc
-from typing import cast, Iterable, Set, Tuple
+from typing import Any, cast, Iterable, List, Tuple
 
 
 class Node(metaclass=abc.ABCMeta):
@@ -48,7 +48,7 @@ class Node(metaclass=abc.ABCMeta):
         """
         return hash(repr(self))
 
-    def __key(self) -> Iterable[str]:
+    def __key(self) -> Iterable[Any]:
         """
         A tuple of all fields of a node
         """
@@ -58,7 +58,9 @@ class Node(metaclass=abc.ABCMeta):
         """
         A string representation of the node for hashing
         """
-        return "(" + type(self).__name__ + ", " + ", ".join(self.__key()) + ")"
+        strs = [key if isinstance(key, str) else repr(key)
+                for key in self.__key()]
+        return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
 
 
 @Node.register
@@ -73,9 +75,9 @@ class FiberNode(Node):
         """
         self.fiber = fiber
 
-    def _Node__key(self) -> Iterable[str]:
+    def _Node__key(self) -> Iterable[Any]:
         """
-        Iterable of fields of a LoopNode
+        Iterable of fields of a FiberNode
         """
         return self.fiber,
 
@@ -92,11 +94,11 @@ class LoopNode(Node):
         """
         self.rank = rank
 
-    def _Node__key(self) -> Iterable[str]:
+    def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a LoopNode
         """
-        return self.rank
+        return self.rank,
 
 
 @Node.register
@@ -112,11 +114,11 @@ class PartNode(Node):
         self.tensor = tensor
         self.rank = rank
 
-    def _Node__key(self) -> Iterable[str]:
+    def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a PartNode
         """
-        return self.tensor, repr(self.rank)
+        return self.tensor, self.rank
 
 
 @Node.register
@@ -132,7 +134,7 @@ class RankNode(Node):
         self.tensor = tensor
         self.rank = rank
 
-    def _Node__key(self) -> Iterable[str]:
+    def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a PartNode
         """
@@ -145,15 +147,15 @@ class SRNode(Node):
     A Node representing a swizzleRanks and getRoot
     """
 
-    def __init__(self, tensor: str, ranks: Set[str]):
+    def __init__(self, tensor: str, ranks: List[str]):
         """
         Construct a swizzleRanks and getRoot node
         """
         self.tensor = tensor
         self.ranks = ranks
 
-    def _Node__key(self) -> Iterable[str]:
+    def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a PartNode
         """
-        return self.tensor, repr(self.ranks)
+        return self.tensor, self.ranks

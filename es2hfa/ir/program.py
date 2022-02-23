@@ -130,30 +130,6 @@ class Program:
 
         tensor.partition(self.partitioning, tensor.get_ranks(), True)
 
-    def apply_curr_loop_order(self, tensor: Tensor) -> None:
-        """
-        Swizzle the given tensor with the loop order
-        """
-        # Make sure that the program is configured
-        if self.loop_order is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        tensor.swizzle(
-            cast(List[Optional[str]], self.loop_order.get_curr_loop_order()))
-
-    def apply_final_loop_order(self, tensor: Tensor) -> None:
-        """
-        Swizzle the given tensor with the loop order
-        """
-        # Make sure that the program is configured
-        if self.loop_order is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        tensor.swizzle(
-            cast(List[Optional[str]], self.loop_order.get_final_loop_order()))
-
     def apply_partitioning(self, tensor: Tensor, rank: str) -> None:
         """
         Partition the tensor according to the partitioning given in

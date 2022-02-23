@@ -80,6 +80,34 @@ def test_get_dynamic_partitioning():
     assert partitioning.get_dyn_parts() == dyn
 
 
+def test_get_final_rank_id():
+    all_parts = """
+                M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], [
+            "M", "N", "K"])
+
+    assert partitioning.get_final_rank_id("N") == "N2"
+    assert partitioning.get_final_rank_id("N2") == "N2"
+    assert partitioning.get_final_rank_id("M1I") == "M1"
+    assert partitioning.get_final_rank_id("K") == "K"
+
+
+def test_get_intermediates():
+    all_parts = """
+                M:
+                    - uniform_occupancy(A.12)
+                    - uniform_occupancy(A.6)
+                    - uniform_occupancy(A.3)
+    """
+    partitioning = Partitioning(
+        parse_partitioning(all_parts)["Z"], ["M", "N", "K"])
+
+    assert partitioning.get_intermediates("M") == ["M1I", "M2I"]
+
+
 def test_get_leader():
     parts = """
                 M: [uniform_occupancy(A.6)]

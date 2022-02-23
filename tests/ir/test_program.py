@@ -154,56 +154,6 @@ def test_apply_all_partitioning_mapped():
         "A", ["K1", "K0", "M2", "M1", "M0"])
 
 
-def test_apply_curr_loop_order_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.apply_curr_loop_order(Tensor("A", ["K", "M"]))
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_apply_curr_loop_order():
-    program = create_loop_ordered()
-    program.add_einsum(0)
-    program.apply_curr_loop_order(program.get_output())
-
-    Z = Tensor("Z", ["N", "M"])
-    Z.set_is_output(True)
-    assert program.get_output() == Z
-
-
-def test_apply_final_loop_order_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.apply_final_loop_order(Tensor("A", ["K", "M"]))
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_apply_final_loop_order():
-    program = create_loop_ordered()
-    program.add_einsum(0)
-    program.apply_final_loop_order(program.get_output())
-
-    Z = Tensor("Z", ["N", "M"])
-    Z.set_is_output(True)
-    assert program.get_output() == Z
-
-
-def test_apply_final_loop_order_partitioned():
-    program = create_partitioned()
-    program.add_einsum(0)
-
-    program.apply_all_partitioning(program.get_output())
-    program.apply_final_loop_order(program.get_output())
-
-    Z = Tensor("Z", ["M2", "M1", "M0", "N"])
-    Z.set_is_output(True)
-    assert program.get_output() == Z
-
-
 def test_apply_partitioning_unconfigured():
     program = create_default()
 
@@ -388,7 +338,7 @@ def test_reset():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_curr_loop_order(tensor)
+        program.get_loop_order().apply(tensor)
 
     program.reset()
 
@@ -446,7 +396,7 @@ def test_start_partitioning_dynamic():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_curr_loop_order(tensor)
+        program.get_loop_order().apply(tensor)
         tensor.pop()
 
     program.start_partitioning("K")

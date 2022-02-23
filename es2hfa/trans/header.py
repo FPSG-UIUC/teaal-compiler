@@ -64,7 +64,7 @@ class Header:
         # Configure the output tensor
         output = self.program.get_output()
         self.program.apply_all_partitioning(output)
-        self.program.apply_final_loop_order(output)
+        self.program.get_loop_order().apply(output)
 
         # Create the output tensor
         out_name = cast(Assignable, AVar(output.tensor_name()))
@@ -137,7 +137,7 @@ class Header:
 
         # Swizzle for a concordant traversal
         old_name = tensor.tensor_name()
-        self.program.apply_curr_loop_order(tensor)
+        self.program.get_loop_order().apply(tensor)
         new_name = tensor.tensor_name()
 
         # Emit code to perform the swizzle if necessary

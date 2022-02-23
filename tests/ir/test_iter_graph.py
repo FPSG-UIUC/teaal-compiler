@@ -93,7 +93,7 @@ def test_peek_order():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_curr_loop_order(tensor)
+        program.get_loop_order().apply(tensor)
     graph = IterationGraph(program)
 
     results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
@@ -144,7 +144,7 @@ def test_pop_order():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_curr_loop_order(tensor)
+        program.get_loop_order().apply(tensor)
     graph = IterationGraph(program)
 
     A = Tensor("A", ["J", "I"])
@@ -179,13 +179,13 @@ def test_pop_occupancy_partitioning():
     program.add_einsum(0)
 
     for tensor in program.get_tensors():
-        program.apply_curr_loop_order(tensor)
+        program.get_loop_order().apply(tensor)
     graph = IterationGraph(program)
 
     # First apply all partitioning/loop order to the output tensor
     output = program.get_output()
     program.apply_all_partitioning(output)
-    program.apply_final_loop_order(output)
+    program.get_loop_order().apply(output)
 
     # Apply the partitioning to the A tensor
     program.start_partitioning("M")

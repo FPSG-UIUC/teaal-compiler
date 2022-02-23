@@ -26,9 +26,11 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
+from typing import List
 
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
+from es2hfa.ir.tensor import Tensor
 
 
 class FlowGraph:
@@ -43,7 +45,7 @@ class FlowGraph:
         self.program = program
 
         self.__build()
-        self.__clean()
+        self.__prune()
 
     def __build(self) -> None:
         """
@@ -60,48 +62,99 @@ class FlowGraph:
             self.graph.add_edge(LoopNode(src), LoopNode(dst))
             src = dst
 
-        # Add the RankNodes for the pre-partitioned ranks
-        for tensor in self.program.get_tensors():
-            for rank in tensor.get_ranks():
-                # self.graph.add_node(RankNode(tensor.root_name(), rank))
-                pass
-
         # Add SRNodes and FiberNodes for each tensor
-        outer_loop = LoopNode(loop_order[0])
+        part = self.program.get_partitioning()
         for tensor in self.program.get_tensors():
-            self.program.apply_curr_loop_order(tensor)
+            root = tensor.root_name()
 
-            sr_node = SRNode(tensor.root_name(), set(tensor.get_ranks()))
+            # Add the partitioning
+            init_ranks = tensor.get_ranks()
+            for rank in init_ranks:
+
+                # Add the static partitioning
+                if rank in part.get_static_parts():
+                    part_node = PartNode(root, (rank,))
+
+                    # Add the edge from the source rank to the partitioning
+                    self.graph.add_edge(RankNode(root, rank), part_node)
+
+                    # Add edges to for all resulting ranks
+                    for res in part.partition_names(rank, False):
+                        self.graph.add_edge(part_node, RankNode(root, res))
+
+                    self.program.apply_partitioning(tensor, rank)
+
+                # Add the dynamic partitioning
+                if rank in part.get_dyn_parts():
+                    for src in [rank] + part.get_intermediates(rank):
+                        part_node = PartNode(root, (src,))
+                        dsts = part.partition_names(src, False)
+                        leader = part.get_leader(part.get_dyn_parts()[src][0])
+
+                        # Add the edge from the source rank and fiber to the
+                        # PartNode
+                        self.graph.add_edge(RankNode(root, src), part_node)
+                        if root != leader:
+                            lead_name = leader.lower() + "_" + dsts[1].lower()
+                            self.graph.add_edge(
+                                FiberNode(lead_name), part_node)
+
+                        # Add the destination RankNodes
+                        for dst in dsts:
+                            self.graph.add_edge(part_node, RankNode(root, dst))
+
+            # Insert the header SRNode
+            self.program.get_loop_order().apply(tensor)
+            sr_node = SRNode(root, tensor.get_ranks().copy())
             fiber_node = FiberNode(tensor.fiber_name())
-
-            # Insert the header
             self.graph.add_edge(sr_node, fiber_node)
 
-            # Insert all other fiber nodes
-            while tensor.peek() is not None:
-                rank = tensor.pop().upper()
-                new_fnode = FiberNode(tensor.fiber_name())
+            # The header SRNode requires RankNodes of the relevant ranks
+            for rank in tensor.get_ranks():
+                self.graph.add_edge(RankNode(root, rank), sr_node)
 
+            # Insert all other fiber nodes
+            active = tensor
+            opt_rank = active.peek()
+            while opt_rank is not None:
+                rank = opt_rank.upper()
+                # If this is a dynamically partitioned rank, add the relevant
+                # SRNode and connection to the FiberNode
+                if rank in part.get_dyn_parts():
+                    active = Tensor.from_tensor(active)
+                    self.program.apply_partitioning(active, rank)
+                    self.program.get_loop_order().apply(active)
+
+                    sr_node = SRNode(root, active.get_ranks().copy())
+                    part_node = PartNode(root, (rank,))
+                    new_fnode = FiberNode(active.fiber_name())
+
+                    self.graph.add_edge(fiber_node, part_node)
+                    self.graph.add_edge(part_node, sr_node)
+                    self.graph.add_edge(sr_node, new_fnode)
+
+                    fiber_node = new_fnode
+
+                rank = active.pop().upper()
+                new_fnode = FiberNode(active.fiber_name())
+
+                # Add the nodes corresponding to the inputs and outputs of this
+                # loop
                 self.graph.add_edge(fiber_node, LoopNode(rank))
                 self.graph.add_edge(LoopNode(rank), new_fnode)
 
                 fiber_node = new_fnode
+                opt_rank = active.peek()
 
             tensor.reset()
 
-        # plt.figure(figsize=(8, 6))
-        # nx.draw(self.graph, with_labels=True, font_size=8, pos=nx.random_layout(self.graph, seed=11))
-        # plt.savefig("foo.png")
-
-    def __clean(self) -> None:
+    def __prune(self) -> None:
         """
-        Clean out all intermediate nodes
+        Prune out all intermediate nodes
         """
-
         # Remove all FiberNodes
-        nodes = [
-            node for node in self.graph.nodes() if isinstance(
-                node, FiberNode)]
+        nodes = [node for node in self.graph.nodes()
+                 if isinstance(node, FiberNode) or isinstance(node, RankNode)]
 
         for node in nodes:
             # Connect all in and out edges
@@ -111,21 +164,30 @@ class FlowGraph:
 
             # Remove the node
             self.graph.remove_node(node)
+        plt.figure(figsize=(8, 6))
+        nx.draw(
+            self.graph,
+            with_labels=True,
+            font_size=8,
+            pos=nx.random_layout(
+                self.graph,
+                seed=10))
+        plt.savefig("foo.png")
 
-    def sort(self) -> None:
+    def sort(self) -> List[Node]:
         """
         Sort all nodes so that the generated code obeys all dependencies
         """
         # Get the sort that places the loop orders the latest
-        best_sort = None
-        loop_ind_sum = -float('inf')
+        best_pos = {}
+        for rank in self.program.get_loop_order().get_final_loop_order():
+            loop_node = LoopNode(rank)
+            decs = nx.descendants(self.graph, loop_node)
+            best_pos[loop_node] = len(self.graph.nodes()) - len(decs) - 1
 
         for sort in nx.all_topological_sorts(self.graph):
-            sum_ = 0
-            for rank in self.program.get_loop_order().get_final_loop_order():
-                sum_ += sort.index(LoopNode(rank))
+            if all(sort.index(node) == i for node, i in best_pos.items()):
+                return sort
 
-            if sum_ > loop_ind_sum:
-                best_sort = sort
-
-        return sort
+        # Note: we should never reach here, there is no way to test
+        raise ValueError("Something is wrong...")  # pragma: no cover

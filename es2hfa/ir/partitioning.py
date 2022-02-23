@@ -97,7 +97,36 @@ class Partitioning:
         for rank in self.dyn_parts.keys():
             self.root_names[rank] = rank
             self.root_names.update(
-                {inter: rank for inter in self.__inter_names(rank)})
+                {inter: rank for inter in self.get_intermediates(rank)})
+
+        # All possible rank IDs to the final rank ID
+        self.final_rank_id = {}
+
+        # Unpartitioned ranks will not change
+        for rank in ranks:
+            self.final_rank_id[rank] = rank
+
+        # Partitioned ranks may change
+        for rank in self.all_parts.keys():
+            top, all_ = self.__all_names(rank)
+
+            # Add unpartitioned to top rank, e.g., K -> K2
+            self.final_rank_id[rank] = top
+
+            # Add partitioned to itself, e.g., K0 -> K0
+            for id_ in all_:
+                self.final_rank_id[id_] = id_
+
+            # Add intermediate to final names, e.g., K1I -> K1
+            for id_ in self.get_intermediates(rank):
+                self.final_rank_id[id_] = id_[:-1]
+
+        # Save the partitioning information for intermediate ranks
+        init_dyn_ranks = [rank for rank in self.dyn_parts.keys()]
+        for rank in init_dyn_ranks:
+            for i, int_ in enumerate(self.get_intermediates(rank)):
+                self.dyn_parts[int_] = self.dyn_parts[rank][-(i + 1):]
+                self.all_parts[int_] = self.all_parts[rank][-(i + 1):]
 
     def get_all_parts(self) -> Dict[str, List[Tree]]:
         """
@@ -108,6 +137,8 @@ class Partitioning:
     def get_curr_rank_id(self, rank: str) -> Optional[str]:
         """
         Get the name of this rank in the current loop order
+
+        TODO: May be able to remove after we remove the IterationGraph
         """
         return self.curr_rank_id[rank]
 
@@ -128,6 +159,19 @@ class Partitioning:
         ranks
         """
         return self.dyn_parts
+
+    def get_final_rank_id(self, rank: str) -> str:
+        """
+        Get the name of this rank in the final loop order
+        """
+        return self.final_rank_id[rank]
+
+    def get_intermediates(self, rank: str) -> List[str]:
+        """
+        Get the names of all intermediate ranks (e.g., K2I)
+        """
+        num_parts = len(self.all_parts[rank])
+        return [rank + str(i) + "I" for i in range(1, num_parts)]
 
     def get_leader(self, part: Tree) -> str:
         """
@@ -177,6 +221,8 @@ class Partitioning:
         """
         Update the partitioning information to include the fact that the given
         rank has been partitioned
+
+        TODO: May be able to remove after removing the IterationGraph
         """
         if rank in self.static_parts:
             for id_ in self.partition_names(rank, False):
@@ -196,11 +242,6 @@ class Partitioning:
             # Otherwise, we currently have an intermediate rank
             else:
                 self.curr_rank_id[next_[:-1]] = next_
-
-                # Also save the partitioning information for the intermediate
-                # rank
-                self.dyn_parts[next_] = self.dyn_parts[rank][1:]
-                self.all_parts[next_] = self.dyn_parts[rank][1:]
 
     def __eq__(self, other) -> bool:
         """
@@ -229,17 +270,10 @@ class Partitioning:
             final = [rank + str(i) for i in range(num_parts + 1)]
             # Because we know we have all dynamic partitioning, we will need
             # intermediate rank names for all middle ranks
-            inter = self.__inter_names(rank)
+            inter = self.get_intermediates(rank)
             all_ = final + inter
 
         return rank + str(num_parts), all_
-
-    def __inter_names(self, rank: str) -> List[str]:
-        """
-        Get the names of all intermediate ranks (e.g., K2I)
-        """
-        num_parts = len(self.all_parts[rank])
-        return [rank + str(i) + "I" for i in range(1, num_parts)]
 
     @staticmethod
     def __is_static(part: Tree) -> bool:

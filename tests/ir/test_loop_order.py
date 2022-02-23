@@ -61,6 +61,39 @@ def test_add_loop_order_specified_partitioning():
         "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
 
 
+def test_apply_unconfigured():
+    loop_order = build_loop_order()
+    A = Tensor("A", ["M", "K", "N"])
+
+    with pytest.raises(ValueError) as excinfo:
+        loop_order.apply(A)
+
+    assert str(
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add_loop_order()"
+
+
+def test_apply():
+    loop_order = build_loop_order()
+    parts = """
+                K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+    """
+    partitioning = build_partitioning(loop_order, parts)
+    loop_order.add_loop_order(
+        ["K2", "M", "K1", "N", "K0"], partitioning)
+
+    A = Tensor("A", ["M", "K", "N"])
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K", "M", "N"]
+
+    A.partition(partitioning, {"K"}, False)
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K2", "M", "K1I", "N"]
+
+    A.partition(partitioning, {"K1I"}, False)
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K2", "M", "K1", "N", "K0"]
+
+
 def test_default_loop_order_after_partitioning():
     loop_order = build_loop_order()
 

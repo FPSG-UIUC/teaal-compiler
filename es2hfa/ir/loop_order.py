@@ -25,7 +25,7 @@ Intermediate representation of the loop order information
 """
 
 from lark.tree import Tree
-from typing import Any, Iterable, List, Optional
+from typing import Any, cast, Iterable, List, Optional
 
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
@@ -67,9 +67,27 @@ class LoopOrder:
         # Update the current loop order
         self.update_loop_order()
 
+    def apply(self, tensor: Tensor) -> None:
+        """
+        Swizzle the tensor according to the ranks available
+        """
+        # Make sure that the loop order has been configured
+        if self.final_loop_order is None or self.partitioning is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add_loop_order()")
+
+        order = self.final_loop_order.copy()
+        for rank in tensor.get_ranks():
+            final_id = self.partitioning.get_final_rank_id(rank)
+            order[order.index(final_id)] = rank
+
+        tensor.swizzle(cast(List[Optional[str]], order))
+
     def get_curr_loop_order(self) -> List[str]:
         """
         Get the current loop order
+
+        TODO: May be able to delete after removing the IterationGraph
         """
         # Make sure that the final loop order has been set
         if self.curr_loop_order is None:
@@ -104,6 +122,8 @@ class LoopOrder:
     def update_loop_order(self) -> None:
         """
         Update the loop order with the latest partitioning information
+
+        TODO: May be able to remove after getting rid of the IterationGraph
         """
         # Make sure that the final loop order has been set
         if self.final_loop_order is None or self.partitioning is None:

@@ -17,7 +17,7 @@ def test_fiber_node():
 
 
 def test_loop_node():
-    assert repr(LoopNode("K")) == "(LoopNode, K)"
+    assert repr(LoopNode("K1")) == "(LoopNode, K1)"
 
 
 def test_part_node():
@@ -29,4 +29,4 @@ def test_rank_node():
 
 
 def test_sr_node():
-    assert repr(SRNode("A", {"K"})) == "(SRNode, A, {'K'})"
+    assert repr(SRNode("A", ["K"])) == "(SRNode, A, ['K'])"
