@@ -25,7 +25,7 @@ Representations of all of the nodes in the FlowGraph
 """
 
 import abc
-from typing import cast, Iterable, Tuple
+from typing import cast, Iterable, Set, Tuple
 
 
 class Node(metaclass=abc.ABCMeta):
@@ -36,6 +36,7 @@ class Node(metaclass=abc.ABCMeta):
     def __eq__(self, other: object) -> bool:
         """
         The == operator for nodes
+
         """
         if isinstance(other, type(self)):
             return self.__key() == other.__key()
@@ -58,6 +59,25 @@ class Node(metaclass=abc.ABCMeta):
         A string representation of the node for hashing
         """
         return "(" + type(self).__name__ + ", " + ", ".join(self.__key()) + ")"
+
+
+@Node.register
+class FiberNode(Node):
+    """
+    A Node representing a fiber
+    """
+
+    def __init__(self, fiber):
+        """
+        Construct a FiberNode
+        """
+        self.fiber = fiber
+
+    def _Node__key(self) -> Iterable[str]:
+        """
+        Iterable of fields of a LoopNode
+        """
+        return self.fiber,
 
 
 @Node.register
@@ -117,3 +137,23 @@ class RankNode(Node):
         Iterable of fields of a PartNode
         """
         return self.tensor, self.rank
+
+
+@Node.register
+class SRNode(Node):
+    """
+    A Node representing a swizzleRanks and getRoot
+    """
+
+    def __init__(self, tensor: str, ranks: Set[str]):
+        """
+        Construct a swizzleRanks and getRoot node
+        """
+        self.tensor = tensor
+        self.ranks = ranks
+
+    def _Node__key(self) -> Iterable[str]:
+        """
+        Iterable of fields of a PartNode
+        """
+        return self.tensor, repr(self.ranks)

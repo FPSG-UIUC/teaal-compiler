@@ -25,7 +25,7 @@ Intermediate representation of the loop order information
 """
 
 from lark.tree import Tree
-from typing import List, Optional
+from typing import Any, Iterable, List, Optional
 
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
@@ -137,3 +137,21 @@ class LoopOrder:
                 loop_order.insert(i, new_rank)
 
         return loop_order
+
+    def __eq__(self, other: object) -> bool:
+        """
+        The == operator for LoopOrders
+        """
+        if isinstance(other, type(self)):
+            for field1, field2 in zip(self.__key(), other.__key()):
+                if field1 != field2:
+                    return False
+            return True
+        return False
+
+    def __key(self) -> Iterable[Any]:
+        """
+        Get the fields of the LoopOrder
+        """
+        return self.equation, self.output, self.curr_loop_order, \
+            self.final_loop_order, self.partitioning

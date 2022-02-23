@@ -167,17 +167,6 @@ class Program:
 
         tensor.partition(self.partitioning, [rank], False)
 
-    def get_curr_loop_order(self) -> List[str]:
-        """
-        Get the currently known loop order used for this kernel
-        """
-        # Make sure that the program is configured
-        if self.loop_order is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        return self.loop_order.get_curr_loop_order()
-
     def get_einsum(self) -> Tree:
         """
         Get the parse tree representation of the einsum
@@ -189,16 +178,16 @@ class Program:
 
         return self.equation
 
-    def get_final_loop_order(self) -> List[str]:
+    def get_loop_order(self) -> LoopOrder:
         """
-        Get the final loop order used for this kernel
+        Get the LoopOrder intermediate representation
         """
         # Make sure that the program is configured
         if self.loop_order is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return self.loop_order.get_final_loop_order()
+        return self.loop_order
 
     def get_output(self) -> Tensor:
         """

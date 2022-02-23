@@ -1,8 +1,9 @@
 import pytest
 
+from es2hfa.ir.loop_order import LoopOrder
 from es2hfa.ir.partitioning import Partitioning
-from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.program import Program
+from es2hfa.ir.spacetime import SpaceTime
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.spacetime import SpaceTimeParser
 from es2hfa.parse.equation import EquationParser
@@ -220,31 +221,6 @@ def test_apply_partitioning():
     assert program.get_tensors()[1] == Tensor("A", ["K", "M2", "M1", "M0"])
 
 
-def test_get_curr_loop_order_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_curr_loop_order()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_curr_loop_order():
-    program = create_loop_ordered()
-    program.add_einsum(0)
-
-    assert program.get_curr_loop_order() == ["K", "N", "M"]
-
-
-def test_get_curr_loop_order_partitioned():
-    program = create_partitioned()
-    program.add_einsum(0)
-    assert program.get_curr_loop_order() == ["M", "N", "K"]
-
-    program.start_partitioning("M")
-    assert program.get_curr_loop_order() == ["M2", "M1", "M0", "N", "K"]
-
-
 def test_get_einsum_unconfigured():
     program = create_default()
 
@@ -260,29 +236,6 @@ def test_get_einsum():
 
     equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
     assert program.get_einsum() == equation
-
-
-def test_get_final_loop_order_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_final_loop_order()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_final_loop_order():
-    program = create_loop_ordered()
-    program.add_einsum(0)
-
-    assert program.get_final_loop_order() == ["K", "N", "M"]
-
-
-def test_get_final_loop_order_partitioned():
-    program = create_partitioned()
-    program.add_einsum(0)
-    assert program.get_final_loop_order() == [
-        "M2", "M1", "M0", "N", "K1", "K0"]
 
 
 def test_get_output_unconfigured():
@@ -302,6 +255,25 @@ def test_get_output():
     result.set_is_output(True)
 
     assert program.get_output() == result
+
+
+def test_get_loop_order_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_loop_order()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_loop_order():
+    program = create_loop_ordered()
+    program.add_einsum(0)
+    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+
+    return LoopOrder(equation, program.get_output())
+
+    assert program.get_loop_order() == LoopOrder(equation, program.get_output())
 
 
 def test_get_partitioning_unconfigured():
@@ -421,7 +393,7 @@ def test_reset():
     program.reset()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_curr_loop_order()
+        program.get_loop_order()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
@@ -465,7 +437,8 @@ def test_start_partitioning_mapped():
 
     program.start_partitioning("M")
 
-    assert program.get_curr_loop_order() == ["M2", "M1", "M0", "N", "K"]
+    assert program.get_loop_order().get_curr_loop_order() == [
+        "M2", "M1", "M0", "N", "K"]
 
 
 def test_start_partitioning_dynamic():

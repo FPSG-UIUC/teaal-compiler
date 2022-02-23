@@ -12,6 +12,10 @@ def test_node():
     assert "" not in set_
 
 
+def test_fiber_node():
+    assert repr(FiberNode("a_k")) == "(FiberNode, a_k)"
+
+
 def test_loop_node():
     assert repr(LoopNode("K")) == "(LoopNode, K)"
 
@@ -22,3 +26,7 @@ def test_part_node():
 
 def test_rank_node():
     assert repr(RankNode("A", "K")) == "(RankNode, A, K)"
+
+
+def test_sr_node():
+    assert repr(SRNode("A", {"K"})) == "(SRNode, A, {'K'})"

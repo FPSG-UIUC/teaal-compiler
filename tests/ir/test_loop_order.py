@@ -141,3 +141,49 @@ def test_default_loop_order_no_partitioning():
         loop_order._LoopOrder__default_loop_order()
 
     assert str(excinfo.value) == "Must configure partitioning before loop order"
+
+
+def test_eq():
+    loop_order1 = build_loop_order()
+    loop_order2 = build_loop_order()
+    parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = build_partitioning(loop_order1, parts)
+    loop_order1.add_loop_order(
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+    loop_order2.add_loop_order(
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+
+    assert loop_order1 == loop_order2
+
+
+def test_neq_loop_order():
+    loop_order1 = build_loop_order()
+    loop_order2 = build_loop_order()
+    parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = build_partitioning(loop_order1, parts)
+    loop_order1.add_loop_order(
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+
+    assert loop_order1 != loop_order2
+
+
+def test_neq_other_type():
+    loop_order1 = build_loop_order()
+    parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = build_partitioning(loop_order1, parts)
+    loop_order1.add_loop_order(
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+
+    assert loop_order1 != ""
