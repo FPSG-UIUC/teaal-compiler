@@ -26,25 +26,25 @@ def build_partitioning(loop_order, parts):
     return Partitioning(dict_, loop_order.get_unpartitioned_ranks())
 
 
-def test_add_loop_order_specified_no_partitioning():
+def test_add_specified_no_partitioning():
     loop_order = build_loop_order()
 
     partitioning = build_partitioning(loop_order, "")
-    loop_order.add_loop_order(["K", "M", "N"], partitioning)
+    loop_order.add(["K", "M", "N"], partitioning)
 
-    assert loop_order.get_curr_loop_order() == ["K", "M", "N"]
+    assert loop_order.get_ranks() == ["K", "M", "N"]
 
 
-def test_add_loop_order_default_no_partitioning():
+def test_add_default_no_partitioning():
     loop_order = build_loop_order()
 
     partitioning = build_partitioning(loop_order, "")
-    loop_order.add_loop_order(None, partitioning)
+    loop_order.add(None, partitioning)
 
-    assert loop_order.get_curr_loop_order() == ["M", "N", "K"]
+    assert loop_order.get_ranks() == ["M", "N", "K"]
 
 
-def test_add_loop_order_specified_partitioning():
+def test_add_specified_partitioning():
     loop_order = build_loop_order()
 
     parts = """
@@ -53,11 +53,10 @@ def test_add_loop_order_specified_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order, parts)
-    loop_order.add_loop_order(
+    loop_order.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
 
-    assert loop_order.get_curr_loop_order() == ["N", "K", "M"]
-    assert loop_order.get_final_loop_order() == [
+    assert loop_order.get_ranks() == [
         "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
 
 
@@ -69,7 +68,7 @@ def test_apply_unconfigured():
         loop_order.apply(A)
 
     assert str(
-        excinfo.value) == "Unconfigured loop order. Make sure to first call add_loop_order()"
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
 
 
 def test_apply():
@@ -78,7 +77,7 @@ def test_apply():
                 K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
     """
     partitioning = build_partitioning(loop_order, parts)
-    loop_order.add_loop_order(
+    loop_order.add(
         ["K2", "M", "K1", "N", "K0"], partitioning)
 
     A = Tensor("A", ["M", "K", "N"])
@@ -103,14 +102,9 @@ def test_default_loop_order_after_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order, parts)
-    loop_order.add_loop_order(None, partitioning)
+    loop_order.add(None, partitioning)
 
-    partitioning.partition_rank("K")
-    partitioning.partition_rank("M")
-    partitioning.partition_rank("N")
-    loop_order.update_loop_order()
-
-    assert loop_order.get_curr_loop_order() == [
+    assert loop_order.get_ranks() == [
         "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
 
 
@@ -119,52 +113,14 @@ def test_get_unpartitioned_ranks():
     assert loop_order.get_unpartitioned_ranks() == ["M", "N", "K"]
 
 
-def test_get_curr_loop_order_unconfigured():
+def test_get_ranks_unconfigured():
     loop_order = build_loop_order()
 
     with pytest.raises(ValueError) as excinfo:
-        loop_order.get_curr_loop_order()
+        loop_order.get_ranks()
 
     assert str(
-        excinfo.value) == "Unconfigured loop order. Make sure to first call add_loop_order()"
-
-
-def test_get_final_loop_order_unconfigured():
-    loop_order = build_loop_order()
-
-    with pytest.raises(ValueError) as excinfo:
-        loop_order.get_final_loop_order()
-
-    assert str(
-        excinfo.value) == "Unconfigured loop order. Make sure to first call add_loop_order()"
-
-
-def test_update_loop_order_unconfigured():
-    loop_order = build_loop_order()
-
-    with pytest.raises(ValueError) as excinfo:
-        loop_order.update_loop_order()
-
-    assert str(
-        excinfo.value) == "Unconfigured loop order. Make sure to first call add_loop_order()"
-
-
-def test_update_loop_order_partitioning():
-    loop_order = build_loop_order()
-
-    parts = """
-                K: [uniform_shape(4)]
-                M: [uniform_occupancy(A.6)]
-                N: [uniform_shape(2), nway_shape(7)]
-    """
-    partitioning = build_partitioning(loop_order, parts)
-    loop_order.add_loop_order(
-        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
-
-    partitioning.partition_rank("N")
-    loop_order.update_loop_order()
-
-    assert loop_order.get_curr_loop_order() == ["N2", "K", "M", "N1", "N0"]
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
 
 
 def test_default_loop_order_no_partitioning():
@@ -185,9 +141,9 @@ def test_eq():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order1, parts)
-    loop_order1.add_loop_order(
+    loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
-    loop_order2.add_loop_order(
+    loop_order2.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
 
     assert loop_order1 == loop_order2
@@ -202,7 +158,7 @@ def test_neq_loop_order():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order1, parts)
-    loop_order1.add_loop_order(
+    loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
 
     assert loop_order1 != loop_order2
@@ -216,7 +172,7 @@ def test_neq_other_type():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order1, parts)
-    loop_order1.add_loop_order(
+    loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
 
     assert loop_order1 != ""

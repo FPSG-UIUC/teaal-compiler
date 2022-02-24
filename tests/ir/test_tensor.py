@@ -24,27 +24,14 @@ def test_repeat_ranks():
         excinfo.value) == "All ranks must be unique; given A: [I, J, I]"
 
 
-def test_from_tensor_init():
-    parent = Tensor("A", ["I", "J", "K"])
-    child = Tensor.from_tensor(parent)
-    assert parent == child
+def test_from_fiber():
+    tensor = Tensor("A", ["I", "J", "K"])
+    tensor.pop()
+    tensor.from_fiber()
 
-
-def test_from_tensor_is_output():
-    parent = Tensor("A", ["I", "J", "K"])
-    parent.set_is_output(True)
-    child = Tensor.from_tensor(parent)
-    assert parent == child
-
-
-def test_from_tensor_intermediate():
-    parent = Tensor("A", ["I", "J", "K"])
-    parent.pop()
-
-    child = Tensor.from_tensor(parent)
-    corr = Tensor("A", ["J", "K"])
-
-    assert child == corr
+    assert tensor.get_access() == ["j", "k"]
+    assert tensor.get_ranks() == ["J", "K"]
+    assert tensor.tensor_name() == "A_JK"
 
 
 def test_fiber_name_rank():
@@ -95,15 +82,10 @@ def test_partition_dyn():
     partitioning = build_partitioning(parts, ranks)
     tensor = Tensor("A", ranks)
 
-    partitioning.partition_rank("K")
-    partitioning.partition_rank("I")
     tensor.partition(partitioning, ranks, False)
-
     assert tensor.get_ranks() == ["I2", "I1I", "J", "K2", "K1", "K0"]
 
-    partitioning.partition_rank("I1I")
     tensor.partition(partitioning, {"I1I"}, False)
-
     assert tensor.get_ranks() == ["I2", "I1", "I0", "J", "K2", "K1", "K0"]
 
 
@@ -223,4 +205,4 @@ def test_neq_obj():
 def test_repr():
     tensor = Tensor("A", ["I", "J", "K"])
     tensor.set_is_output(True)
-    assert repr(tensor) == "(Tensor, A, ['I', 'J', 'K'], True)"
+    assert repr(tensor) == "(Tensor, A, ['I', 'J', 'K'], True, 0, 0)"

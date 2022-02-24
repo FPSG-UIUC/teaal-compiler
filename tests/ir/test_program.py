@@ -370,36 +370,3 @@ def test_reset():
     B = Tensor("B", ["K", "N"])
 
     assert program.get_tensors() == [Z, A, B]
-
-
-def test_start_partitioning_unconfigured():
-    program = create_partitioned()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.start_partitioning("M")
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_start_partitioning_mapped():
-    program = create_partitioned()
-    program.add_einsum(0)
-
-    program.start_partitioning("M")
-
-    assert program.get_loop_order().get_curr_loop_order() == [
-        "M2", "M1", "M0", "N", "K"]
-
-
-def test_start_partitioning_dynamic():
-    program = create_partitioned()
-    program.add_einsum(0)
-
-    for tensor in program.get_tensors():
-        program.get_loop_order().apply(tensor)
-        tensor.pop()
-
-    program.start_partitioning("K")
-
-    assert program.get_tensor("A") == Tensor("A", ["K"])
-    assert program.get_tensor("B") == Tensor("B", ["K"])

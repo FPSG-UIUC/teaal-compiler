@@ -45,7 +45,7 @@ class IterationGraph:
         self.pos = 0
 
         # Configure the iteration graph
-        loop_order = self.program.get_loop_order().get_final_loop_order()
+        loop_order = self.program.get_loop_order().get_ranks()
         self.loop_order = cast(List[Optional[str]], loop_order.copy()) + [None]
 
     def peek(self) -> Tuple[Optional[str], List[Tensor]]:

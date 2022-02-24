@@ -106,7 +106,7 @@ class Program:
         if output.root_name() in loop_orders.keys():
             opt_loop_order = loop_orders[output.root_name()]
 
-        self.loop_order.add_loop_order(opt_loop_order, self.partitioning)
+        self.loop_order.add(opt_loop_order, self.partitioning)
 
         # Get the spacetime information
         spacetime: Optional[Dict[str, List[Tree]]] = None
@@ -238,25 +238,6 @@ class Program:
         self.loop_order = None
         self.partitioning = None
         self.spacetime = None
-
-    def start_partitioning(self, rank: str) -> None:
-        """
-        Start partitioning the partition_rank given
-
-        TODO: Switch to taking a tensor
-        """
-        # Make sure that the program is configured
-        if self.loop_order is None or self.partitioning is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        # Update the partitioning and loop order
-        self.partitioning.partition_rank(rank)
-        self.loop_order.update_loop_order()
-
-        # Prepare each of the input tensors
-        self.es_tensors = [self.es_tensors[0]] + \
-            [Tensor.from_tensor(tensor) for tensor in self.es_tensors[1:]]
 
     def __get_tensor(self, tensor: Tree) -> Tensor:
         """

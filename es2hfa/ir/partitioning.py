@@ -25,7 +25,7 @@ Intermediate representation of the partitioning information
 """
 
 from lark.tree import Tree
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from es2hfa.parse.utils import ParseUtils
 
@@ -68,27 +68,6 @@ class Partitioning:
                 self.dyn_parts[rank] = parts
 
         self.all_parts = {**self.static_parts, **self.dyn_parts}
-
-        # Build a dictionary from final rank name to an optional rank name
-        # where the value is determined by:
-        # - If the rank is unpartitioned, the value is the same as the key
-        # - If the rank has already been partitioned, value == key
-        # - If the rank will be partitioned
-        #    - If this is the largest rank name in this original rank, the
-        #      the value is the initial rank name
-        #    - If this is not the largest rank name in this original rank,
-        #      the value is None
-        self.curr_rank_id: Dict[str, Optional[str]] = {}
-        for rank in ranks:
-
-            if rank in self.all_parts.keys():
-                top, all_ = self.__all_names(rank)
-                for id_ in all_:
-                    self.curr_rank_id[id_] = None
-                self.curr_rank_id[top] = rank
-
-            else:
-                self.curr_rank_id[rank] = rank
 
         # For all names of intermediate ranks, e.g., K2I, save the root name
         # of the rank so we can recover it later
@@ -133,14 +112,6 @@ class Partitioning:
         Get the partitioning information for all partitioned ranks
         """
         return self.all_parts
-
-    def get_curr_rank_id(self, rank: str) -> Optional[str]:
-        """
-        Get the name of this rank in the current loop order
-
-        TODO: May be able to remove after we remove the IterationGraph
-        """
-        return self.curr_rank_id[rank]
 
     def get_dyn_rank(self, rank: str) -> str:
         """
@@ -217,40 +188,12 @@ class Partitioning:
             else:
                 return [root + str(num_parts - 1) + "I", root + str(num_parts)]
 
-    def partition_rank(self, rank: str) -> None:
-        """
-        Update the partitioning information to include the fact that the given
-        rank has been partitioned
-
-        TODO: May be able to remove after removing the IterationGraph
-        """
-        if rank in self.static_parts:
-            for id_ in self.partition_names(rank, False):
-                self.curr_rank_id[id_] = id_
-
-        # Since we know we have all static or all dynamic partitioning, we know
-        # that we can only partition once
-        else:
-            next_, this = self.partition_names(rank, False)
-            self.curr_rank_id[this] = this
-
-            # If this is the last partitioning, we also have the final bottom
-            # rank
-            if next_[-1] == "0":
-                self.curr_rank_id[next_] = next_
-
-            # Otherwise, we currently have an intermediate rank
-            else:
-                self.curr_rank_id[next_[:-1]] = next_
-
     def __eq__(self, other) -> bool:
         """
         The == operator for Partitionings
         """
         if isinstance(other, type(self)):
-            return self.curr_rank_id == other.curr_rank_id and \
-                self.dyn_parts == other.dyn_parts and \
-                self.static_parts == other.static_parts
+            return self.__key() == other.__key()
 
         return False
 
@@ -281,3 +224,9 @@ class Partitioning:
         Return true if this style of partitioning can be performed statically
         """
         return part.data == "uniform_shape" or part.data == "nway_shape"
+
+    def __key(self) -> Iterable[Any]:
+        """
+        Get all relevant fields of the Partitioning
+        """
+        return self.dyn_parts, self.static_parts

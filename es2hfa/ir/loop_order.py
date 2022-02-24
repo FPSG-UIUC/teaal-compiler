@@ -45,13 +45,12 @@ class LoopOrder:
         self.output = output
 
         # Make placeholders for the loop orders and partitioning
-        self.curr_loop_order: Optional[List[str]] = None
-        self.final_loop_order: Optional[List[str]] = None
+        self.ranks: Optional[List[str]] = None
         self.partitioning: Optional[Partitioning] = None
 
-    def add_loop_order(self,
-                       loop_order: Optional[List[str]],
-                       partitioning: Partitioning) -> None:
+    def add(self,
+            loop_order: Optional[List[str]],
+            partitioning: Partitioning) -> None:
         """
         Add the loop order information, selecting the default loop order if
         one was not provided
@@ -60,52 +59,35 @@ class LoopOrder:
 
         # First build the final loop order
         if loop_order is None:
-            self.final_loop_order = self.__default_loop_order()
+            self.ranks = self.__default_loop_order()
         else:
-            self.final_loop_order = loop_order
-
-        # Update the current loop order
-        self.update_loop_order()
+            self.ranks = loop_order
 
     def apply(self, tensor: Tensor) -> None:
         """
         Swizzle the tensor according to the ranks available
         """
         # Make sure that the loop order has been configured
-        if self.final_loop_order is None or self.partitioning is None:
+        if self.ranks is None or self.partitioning is None:
             raise ValueError(
-                "Unconfigured loop order. Make sure to first call add_loop_order()")
-
-        order = self.final_loop_order.copy()
+                "Unconfigured loop order. Make sure to first call add()")
+        order = self.ranks.copy()
         for rank in tensor.get_ranks():
             final_id = self.partitioning.get_final_rank_id(rank)
             order[order.index(final_id)] = rank
 
         tensor.swizzle(cast(List[Optional[str]], order))
 
-    def get_curr_loop_order(self) -> List[str]:
-        """
-        Get the current loop order
-
-        TODO: May be able to delete after removing the IterationGraph
-        """
-        # Make sure that the final loop order has been set
-        if self.curr_loop_order is None:
-            raise ValueError(
-                "Unconfigured loop order. Make sure to first call add_loop_order()")
-
-        return self.curr_loop_order
-
-    def get_final_loop_order(self) -> List[str]:
+    def get_ranks(self) -> List[str]:
         """
         Get the final loop order
         """
         # Make sure that the final loop order has been set
-        if self.final_loop_order is None:
+        if self.ranks is None:
             raise ValueError(
-                "Unconfigured loop order. Make sure to first call add_loop_order()")
+                "Unconfigured loop order. Make sure to first call add()")
 
-        return self.final_loop_order
+        return self.ranks
 
     def get_unpartitioned_ranks(self) -> List[str]:
         """
@@ -118,24 +100,6 @@ class LoopOrder:
                                ).scan_values(lambda _: True))
 
         return ranks
-
-    def update_loop_order(self) -> None:
-        """
-        Update the loop order with the latest partitioning information
-
-        TODO: May be able to remove after getting rid of the IterationGraph
-        """
-        # Make sure that the final loop order has been set
-        if self.final_loop_order is None or self.partitioning is None:
-            raise ValueError(
-                "Unconfigured loop order. Make sure to first call add_loop_order()")
-
-        # Compute the current loop order
-        self.curr_loop_order = []
-        for rank in self.final_loop_order:
-            opt_rank = self.partitioning.get_curr_rank_id(rank)
-            if opt_rank:
-                self.curr_loop_order.append(opt_rank)
 
     def __default_loop_order(self) -> List[str]:
         """
@@ -173,5 +137,4 @@ class LoopOrder:
         """
         Get the fields of the LoopOrder
         """
-        return self.equation, self.output, self.curr_loop_order, \
-            self.final_loop_order, self.partitioning
+        return self.equation, self.output, self.ranks, self.partitioning

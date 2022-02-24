@@ -90,9 +90,18 @@ def test_pop_default():
     B = Tensor("B", ["I", "K"])
     C = Tensor("C", ["J", "K"])
 
+    A.pop()
+    B.pop()
     assert graph.pop() == ("I", [A, B])
+
+    A.pop()
+    C.pop()
     assert graph.pop() == ("J", [A, C])
+
+    B.pop()
+    C.pop()
     assert graph.pop() == ("K", [B, C])
+
     assert graph.peek() == (None, [A, B, C])
 
 
@@ -121,9 +130,18 @@ def test_pop_order():
     B = Tensor("B", ["K", "I"])
     C = Tensor("C", ["J", "K"])
 
+    A.pop()
+    C.pop()
     assert graph.pop() == ("J", [A, C])
+
+    B.pop()
+    C.pop()
     assert graph.pop() == ("K", [B, C])
+
+    A.pop()
+    B.pop()
     assert graph.pop() == ("I", [A, B])
+
     assert graph.peek() == (None, [A, B, C])
 
 
@@ -157,9 +175,8 @@ def test_pop_occupancy_partitioning():
     program.get_loop_order().apply(output)
 
     # Apply the partitioning to the A tensor
-    program.start_partitioning("M")
-    A = next(tensor for tensor in program.get_tensors()
-             if tensor.root_name() == "A")
+    A = program.get_tensor("A")
+    A.from_fiber()
     program.apply_partitioning(A, "M")
 
     # Make sure that there are no errors on pop

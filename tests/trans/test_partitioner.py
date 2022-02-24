@@ -94,8 +94,8 @@ def test_uniform_occupancy_multiple():
           "A_K2K1IM.setRankIds(rank_ids=[\"K2\", \"K1I\", \"M\"])"
 
     program, partitioner = build_partitioner(spec)
-    program.start_partitioning("K")
     tensor = program.get_tensor("A")
+    tensor.from_fiber()
     assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
 
     hfa = "tmp2 = A_K1IM\n" + \
@@ -104,8 +104,7 @@ def test_uniform_occupancy_multiple():
           "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
 
     tensor.pop()
-    program.start_partitioning("K1I")
-    tensor = program.get_tensor("A")
+    tensor.from_fiber()
     assert partitioner.partition(tensor, {"K1I"}).gen(depth=0) == hfa
 
 

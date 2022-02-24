@@ -48,43 +48,40 @@ class Tensor:
         self.ranks = ranks.copy()
         self.init_ranks = self.ranks.copy()
 
-        # Set the ranks pointer and output status
+        # Set the pointers and output status
+        self.iter_ptr = 0
         self.rank_ptr = 0
         self.is_output = False
-
-    @classmethod
-    def from_tensor(cls, parent: "Tensor") -> "Tensor":
-        """
-        Construct a new Tensor from the current fiber
-        """
-        child = cls(parent.root_name(), parent.get_ranks()[parent.rank_ptr:])
-        child.set_is_output(parent.get_is_output())
-
-        return child
 
     def fiber_name(self) -> str:
         """
         Return the current fiber name for this tensor
         """
         stub = self.name.lower() + "_"
-        if self.rank_ptr < len(self.ranks):
+        if self.iter_ptr < len(self.ranks):
             return stub + self.__get_rank()
         elif self.is_output:
             return stub + "ref"
         else:
             return stub + "val"
 
+    def from_fiber(self) -> None:
+        """
+        Construct a new Tensor from the current fiber
+        """
+        self.rank_ptr = self.iter_ptr
+
     def get_access(self) -> List[str]:
         """
         Return a (lowercase) list of ranks for this tensor
         """
-        return [rank.lower() for rank in self.ranks]
+        return [rank.lower() for rank in self.ranks[self.rank_ptr:]]
 
     def get_ranks(self) -> List[str]:
         """
         Return a (capitalized) list of ranks for this tensor
         """
-        return self.ranks
+        return self.ranks[self.rank_ptr:]
 
     def get_is_output(self) -> bool:
         """
@@ -120,8 +117,8 @@ class Tensor:
         """
         Peek at the top rank, returns None if there are no more ranks
         """
-        if self.rank_ptr < len(self.ranks):
-            return self.ranks[self.rank_ptr]
+        if self.iter_ptr < len(self.ranks):
+            return self.ranks[self.iter_ptr]
         return None
 
     def pop(self) -> str:
@@ -129,13 +126,14 @@ class Tensor:
         Pop off the top rank
         """
         rank = self.__get_rank()
-        self.rank_ptr += 1
+        self.iter_ptr += 1
         return rank
 
     def reset(self) -> None:
         """
         Reset the tensor to its initial state
         """
+        self.iter_ptr = 0
         self.rank_ptr = 0
         self.ranks = self.init_ranks.copy()
         self.is_output = False
@@ -162,7 +160,7 @@ class Tensor:
         """
         Get the current name of the tensor
         """
-        return self.name + "_" + "".join(self.ranks)
+        return self.name + "_" + "".join(self.ranks[self.rank_ptr:])
 
     def __eq__(self, other: object) -> bool:
         """
@@ -176,13 +174,13 @@ class Tensor:
         """
         Get the name of the current rank of the tensor
         """
-        return self.ranks[self.rank_ptr].lower()
+        return self.ranks[self.iter_ptr].lower()
 
     def __key(self) -> Iterable[Any]:
         """
         Return an iterable of attributes
         """
-        return self.name, self.ranks, self.is_output
+        return self.name, self.ranks, self.is_output, self.iter_ptr, self.rank_ptr
 
     def __repr__(self) -> str:
         """

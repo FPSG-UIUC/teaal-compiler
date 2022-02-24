@@ -82,7 +82,7 @@ class FlowGraph:
         self.graph = nx.DiGraph()
 
         # Add the LoopNodes
-        loop_order = self.program.get_loop_order().get_final_loop_order()
+        loop_order = self.program.get_loop_order().get_ranks()
 
         # Add the edges connecting the LoopNodes
         chain: List[Node] = [cast(Node, OtherNode("StartLoop"))]
@@ -100,6 +100,10 @@ class FlowGraph:
         part = self.program.get_partitioning()
         for tensor in self.program.get_tensors():
             root = tensor.root_name()
+
+            # Apply all partitioning beforehand to the output tensor
+            if tensor.get_is_output():
+                self.program.apply_all_partitioning(tensor)
 
             # Add the partitioning
             init_ranks = tensor.get_ranks()
@@ -153,7 +157,7 @@ class FlowGraph:
             self.graph.add_edge(sr_node, fiber_node)
 
             # The output SRNode requires the output to have been created first
-            if tensor.is_output:
+            if tensor.get_is_output():
                 self.graph.add_edge(OtherNode("Output"), sr_node)
 
             # The header SRNode requires RankNodes of the relevant ranks
@@ -161,21 +165,20 @@ class FlowGraph:
                 self.graph.add_edge(RankNode(root, rank), sr_node)
 
             # Insert all other fiber nodes
-            active = tensor
-            opt_rank = active.peek()
+            opt_rank = tensor.peek()
             while opt_rank is not None:
                 rank = opt_rank.upper()
                 # If this is a dynamically partitioned rank, add the relevant
                 # FromFiberNode, SRNode and edges to the FiberNodes
                 if rank in part.get_dyn_parts():
-                    active = Tensor.from_tensor(active)
-                    self.program.apply_partitioning(active, rank)
-                    self.program.get_loop_order().apply(active)
+                    tensor.from_fiber()
+                    self.program.apply_partitioning(tensor, rank)
+                    self.program.get_loop_order().apply(tensor)
 
-                    sr_node = SRNode(root, active.get_ranks().copy())
+                    sr_node = SRNode(root, tensor.get_ranks().copy())
                     part_node = PartNode(root, (rank,))
                     ff_node = FromFiberNode(root, rank)
-                    new_fnode = FiberNode(active.fiber_name())
+                    new_fnode = FiberNode(tensor.fiber_name())
 
                     self.graph.add_edge(fiber_node, ff_node)
                     self.graph.add_edge(ff_node, part_node)
@@ -184,8 +187,8 @@ class FlowGraph:
 
                     fiber_node = new_fnode
 
-                rank = active.pop().upper()
-                new_fnode = FiberNode(active.fiber_name())
+                rank = tensor.pop().upper()
+                new_fnode = FiberNode(tensor.fiber_name())
 
                 # Add the nodes corresponding to the inputs and outputs of this
                 # loop
@@ -193,7 +196,7 @@ class FlowGraph:
                 self.graph.add_edge(LoopNode(rank), new_fnode)
 
                 fiber_node = new_fnode
-                opt_rank = active.peek()
+                opt_rank = tensor.peek()
 
             # The last FiberNode is needed for the body
             self.graph.add_edge(fiber_node, OtherNode("Body"))
@@ -228,7 +231,7 @@ class FlowGraph:
         """
         # Get the sort that places the loop orders the latest
         best_pos = {}
-        for rank in self.program.get_loop_order().get_final_loop_order():
+        for rank in self.program.get_loop_order().get_ranks():
             loop_node = LoopNode(rank)
             decs = nx.descendants(self.graph, loop_node)
             best_pos[loop_node] = len(self.graph.nodes()) - len(decs) - 1

@@ -37,7 +37,6 @@ from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
 from es2hfa.trans.header import Header
-from es2hfa.trans.loop_nest import LoopNest
 from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
@@ -144,10 +143,10 @@ class HFA:
                         repr(node))  # pragma: no cover
 
             elif isinstance(node, PartNode):
-                rank = node.get_ranks()[0]
-                self.program.start_partitioning(rank)
-
                 tensor = self.program.get_tensor(node.get_tensor())
+                rank = node.get_ranks()[0]
+
+                tensor.from_fiber()
                 code.add(self.partitioner.partition(tensor, {rank}))
 
             elif isinstance(node, SRNode):
