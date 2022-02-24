@@ -46,6 +46,34 @@ class FlowGraph:
 
         self.__build()
         self.__prune()
+        self.sorted = self.__sort()
+
+    def draw(self) -> None:  # pragma: no cover
+        """
+        Draw the graph
+        """
+
+        plt.figure(figsize=(8, 6))
+        nx.draw(
+            self.graph,
+            with_labels=True,
+            font_size=8,
+            pos=nx.random_layout(
+                self.graph,
+                seed=10))
+        plt.savefig("foo.png")
+
+    def get_graph(self) -> nx.DiGraph:
+        """
+        Return the flow graph for this program
+        """
+        return self.graph
+
+    def get_sorted(self) -> List[Node]:
+        """
+        Get the sorted graph
+        """
+        return self.sorted
 
     def __build(self) -> None:
         """
@@ -57,10 +85,16 @@ class FlowGraph:
         loop_order = self.program.get_loop_order().get_final_loop_order()
 
         # Add the edges connecting the LoopNodes
-        src = loop_order[0]
-        for dst in loop_order[1:]:
-            self.graph.add_edge(LoopNode(src), LoopNode(dst))
-            src = dst
+        chain: List[Node] = [cast(Node, OtherNode("StartLoop"))]
+        for rank in loop_order:
+            chain.append(cast(Node, LoopNode(rank)))
+            self.graph.add_edge(chain[-2], chain[-1])
+
+        # Add the graphics generation, body, and footer
+        self.graph.add_edge(OtherNode("Graphics"), OtherNode("StartLoop"))
+        self.graph.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+        self.graph.add_edge(chain[-1], OtherNode("Body"))
+        self.graph.add_edge(OtherNode("Body"), OtherNode("Footer"))
 
         # Add SRNodes and FiberNodes for each tensor
         part = self.program.get_partitioning()
@@ -70,6 +104,13 @@ class FlowGraph:
             # Add the partitioning
             init_ranks = tensor.get_ranks()
             for rank in init_ranks:
+
+                # If it is an output, we need to construct the tensor before
+                # its ranks are avalable
+                if tensor.get_is_output():
+                    self.graph.add_edge(
+                        OtherNode("Output"), RankNode(
+                            root, rank))
 
                 # Add the static partitioning
                 if rank in part.get_static_parts():
@@ -82,6 +123,8 @@ class FlowGraph:
                     for res in part.partition_names(rank, False):
                         self.graph.add_edge(part_node, RankNode(root, res))
 
+                    # We must do graphics after any static partitioning
+                    self.graph.add_edge(part_node, OtherNode("Graphics"))
                     self.program.apply_partitioning(tensor, rank)
 
                 # Add the dynamic partitioning
@@ -109,6 +152,10 @@ class FlowGraph:
             fiber_node = FiberNode(tensor.fiber_name())
             self.graph.add_edge(sr_node, fiber_node)
 
+            # The output SRNode requires the output to have been created first
+            if tensor.is_output:
+                self.graph.add_edge(OtherNode("Output"), sr_node)
+
             # The header SRNode requires RankNodes of the relevant ranks
             for rank in tensor.get_ranks():
                 self.graph.add_edge(RankNode(root, rank), sr_node)
@@ -119,7 +166,7 @@ class FlowGraph:
             while opt_rank is not None:
                 rank = opt_rank.upper()
                 # If this is a dynamically partitioned rank, add the relevant
-                # SRNode and connection to the FiberNode
+                # FromFiberNode, SRNode and edges to the FiberNodes
                 if rank in part.get_dyn_parts():
                     active = Tensor.from_tensor(active)
                     self.program.apply_partitioning(active, rank)
@@ -127,9 +174,11 @@ class FlowGraph:
 
                     sr_node = SRNode(root, active.get_ranks().copy())
                     part_node = PartNode(root, (rank,))
+                    ff_node = FromFiberNode(root, rank)
                     new_fnode = FiberNode(active.fiber_name())
 
-                    self.graph.add_edge(fiber_node, part_node)
+                    self.graph.add_edge(fiber_node, ff_node)
+                    self.graph.add_edge(ff_node, part_node)
                     self.graph.add_edge(part_node, sr_node)
                     self.graph.add_edge(sr_node, new_fnode)
 
@@ -146,7 +195,12 @@ class FlowGraph:
                 fiber_node = new_fnode
                 opt_rank = active.peek()
 
+            # The last FiberNode is needed for the body
+            self.graph.add_edge(fiber_node, OtherNode("Body"))
+
+            is_output = tensor.get_is_output()
             tensor.reset()
+            tensor.set_is_output(is_output)
 
     def __prune(self) -> None:
         """
@@ -154,7 +208,10 @@ class FlowGraph:
         """
         # Remove all FiberNodes
         nodes = [node for node in self.graph.nodes()
-                 if isinstance(node, FiberNode) or isinstance(node, RankNode)]
+                 if isinstance(node, FiberNode) or
+                 isinstance(node, RankNode) or
+                 (isinstance(node, OtherNode) and
+                     node.get_type() == "StartLoop")]
 
         for node in nodes:
             # Connect all in and out edges
@@ -165,22 +222,7 @@ class FlowGraph:
             # Remove the node
             self.graph.remove_node(node)
 
-    def draw(self) -> None:  # pragma: no cover
-        """
-        Draw the graph
-        """
-
-        plt.figure(figsize=(8, 6))
-        nx.draw(
-            self.graph,
-            with_labels=True,
-            font_size=8,
-            pos=nx.random_layout(
-                self.graph,
-                seed=10))
-        plt.savefig("foo.png")
-
-    def sort(self) -> List[Node]:
+    def __sort(self) -> List[Node]:
         """
         Sort all nodes so that the generated code obeys all dependencies
         """

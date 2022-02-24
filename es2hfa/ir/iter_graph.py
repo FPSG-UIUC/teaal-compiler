@@ -45,54 +45,34 @@ class IterationGraph:
         self.pos = 0
 
         # Configure the iteration graph
-        self.config()
-
-    def config(self) -> None:
-        """
-        Configure the iteration graph
-        """
-        # Add a None to the end of the loop_order for the bottom of the loop
-        # nest
-        loop_order = self.program.get_loop_order().get_curr_loop_order()
+        loop_order = self.program.get_loop_order().get_final_loop_order()
         self.loop_order = cast(List[Optional[str]], loop_order.copy()) + [None]
-
-        # Place the tensors in the appropriate locations in the iteration graph
-        self.graph: List[List[Tensor]] = []
-        for rank in self.loop_order:
-            self.graph.append([])
-            for tensor in self.program.get_tensors():
-                if tensor.peek() == rank:
-                    self.graph[-1].append(tensor)
-
-        # Note that our position in the iteration graph should not move if we
-        # are doing an update
 
     def peek(self) -> Tuple[Optional[str], List[Tensor]]:
         """
         Peek at the next iteration
         """
         rank = self.loop_order[self.pos]
-        return rank, self.graph[self.pos]
+        tensors = []
+        for tensor in self.program.get_tensors():
+            trank = tensor.peek()
+            if trank is not None:
+                trank = trank.upper()
+
+            if trank == rank:
+                tensors.append(tensor)
+
+        return rank, tensors
 
     def pop(self) -> Tuple[Optional[str], List[Tensor]]:
         """
         Pop the next iteration off the graph
         """
-        # Pop off the next iteration
-        rank = self.loop_order[self.pos]
-        tensors = self.graph[self.pos]
-        self.graph[self.pos] = []
+        rank, tensors = self.peek()
 
-        # Update each of the tensors and re-insert them into the graph at the
-        # appropriate location
+        # Update each of the tensors
         for tensor in tensors:
             tensor.pop()
-
-            # The output tensor may not have the correct ranks right now, it
-            # is fine to just drop it from the iteration graph because it will
-            # be re-inserted after the config()
-            if not tensor.get_is_output() or tensor.peek() in self.loop_order:
-                self.graph[self.loop_order.index(tensor.peek())].append(tensor)
 
         # Update the position in the iteration graph
         self.pos += 1

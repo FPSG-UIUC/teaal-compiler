@@ -25,7 +25,7 @@ Representation of a tensor as it moves through the iteration graph
 """
 
 from lark.tree import Tree
-from typing import Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from es2hfa.ir.partitioning import Partitioning
 
@@ -169,9 +169,7 @@ class Tensor:
         The == operator for Tensors
         """
         if isinstance(other, type(self)):
-            return self.name == other.name and \
-                self.ranks == other.ranks and \
-                self.is_output == other.is_output
+            return self.__key() == other.__key()
         return False
 
     def __get_rank(self) -> str:
@@ -179,3 +177,17 @@ class Tensor:
         Get the name of the current rank of the tensor
         """
         return self.ranks[self.rank_ptr].lower()
+
+    def __key(self) -> Iterable[Any]:
+        """
+        Return an iterable of attributes
+        """
+        return self.name, self.ranks, self.is_output
+
+    def __repr__(self) -> str:
+        """
+        Get a string representation of this object
+        """
+        strs = [key if isinstance(key, str) else repr(key)
+                for key in self.__key()]
+        return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"

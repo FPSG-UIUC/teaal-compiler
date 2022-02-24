@@ -218,3 +218,9 @@ def test_neq_obj():
     tensor = Tensor("A", ["I", "J"])
     obj = "foo"
     assert tensor != obj
+
+
+def test_repr():
+    tensor = Tensor("A", ["I", "J", "K"])
+    tensor.set_is_output(True)
+    assert repr(tensor) == "(Tensor, A, ['I', 'J', 'K'], True)"

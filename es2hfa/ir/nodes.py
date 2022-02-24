@@ -69,11 +69,17 @@ class FiberNode(Node):
     A Node representing a fiber
     """
 
-    def __init__(self, fiber):
+    def __init__(self, fiber: str):
         """
         Construct a FiberNode
         """
         self.fiber = fiber
+
+    def get_fiber(self) -> str:
+        """
+        Accessor for the fiber
+        """
+        return self.fiber
 
     def _Node__key(self) -> Iterable[Any]:
         """
@@ -83,16 +89,54 @@ class FiberNode(Node):
 
 
 @Node.register
+class FromFiberNode(Node):
+    """
+    A Node representing a call to Tensor.fromFiber()
+    """
+
+    def __init__(self, tensor: str, rank: str):
+        """
+        Construct a FromFiberNode
+        """
+        self.tensor = tensor
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a FromFiberNode
+        """
+        return self.tensor, self.rank
+
+
+@Node.register
 class LoopNode(Node):
     """
     A Node representing a loop
     """
 
-    def __init__(self, rank):
+    def __init__(self, rank: str):
         """
         Construct a LoopNode
         """
         self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
 
     def _Node__key(self) -> Iterable[Any]:
         """
@@ -102,23 +146,61 @@ class LoopNode(Node):
 
 
 @Node.register
+class OtherNode(Node):
+    """
+    Another type of node
+    """
+
+    def __init__(self, type_: str):
+        """
+        Construct another type of node
+        Should be used for required, one-off nodes
+        """
+        self.type = type_
+
+    def get_type(self) -> str:
+        """
+        Accessor for the type
+        """
+        return self.type
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of the fields of an OtherNode
+        """
+        return self.type,
+
+
+@Node.register
 class PartNode(Node):
     """
     A Node representing a partitioning function
     """
 
-    def __init__(self, tensor: str, rank: Tuple[str]):
+    def __init__(self, tensor: str, ranks: Tuple[str]):
         """
-        Build a partitioning node for a given tensor and rank
+        Build a partitioning node for a given tensor and ranks
         """
         self.tensor = tensor
-        self.rank = rank
+        self.ranks = ranks
+
+    def get_ranks(self) -> Tuple[str]:
+        """
+        Accessor for the ranks
+        """
+        return self.ranks
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
 
     def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a PartNode
         """
-        return self.tensor, self.rank
+        return self.tensor, self.ranks
 
 
 @Node.register
@@ -133,6 +215,18 @@ class RankNode(Node):
         """
         self.tensor = tensor
         self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
 
     def _Node__key(self) -> Iterable[Any]:
         """
@@ -153,6 +247,18 @@ class SRNode(Node):
         """
         self.tensor = tensor
         self.ranks = ranks
+
+    def get_ranks(self) -> List[str]:
+        """
+        Accessor for the ranks
+        """
+        return self.ranks
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
 
     def _Node__key(self) -> Iterable[Any]:
         """

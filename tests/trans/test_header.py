@@ -1,5 +1,6 @@
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
+from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.graphics import Graphics
@@ -128,7 +129,7 @@ def test_make_loop_header_leader():
 
     header, graphics, _ = build_header(mapping)
     header.make_global_header(graphics)
-    assert header.make_loop_header("M").gen(depth=0) == hfa
+    assert header.make_loop_header("M1").gen(depth=0) == hfa
 
 
 def test_make_loop_header_follower():
@@ -155,7 +156,7 @@ def test_make_loop_header_follower():
 
     header, graphics, _ = build_header(mapping)
     header.make_global_header(graphics)
-    assert header.make_loop_header("K").gen(depth=0) == hfa
+    assert header.make_loop_header("K1").gen(depth=0) == hfa
 
 
 def test_make_loop_header_swizzle():
@@ -187,4 +188,31 @@ def test_make_loop_header_swizzle():
     graph = IterationGraph(program)
     graph.pop()
 
-    assert header.make_loop_header("K").gen(depth=0) == hfa
+    assert header.make_loop_header("K1").gen(depth=0) == hfa
+
+
+def test_make_output():
+    mapping = """
+        loop-order:
+            Z: [K, M, N]
+    """
+
+    hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])"
+
+    header, _, program = build_header(mapping)
+    assert header.make_output().gen(depth=0) == hfa
+
+
+def test_make_swizzle_root():
+    hfa = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
+          "a_m = A_MK.getRoot()"
+
+    header, _, _ = build_header("")
+    tensor = Tensor("A", ["K", "M"])
+    assert header.make_swizzle_root(tensor).gen(depth=0) == hfa
+
+
+def test_make_tensor_from_fiber():
+    hfa = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)"
+    tensor = Tensor("A", ["K", "M"])
+    assert Header.make_tensor_from_fiber(tensor).gen(depth=0) == hfa

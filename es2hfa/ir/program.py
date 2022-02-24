@@ -242,6 +242,8 @@ class Program:
     def start_partitioning(self, rank: str) -> None:
         """
         Start partitioning the partition_rank given
+
+        TODO: Switch to taking a tensor
         """
         # Make sure that the program is configured
         if self.loop_order is None or self.partitioning is None:

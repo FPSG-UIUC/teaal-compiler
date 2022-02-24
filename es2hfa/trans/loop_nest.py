@@ -64,8 +64,6 @@ class LoopNest:
         # Generate the loop header
         loop_nest.add(header.make_loop_header(rank))
 
-        # Update the iteration graph and get the new tensors
-        graph.config()
         rank, tensors = graph.peek()
 
         # Get the information for the for loop
