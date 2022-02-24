@@ -1,10 +1,10 @@
-Z_MN = Tensor(rank_ids=["M", "N"])
-B_NK = B_KN.swizzleRanks(rank_ids=["N", "K"])
 C_NJ = C_JN.swizzleRanks(rank_ids=["N", "J"])
-z_m = Z_MN.getRoot()
-a_m = A_MKJ.getRoot()
-b_n = B_NK.getRoot()
 c_n = C_NJ.getRoot()
+B_NK = B_KN.swizzleRanks(rank_ids=["N", "K"])
+b_n = B_NK.getRoot()
+a_m = A_MKJ.getRoot()
+Z_MN = Tensor(rank_ids=["M", "N"])
+z_m = Z_MN.getRoot()
 for m, (z_n, a_k) in z_m << a_m:
     for n, (z_ref, (b_k, c_j)) in z_n << (b_n & c_n):
         for k, (a_j, b_val) in a_k & b_k:

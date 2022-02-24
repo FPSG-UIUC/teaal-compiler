@@ -10,7 +10,7 @@ def test_translate_no_loops():
     hfa = "A_ = Tensor(rank_ids=[])\n" + \
           "a_ref = A_.getRoot()\n" + \
           "a_ref += b"
-    assert HFA(einsum, mapping).translate(0).gen(0) == hfa
+    assert str(HFA(einsum, mapping)) == hfa
 
 
 def test_translate_defaults():
@@ -34,9 +34,7 @@ def test_translate_defaults():
           "for m, (z_n, (_, t1_n, c_n)) in z_m << (t1_m | c_m):\n" + \
           "    for n, (z_ref, (_, t1_val, c_val)) in z_n << (t1_n | c_n):\n" + \
           "        z_ref += t1_val + c_val"
-    code1 = HFA(einsum, mapping).translate(0).gen(0)
-    code2 = HFA(einsum, mapping).translate(1).gen(0)
-    assert code1 + "\n" + code2 == hfa
+    assert str(HFA(einsum, mapping)) == hfa
 
 
 def test_translate_specified():
@@ -107,10 +105,7 @@ def test_translate_specified():
           "Z_NM = tmp20\n" + \
           "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
 
-    trans = HFA(einsum, mapping)
-    code1 = trans.translate(0).gen(0)
-    code2 = trans.translate(1).gen(0)
-    assert code1 + "\n" + code2 == hfa
+    assert str(HFA(einsum, mapping)) == hfa
 
 
 def test_hfa_dyn_part():
@@ -162,4 +157,4 @@ def test_hfa_dyn_part():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    assert HFA(einsum, mapping).translate(0).gen(0) == hfa
+    assert str(HFA(einsum, mapping)) == hfa

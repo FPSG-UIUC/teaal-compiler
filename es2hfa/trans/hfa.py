@@ -54,40 +54,16 @@ class HFA:
         self.einsum = einsum
         self.mapping = mapping
 
-        program = Program(einsum, mapping)
-        trans_utils = TransUtils()
+        self.program = Program(einsum, mapping)
+        self.trans_utils = TransUtils()
 
         code = SBlock([])
         for i in range(len(einsum.get_expressions())):
-            # Add Einsum to program
-            program.add_einsum(i)
-
-            # Create a graphics object
-            graphics = Graphics(program)
-
-            # Create a partitioner
-            partitioner = Partitioner(program, trans_utils)
-
-            # Build the header
-            header = Header(program, partitioner)
-            code.add(header.make_global_header(graphics))
-
-            # Build the loop nests
-            graph = IterationGraph(program)
-            eqn = Equation(program)
-            code.add(LoopNest.make_loop_nest(eqn, graph, graphics, header))
-
-            # Build the footer
-            code.add(Footer.make_footer(program, graphics, partitioner))
-
-            program.reset()
+            code.add(self.__translate(i))
 
         self.hfa = cast(Statement, code)
 
-        self.program = Program(self.einsum, self.mapping)
-        self.trans_utils = TransUtils()
-
-    def translate(self, i: int) -> Statement:
+    def __translate(self, i: int) -> Statement:
         """
         Generate a single loop nest
         """

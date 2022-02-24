@@ -1,8 +1,8 @@
-Z_MNO = Tensor(rank_ids=["M", "N", "O"])
 B_OK = B_KO.swizzleRanks(rank_ids=["O", "K"])
-z_m = Z_MNO.getRoot()
-a_m = A_MNK.getRoot()
 b_o = B_OK.getRoot()
+a_m = A_MNK.getRoot()
+Z_MNO = Tensor(rank_ids=["M", "N", "O"])
+z_m = Z_MNO.getRoot()
 for m, (z_n, a_n) in z_m << a_m:
     for n, (z_o, a_k) in z_n << a_n:
         for o, (z_ref, b_k) in z_o << b_o:
