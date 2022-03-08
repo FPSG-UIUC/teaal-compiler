@@ -71,15 +71,17 @@ class Partitioner:
             if rank not in partitioning.keys():
                 continue
 
+            first = True
             for j, part in enumerate(partitioning[rank]):
                 if part.data == "nway_shape":
                     block.add(self.__nway_shape(rank, part, i))
 
                 elif part.data == "uniform_occupancy":
-                    block.add(self.__uniform_occupancy(tensor, part))
+                    # The dynamic partitioning must be of the current top rank
+                    if not first:
+                        break
 
-                    # Only apply one dynamic partition
-                    break
+                    block.add(self.__uniform_occupancy(tensor, part))
 
                 elif part.data == "uniform_shape":
                     block.add(self.__uniform_shape(part, i + j))
@@ -91,6 +93,8 @@ class Partitioner:
                     raise ValueError(
                         "Unknown partitioning style: " +
                         part.data)  # pragma: no cover
+
+                first = False
 
             # Finally, update the tensor with this partition
             self.program.apply_partitioning(tensor, rank)

@@ -262,6 +262,31 @@ class SRNode(Node):
 
     def _Node__key(self) -> Iterable[Any]:
         """
-        Iterable of fields of a PartNode
+        Iterable of fields of a SRNode
         """
         return self.tensor, self.ranks
+
+
+@Node.register
+class TensorNode(Node):
+    """
+    A Node representing a Tensor
+    """
+
+    def __init__(self, tensor: str):
+        """
+        Construct a tensor node
+        """
+        self.tensor = tensor
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a TensorNode
+        """
+        return self.tensor,

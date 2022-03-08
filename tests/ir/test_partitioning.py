@@ -13,16 +13,16 @@ def parse_partitioning(parts):
     return Mapping.from_str(yaml).get_partitioning()
 
 
-def test_mixed_partitioning():
-    parts = """
-                K: [uniform_occupancy(A.5), uniform_shape(4)]
+def test_nway_after_dyn():
+    all_parts = """
+                M: [uniform_occupancy(A.6), nway_shape(20)]
     """
-    dict_ = parse_partitioning(parts)
-
+    dict_ = parse_partitioning(all_parts)["Z"]
     with pytest.raises(ValueError) as excinfo:
-        Partitioning(dict_["Z"], ["M", "N", "K"])
-    assert str(excinfo.value) \
-        == "Rank K cannot be partitioned both statically and dynamically"
+        partitioning = Partitioning(dict_, ["M", "N", "K"])
+
+    assert str(
+        excinfo.value) == "N-way partitioning after dynamic partitioning on rank M"
 
 
 def test_get_all_partitioning():
@@ -33,6 +33,27 @@ def test_get_all_partitioning():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
     partitioning = Partitioning(dict_, ["M", "N", "K"])
+    assert partitioning.get_all_parts() == dict_
+
+
+def test_mixed_partitioning():
+    parts = """
+                K:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
+    """
+    dict_ = parse_partitioning(parts)["Z"]
+    partitioning = Partitioning(dict_, ["M", "N", "K"])
+
+    dict_["K6I"] = dict_["K"][-6:]
+    dict_["K5I"] = dict_["K"][-5:]
+    dict_["K3I"] = dict_["K"][-3:]
     assert partitioning.get_all_parts() == dict_
 
 
@@ -83,15 +104,20 @@ def test_get_final_rank_id():
 
 def test_get_intermediates():
     all_parts = """
-                M:
-                    - uniform_occupancy(A.12)
+                K:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
                     - uniform_occupancy(A.6)
-                    - uniform_occupancy(A.3)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
     """
     partitioning = Partitioning(
         parse_partitioning(all_parts)["Z"], ["M", "N", "K"])
 
-    assert partitioning.get_intermediates("M") == ["M1I", "M2I"]
+    assert partitioning.get_intermediates("K") == ["K6I", "K5I", "K3I"]
 
 
 def test_get_leader():
@@ -161,14 +187,28 @@ def test_partition_names():
     all_parts = """
                 M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
                 N: [uniform_shape(2), nway_shape(7)]
+                K:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
     """
     partitioning = Partitioning(
         parse_partitioning(all_parts)["Z"], [
             "M", "N", "K"])
 
     assert partitioning.partition_names("M", True) == ["M0", "M1", "M2"]
-    assert partitioning.partition_names("N", False) == ["N0", "N1", "N2"]
     assert partitioning.partition_names("M", False) == ["M1I", "M2"]
+
+    assert partitioning.partition_names("N", False) == ["N0", "N1", "N2"]
+
+    assert partitioning.partition_names("K", False) == ["K6I", "K7", "K8"]
+    assert partitioning.partition_names("K3I", False) == [
+        "K0", "K1", "K2", "K3"]
 
 
 def test_skip_empty_partitioning():

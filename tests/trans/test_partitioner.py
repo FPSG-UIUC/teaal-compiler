@@ -123,6 +123,62 @@ def test_uniform_shape():
     assert_partition(tensor, spec, hfa)
 
 
+def test_mixed():
+    spec = """
+                K:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
+    """
+    hfa = "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitUniform(500, depth=0)\n" + \
+          "tmp2 = tmp1.splitUniform(250, depth=1)\n" + \
+          "A_K8K7K6IM = tmp2\n" + \
+          "A_K8K7K6IM.setRankIds(rank_ids=[\"K8\", \"K7\", \"K6I\", \"M\"])"
+
+    program, partitioner = build_partitioner(spec)
+    tensor = program.get_tensor("A")
+    tensor.from_fiber()
+    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
+
+    hfa = "tmp3 = A_K6IM\n" + \
+          "tmp4 = tmp3.splitEqual(100)\n" + \
+          "A_K6K5IM = tmp4\n" + \
+          "A_K6K5IM.setRankIds(rank_ids=[\"K6\", \"K5I\", \"M\"])"
+
+    tensor.pop()
+    tensor.pop()
+    tensor.from_fiber()
+    assert partitioner.partition(tensor, {"K6I"}).gen(depth=0) == hfa
+
+    hfa = "tmp5 = A_K5IM\n" + \
+          "tmp6 = tmp5.splitEqual(50)\n" + \
+          "tmp7 = tmp6.splitUniform(10, depth=1)\n" + \
+          "A_K5K4K3IM = tmp7\n" + \
+          "A_K5K4K3IM.setRankIds(rank_ids=[\"K5\", \"K4\", \"K3I\", \"M\"])"
+
+    tensor.pop()
+    tensor.from_fiber()
+    assert partitioner.partition(tensor, {"K5I"}).gen(depth=0) == hfa
+
+    hfa = "tmp8 = A_K3IM\n" + \
+          "tmp9 = tmp8.splitEqual(6)\n" + \
+          "tmp10 = tmp9.splitUniform(4, depth=1)\n" + \
+          "tmp11 = tmp10.splitUniform(2, depth=2)\n" + \
+          "A_K3K2K1K0M = tmp11\n" + \
+          "A_K3K2K1K0M.setRankIds(rank_ids=[\"K3\", \"K2\", \"K1\", \"K0\", \"M\"])"
+
+    tensor.pop()
+    tensor.pop()
+    tensor.from_fiber()
+    assert partitioner.partition(tensor, {"K3I"}).gen(depth=0) == hfa
+
+
 def assert_unpartition(spec, hfa):
     yaml = """
     einsum:

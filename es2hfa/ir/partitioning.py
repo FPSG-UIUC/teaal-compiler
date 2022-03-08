@@ -53,16 +53,12 @@ class Partitioning:
             if not parts:
                 continue
 
-            # Make sure that the rank is either partitioned completely
-            # statically or completely dynamically
-            static = Partitioning.__is_static(parts[0])
-            for part in parts[1:]:
-                if Partitioning.__is_static(part) != static:
-                    raise ValueError(
-                        "Rank " + rank + " cannot be partitioned both statically and dynamically")
+            if Partitioning.__nway_after_dyn(parts):
+                raise ValueError(
+                    "N-way partitioning after dynamic partitioning on rank " + rank)
 
             # Add the partitioning specification to the appropriate dictionary
-            if static:
+            if Partitioning.__is_static(parts[0]):
                 self.static_parts[rank] = parts
             else:
                 self.dyn_parts[rank] = parts
@@ -73,7 +69,7 @@ class Partitioning:
         # of the rank so we can recover it later
         # Remember that the top rank's intermediate name is just the root name
         self.root_names = {}
-        for rank in self.dyn_parts.keys():
+        for rank in self.all_parts.keys():
             self.root_names[rank] = rank
             self.root_names.update(
                 {inter: rank for inter in self.get_intermediates(rank)})
@@ -101,11 +97,12 @@ class Partitioning:
                 self.final_rank_id[id_] = id_[:-1]
 
         # Save the partitioning information for intermediate ranks
-        init_dyn_ranks = [rank for rank in self.dyn_parts.keys()]
-        for rank in init_dyn_ranks:
+        init_ranks = [rank for rank in self.all_parts.keys()]
+        for rank in init_ranks:
             for i, int_ in enumerate(self.get_intermediates(rank)):
-                self.dyn_parts[int_] = self.dyn_parts[rank][-(i + 1):]
-                self.all_parts[int_] = self.all_parts[rank][-(i + 1):]
+                i = int(int_[len(rank):-1])
+                self.dyn_parts[int_] = self.all_parts[rank][-i:]
+                self.all_parts[int_] = self.all_parts[rank][-i:]
 
     def get_all_parts(self) -> Dict[str, List[Tree]]:
         """
@@ -141,8 +138,14 @@ class Partitioning:
         """
         Get the names of all intermediate ranks (e.g., K2I)
         """
-        num_parts = len(self.all_parts[rank])
-        return [rank + str(i) + "I" for i in range(1, num_parts)]
+        intermediates = []
+        for i, part in enumerate(self.all_parts[rank][1:]):
+
+            num = len(self.all_parts[rank]) - i - 1
+            if not Partitioning.__is_static(part):
+                intermediates.append(rank + str(num) + "I")
+
+        return intermediates
 
     def get_leader(self, part: Tree) -> str:
         """
@@ -176,17 +179,30 @@ class Partitioning:
         Get the list of names that this rank will be partitioned into
         """
         parts = self.all_parts[rank]
-        if all_ or rank in self.static_parts.keys():
+        # Return all final rank names
+        if all_:
             return [rank + str(j) for j in range(len(parts) + 1)]
 
-        else:
-            root = self.root_names[rank]
-            num_parts = len(self.dyn_parts[rank])
+        root = self.root_names[rank]
+        names = [root + str(len(parts))]
 
-            if num_parts == 1:
-                return [root + "0", root + "1"]
-            else:
-                return [root + str(num_parts - 1) + "I", root + str(num_parts)]
+        early_exit = False
+        # Otherwise, add rank names until another dynamic partitioning
+        for i, part in enumerate(parts[1:]):
+            num = len(parts) - i - 1
+            if Partitioning.__is_static(part):
+                names.append(root + str(num))
+                continue
+
+            names.append(root + str(num) + "I")
+            early_exit = True
+            break
+
+        if not early_exit:
+            names.append(root + "0")
+        names.reverse()
+
+        return names
 
     def __eq__(self, other) -> bool:
         """
@@ -203,18 +219,9 @@ class Partitioning:
         """
         num_parts = len(self.all_parts[rank])
 
-        # If the rank is statically partitioned, we can go straight to the
-        # final rank names
-        if rank in self.static_parts.keys():
-            all_ = [rank + str(i) for i in range(num_parts + 1)]
-
-        # Otherwise, we need both the intermediate and final rank names
-        else:
-            final = [rank + str(i) for i in range(num_parts + 1)]
-            # Because we know we have all dynamic partitioning, we will need
-            # intermediate rank names for all middle ranks
-            inter = self.get_intermediates(rank)
-            all_ = final + inter
+        final = self.partition_names(rank, True)
+        inter = self.get_intermediates(rank)
+        all_ = final + inter
 
         return rank + str(num_parts), all_
 
@@ -230,3 +237,18 @@ class Partitioning:
         Get all relevant fields of the Partitioning
         """
         return self.dyn_parts, self.static_parts
+
+    @staticmethod
+    def __nway_after_dyn(parts: List[Tree]) -> bool:
+        """
+        Check that this combination of partitionings does not have an nway
+        partitioning after a dynamic partitioning
+        """
+        dyn = False
+        for part in parts:
+            if not Partitioning.__is_static(part):
+                dyn = True
+            elif part.data == "nway_shape" and dyn:
+                return True
+
+        return False

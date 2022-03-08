@@ -111,12 +111,16 @@ class LoopOrder:
         loop_order = self.get_unpartitioned_ranks()
 
         for rank, parts in self.partitioning.get_all_parts().items():
+            # Skip intermediate ranks
+            if rank not in loop_order:
+                continue
+
             # Remove the old rank
             i = loop_order.index(rank)
             loop_order.pop(i)
 
             # Insert the new ranks
-            new_ranks = [rank + str(j) for j in range(len(parts) + 1)]
+            new_ranks = self.partitioning.partition_names(rank, True)
             for new_rank in new_ranks:
                 loop_order.insert(i, new_rank)
 

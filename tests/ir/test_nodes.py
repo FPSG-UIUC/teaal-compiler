@@ -56,3 +56,9 @@ def test_sr_node():
 
     assert SRNode("A", ["K"]).get_tensor() == "A"
     assert SRNode("A", ["K"]).get_ranks() == ["K"]
+
+
+def test_tensor_node():
+    assert repr(TensorNode("A")) == "(TensorNode, A)"
+
+    assert TensorNode("A").get_tensor() == "A"

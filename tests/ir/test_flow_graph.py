@@ -185,14 +185,12 @@ def test_graph_dyn_parts():
     corr.add_edge(PartNode("B", ('K',)), PartNode("B", ('K1I',)))
     corr.add_edge(PartNode("B", ('K1I',)), SRNode("B", ['K1', 'N0', 'K0']))
     corr.add_edge(PartNode("B", ('N',)), SRNode("B", ['N1', 'K1I', 'N0']))
+    corr.add_edge(PartNode("B", ('K',)), SRNode("B", ['N1', 'K1I', 'N0']))
+    corr.add_edge(PartNode("B", ('N',)), SRNode("B", ['K1', 'N0', 'K0']))
     corr.add_edge(SRNode("B", ['K', 'N']), FromFiberNode("B", "K"))
     corr.add_edge(FromFiberNode("B", "K"), PartNode("B", ('K',)))
     corr.add_edge(SRNode("B", ['K2', 'N', 'K1I']), LoopNode("K2"))
     corr.add_edge(SRNode("B", ['N1', 'K1I', 'N0']), LoopNode("N1"))
     corr.add_edge(SRNode("B", ['K1', 'N0', 'K0']), LoopNode("K1"))
-
-    for edge in corr.edges:
-        if edge not in graph.edges:
-            print(edge)
 
     assert nx.is_isomorphic(graph, corr)

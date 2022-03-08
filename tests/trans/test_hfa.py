@@ -103,42 +103,69 @@ def test_hfa_dyn_part():
         declaration:
             A: [K, M]
             B: [K, N]
-            T1: [K, M, N]
+            Z: [M, N]
         expressions:
-            - T1[k, m, n] = A[k, m] * B[k, n]
+            - Z[M, N] = sum(K).(A[K, M] * B[K, N])
     mapping:
-        rank-order:
-            A: [K, M]
-            B: [K, N]
-            T1: [M, K, N]
         partitioning:
-            T1:
-                M: [uniform_occupancy(A.16)]
+            Z:
+                K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                N: [uniform_occupancy(B.5)]
+        loop-order:
+            Z: [K2, M, N1, K1, N0, K0]
     """
-
-    hfa = "b_k = B_KN.getRoot()\n" + \
-          "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
-          "a_m = A_MK.getRoot()\n" + \
-          "A_MK = Tensor.fromFiber(rank_ids=[\"M\", \"K\"], fiber=a_m)\n" + \
-          "tmp0 = A_MK\n" + \
-          "tmp1 = tmp0.splitEqual(16)\n" + \
-          "A_M1M0K = tmp1\n" + \
-          "A_M1M0K.setRankIds(rank_ids=[\"M1\", \"M0\", \"K\"])\n" + \
-          "a_m1 = A_M1M0K.getRoot()\n" + \
-          "T1_M1M0KN = Tensor(rank_ids=[\"M1\", \"M0\", \"K\", \"N\"])\n" + \
-          "t1_m1 = T1_M1M0KN.getRoot()\n" + \
-          "for m1, (t1_m0, a_m0) in t1_m1 << a_m1:\n" + \
-          "    for m0, (t1_k, a_k) in t1_m0 << a_m0:\n" + \
-          "        for k, (t1_n, (a_val, b_n)) in t1_k << (a_k & b_k):\n" + \
-          "            for n, (t1_ref, b_val) in t1_n << b_n:\n" + \
-          "                t1_ref += a_val * b_val\n" + \
-          "tmp2 = T1_M1M0KN\n" + \
-          "tmp3 = tmp2.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-          "T1_MKN = tmp3\n" + \
-          "T1_MKN.setRankIds(rank_ids=[\"M\", \"K\", \"N\"])"
 
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    print(str(HFA(einsum, mapping)))
+    hfa = "b_k = B_KN.getRoot()\n" + \
+          "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k)\n" + \
+          "a_k = A_KM.getRoot()\n" + \
+          "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)\n" + \
+          "tmp0 = A_KM\n" + \
+          "tmp1 = tmp0.splitEqual(6)\n" + \
+          "A_K2K1IM = tmp1\n" + \
+          "A_K2K1IM.setRankIds(rank_ids=[\"K2\", \"K1I\", \"M\"])\n" + \
+          "A_K2MK1I = A_K2K1IM.swizzleRanks(rank_ids=[\"K2\", \"M\", \"K1I\"])\n" + \
+          "a_k2 = A_K2MK1I.getRoot()\n" + \
+          "tmp2 = B_KN\n" + \
+          "tmp3 = tmp2.splitNonUniform(a_k2)\n" + \
+          "B_K2K1IN = tmp3\n" + \
+          "B_K2K1IN.setRankIds(rank_ids=[\"K2\", \"K1I\", \"N\"])\n" + \
+          "B_K2NK1I = B_K2K1IN.swizzleRanks(rank_ids=[\"K2\", \"N\", \"K1I\"])\n" + \
+          "b_k2 = B_K2NK1I.getRoot()\n" + \
+          "Z_MN1N0 = Tensor(rank_ids=[\"M\", \"N1\", \"N0\"])\n" + \
+          "z_m = Z_MN1N0.getRoot()\n" + \
+          "for k2, (a_m, b_n) in a_k2 & b_k2:\n" + \
+          "    B_NK1I = Tensor.fromFiber(rank_ids=[\"N\", \"K1I\"], fiber=b_n)\n" + \
+          "    tmp4 = B_NK1I\n" + \
+          "    tmp5 = tmp4.splitEqual(5)\n" + \
+          "    B_N1N0K1I = tmp5\n" + \
+          "    B_N1N0K1I.setRankIds(rank_ids=[\"N1\", \"N0\", \"K1I\"])\n" + \
+          "    B_N1K1IN0 = B_N1N0K1I.swizzleRanks(rank_ids=[\"N1\", \"K1I\", \"N0\"])\n" + \
+          "    b_n1 = B_N1K1IN0.getRoot()\n" + \
+          "    for m, (z_n1, a_k1i) in z_m << a_m:\n" + \
+          "        A_K1I = Tensor.fromFiber(rank_ids=[\"K1I\"], fiber=a_k1i)\n" + \
+          "        tmp6 = A_K1I\n" + \
+          "        tmp7 = tmp6.splitEqual(3)\n" + \
+          "        A_K1K0 = tmp7\n" + \
+          "        A_K1K0.setRankIds(rank_ids=[\"K1\", \"K0\"])\n" + \
+          "        a_k1 = A_K1K0.getRoot()\n" + \
+          "        for n1, (z_n0, b_k1i) in z_n1 << b_n1:\n" + \
+          "            B_K1IN0 = Tensor.fromFiber(rank_ids=[\"K1I\", \"N0\"], fiber=b_k1i)\n" + \
+          "            tmp8 = B_K1IN0\n" + \
+          "            tmp9 = tmp8.splitNonUniform(a_k1)\n" + \
+          "            B_K1K0N0 = tmp9\n" + \
+          "            B_K1K0N0.setRankIds(rank_ids=[\"K1\", \"K0\", \"N0\"])\n" + \
+          "            B_K1N0K0 = B_K1K0N0.swizzleRanks(rank_ids=[\"K1\", \"N0\", \"K0\"])\n" + \
+          "            b_k1 = B_K1N0K0.getRoot()\n" + \
+          "            for k1, (a_k0, b_n0) in a_k1 & b_k1:\n" + \
+          "                for n0, (z_ref, b_k0) in z_n0 << b_n0:\n" + \
+          "                    for k0, (a_val, b_val) in a_k0 & b_k0:\n" + \
+          "                        z_ref += a_val * b_val\n" + \
+          "tmp10 = Z_MN1N0\n" + \
+          "tmp11 = tmp10.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+          "Z_MN = tmp11\n" + \
+          "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
+
     assert str(HFA(einsum, mapping)) == hfa

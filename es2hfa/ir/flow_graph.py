@@ -81,7 +81,95 @@ class FlowGraph:
         """
         self.graph = nx.DiGraph()
 
-        # Add the LoopNodes
+        self.__build_loop_nest()
+        self.__build_output()
+
+        # Add SRNodes and FiberNodes for each tensor
+        part = self.program.get_partitioning()
+        for tensor in self.program.get_tensors():
+            root = tensor.root_name()
+
+            # Add the partitioning
+            init_ranks = tensor.get_ranks()
+            for rank in init_ranks:
+                self.graph.add_edge(TensorNode(root), RankNode(root, rank))
+
+                # Add the static partitioning
+                if rank in part.get_static_parts():
+                    self.__build_static_part(tensor, rank)
+
+                # Add the dynamic partitioning
+                if rank in part.get_dyn_parts():
+                    self.__build_dyn_part(tensor, rank)
+
+            # Get the root fiber
+            self.__build_swizzle_root_fiber(tensor)
+
+            # Insert all other fiber nodes
+            opt_rank = tensor.peek()
+            while opt_rank is not None:
+                rank = opt_rank.upper()
+
+                # If this is a dynamically partitioned rank, add the relevant
+                # FromFiberNode, SRNode and edges to the FiberNodes
+                if rank in part.get_dyn_parts():
+                    self.__connect_dyn_part(tensor, rank)
+
+                # Connect a loop to its relevant input and output fibers
+                self.__build_fiber_nodes(tensor, rank)
+
+                opt_rank = tensor.peek()
+
+            # The last FiberNode is needed for the body
+            self.graph.add_edge(
+                FiberNode(tensor.fiber_name()),
+                OtherNode("Body"))
+
+            is_output = tensor.get_is_output()
+            tensor.reset()
+            tensor.set_is_output(is_output)
+
+    def __build_dyn_part(self, tensor: Tensor, rank: str) -> None:
+        """
+        Build a dynamic partitioning
+        """
+        part = self.program.get_partitioning()
+        root = tensor.root_name()
+
+        for src in [rank] + part.get_intermediates(rank):
+            part_node = PartNode(root, (src,))
+            dsts = part.partition_names(src, False)
+            leader = part.get_leader(part.get_dyn_parts()[src][0])
+
+            # Add the edge from the source rank and fiber to the
+            # PartNode
+            self.graph.add_edge(RankNode(root, src), part_node)
+            if root != leader:
+                lead_name = leader.lower() + "_" + dsts[1].lower()
+                self.graph.add_edge(
+                    FiberNode(lead_name), part_node)
+
+            # Add the destination RankNodes
+            for dst in dsts:
+                self.graph.add_edge(part_node, RankNode(root, dst))
+
+    def __build_fiber_nodes(self, tensor: Tensor, rank: str) -> None:
+        """
+        Build the FiberNodes between loops
+        """
+        fiber_node = FiberNode(tensor.fiber_name())
+        rank = tensor.pop().upper()
+        new_fnode = FiberNode(tensor.fiber_name())
+
+        # Add the nodes corresponding to the inputs and outputs of this
+        # loop
+        self.graph.add_edge(fiber_node, LoopNode(rank))
+        self.graph.add_edge(LoopNode(rank), new_fnode)
+
+    def __build_loop_nest(self) -> None:
+        """
+        Build the loop nest
+        """
         loop_order = self.program.get_loop_order().get_ranks()
 
         # Add the edges connecting the LoopNodes
@@ -96,114 +184,73 @@ class FlowGraph:
         self.graph.add_edge(chain[-1], OtherNode("Body"))
         self.graph.add_edge(OtherNode("Body"), OtherNode("Footer"))
 
-        # Add SRNodes and FiberNodes for each tensor
+    def __build_output(self) -> None:
+        """
+        Build all of the output-specific edges
+        """
+        tensor = self.program.get_output()
+        self.program.apply_all_partitioning(tensor)
+        root = tensor.root_name()
+
+        # Construct the output for the relevant tensor to be available
+        self.graph.add_edge(OtherNode("Output"), TensorNode(root))
+
+    def __build_static_part(self, tensor: Tensor, rank: str) -> None:
+        """
+        Build a static partitioning
+        """
         part = self.program.get_partitioning()
-        for tensor in self.program.get_tensors():
-            root = tensor.root_name()
+        root = tensor.root_name()
+        part_node = PartNode(root, (rank,))
 
-            # Apply all partitioning beforehand to the output tensor
-            if tensor.get_is_output():
-                self.program.apply_all_partitioning(tensor)
+        # Add the edge from the source rank to the partitioning
+        self.graph.add_edge(RankNode(root, rank), part_node)
 
-            # Add the partitioning
-            init_ranks = tensor.get_ranks()
-            for rank in init_ranks:
+        # Add edges to for all resulting ranks
+        for res in part.partition_names(rank, False):
+            self.graph.add_edge(part_node, RankNode(root, res))
 
-                # If it is an output, we need to construct the tensor before
-                # its ranks are avalable
-                if tensor.get_is_output():
-                    self.graph.add_edge(
-                        OtherNode("Output"), RankNode(
-                            root, rank))
+        # We must do graphics after any static partitioning
+        self.graph.add_edge(part_node, OtherNode("Graphics"))
+        self.program.apply_partitioning(tensor, rank)
 
-                # Add the static partitioning
-                if rank in part.get_static_parts():
-                    part_node = PartNode(root, (rank,))
+    def __build_swizzle_root_fiber(self, tensor: Tensor) -> None:
+        """
+        Build a swizzleRanks(), getRoot(), and the resulting FiberNode
+        """
+        self.program.get_loop_order().apply(tensor)
+        root = tensor.root_name()
 
-                    # Add the edge from the source rank to the partitioning
-                    self.graph.add_edge(RankNode(root, rank), part_node)
+        tensor_node = TensorNode(root)
+        sr_node = SRNode(root, tensor.get_ranks().copy())
+        fiber_node = FiberNode(tensor.fiber_name())
 
-                    # Add edges to for all resulting ranks
-                    for res in part.partition_names(rank, False):
-                        self.graph.add_edge(part_node, RankNode(root, res))
+        self.graph.add_edge(tensor_node, sr_node)
+        self.graph.add_edge(sr_node, fiber_node)
 
-                    # We must do graphics after any static partitioning
-                    self.graph.add_edge(part_node, OtherNode("Graphics"))
-                    self.program.apply_partitioning(tensor, rank)
+        # An SR node always requires the TensorNode and RankNodes of the
+        # relevant ranks
+        for rank in tensor.get_ranks():
+            self.graph.add_edge(RankNode(root, rank), sr_node)
 
-                # Add the dynamic partitioning
-                if rank in part.get_dyn_parts():
-                    for src in [rank] + part.get_intermediates(rank):
-                        part_node = PartNode(root, (src,))
-                        dsts = part.partition_names(src, False)
-                        leader = part.get_leader(part.get_dyn_parts()[src][0])
+    def __connect_dyn_part(self, tensor: Tensor, rank: str) -> None:
+        """
+        Connect the dynamic partitioning node to the relevant fiber nodes
+        """
+        fiber_node = FiberNode(tensor.fiber_name())
+        root = tensor.root_name()
 
-                        # Add the edge from the source rank and fiber to the
-                        # PartNode
-                        self.graph.add_edge(RankNode(root, src), part_node)
-                        if root != leader:
-                            lead_name = leader.lower() + "_" + dsts[1].lower()
-                            self.graph.add_edge(
-                                FiberNode(lead_name), part_node)
+        tensor.from_fiber()
+        self.program.apply_partitioning(tensor, rank)
+        self.program.get_loop_order().apply(tensor)
 
-                        # Add the destination RankNodes
-                        for dst in dsts:
-                            self.graph.add_edge(part_node, RankNode(root, dst))
+        part_node = PartNode(root, (rank,))
+        ff_node = FromFiberNode(root, rank)
 
-            # Insert the header SRNode
-            self.program.get_loop_order().apply(tensor)
-            sr_node = SRNode(root, tensor.get_ranks().copy())
-            fiber_node = FiberNode(tensor.fiber_name())
-            self.graph.add_edge(sr_node, fiber_node)
+        self.graph.add_edge(fiber_node, ff_node)
+        self.graph.add_edge(ff_node, part_node)
 
-            # The output SRNode requires the output to have been created first
-            if tensor.get_is_output():
-                self.graph.add_edge(OtherNode("Output"), sr_node)
-
-            # The header SRNode requires RankNodes of the relevant ranks
-            for rank in tensor.get_ranks():
-                self.graph.add_edge(RankNode(root, rank), sr_node)
-
-            # Insert all other fiber nodes
-            opt_rank = tensor.peek()
-            while opt_rank is not None:
-                rank = opt_rank.upper()
-                # If this is a dynamically partitioned rank, add the relevant
-                # FromFiberNode, SRNode and edges to the FiberNodes
-                if rank in part.get_dyn_parts():
-                    tensor.from_fiber()
-                    self.program.apply_partitioning(tensor, rank)
-                    self.program.get_loop_order().apply(tensor)
-
-                    sr_node = SRNode(root, tensor.get_ranks().copy())
-                    part_node = PartNode(root, (rank,))
-                    ff_node = FromFiberNode(root, rank)
-                    new_fnode = FiberNode(tensor.fiber_name())
-
-                    self.graph.add_edge(fiber_node, ff_node)
-                    self.graph.add_edge(ff_node, part_node)
-                    self.graph.add_edge(part_node, sr_node)
-                    self.graph.add_edge(sr_node, new_fnode)
-
-                    fiber_node = new_fnode
-
-                rank = tensor.pop().upper()
-                new_fnode = FiberNode(tensor.fiber_name())
-
-                # Add the nodes corresponding to the inputs and outputs of this
-                # loop
-                self.graph.add_edge(fiber_node, LoopNode(rank))
-                self.graph.add_edge(LoopNode(rank), new_fnode)
-
-                fiber_node = new_fnode
-                opt_rank = tensor.peek()
-
-            # The last FiberNode is needed for the body
-            self.graph.add_edge(fiber_node, OtherNode("Body"))
-
-            is_output = tensor.get_is_output()
-            tensor.reset()
-            tensor.set_is_output(is_output)
+        self.__build_swizzle_root_fiber(tensor)
 
     def __prune(self) -> None:
         """
@@ -213,8 +260,9 @@ class FlowGraph:
         nodes = [node for node in self.graph.nodes()
                  if isinstance(node, FiberNode) or
                  isinstance(node, RankNode) or
+                 isinstance(node, TensorNode) or
                  (isinstance(node, OtherNode) and
-                     node.get_type() == "StartLoop")]
+                  node.get_type() == "StartLoop")]
 
         for node in nodes:
             # Connect all in and out edges

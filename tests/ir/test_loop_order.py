@@ -49,15 +49,14 @@ def test_add_specified_partitioning():
 
     parts = """
                 K: [uniform_shape(4)]
-                M: [uniform_occupancy(A.6)]
+                M: [uniform_shape(6), uniform_occupancy(A.3)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order, parts)
-    loop_order.add(
-        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+    order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
+    loop_order.add(order, partitioning)
 
-    assert loop_order.get_ranks() == [
-        "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
+    assert loop_order.get_ranks() == order
 
 
 def test_apply_unconfigured():
@@ -98,14 +97,14 @@ def test_default_loop_order_after_partitioning():
 
     parts = """
                 K: [uniform_shape(4)]
-                M: [uniform_occupancy(A.6)]
+                M: [uniform_shape(20), uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order, parts)
     loop_order.add(None, partitioning)
 
     assert loop_order.get_ranks() == [
-        "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
+        "M2", "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
 
 
 def test_get_unpartitioned_ranks():
