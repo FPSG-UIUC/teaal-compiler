@@ -127,6 +127,13 @@ class Equation:
 
         # Separate the tensors into terms
         terms = self.__separate_terms(tensors)
+        output_tensor = self.__get_output_tensor(tensors)
+
+        # If there are no input tensors, we just need to iterShape on the
+        # output
+        if not terms and output_tensor:
+            call = EMethod(output_tensor.fiber_name(), "iterShape", [])
+            return cast(Expression, call)
 
         # Combine terms with intersections
         intersections = []
@@ -147,7 +154,6 @@ class Equation:
                 intersection, cast(Operator, OOr()), expr)
 
         # Finally, add in the output
-        output_tensor = self.__get_output_tensor(tensors)
         if output_tensor:
             expr = Equation.__add_operator(
                 cast(
@@ -175,25 +181,34 @@ class Equation:
 
         # Separate the tensors into terms
         terms = self.__separate_terms(tensors)
-
-        # Construct the term payloads
-        term_payloads = []
-        for term in terms:
-            payload = cast(Payload, PVar(term[-1].fiber_name()))
-            for factor in reversed(term[:-1]):
-                payload = Equation.__add_pvar(factor.fiber_name(), payload)
-            term_payloads.append(payload)
-
-        # Construct the entire expression payload
-        payload = term_payloads[-1]
-        for term_payload in reversed(term_payloads[:-1]):
-            payload = cast(Payload, PTuple(
-                [cast(Payload, PVar("_")), term_payload, payload]))
-
-        # Put the output on the outside
         output_tensor = self.__get_output_tensor(tensors)
-        if output_tensor:
-            payload = Equation.__add_pvar(output_tensor.fiber_name(), payload)
+
+        if terms:
+            # Construct the term payloads
+            term_payloads = []
+            for term in terms:
+                payload = cast(Payload, PVar(term[-1].fiber_name()))
+                for factor in reversed(term[:-1]):
+                    payload = Equation.__add_pvar(factor.fiber_name(), payload)
+                term_payloads.append(payload)
+
+            # Construct the entire expression payload
+            payload = term_payloads[-1]
+            for term_payload in reversed(term_payloads[:-1]):
+                payload = cast(Payload, PTuple(
+                    [cast(Payload, PVar("_")), term_payload, payload]))
+
+            # Put the output on the outside
+            if output_tensor:
+                payload = Equation.__add_pvar(
+                    output_tensor.fiber_name(), payload)
+
+        elif output_tensor:
+            payload = cast(Payload, PVar(output_tensor.fiber_name()))
+
+        else:
+            # We should never get to this state
+            raise ValueError("Something is wrong...")  # pragma: no cover
 
         # Add the rank variable
         rank_var = rank.lower()
@@ -288,8 +303,10 @@ class Equation:
         # Separate the tensors
         terms: List[List[Tensor]] = [[] for _ in self.terms]
         for tensor in tensors:
-            if tensor.root_name() in self.term_dict.keys():
-                terms[self.term_dict[tensor.root_name()]].append(tensor)
+            if tensor.get_is_output():
+                continue
+
+            terms[self.term_dict[tensor.root_name()]].append(tensor)
 
         # Remove any empty lists
         return [term for term in terms if term]

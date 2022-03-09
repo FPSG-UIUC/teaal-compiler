@@ -214,6 +214,17 @@ def test_make_iter_expr_display_slip():
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
+def test_make_iter_expr_output_only():
+    program = make_other("A[i] = b")
+    graph = IterationGraph(program)
+    eqn = Equation(program)
+
+    rank, tensors = graph.peek()
+    iter_expr = "a_i.iterShape()"
+
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
 def test_make_payload_no_tensors():
     _, eqn = make_basic()
     with pytest.raises(ValueError) as excinfo:
@@ -284,6 +295,17 @@ def test_make_payload_display_slip():
     payload = "i, (b_val, (c_val, d_val))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
+
+
+def test_make_payload_output_only():
+    program = make_other("A[i] = b")
+    graph = IterationGraph(program)
+    eqn = Equation(program)
+
+    rank, tensors = graph.pop()
+    iter_expr = "i, a_ref"
+
+    assert eqn.make_payload(rank, tensors).gen(False) == iter_expr
 
 
 def test_make_update():

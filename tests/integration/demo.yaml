@@ -1,23 +1,5 @@
 einsum:
   declaration:
-    A: [K, M]
-    B: [K]
     Z: [M]
   expressions:
-    - Z[m] = sum(K).(A[k, m] * B[k])
-mapping:
-  rank-order:
-    A: [K, M]
-    B: [K]
-    Z: [M]
-  partitioning:
-    Z:
-      K:
-        - uniform_occupancy(B.32)
-        - uniform_occupancy(B.16)
-  loop-order:
-    Z: [K2, M, K1, K0]
-  spacetime:
-    Z:
-      space: [K1]
-      time: [K2, M, K0]
+    - Z[m] = b
