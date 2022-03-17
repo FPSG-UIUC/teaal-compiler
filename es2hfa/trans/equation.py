@@ -129,10 +129,10 @@ class Equation:
         terms = self.__separate_terms(tensors)
         output_tensor = self.__get_output_tensor(tensors)
 
-        # If there are no input tensors, we just need to iterShape on the
+        # If there are no input tensors, we just need to iterShapeRef on the
         # output
         if not terms and output_tensor:
-            call = EMethod(output_tensor.fiber_name(), "iterShape", [])
+            call = EMethod(output_tensor.fiber_name(), "iterShapeRef", [])
             return cast(Expression, call)
 
         # Combine terms with intersections

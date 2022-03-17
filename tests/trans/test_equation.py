@@ -220,7 +220,7 @@ def test_make_iter_expr_output_only():
     eqn = Equation(program)
 
     rank, tensors = graph.peek()
-    iter_expr = "a_i.iterShape()"
+    iter_expr = "a_i.iterShapeRef()"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
