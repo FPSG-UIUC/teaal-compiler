@@ -77,6 +77,13 @@ class Tensor:
         """
         return [rank.lower() for rank in self.ranks[self.rank_ptr:]]
 
+    def get_init_ranks(self) -> List[str]:
+        """
+        Get the inital set of ranks declared for this tensor (with no
+        partitioning or swizzling)
+        """
+        return self.init_ranks
+
     def get_ranks(self) -> List[str]:
         """
         Return a (capitalized) list of ranks for this tensor

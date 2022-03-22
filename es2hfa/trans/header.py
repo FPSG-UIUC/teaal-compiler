@@ -56,9 +56,35 @@ class Header:
         self.program.get_loop_order().apply(tensor)
 
         name = cast(Assignable, AVar(tensor.tensor_name()))
-        arg = TransUtils.build_rank_ids(tensor)
-        constr = cast(Expression, EFunc("Tensor", [arg]))
+        arg0 = TransUtils.build_rank_ids(tensor)
+        args = self.__make_shape([arg0])
+        constr = cast(Expression, EFunc("Tensor", args))
         return cast(Statement, SAssign(name, constr))
+
+    def __make_shape(self, args: List[Argument]) -> List[Argument]:
+        """
+        Add the shape argument to a tensor if necessary (i.e. no input tensor
+        has at least one rank of the output)
+        """
+        output = self.program.get_output()
+        ranks = output.get_init_ranks()
+        avail = [False for _ in ranks]
+
+        for tensor in self.program.get_tensors():
+            # Skip the output
+            if tensor.get_is_output():
+                continue
+
+            # Mark all ranks in the input tensor available
+            for rank in tensor.get_init_ranks():
+                if rank in ranks:
+                    avail[ranks.index(rank)] = True
+
+        # If at least one rank is not available, we need an explicit shape
+        if not all(avail):
+            args.append(TransUtils.build_shape(output))
+
+        return args
 
     def make_swizzle_root(self, tensor: Tensor) -> Statement:
         """

@@ -15,6 +15,11 @@ def test_build_set_rank_ids():
     assert TransUtils.build_set_rank_ids(tensor).gen(0) == hfa
 
 
+def test_build_shape():
+    tensor = Tensor("A", ["I", "J"])
+    assert TransUtils.build_shape(tensor).gen() == "shape=[I, J]"
+
+
 def test_build_swizzle():
     new = Tensor("A", ["J", "I"])
     hfa = "A_JI = A_IJ.swizzleRanks(rank_ids=[\"J\", \"I\"])"

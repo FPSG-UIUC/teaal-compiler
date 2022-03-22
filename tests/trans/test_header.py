@@ -8,7 +8,7 @@ from es2hfa.trans.partitioner import Partitioner
 from es2hfa.trans.utils import TransUtils
 
 
-def build_header(mapping):
+def build_header(exprs, mapping):
     yaml = """
     einsum:
         declaration:
@@ -17,7 +17,7 @@ def build_header(mapping):
             B: [K, N]
             C: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """ + exprs + """
     mapping:
     """ + mapping
 
@@ -26,7 +26,14 @@ def build_header(mapping):
 
     header = Header(program, Partitioner(program, TransUtils()))
 
-    return header, program
+    return header
+
+
+def build_matmul_header(mapping):
+    exprs = """
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    return build_header(exprs, mapping)
 
 
 def test_make_output():
@@ -40,7 +47,18 @@ def test_make_output():
 
     hfa = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])"
 
-    header, program = build_header(mapping)
+    header = build_matmul_header(mapping)
+    assert header.make_output().gen(depth=0) == hfa
+
+
+def test_make_output():
+    exprs = """
+            - Z[m, n] = sum(K).(A[k, m])
+    """
+
+    hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], shape=[M, N])"
+
+    header = build_header(exprs, "")
     assert header.make_output().gen(depth=0) == hfa
 
 
@@ -48,7 +66,7 @@ def test_make_swizzle_root():
     hfa = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
           "a_m = A_MK.getRoot()"
 
-    header, _ = build_header("")
+    header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
     assert header.make_swizzle_root(tensor).gen(depth=0) == hfa
 

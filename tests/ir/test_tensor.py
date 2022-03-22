@@ -55,6 +55,21 @@ def test_get_access():
     assert tensor.get_access() == ["i", "j"]
 
 
+def test_get_init_ranks():
+    parts = """
+                I: [uniform_shape(3)]
+                K: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+    """
+    ranks = ["I", "J", "K"]
+    partitioning = build_partitioning(parts, ranks)
+
+    tensor = Tensor("A", ranks)
+    tensor.partition(partitioning, ranks, True)
+    tensor.swizzle(["K2", "I1", "J", "K1", "I0", "K0"])
+
+    assert tensor.get_init_ranks() == ["I", "J", "K"]
+
+
 def test_get_ranks():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.get_ranks() == ["I", "J"]

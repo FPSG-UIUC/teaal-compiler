@@ -58,6 +58,16 @@ class TransUtils:
         return cast(Statement, SExpr(cast(Expression, set_call)))
 
     @staticmethod
+    def build_shape(tensor: Tensor) -> Argument:
+        """
+        Build the shape argument
+        """
+        ranks = [cast(Expression, EVar(rank))
+                 for rank in tensor.get_ranks()]
+        arg = AParam("shape", cast(Expression, EList(ranks)))
+        return cast(Argument, arg)
+
+    @staticmethod
     def build_swizzle(tensor: Tensor, old_name: str) -> Statement:
         """
         Build the swizzleRanks() function
