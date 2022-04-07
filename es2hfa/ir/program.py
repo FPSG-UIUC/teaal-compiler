@@ -45,7 +45,7 @@ class Program:
 
     def __init__(self, einsum: Einsum, mapping: Mapping) -> None:
         """
-        Construct the metadata for tensors
+        Construct the metadata for tensors and prepare for an einsum
         """
         self.einsum = einsum
         self.mapping = mapping

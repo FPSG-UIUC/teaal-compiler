@@ -12,6 +12,7 @@ lark-parser = "*"
 ruamel-yaml = "*"
 networkx = "*"
 matplotlib = "*"
+sympy = "*"
 
 [dev-packages]
 

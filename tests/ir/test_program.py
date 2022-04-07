@@ -221,9 +221,11 @@ def test_get_loop_order():
     program.add_einsum(0)
     equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
 
-    return LoopOrder(equation, program.get_output())
+    loop_order = LoopOrder(equation, program.get_output())
+    ranks = ["K", "N", "M"]
+    loop_order.add(ranks, Partitioning({}, ranks))
 
-    assert program.get_loop_order() == LoopOrder(equation, program.get_output())
+    assert program.get_loop_order() == loop_order
 
 
 def test_get_partitioning_unconfigured():

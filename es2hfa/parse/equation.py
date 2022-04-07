@@ -22,6 +22,11 @@ class EquationParser:
         ?filter: factor -> single
                | "dot(" (factor ",")* factor "," NUMBER ")" -> dot
 
+        ?iexpr: (iterm "+")* iterm -> iplus
+
+        ?iterm: NAME -> ijust
+              | NUMBER "*" NAME -> itimes
+
         ?output: NAME "[" tranks "]"
 
         ?sum: "sum(" sranks ")." factor
@@ -33,7 +38,7 @@ class EquationParser:
 
         ?term: (filter "*")* filter -> times
 
-        ?tranks: [NAME ("," NAME)*] -> tranks
+        ?tranks: [iexpr ("," iexpr)*] -> tranks
 
         %import common.CNAME -> NAME
         %import common.NUMBER -> NUMBER
