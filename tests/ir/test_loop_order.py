@@ -19,7 +19,7 @@ def build_loop_order():
     return LoopOrder(equation, output)
 
 
-def build_conv_loop_order():
+def build_loop_order_conv():
     equation = EquationParser.parse("O[q] = sum(S).(I[q + s] + F[s])")
 
     output = Tensor("O", ["Q"])
@@ -28,7 +28,7 @@ def build_conv_loop_order():
     return LoopOrder(equation, output)
 
 
-def build_partitioning(loop_order, parts):
+def build_partitioning(parts):
     yaml = """
     mapping:
         partitioning:
@@ -36,6 +36,16 @@ def build_partitioning(loop_order, parts):
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["Z"]
     return Partitioning(dict_, ["K", "M", "N"])
+
+
+def build_partitioning_conv(parts):
+    yaml = """
+    mapping:
+        partitioning:
+            O:
+    """ + parts
+    dict_ = Mapping.from_str(yaml).get_partitioning()["O"]
+    return Partitioning(dict_, ["Q", "S", "W"])
 
 
 def build_index_math():
@@ -62,7 +72,7 @@ def build_index_math_conv():
 def test_add_specified_no_partitioning():
     loop_order = build_loop_order()
 
-    partitioning = build_partitioning(loop_order, "")
+    partitioning = build_partitioning("")
     index_math = build_index_math()
     loop_order.add(["K", "M", "N"], index_math, partitioning)
 
@@ -72,7 +82,7 @@ def test_add_specified_no_partitioning():
 def test_add_default_no_partitioning():
     loop_order = build_loop_order()
 
-    partitioning = build_partitioning(loop_order, "")
+    partitioning = build_partitioning("")
     index_math = build_index_math()
     loop_order.add(None, index_math, partitioning)
 
@@ -87,7 +97,7 @@ def test_add_specified_partitioning():
                 M: [uniform_shape(6), uniform_occupancy(A.3)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(loop_order, parts)
+    partitioning = build_partitioning(parts)
     index_math = build_index_math()
     order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
     loop_order.add(order, index_math, partitioning)
@@ -113,7 +123,7 @@ def test_apply():
     order = ["K2", "M", "K1", "N", "K0"]
 
     loop_order = build_loop_order()
-    partitioning = build_partitioning(loop_order, parts)
+    partitioning = build_partitioning(parts)
     index_math = build_index_math()
 
     loop_order.add(order, index_math, partitioning)
@@ -132,32 +142,26 @@ def test_apply():
     assert A.get_ranks() == order
 
 
-def test_default_loop_order_after_partitioning():
-    loop_order = build_loop_order()
-
-    parts = """
-                K: [uniform_shape(4)]
-                M: [uniform_shape(20), uniform_occupancy(A.6)]
-                N: [uniform_shape(2), nway_shape(7)]
-    """
-    partitioning = build_partitioning(loop_order, parts)
-    index_math = build_index_math()
-    loop_order.add(None, index_math, partitioning)
-
-    assert loop_order.get_ranks() == [
-        "M2", "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
-
-
-def test_default_loop_order_conv():
-    # Note that this test is not strictly necessary (as nothing changes when we
-    # introduce indices as expressions), but it is a sanity check
-    loop_order = build_conv_loop_order()
-    partitioning = Partitioning({}, ["Q", "S", "W"])
+def test_apply_conv():
+    loop_order = build_loop_order_conv()
+    partitioning = build_partitioning_conv("")
     index_math = build_index_math_conv()
 
-    loop_order.add(None, index_math, partitioning)
+    order = ["W", "Q"]
+    loop_order.add(order, index_math, partitioning)
+    index_math.prune(order, partitioning)
 
-    assert loop_order.get_ranks() == ["Q", "S"]
+    I = Tensor("I", ["W"])
+    loop_order.apply(I)
+    assert I.get_ranks() == ["W"]
+
+    F = Tensor("F", ["S"])
+    loop_order.apply(F)
+    assert F.get_ranks() == ["S"]
+
+    Z = Tensor("Z", ["Q"])
+    loop_order.apply(Z)
+    assert Z.get_ranks() == ["Q"]
 
 
 def test_get_ranks_unconfigured():
@@ -179,6 +183,89 @@ def test_default_loop_order_no_partitioning():
     assert str(excinfo.value) == "Must configure partitioning before loop order"
 
 
+def test_default_loop_order_after_partitioning():
+    loop_order = build_loop_order()
+
+    parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_shape(20), uniform_occupancy(A.6)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = build_partitioning(parts)
+    index_math = build_index_math()
+    loop_order.add(None, index_math, partitioning)
+
+    assert loop_order.get_ranks() == [
+        "M2", "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
+
+
+def test_default_loop_order_conv():
+    # Note that this test is not strictly necessary (as nothing changes when we
+    # introduce indices as expressions), but it is a sanity check
+    loop_order = build_loop_order_conv()
+    partitioning = build_partitioning_conv("")
+    index_math = build_index_math_conv()
+
+    loop_order.add(None, index_math, partitioning)
+
+    assert loop_order.get_ranks() == ["Q", "S"]
+
+
+def test_is_ready_unconfigured():
+    loop_order = build_loop_order()
+
+    with pytest.raises(ValueError) as excinfo:
+        loop_order.is_ready("K", 2)
+
+    assert str(
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
+
+
+def test_innermost_rank_unconfigured():
+    loop_order = build_loop_order()
+
+    with pytest.raises(ValueError) as excinfo:
+        loop_order._LoopOrder__innermost_rank("K")
+
+    assert str(
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
+
+
+def test_is_ready():
+    loop_order = build_loop_order()
+
+    parts = """
+                K: [uniform_shape(6), uniform_occupancy(A.3)]
+                M: [uniform_shape(4)]
+                N: [uniform_shape(2), nway_shape(7)]
+    """
+    partitioning = build_partitioning(parts)
+    index_math = build_index_math()
+
+    order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
+    loop_order.add(order, index_math, partitioning)
+    index_math.prune(loop_order.get_ranks(), partitioning)
+
+    assert loop_order.is_ready("N2", 1)
+    assert loop_order.is_ready("K0", 5)
+    assert not loop_order.is_ready("M0", 5)
+    assert not loop_order.is_ready("N1", 5)
+
+
+def test_is_ready_conv():
+    loop_order = build_loop_order_conv()
+    partitioning = build_partitioning_conv("")
+    index_math = build_index_math_conv()
+
+    order = ["W", "Q"]
+    loop_order.add(order, index_math, partitioning)
+    index_math.prune(loop_order.get_ranks(), partitioning)
+
+    assert loop_order.is_ready("Q", 1)
+    assert loop_order.is_ready("S", 1)
+    assert not loop_order.is_ready("W", 1)
+
+
 def test_eq():
     loop_order1 = build_loop_order()
     loop_order2 = build_loop_order()
@@ -187,7 +274,7 @@ def test_eq():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(loop_order1, parts)
+    partitioning = build_partitioning(parts)
     index_math = build_index_math()
     loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)
@@ -205,7 +292,7 @@ def test_neq_loop_order():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(loop_order1, parts)
+    partitioning = build_partitioning(parts)
     index_math = build_index_math()
     loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)
@@ -220,7 +307,7 @@ def test_neq_other_type():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(loop_order1, parts)
+    partitioning = build_partitioning(parts)
     index_math = build_index_math()
     loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)

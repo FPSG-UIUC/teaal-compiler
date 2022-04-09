@@ -25,6 +25,7 @@ Intermediate representation of the loop order information
 """
 
 from lark.tree import Tree
+from sympy import Symbol
 from typing import Any, cast, Iterable, List, Optional
 
 from es2hfa.ir.index_math import IndexMath
@@ -45,8 +46,9 @@ class LoopOrder:
         self.equation = equation
         self.output = output
 
-        # Make placeholders for the loop orders and partitioning
+        # Make placeholders for the loop order, index math, and partitioning
         self.ranks: Optional[List[str]] = None
+        self.index_math: Optional[IndexMath] = None
         self.partitioning: Optional[Partitioning] = None
 
     def add(self,
@@ -57,6 +59,7 @@ class LoopOrder:
         Add the loop order information, selecting the default loop order if
         one was not provided
         """
+        self.index_math = index_math
         self.partitioning = partitioning
 
         # First build the final loop order
@@ -73,10 +76,20 @@ class LoopOrder:
         if self.ranks is None or self.partitioning is None:
             raise ValueError(
                 "Unconfigured loop order. Make sure to first call add()")
-        order = self.ranks.copy()
+
+        # Get the names of the final rank ids for the tensor
+        final_ids = []
         for rank in tensor.get_ranks():
-            final_id = self.partitioning.get_final_rank_id(rank)
-            order[order.index(final_id)] = rank
+            final_ids.append(self.partitioning.get_final_rank_id(rank))
+
+        # Order the current rank ids based on their final posititon
+        order = self.ranks.copy()
+        for i in range(len(self.ranks)):
+            for j, rank in enumerate(tensor.get_ranks()):
+
+                if self.is_ready(final_ids[j], i):
+                    order[i] = rank
+                    break
 
         tensor.swizzle(cast(List[Optional[str]], order))
 
@@ -90,6 +103,35 @@ class LoopOrder:
                 "Unconfigured loop order. Make sure to first call add()")
 
         return self.ranks
+
+    def is_ready(self, rank: str, pos: int) -> bool:
+        """
+        Returns true if all variables needed to compute a payload in the given
+        rank should be iterated on at the given loop
+
+        Assumes uppercase rank name
+        """
+        if self.ranks is None or self.index_math is None or self.partitioning is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add()")
+
+        # If this rank is partitioned and this is not the inner-most rank, no
+        # projecting should occur
+        if not self.__innermost_rank(rank):
+            return self.ranks[pos] == rank
+
+        # Otherwise, check if we have all index variables available
+        avail = [self.partitioning.get_root_name(lrank).lower(
+        ) for lrank in self.ranks[:(pos + 1)] if self.__innermost_rank(lrank)]
+
+        root = self.partitioning.get_root_name(rank).lower()
+        math = self.index_math.get_trans(root)
+
+        ready = all(str(ind) in avail for ind in math.atoms(Symbol))
+        curr = Symbol(self.partitioning.get_root_name(
+            self.ranks[pos]).lower()) in math.atoms(Symbol)
+
+        return ready and curr
 
     def __default_loop_order(self) -> List[str]:
         """
@@ -144,3 +186,14 @@ class LoopOrder:
         Get the fields of the LoopOrder
         """
         return self.equation, self.output, self.ranks, self.partitioning
+
+    def __innermost_rank(self, rank: str) -> bool:
+        """
+        Returns true if the the given rank is the inner-most rank
+        """
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add()")
+
+        suffix = rank[len(self.partitioning.get_root_name(rank)):]
+        return len(suffix) == 0 or suffix == "0"
