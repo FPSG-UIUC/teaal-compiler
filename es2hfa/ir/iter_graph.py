@@ -24,6 +24,7 @@ SOFTWARE.
 Representation of an iteration graph
 """
 
+from sympy import Symbol
 from typing import cast, List, Optional, Tuple
 
 from es2hfa.ir.program import Program
@@ -52,17 +53,12 @@ class IterationGraph:
         """
         Peek at the next iteration
         """
-        rank = self.loop_order[self.pos]
         tensors = []
         for tensor in self.program.get_tensors():
-            trank = tensor.peek()
-            if trank is not None:
-                trank = trank.upper()
-
-            if trank == rank:
+            if self.__ready(tensor):
                 tensors.append(tensor)
 
-        return rank, tensors
+        return self.loop_order[self.pos], tensors
 
     def pop(self) -> Tuple[Optional[str], List[Tensor]]:
         """
@@ -78,3 +74,41 @@ class IterationGraph:
         self.pos += 1
 
         return rank, tensors
+
+    def __ready(self, tensor: Tensor) -> bool:
+        """
+        Returns true if all indices are available to iterate over this tensor
+        """
+        rank = self.loop_order[self.pos]
+        # If we are at the end, all tensors are involved
+        if rank is None:
+            return True
+
+        # We already know rank is not None
+        trank = tensor.peek()
+        if trank is None:
+            return False
+
+        # If this rank is partitioned and this is not the inner-most rank, no
+        # projecting should occur
+        if not self.__innermost_rank(trank):
+            return trank.upper() == rank
+
+        # Otherwise, check if we have all index variables available
+        part = self.program.get_partitioning()
+        avail = [part.get_root_name(rank) for rank in self.loop_order[:(
+            self.pos + 1)] if rank is not None and self.__innermost_rank(rank)]
+
+        root = self.program.get_partitioning().get_root_name(trank.upper()).lower()
+        math = self.program.get_index_math().get_trans(root)
+        def cond(i): return str(i).upper() in avail
+        return all(cond(ind) for ind in math.atoms(Symbol))
+
+    def __innermost_rank(self, rank: str) -> bool:
+        """
+        Returns true if the the given rank is the inner-most rank
+        """
+        rank = rank.upper()
+        suffix = rank[len(
+            self.program.get_partitioning().get_root_name(rank)):]
+        return len(suffix) == 0 or suffix == "0"

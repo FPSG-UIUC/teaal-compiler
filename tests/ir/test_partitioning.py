@@ -143,6 +143,15 @@ def test_get_leader_bad_style():
     assert str(excinfo.value) == "Style uniform_shape has no leader"
 
 
+def test_get_root_name():
+    parts = """
+                M: [uniform_shape(6)]
+    """
+    partitioning = Partitioning(parse_partitioning(parts)["Z"], ["M", "K"])
+    assert partitioning.get_root_name("M1") == "M"
+    assert partitioning.get_root_name("K") == "K"
+
+
 def test_get_static_partitioning():
     all_parts = """
                 K: [uniform_shape(4)]

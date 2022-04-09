@@ -27,6 +27,7 @@ Intermediate representation of the loop order information
 from lark.tree import Tree
 from typing import Any, cast, Iterable, List, Optional
 
+from es2hfa.ir.index_math import IndexMath
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
 
@@ -50,6 +51,7 @@ class LoopOrder:
 
     def add(self,
             loop_order: Optional[List[str]],
+            index_math: IndexMath,
             partitioning: Partitioning) -> None:
         """
         Add the loop order information, selecting the default loop order if
@@ -89,18 +91,6 @@ class LoopOrder:
 
         return self.ranks
 
-    def get_unpartitioned_ranks(self) -> List[str]:
-        """
-        Get the names of the ranks before partitioning
-        """
-        ranks = self.output.get_ranks().copy()
-
-        for sum_ in self.equation.find_data("sum"):
-            ranks += list(next(sum_.find_data("sranks")
-                               ).scan_values(lambda _: True))
-
-        return ranks
-
     def __default_loop_order(self) -> List[str]:
         """
         Compute the default loop order
@@ -108,7 +98,7 @@ class LoopOrder:
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
-        loop_order = self.get_unpartitioned_ranks()
+        loop_order = self.__default_loop_order_unpartitioned()
 
         for rank, parts in self.partitioning.get_all_parts().items():
             # Skip intermediate ranks
@@ -125,6 +115,18 @@ class LoopOrder:
                 loop_order.insert(i, new_rank)
 
         return loop_order
+
+    def __default_loop_order_unpartitioned(self) -> List[str]:
+        """
+        Get the names of the ranks before partitioning
+        """
+        ranks = self.output.get_ranks().copy()
+
+        for sum_ in self.equation.find_data("sum"):
+            ranks += list(next(sum_.find_data("sranks")
+                               ).scan_values(lambda _: True))
+
+        return ranks
 
     def __eq__(self, other: object) -> bool:
         """

@@ -181,3 +181,40 @@ def test_pop_occupancy_partitioning():
 
     # Make sure that there are no errors on pop
     assert graph.pop()[0] == "M1"
+
+
+def test_peek_pop_index_math():
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [Q]
+        expressions:
+            - O[q] = sum(S).(I[q + s] + F[s])
+    mapping:
+        loop-order:
+            O: [W, Q]
+    """
+
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    I = Tensor("I", ["W"])
+    F = Tensor("F", ["S"])
+    O = Tensor("O", ["Q"])
+    O.set_is_output(True)
+
+    assert graph.peek() == ("W", [I])
+
+    I.pop()
+    assert graph.pop() == ("W", [I])
+
+    assert graph.peek() == ("Q", [O, F])
+
+    F.pop()
+    O.pop()
+    assert graph.pop() == ("Q", [O, F])
+
+    assert graph.peek() == (None, [O, I, F])

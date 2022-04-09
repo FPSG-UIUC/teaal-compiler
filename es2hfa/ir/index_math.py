@@ -31,9 +31,9 @@ from lark.tree import Tree
 from sympy import Symbol
 from sympy.core.expr import Expr
 from sympy.solvers import solve
-from typing import Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
-from es2hfa.ir.loop_order import LoopOrder
+from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
 
@@ -47,16 +47,13 @@ class IndexMath:
         """
         Construct the metadata for index math
         """
-        self.all_exprs: Optional[Dict[Symbol, List[Expr]]] = None
-        self.loop_order: Optional[LoopOrder] = None
+        self.all_exprs: Dict[Symbol, List[Expr]] = {}
         self.trans: Optional[Dict[Symbol, Expr]] = None
 
-    def add_tranks(self, tensor: Tensor, tranks: Tree) -> None:
+    def add(self, tensor: Tensor, tranks: Tree) -> None:
         """
         Add the information for a given set of ranks
         """
-        self.all_exprs = {}
-
         for rank, expr in zip(tensor.get_ranks(), tranks.children):
             if not isinstance(expr, Tree):
                 raise ValueError("Unknown index tree: " + repr(expr))
@@ -109,11 +106,9 @@ class IndexMath:
         """
         Get expressions corresponding to the different ways to represent a
         a given index
-        """
-        if self.all_exprs is None:
-            raise ValueError(
-                "Unconfigured index math. First call add_tranks()")
 
+        TODO: currently only used for testing
+        """
         return self.all_exprs[Symbol(ind)]
 
     def get_trans(self, ind: str) -> Expr:
@@ -125,22 +120,33 @@ class IndexMath:
 
         return self.trans[Symbol(ind)]
 
-    def prune(self, loop_order: LoopOrder) -> None:
+    def prune(self, loop_order: List[str], partitioning: Partitioning) -> None:
         """
         Prune out all index translations not available with this loop order
         """
-        if self.all_exprs is None:
-            raise ValueError(
-                "Unconfigured index math. First call add_tranks()")
-
         self.trans = {}
-        self.loop_order = loop_order
 
         # Build the set of symbols available
-        avail = {Symbol(rank.lower()) for rank in self.loop_order.get_ranks()}
+        def trans_name(r): return partitioning.get_root_name(r).lower()
+        avail = {Symbol(trans_name(rank)) for rank in loop_order}
 
         # Prune unnecessary translations
         for ind, exprs in self.all_exprs.items():
             for expr in exprs:
                 if len(expr.atoms(Symbol) - avail) == 0:
                     self.trans[ind] = expr
+
+    def __key(self) -> Iterable[Any]:
+        """
+        Get all properties of the IndexMath
+        """
+        return self.all_exprs, self.trans
+
+    def __eq__(self, other) -> bool:
+        """
+        Test IndexMath equality
+        """
+        if not isinstance(other, IndexMath):
+            return False
+
+        return self.__key() == other.__key()

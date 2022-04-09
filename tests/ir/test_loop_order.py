@@ -1,16 +1,28 @@
+from lark.tree import Tree
 import pytest
 
+from es2hfa.ir.index_math import IndexMath
 from es2hfa.ir.loop_order import LoopOrder
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.mapping import Mapping
+from tests.utils.parse_tree import *
 
 
 def build_loop_order():
     equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
 
     output = Tensor("Z", ["M", "N"])
+    output.set_is_output(True)
+
+    return LoopOrder(equation, output)
+
+
+def build_conv_loop_order():
+    equation = EquationParser.parse("O[q] = sum(S).(I[q + s] + F[s])")
+
+    output = Tensor("O", ["Q"])
     output.set_is_output(True)
 
     return LoopOrder(equation, output)
@@ -23,14 +35,36 @@ def build_partitioning(loop_order, parts):
             Z:
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["Z"]
-    return Partitioning(dict_, loop_order.get_unpartitioned_ranks())
+    return Partitioning(dict_, ["K", "M", "N"])
+
+
+def build_index_math():
+    index_math = IndexMath()
+
+    index_math.add(Tensor("A", ["K", "M"]), make_tranks(["k", "m"]))
+    index_math.add(Tensor("B", ["K", "N"]), make_tranks(["k", "n"]))
+    index_math.add(Tensor("Z", ["M", "N"]), make_tranks(["m", "n"]))
+
+    return index_math
+
+
+def build_index_math_conv():
+    index_math = IndexMath()
+
+    index_math.add(Tensor("I", ["W"]), Tree(
+        "tranks", [make_iplus(["q", "s"])]))
+    index_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
+    index_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
+
+    return index_math
 
 
 def test_add_specified_no_partitioning():
     loop_order = build_loop_order()
 
     partitioning = build_partitioning(loop_order, "")
-    loop_order.add(["K", "M", "N"], partitioning)
+    index_math = build_index_math()
+    loop_order.add(["K", "M", "N"], index_math, partitioning)
 
     assert loop_order.get_ranks() == ["K", "M", "N"]
 
@@ -39,7 +73,8 @@ def test_add_default_no_partitioning():
     loop_order = build_loop_order()
 
     partitioning = build_partitioning(loop_order, "")
-    loop_order.add(None, partitioning)
+    index_math = build_index_math()
+    loop_order.add(None, index_math, partitioning)
 
     assert loop_order.get_ranks() == ["M", "N", "K"]
 
@@ -53,8 +88,9 @@ def test_add_specified_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order, parts)
+    index_math = build_index_math()
     order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
-    loop_order.add(order, partitioning)
+    loop_order.add(order, index_math, partitioning)
 
     assert loop_order.get_ranks() == order
 
@@ -71,13 +107,17 @@ def test_apply_unconfigured():
 
 
 def test_apply():
-    loop_order = build_loop_order()
     parts = """
                 K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
     """
+    order = ["K2", "M", "K1", "N", "K0"]
+
+    loop_order = build_loop_order()
     partitioning = build_partitioning(loop_order, parts)
-    loop_order.add(
-        ["K2", "M", "K1", "N", "K0"], partitioning)
+    index_math = build_index_math()
+
+    loop_order.add(order, index_math, partitioning)
+    index_math.prune(order, partitioning)
 
     A = Tensor("A", ["M", "K", "N"])
     loop_order.apply(A)
@@ -89,7 +129,7 @@ def test_apply():
 
     A.partition(partitioning, {"K1I"}, False)
     loop_order.apply(A)
-    assert A.get_ranks() == ["K2", "M", "K1", "N", "K0"]
+    assert A.get_ranks() == order
 
 
 def test_default_loop_order_after_partitioning():
@@ -101,15 +141,23 @@ def test_default_loop_order_after_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order, parts)
-    loop_order.add(None, partitioning)
+    index_math = build_index_math()
+    loop_order.add(None, index_math, partitioning)
 
     assert loop_order.get_ranks() == [
         "M2", "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
 
 
-def test_get_unpartitioned_ranks():
-    loop_order = build_loop_order()
-    assert loop_order.get_unpartitioned_ranks() == ["M", "N", "K"]
+def test_default_loop_order_conv():
+    # Note that this test is not strictly necessary (as nothing changes when we
+    # introduce indices as expressions), but it is a sanity check
+    loop_order = build_conv_loop_order()
+    partitioning = Partitioning({}, ["Q", "S", "W"])
+    index_math = build_index_math_conv()
+
+    loop_order.add(None, index_math, partitioning)
+
+    assert loop_order.get_ranks() == ["Q", "S"]
 
 
 def test_get_ranks_unconfigured():
@@ -140,10 +188,11 @@ def test_eq():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order1, parts)
+    index_math = build_index_math()
     loop_order1.add(
-        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)
     loop_order2.add(
-        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)
 
     assert loop_order1 == loop_order2
 
@@ -157,8 +206,9 @@ def test_neq_loop_order():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order1, parts)
+    index_math = build_index_math()
     loop_order1.add(
-        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)
 
     assert loop_order1 != loop_order2
 
@@ -171,7 +221,8 @@ def test_neq_other_type():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(loop_order1, parts)
+    index_math = build_index_math()
     loop_order1.add(
-        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], partitioning)
+        ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], index_math, partitioning)
 
     assert loop_order1 != ""

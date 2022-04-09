@@ -1,5 +1,8 @@
+from lark.tree import Tree
 import pytest
+from sympy import symbols
 
+from es2hfa.ir.index_math import IndexMath
 from es2hfa.ir.loop_order import LoopOrder
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.program import Program
@@ -9,6 +12,7 @@ from es2hfa.parse.spacetime import SpaceTimeParser
 from es2hfa.parse.equation import EquationParser
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
+from tests.utils.parse_tree import *
 
 
 def create_default():
@@ -93,23 +97,17 @@ def create_displayed(time):
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
-def test_missing_decl():
+def create_conv():
     yaml = """
     einsum:
         declaration:
-            A: []
+            F: [S]
+            I: [W]
+            O: [Q]
         expressions:
-            - A[] = b
-    mapping:
-        rank-order:
-            A: []
-            B: []
+            - O[q] = sum(S).(I[q + s] + F[s])
     """
-    einsum = Einsum.from_str(yaml)
-    mapping = Mapping.from_str(yaml)
-    with pytest.raises(ValueError) as excinfo:
-        Program(einsum, mapping)
-    assert str(excinfo.value) == "Undeclared tensor: B"
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def test_add_einsum_missing_decl():
@@ -207,6 +205,42 @@ def test_get_output():
     assert program.get_output() == result
 
 
+def test_get_index_math_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_index_math()
+    assert str(excinfo.value) == \
+        "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_index_math_conv():
+    program = create_conv()
+    program.add_einsum(0)
+
+    # Add the tensors
+    index_math = IndexMath()
+    index_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
+    index_math.add(Tensor("I", ["W"]), Tree(
+        "tranks", [make_iplus(["q", "s"])]))
+    index_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
+    index_math.prune(
+        program.get_loop_order().get_ranks(),
+        program.get_partitioning())
+
+    assert program.get_index_math() == index_math
+
+
+def test_get_index_math_rank_ordered():
+    program = create_rank_ordered()
+    program.add_einsum(0)
+
+    k, m, n = symbols("k m n")
+    assert program.get_index_math().get_all_exprs("k") == [k]
+    assert program.get_index_math().get_all_exprs("m") == [m]
+    assert program.get_index_math().get_all_exprs("n") == [n]
+
+
 def test_get_loop_order_unconfigured():
     program = create_default()
 
@@ -223,7 +257,7 @@ def test_get_loop_order():
 
     loop_order = LoopOrder(equation, program.get_output())
     ranks = ["K", "N", "M"]
-    loop_order.add(ranks, Partitioning({}, ranks))
+    loop_order.add(ranks, program.get_index_math(), Partitioning({}, ranks))
 
     assert program.get_loop_order() == loop_order
 

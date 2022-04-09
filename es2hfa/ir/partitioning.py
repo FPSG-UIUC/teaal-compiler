@@ -65,14 +65,17 @@ class Partitioning:
 
         self.all_parts = {**self.static_parts, **self.dyn_parts}
 
-        # For all names of intermediate ranks, e.g., K2I, save the root name
+        # For all names of ranks, e.g., M1 or K2I, save the root name
         # of the rank so we can recover it later
-        # Remember that the top rank's intermediate name is just the root name
         self.root_names = {}
-        for rank in self.all_parts.keys():
+        for rank in ranks:
             self.root_names[rank] = rank
+
+        for rank in self.all_parts.keys():
             self.root_names.update(
                 {inter: rank for inter in self.get_intermediates(rank)})
+            self.root_names.update(
+                {final: rank for final in self.partition_names(rank, True)})
 
         # All possible rank IDs to the final rank ID
         self.final_rank_id = {}
@@ -155,6 +158,12 @@ class Partitioning:
             return ParseUtils.find_str(part, "leader")
 
         raise ValueError("Style " + part.data + " has no leader")
+
+    def get_root_name(self, rank: str) -> str:
+        """
+        Get the root name for this partitioned rank (e.g., M1 -> M)
+        """
+        return self.root_names[rank]
 
     def get_static_parts(self) -> Dict[str, List[Tree]]:
         """

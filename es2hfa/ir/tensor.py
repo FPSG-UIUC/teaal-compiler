@@ -125,7 +125,7 @@ class Tensor:
         Peek at the top rank, returns None if there are no more ranks
         """
         if self.iter_ptr < len(self.ranks):
-            return self.ranks[self.iter_ptr]
+            return self.__get_rank()
         return None
 
     def pop(self) -> str:

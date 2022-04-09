@@ -121,7 +121,7 @@ def test_ranks_safe_after_partition():
 
 def test_peek_rank():
     tensor = Tensor("A", ["I", "J"])
-    assert tensor.peek() == "I"
+    assert tensor.peek() == "i"
 
 
 def test_peek_empty():
