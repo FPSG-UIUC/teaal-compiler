@@ -24,8 +24,6 @@ SOFTWARE.
 Translate the footer below the loop nest
 """
 
-from typing import cast
-
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.trans.graphics import Graphics
@@ -73,4 +71,4 @@ class Footer:
         # Display the graphics if necessary
         footer.add(graphics.make_footer())
 
-        return cast(Statement, footer)
+        return footer

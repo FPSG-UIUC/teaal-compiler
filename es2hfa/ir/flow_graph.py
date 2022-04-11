@@ -26,7 +26,7 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-from typing import List
+from typing import cast, List
 
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program

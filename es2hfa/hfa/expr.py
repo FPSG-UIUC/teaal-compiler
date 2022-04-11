@@ -24,13 +24,12 @@ SOFTWARE.
 HFA AST and code generation for HFA expressions
 """
 
-from typing import Dict, List
+from typing import Dict, Sequence
 
 from es2hfa.hfa.base import Argument, Expression, Operator
 
 
-@Expression.register
-class EAccess:
+class EAccess(Expression):
     """
     An access into a list or dictionary
     """
@@ -46,8 +45,7 @@ class EAccess:
         return self.var + "[" + self.ind.gen() + "]"
 
 
-@Expression.register
-class EBinOp:
+class EBinOp(Expression):
     """
     An HFA binary operation
     """
@@ -68,8 +66,7 @@ class EBinOp:
         return self.expr1.gen() + " " + self.op.gen() + " " + self.expr2.gen()
 
 
-@Expression.register
-class EBool:
+class EBool(Expression):
     """
     An HFA boolean variable
     """
@@ -84,8 +81,7 @@ class EBool:
         return str(self.bool)
 
 
-@Expression.register
-class EComp:
+class EComp(Expression):
     """
     An HFA list comprehension
     """
@@ -103,8 +99,7 @@ class EComp:
             " in " + self.iter.gen() + "]"
 
 
-@Expression.register
-class EDict:
+class EDict(Expression):
     """
     An HFA dictionary
     """
@@ -122,8 +117,7 @@ class EDict:
         return "{" + ", ".join(items) + "}"
 
 
-@Expression.register
-class EField:
+class EField(Expression):
     """
     An HFA object field access
     """
@@ -139,13 +133,12 @@ class EField:
         return self.obj + "." + self.field
 
 
-@Expression.register
-class EFunc:
+class EFunc(Expression):
     """
     An HFA function call
     """
 
-    def __init__(self, name: str, args: List[Argument]) -> None:
+    def __init__(self, name: str, args: Sequence[Argument]) -> None:
         self.name = name
         self.args = args
 
@@ -157,8 +150,7 @@ class EFunc:
             "(" + ", ".join([a.gen() for a in self.args]) + ")"
 
 
-@Expression.register
-class EInt:
+class EInt(Expression):
     """
     An HFA integer
     """
@@ -173,13 +165,12 @@ class EInt:
         return str(self.int)
 
 
-@Expression.register
-class ELambda:
+class ELambda(Expression):
     """
     An HFA lambda
     """
 
-    def __init__(self, args: List[str], body: Expression) -> None:
+    def __init__(self, args: Sequence[str], body: Expression) -> None:
         self.args = args
         self.body = body
 
@@ -190,13 +181,12 @@ class ELambda:
         return "lambda " + ", ".join(self.args) + ": " + self.body.gen()
 
 
-@Expression.register
-class EList:
+class EList(Expression):
     """
     An HFA list
     """
 
-    def __init__(self, list_: List[Expression]) -> None:
+    def __init__(self, list_: Sequence[Expression]) -> None:
         self.list = list_
 
     def gen(self) -> str:
@@ -206,13 +196,12 @@ class EList:
         return "[" + ", ".join([e.gen() for e in self.list]) + "]"
 
 
-@Expression.register
-class EMethod:
+class EMethod(Expression):
     """
     An HFA method call
     """
 
-    def __init__(self, obj: str, name: str, args: List[Argument]) -> None:
+    def __init__(self, obj: str, name: str, args: Sequence[Argument]) -> None:
         self.obj = obj
         self.name = name
         self.args = args
@@ -225,8 +214,7 @@ class EMethod:
             "(" + ", ".join([a.gen() for a in self.args]) + ")"
 
 
-@Expression.register
-class EParens:
+class EParens(Expression):
     """
     An HFA expression surrounded by parentheses
     """
@@ -241,8 +229,7 @@ class EParens:
         return "(" + self.expr.gen() + ")"
 
 
-@Expression.register
-class EString:
+class EString(Expression):
     """
     A string in HFA
     """
@@ -257,13 +244,12 @@ class EString:
         return "\"" + self.string + "\""
 
 
-@Expression.register
-class ETuple:
+class ETuple(Expression):
     """
     A tuple in HFA
     """
 
-    def __init__(self, elems: List[Expression]) -> None:
+    def __init__(self, elems: Sequence[Expression]) -> None:
         self.elems = elems
 
     def gen(self) -> str:
@@ -278,8 +264,7 @@ class ETuple:
             return "(" + ", ".join([elem.gen() for elem in self.elems]) + ")"
 
 
-@Expression.register
-class EVar:
+class EVar(Expression):
     """
     An HFA variable
     """

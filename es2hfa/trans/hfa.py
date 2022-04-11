@@ -56,11 +56,9 @@ class HFA:
         self.program = Program(einsum, mapping)
         self.trans_utils = TransUtils()
 
-        code = SBlock([])
+        self.hfa = SBlock([])
         for i in range(len(einsum.get_expressions())):
-            code.add(self.__translate(i))
-
-        self.hfa = cast(Statement, code)
+            self.hfa.add(self.__translate(i))
 
     def __translate(self, i: int) -> Statement:
         """
@@ -111,7 +109,7 @@ class HFA:
 
                 # Recurse for the for loop body
                 j, body = self.__trans_nodes(nodes[(i + 1):], depth + 1)
-                code.add(cast(Statement, SFor(payload, expr, body)))
+                code.add(SFor(payload, expr, body))
                 i += j
 
             elif isinstance(node, OtherNode):
@@ -129,7 +127,7 @@ class HFA:
 
                     else:
                         # Pop back up a level and retry this node
-                        return i, cast(Statement, code)
+                        return i, code
 
                 elif node.get_type() == "Graphics":
                     code.add(self.graphics.make_header())
@@ -160,7 +158,7 @@ class HFA:
 
             i += 1
 
-        return i, cast(Statement, code)
+        return i, code
 
     def __str__(self) -> str:
         """

@@ -27,7 +27,7 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import cast, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from es2hfa.ir.index_math import IndexMath
 from es2hfa.ir.loop_order import LoopOrder

@@ -27,8 +27,7 @@ HFA AST and code generation for expressions that can be assigned to
 from es2hfa.hfa.base import Assignable, Expression
 
 
-@Assignable.register
-class AAccess:
+class AAccess(Assignable):
     """
     An access into a list or dictionary
     """
@@ -44,8 +43,7 @@ class AAccess:
         return self.var + "[" + self.ind.gen() + "]"
 
 
-@Assignable.register
-class AField:
+class AField(Assignable):
     """
     An HFA object field access
     """
@@ -61,8 +59,7 @@ class AField:
         return self.obj + "." + self.field
 
 
-@Assignable.register
-class AVar:
+class AVar(Assignable):
     """
     An HFA variable
     """

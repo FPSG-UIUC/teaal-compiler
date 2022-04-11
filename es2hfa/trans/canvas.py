@@ -23,7 +23,7 @@ SOFTWARE.
 
 Translate the canvas spacetime information
 """
-from typing import cast, List, Optional
+from typing import List, Optional
 
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
@@ -55,38 +55,34 @@ class Canvas:
             raise ValueError("SpaceTime information unspecified")
 
         # Create tensor rank arguments
-        args = []
+        args: List[Argument] = []
         for tensor in self.tensors:
             ranks = [self.program.get_partitioning().get_dyn_rank(rank)
                      for rank in tensor.get_access()]
-            access = [cast(Expression, EVar(rank)) for rank in ranks]
-            arg = AJust(cast(Expression, ETuple(access)))
-            args.append(cast(Argument, arg))
+            access = [EVar(rank) for rank in ranks]
+            args.append(AJust(ETuple(access)))
 
         # Get the space and time tuples
         space = self.get_space_tuple()
 
         # If slip, the timestamp is actually (timestamps[space] - 1,)
+        time: Expression
         if spacetime.get_slip():
-            acc = cast(Expression, EAccess("timestamps", space))
-            sub = cast(Operator, OSub())
-            one = cast(Expression, EInt(1))
-            bop = cast(Expression, EBinOp(acc, sub, one))
-            time = cast(Expression, ETuple([bop]))
+            bop = EBinOp(EAccess("timestamps", space), OSub(), EInt(1))
+            time = ETuple([bop])
 
         # Otherwise, it is just the time tuple
         else:
             time = self.get_time_tuple()
 
         # Add the space-time arguments
-        spacetime_tup = cast(Expression, ETuple([space, time]))
-        args.append(cast(Argument, AParam("spacetime", spacetime_tup)))
+        args.append(AParam("spacetime", ETuple([space, time])))
 
         # Create call to addActivity
-        add = cast(Expression, EMethod("canvas", "addActivity", args))
+        add = EMethod("canvas", "addActivity", args)
 
         # Create the corresponding statement
-        return cast(Statement, SExpr(add))
+        return SExpr(add)
 
     def create_canvas(self) -> Statement:
         """
@@ -101,17 +97,13 @@ class Canvas:
         self.tensors.append(self.program.get_output())
 
         # Build the args
-        args = []
-        for tensor in self.tensors:
-            arg = AJust(cast(Expression, EVar(tensor.tensor_name())))
-            args.append(cast(Argument, arg))
+        args = [AJust(EVar(tensor.tensor_name())) for tensor in self.tensors]
 
         # Build the call to createCanvas()
-        create = cast(Expression, EFunc("createCanvas", args))
+        create = EFunc("createCanvas", args)
 
         # Build the assignment
-        canvas_name = cast(Assignable, AVar("canvas"))
-        return cast(Statement, SAssign(canvas_name, create))
+        return SAssign(AVar("canvas"), create)
 
     def display_canvas(self) -> Statement:
         """
@@ -122,9 +114,7 @@ class Canvas:
                 "Unconfigured canvas. Make sure to first call create_canvas()")
 
         # Create call displayCanvas(canvas)
-        canvas = cast(Argument, AJust(cast(Expression, EVar("canvas"))))
-        call = cast(Expression, EFunc("displayCanvas", [canvas]))
-        return cast(Statement, SExpr(call))
+        return SExpr(EFunc("displayCanvas", [AJust(EVar("canvas"))]))
 
     def get_space_tuple(self) -> Expression:
         """
@@ -134,8 +124,8 @@ class Canvas:
         if spacetime is None:
             raise ValueError("SpaceTime information unspecified")
 
-        return cast(Expression, ETuple(
-            [self.__rel_coord(rank) for rank in spacetime.get_space()]))
+        return ETuple([self.__rel_coord(rank)
+                      for rank in spacetime.get_space()])
 
     def get_time_tuple(self) -> Expression:
         """
@@ -145,8 +135,8 @@ class Canvas:
         if spacetime is None:
             raise ValueError("SpaceTime information unspecified")
 
-        return cast(Expression, ETuple(
-            [self.__rel_coord(rank) for rank in spacetime.get_time()]))
+        return ETuple([self.__rel_coord(rank)
+                      for rank in spacetime.get_time()])
 
     def __rel_coord(self, rank: str) -> Expression:
         """
@@ -163,18 +153,14 @@ class Canvas:
             # Check if we already have the absolute coordinate
             offset = spacetime.get_offset(rank)
             if offset is None:
-                return cast(Expression, EVar(rank_str))
+                return EVar(rank_str)
 
             # rank - offset
-            rank_expr = cast(Expression, EVar(rank_str))
-            offset_expr = cast(Expression, EVar(offset.lower()))
-            sub = EBinOp(rank_expr, cast(Operator, OSub()), offset_expr)
-
-            return cast(Expression, sub)
+            return EBinOp(EVar(rank_str), OSub(), EVar(offset.lower()))
 
         elif spacetime.get_style(rank) == "pos":
             # rank_pos
-            return cast(Expression, EVar(rank_str + "_pos"))
+            return EVar(rank_str + "_pos")
 
         else:
             # Note: there is no good way to test this error. Bad spacetime styles

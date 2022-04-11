@@ -29,8 +29,7 @@ from typing import List
 from es2hfa.hfa.base import Payload
 
 
-@Payload.register
-class PTuple:
+class PTuple(Payload):
     """
     A tuple of payloads
     """
@@ -48,8 +47,7 @@ class PTuple:
         return payload
 
 
-@Payload.register
-class PVar:
+class PVar(Payload):
     """
     A single variable payload
     """

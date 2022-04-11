@@ -24,8 +24,6 @@ SOFTWARE.
 Translate all relevant graphics information
 """
 
-from typing import cast
-
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.spacetime import SpaceTime
@@ -56,26 +54,23 @@ class Graphics:
             if spacetime.get_slip():
 
                 # If this is the first time we are seeing the space stamp
-                keys = cast(Expression, EMethod("timestamps", "keys", []))
-                in_ = cast(Operator, OIn())
+                keys = EMethod("timestamps", "keys", [])
                 space_tup = self.canvas.get_space_tuple()
-                cond = cast(Expression, EBinOp(space_tup, in_, keys))
+                cond = EBinOp(space_tup, OIn(), keys)
 
                 # Then add 1
-                acc = cast(Assignable, AAccess("timestamps", space_tup))
-                add = cast(Operator, OAdd())
-                one = cast(Expression, EInt(1))
-                then = cast(Statement, SIAssign(acc, add, one))
+                acc = AAccess("timestamps", space_tup)
+                then = SIAssign(acc, OAdd(), EInt(1))
 
                 # Otherwise add it to the dictionary
-                else_ = cast(Statement, SAssign(acc, one))
+                else_ = SAssign(acc, EInt(1))
 
-                if_ = cast(Statement, SIf((cond, then), [], else_))
+                if_ = SIf((cond, then), [], else_)
                 body.add(if_)
 
             body.add(self.canvas.add_activity())
 
-        return cast(Statement, body)
+        return body
 
     def make_footer(self) -> Statement:
         """
@@ -85,7 +80,7 @@ class Graphics:
         if spacetime is not None:
             return self.canvas.display_canvas()
         else:
-            return cast(Statement, SBlock([]))
+            return SBlock([])
 
     def make_header(self) -> Statement:
         """
@@ -100,9 +95,7 @@ class Graphics:
 
             # Create the timestamp dictionary if we want slip
             if spacetime.get_slip():
-                dict_ = cast(Expression, EDict({}))
-                timestamps = cast(Assignable, AVar("timestamps"))
-                assign = cast(Statement, SAssign(timestamps, dict_))
+                assign = SAssign(AVar("timestamps"), EDict({}))
                 header.add(assign)
 
-        return cast(Statement, header)
+        return header

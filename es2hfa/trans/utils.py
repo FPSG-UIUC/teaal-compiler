@@ -24,8 +24,6 @@ SOFTWARE.
 Useful functions for generating HFA code
 """
 
-from typing import cast
-
 from es2hfa.hfa import *
 from es2hfa.ir.tensor import Tensor
 
@@ -43,10 +41,8 @@ class TransUtils:
         """
         Build the rank_ids argument
         """
-        ranks = [cast(Expression, EString(rank))
-                 for rank in tensor.get_ranks()]
-        arg = AParam("rank_ids", cast(Expression, EList(ranks)))
-        return cast(Argument, arg)
+        ranks = [EString(rank) for rank in tensor.get_ranks()]
+        return AParam("rank_ids", EList(ranks))
 
     @staticmethod
     def build_set_rank_ids(tensor: Tensor) -> Statement:
@@ -55,17 +51,15 @@ class TransUtils:
         """
         arg = TransUtils.build_rank_ids(tensor)
         set_call = EMethod(tensor.tensor_name(), "setRankIds", [arg])
-        return cast(Statement, SExpr(cast(Expression, set_call)))
+        return SExpr(set_call)
 
     @staticmethod
     def build_shape(tensor: Tensor) -> Argument:
         """
         Build the shape argument
         """
-        ranks = [cast(Expression, EVar(rank))
-                 for rank in tensor.get_ranks()]
-        arg = AParam("shape", cast(Expression, EList(ranks)))
-        return cast(Argument, arg)
+        ranks = [EVar(rank) for rank in tensor.get_ranks()]
+        return AParam("shape", EList(ranks))
 
     @staticmethod
     def build_swizzle(tensor: Tensor, old_name: str) -> Statement:
@@ -73,14 +67,9 @@ class TransUtils:
         Build the swizzleRanks() function
         """
         arg = TransUtils.build_rank_ids(tensor)
-        swizzle_call = cast(
-            Expression,
-            EMethod(
-                old_name,
-                "swizzleRanks",
-                [arg]))
-        new_name_assn = cast(Assignable, AVar(tensor.tensor_name()))
-        return cast(Statement, SAssign(new_name_assn, swizzle_call))
+        swizzle_call = EMethod(old_name, "swizzleRanks", [arg])
+        new_name_assn = AVar(tensor.tensor_name())
+        return SAssign(new_name_assn, swizzle_call)
 
     def curr_tmp(self) -> str:
         """

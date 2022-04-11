@@ -30,8 +30,7 @@ from es2hfa.hfa.base import Assignable, Expression, Operator, Payload, Statement
 from es2hfa.hfa.expr import EVar
 
 
-@Statement.register
-class SAssign:
+class SAssign(Statement):
     """
     An assignment
     """
@@ -47,8 +46,7 @@ class SAssign:
         return "    " * depth + self.assn.gen() + " = " + self.expr.gen()
 
 
-@Statement.register
-class SBlock:
+class SBlock(Statement):
     """
     A block of statements
     """
@@ -73,8 +71,7 @@ class SBlock:
             self.stmts.append(stmt)
 
 
-@Statement.register
-class SExpr:
+class SExpr(Statement):
     """
     A statement that is an expression (usually because the expression has side effects)
     """
@@ -89,8 +86,7 @@ class SExpr:
         return "    " * depth + self.expr.gen()
 
 
-@Statement.register
-class SFor:
+class SFor(Statement):
     """
     A for loop for iterating over fibers in HFA
     """
@@ -112,8 +108,7 @@ class SFor:
             self.payload.gen(False) + " in " + self.expr.gen() + ":\n" + self.stmt.gen(depth + 1)
 
 
-@Statement.register
-class SFunc:
+class SFunc(Statement):
     """
     A function definition
     """
@@ -132,8 +127,7 @@ class SFunc:
         return "    " * depth + header + self.body.gen(depth + 1)
 
 
-@Statement.register
-class SIAssign:
+class SIAssign(Statement):
     """
     An assignment that updates an object in place, e.g. i += j
     """
@@ -155,8 +149,7 @@ class SIAssign:
             "= " + self.expr.gen()
 
 
-@Statement.register
-class SIf:
+class SIf(Statement):
     """
     An if statement
     """
@@ -189,8 +182,7 @@ class SIf:
         return out
 
 
-@Statement.register
-class SReturn:
+class SReturn(Statement):
     """
     A return statement for the end of a function
     """

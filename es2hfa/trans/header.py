@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the header above the HFA loop nest
 """
 
-from typing import cast, Set
+from typing import Set
 
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
@@ -55,11 +55,10 @@ class Header:
         self.program.apply_all_partitioning(tensor)
         self.program.get_loop_order().apply(tensor)
 
-        name = cast(Assignable, AVar(tensor.tensor_name()))
         arg0 = TransUtils.build_rank_ids(tensor)
         args = self.__make_shape([arg0])
-        constr = cast(Expression, EFunc("Tensor", args))
-        return cast(Statement, SAssign(name, constr))
+        constr = EFunc("Tensor", args)
+        return SAssign(AVar(tensor.tensor_name()), constr)
 
     def __make_shape(self, args: List[Argument]) -> List[Argument]:
         """
@@ -103,11 +102,10 @@ class Header:
 
         # Add the call to getRoot()
         get_root_call = EMethod(tensor.tensor_name(), "getRoot", [])
-        call_expr = cast(Expression, get_root_call)
-        fiber_name = cast(Assignable, AVar(tensor.fiber_name()))
-        block.add(cast(Statement, SAssign(fiber_name, call_expr)))
+        fiber_name = AVar(tensor.fiber_name())
+        block.add(SAssign(fiber_name, get_root_call))
 
-        return cast(Statement, block)
+        return block
 
     @staticmethod
     def make_tensor_from_fiber(tensor: Tensor) -> Statement:
@@ -116,15 +114,10 @@ class Header:
         """
         tensor.from_fiber()
 
-        ranks = [cast(Expression, EString(rank))
-                 for rank in tensor.get_ranks()]
-        ranks_list = cast(Expression, EList(ranks))
-        fiber_name = cast(Expression, EVar(tensor.fiber_name()))
-        args = [cast(Argument, AParam("rank_ids", ranks_list)),
-                cast(Argument, AParam("fiber", fiber_name))]
+        ranks = [EString(rank) for rank in tensor.get_ranks()]
+        args = [AParam("rank_ids", EList(ranks)),
+                AParam("fiber", EVar(tensor.fiber_name()))]
 
         from_fiber = EMethod("Tensor", "fromFiber", args)
-        from_fiber_expr = cast(Expression, from_fiber)
-
-        tensor_name = cast(Assignable, AVar(tensor.tensor_name()))
-        return cast(Statement, SAssign(tensor_name, from_fiber_expr))
+        tensor_name = AVar(tensor.tensor_name())
+        return SAssign(tensor_name, from_fiber)

@@ -27,8 +27,7 @@ HFA AST and code generation for HFA expressions
 from es2hfa.hfa.base import Argument, Expression
 
 
-@Argument.register
-class AJust:
+class AJust(Argument):
     """
     An unparameterized argument to an HFA function
     """
@@ -43,8 +42,7 @@ class AJust:
         return self.expr.gen()
 
 
-@Argument.register
-class AParam:
+class AParam(Argument):
     """
     A parameterized argument to an HFA function
     """

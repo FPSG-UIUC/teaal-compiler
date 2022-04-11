@@ -25,7 +25,7 @@ Representations of all of the nodes in the FlowGraph
 """
 
 import abc
-from typing import Any, cast, Iterable, List, Tuple
+from typing import Any, Iterable, List, Tuple
 
 
 class Node(metaclass=abc.ABCMeta):

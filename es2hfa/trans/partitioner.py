@@ -23,7 +23,7 @@ SOFTWARE.
 
 Translate the partitiong specification
 """
-from typing import cast, Set
+from typing import Set
 
 from lark.tree import Tree
 
@@ -54,16 +54,15 @@ class Partitioner:
         part_ir = self.program.get_partitioning()
         partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), ranks)
         if not partitioning:
-            return cast(Statement, SBlock([]))
+            return SBlock([])
 
         # We will build a block with the partitioning code
         block = SBlock([])
 
         # Rename the variable
-        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
+        next_tmp = AVar(self.trans_utils.next_tmp())
         old_name = tensor.tensor_name()
-        old_expr = cast(Expression, EVar(old_name))
-        block.add(cast(Statement, SAssign(next_tmp, old_expr)))
+        block.add(SAssign(next_tmp, EVar(old_name)))
 
         # Emit the partitioning code
         for i, rank in reversed(list(enumerate(tensor.get_ranks()))):
@@ -100,14 +99,14 @@ class Partitioner:
             self.program.apply_partitioning(tensor, rank)
 
         # Rename the tensor
-        part_name = cast(Assignable, AVar(tensor.tensor_name()))
-        tmp_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
-        block.add(cast(Statement, SAssign(part_name, tmp_expr)))
+        part_name = AVar(tensor.tensor_name())
+        tmp_expr = EVar(self.trans_utils.curr_tmp())
+        block.add(SAssign(part_name, tmp_expr))
 
         # Rename the rank_ids
         block.add(TransUtils.build_set_rank_ids(tensor))
 
-        return cast(Statement, block)
+        return block
 
     def unpartition(self, tensor: Tensor) -> Statement:
         """
@@ -125,12 +124,11 @@ class Partitioner:
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])
         if not partitioning:
-            return cast(Statement, block)
+            return block
 
         # Switch to name tmp
-        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
-        part_name_expr = cast(Expression, EVar(part_name))
-        block.add(cast(Statement, SAssign(next_tmp, part_name_expr)))
+        next_tmp = AVar(self.trans_utils.next_tmp())
+        block.add(SAssign(next_tmp, EVar(part_name)))
 
         # For each rank
         for i, rank in enumerate(tensor.get_ranks()):
@@ -139,25 +137,21 @@ class Partitioner:
 
             # Flatten the rank
             curr_tmp = self.trans_utils.curr_tmp()
-            next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
-            arg1 = AParam("depth", cast(Expression, EInt(i)))
-            arg2 = AParam("levels", cast(
-                Expression, EInt(len(partitioning[rank]))))
-            arg3 = AParam("coord_style", cast(Expression, EString("absolute")))
-            args = [cast(Argument, arg) for arg in [arg1, arg2, arg3]]
+            next_tmp = AVar(self.trans_utils.next_tmp())
+            arg1 = AParam("depth", EInt(i))
+            arg2 = AParam("levels", EInt(len(partitioning[rank])))
+            arg3 = AParam("coord_style", EString("absolute"))
 
-            flat_call = EMethod(curr_tmp, "flattenRanks", args)
-            flat_assn = SAssign(next_tmp, cast(Expression, flat_call))
-
-            block.add(cast(Statement, flat_assn))
+            flat_call = EMethod(curr_tmp, "flattenRanks", [arg1, arg2, arg3])
+            block.add(SAssign(next_tmp, flat_call))
 
         # Switch back to tensor name and rename the rank_ids
-        new_name = cast(Assignable, AVar(tensor.tensor_name()))
-        tmp_name_expr = cast(Expression, EVar(self.trans_utils.curr_tmp()))
-        block.add(cast(Statement, SAssign(new_name, tmp_name_expr)))
+        new_name = AVar(tensor.tensor_name())
+        tmp_name_expr = EVar(self.trans_utils.curr_tmp())
+        block.add(SAssign(new_name, tmp_name_expr))
         block.add(TransUtils.build_set_rank_ids(tensor))
 
-        return cast(Statement, block)
+        return block
 
     def __nway_shape(self, rank: str, part: Tree, depth: int) -> Statement:
         """
@@ -167,48 +161,33 @@ class Partitioner:
         parts = ParseUtils.next_int(part)
 
         # Ceiling divide: (rank - 1) // parts + 1
-        rank_expr = cast(Expression, EVar(rank))
-        one_expr = cast(Expression, EInt(1))
-        parts_expr = cast(Expression, EInt(parts))
-
-        rank_one = EBinOp(rank_expr, cast(Operator, OSub()), one_expr)
-        parens_expr = cast(Expression, EParens(cast(Expression, rank_one)))
-        fdiv = EBinOp(
-            cast(
-                Expression, parens_expr), cast(
-                Operator, OFDiv()), parts_expr)
-        step = EBinOp(cast(Expression, fdiv), cast(Operator, OAdd()), one_expr)
+        parens = EParens(EBinOp(EVar(rank), OSub(), EInt(1)))
+        fdiv = EBinOp(parens, OFDiv(), EInt(parts))
+        step = EBinOp(fdiv, OAdd(), EInt(1))
 
         # Build the splitUniform
-        return self.__split_uniform(cast(Expression, step), depth)
+        return self.__split_uniform(step, depth)
 
     def __split_equal(self, size: int) -> Statement:
         """
         Build call to splitEqual
         """
-        arg = cast(Argument, AJust(cast(Expression, EInt(size))))
+        arg = AJust(EInt(size))
         part_call = EMethod(self.trans_utils.curr_tmp(), "splitEqual", [arg])
 
-        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
-        part_assn = SAssign(next_tmp, cast(Expression, part_call))
-
-        return cast(Statement, part_assn)
+        next_tmp = AVar(self.trans_utils.next_tmp())
+        return SAssign(next_tmp, part_call)
 
     def __split_follower(self, leader: str) -> Statement:
         """
         Build a call to splitNonUniform
         """
         fiber = EVar(self.program.get_tensor(leader).fiber_name())
-        arg = cast(Argument, AJust(cast(Expression, fiber)))
-        part_call = EMethod(
-            self.trans_utils.curr_tmp(),
-            "splitNonUniform",
-            [arg])
+        curr_tmp = self.trans_utils.curr_tmp()
+        part_call = EMethod(curr_tmp, "splitNonUniform", [AJust(fiber)])
 
-        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
-        part_assn = SAssign(next_tmp, cast(Expression, part_call))
-
-        return cast(Statement, part_assn)
+        next_tmp = AVar(self.trans_utils.next_tmp())
+        return SAssign(next_tmp, part_call)
 
     def __split_uniform(self, step: Expression, depth: int) -> Statement:
         """
@@ -216,15 +195,14 @@ class Partitioner:
         """
         # Build the depth and the arguments
         arg1 = AJust(step)
-        arg2 = AParam("depth", cast(Expression, EInt(depth)))
-        args = [cast(Argument, arg1), cast(Argument, arg2)]
+        arg2 = AParam("depth", EInt(depth))
 
         # Build the call to splitUniform()
-        part_call = EMethod(self.trans_utils.curr_tmp(), "splitUniform", args)
-        next_tmp = cast(Assignable, AVar(self.trans_utils.next_tmp()))
-        part_assn = SAssign(next_tmp, cast(Expression, part_call))
+        curr_tmp = self.trans_utils.curr_tmp()
+        part_call = EMethod(curr_tmp, "splitUniform", [arg1, arg2])
 
-        return cast(Statement, part_assn)
+        next_tmp = AVar(self.trans_utils.next_tmp())
+        return SAssign(next_tmp, part_call)
 
     def __uniform_occupancy(self, tensor: Tensor, part: Tree) -> Statement:
         """
@@ -246,4 +224,4 @@ class Partitioner:
         step = ParseUtils.next_int(part)
 
         # Build the splitUniform()
-        return self.__split_uniform(cast(Expression, EInt(step)), depth)
+        return self.__split_uniform(EInt(step), depth)

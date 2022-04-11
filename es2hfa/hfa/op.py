@@ -28,8 +28,7 @@ HFA AST and code generation for HFA operators
 from es2hfa.hfa.base import Operator
 
 
-@Operator.register
-class OAdd:
+class OAdd(Operator):
     """
     The HFA addition operator
     """
@@ -41,8 +40,7 @@ class OAdd:
         return "+"
 
 
-@Operator.register
-class OAnd:
+class OAnd(Operator):
     """
     The HFA and operator
     """
@@ -54,8 +52,7 @@ class OAnd:
         return "&"
 
 
-@Operator.register
-class OFDiv:
+class OFDiv(Operator):
     """
     The HFA floor divide operator
     """
@@ -67,8 +64,7 @@ class OFDiv:
         return "//"
 
 
-@Operator.register
-class OIn:
+class OIn(Operator):
     """
     The HFA in operator
     """
@@ -80,8 +76,7 @@ class OIn:
         return "in"
 
 
-@Operator.register
-class OLtLt:
+class OLtLt(Operator):
     """
     The HFA less-than less-than operator
     """
@@ -93,8 +88,7 @@ class OLtLt:
         return "<<"
 
 
-@Operator.register
-class OMul:
+class OMul(Operator):
     """
     The HFA multiplication operator
     """
@@ -106,8 +100,7 @@ class OMul:
         return "*"
 
 
-@Operator.register
-class OOr:
+class OOr(Operator):
     """
     The HFA or operator
     """
@@ -119,8 +112,7 @@ class OOr:
         return "|"
 
 
-@Operator.register
-class OSub:
+class OSub(Operator):
     """
     The HFA subtract operator
     """

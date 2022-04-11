@@ -132,8 +132,7 @@ class Equation:
         # If there are no input tensors, we just need to iterShapeRef on the
         # output
         if not terms and output_tensor:
-            call = EMethod(output_tensor.fiber_name(), "iterShapeRef", [])
-            return cast(Expression, call)
+            return EMethod(output_tensor.fiber_name(), "iterShapeRef", [])
 
         # Combine terms with intersections
         intersections = []
@@ -141,30 +140,24 @@ class Equation:
             expr = self.__iter_fiber(rank, term[-1])
             for factor in reversed(term[:-1]):
                 fiber = self.__iter_fiber(rank, factor)
-                expr = Equation.__add_operator(
-                    fiber, cast(Operator, OAnd()), expr)
+                expr = Equation.__add_operator(fiber, OAnd(), expr)
             intersections.append(expr)
 
         # Combine intersections with a union
         expr = intersections[-1]
         for intersection in reversed(intersections[:-1]):
-            expr = Equation.__add_operator(
-                intersection, cast(Operator, OOr()), expr)
+            expr = Equation.__add_operator(intersection, OOr(), expr)
 
         # Finally, add in the output
         if output_tensor:
             expr = Equation.__add_operator(
-                cast(
-                    Expression, EVar(
-                        output_tensor.fiber_name())), cast(
-                    Operator, OLtLt()), expr)
+                EVar(output_tensor.fiber_name()), OLtLt(), expr)
 
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         spacetime = self.program.get_spacetime()
         if spacetime is not None and spacetime.emit_pos(rank):
-            arg = cast(Argument, AJust(expr))
-            expr = cast(Expression, EFunc("enumerate", [arg]))
+            expr = EFunc("enumerate", [AJust(expr)])
 
         return expr
 
@@ -181,28 +174,27 @@ class Equation:
         terms = self.__separate_terms(tensors)
         output_tensor = self.__get_output_tensor(tensors)
 
+        payload: Payload
         if terms:
             # Construct the term payloads
             term_payloads = []
             for term in terms:
-                payload = cast(Payload, PVar(term[-1].fiber_name()))
+                payload = PVar(term[-1].fiber_name())
                 for factor in reversed(term[:-1]):
-                    payload = Equation.__add_pvar(factor.fiber_name(), payload)
+                    payload = PTuple([PVar(factor.fiber_name()), payload])
                 term_payloads.append(payload)
 
             # Construct the entire expression payload
             payload = term_payloads[-1]
             for term_payload in reversed(term_payloads[:-1]):
-                payload = cast(Payload, PTuple(
-                    [cast(Payload, PVar("_")), term_payload, payload]))
+                payload = PTuple([PVar("_"), term_payload, payload])
 
             # Put the output on the outside
             if output_tensor:
-                payload = Equation.__add_pvar(
-                    output_tensor.fiber_name(), payload)
+                payload = PTuple([PVar(output_tensor.fiber_name()), payload])
 
         elif output_tensor:
-            payload = cast(Payload, PVar(output_tensor.fiber_name()))
+            payload = PVar(output_tensor.fiber_name())
 
         else:
             # We should never get to this state
@@ -210,13 +202,13 @@ class Equation:
 
         # Add the rank variable
         rank_var = rank.lower()
-        payload = Equation.__add_pvar(rank_var, payload)
+        payload = PTuple([PVar(rank_var), payload])
 
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         spacetime = self.program.get_spacetime()
         if spacetime is not None and spacetime.emit_pos(rank):
-            payload = Equation.__add_pvar(rank_var + "_pos", payload)
+            payload = PTuple([PVar(rank_var + "_pos"), payload])
 
         return payload
 
@@ -230,28 +222,20 @@ class Equation:
             factors = [var for var in self.vars[i] if self.__in_update(var)] + \
                 [tensor.lower() + "_val" for tensor in term
                     if self.__in_update(tensor)]
-            product = cast(Expression, EVar(factors[0]))
+
+            product: Expression = EVar(factors[0])
             for factor in factors[1:]:
-                product = cast(Expression, EBinOp(product, cast(
-                    Operator, OMul()), cast(Expression, EVar(factor))))
+                product = EBinOp(product, OMul(), EVar(factor))
             products.append(product)
 
         # Combine the terms
         sum_ = products[0]
         for product in products[1:]:
-            sum_ = cast(
-                Expression,
-                EBinOp(
-                    sum_,
-                    cast(
-                        Operator,
-                        OAdd()),
-                    product))
+            sum_ = EBinOp(sum_, OAdd(), product)
 
         # Create the final statement
         out_name = self.output.lower() + "_ref"
-        out_var = cast(Assignable, AVar(out_name))
-        return cast(Statement, SIAssign(out_var, cast(Operator, OAdd()), sum_))
+        return SIAssign(AVar(out_name), OAdd(), sum_)
 
     @staticmethod
     def __add_operator(
@@ -264,17 +248,9 @@ class Equation:
         exprs = [expr1, expr2]
         for i, expr in enumerate(exprs):
             if isinstance(expr, EBinOp):
-                exprs[i] = cast(Expression, EParens(expr))
+                exprs[i] = EParens(expr)
 
-        return cast(Expression, EBinOp(exprs[0], op, exprs[1]))
-
-    @staticmethod
-    def __add_pvar(var: str, payload: Payload) -> Payload:
-        """
-        Add a var to the front of a payload
-        """
-        pvar = cast(Payload, PVar(var))
-        return cast(Payload, PTuple([pvar, payload]))
+        return EBinOp(exprs[0], op, exprs[1])
 
     @staticmethod
     def __build_expr(sexpr: Basic) -> Expression:
@@ -282,16 +258,16 @@ class Equation:
         Build an HFA expression from a SymPy expression
         """
         if isinstance(sexpr, Symbol):
-            return cast(Expression, EVar(str(sexpr)))
+            return EVar(str(sexpr))
 
         elif isinstance(sexpr, Integer):
-            return cast(Expression, EInt(int(sexpr)))
+            return EInt(int(sexpr))
 
         elif isinstance(sexpr, Add):
-            return Equation.__combine(sexpr, cast(Type[Operator], OAdd))
+            return Equation.__combine(sexpr, OAdd)
 
         elif isinstance(sexpr, Mul):
-            return Equation.__combine(sexpr, cast(Type[Operator], OMul))
+            return Equation.__combine(sexpr, OMul)
 
         else:
             raise ValueError("Unable to translate expression " + repr(sexpr))
@@ -302,10 +278,10 @@ class Equation:
         Fold together an expression
         """
         hexprs = [Equation.__build_expr(arg) for arg in sexpr.args]
-        bexpr = cast(Expression, EBinOp(hexprs[-2], op(), hexprs[-1]))
+        bexpr = EBinOp(hexprs[-2], op(), hexprs[-1])
 
         for hexpr in reversed(hexprs[:-2]):
-            bexpr = cast(Expression, EBinOp(hexpr, op(), bexpr))
+            bexpr = EBinOp(hexpr, op(), bexpr)
 
         return bexpr
 
@@ -340,26 +316,17 @@ class Equation:
         # If this fiber is already over the correct rank, we can iterate over it
         # directly
         if trank == rank.lower():
-            return cast(Expression, EVar(tensor.fiber_name()))
+            return EVar(tensor.fiber_name())
 
         # Otherwise, we need to project
         math = self.program.get_index_math().get_trans(trank)
         mexpr = Equation.__build_expr(math)
-        lambda_ = cast(Expression, ELambda([trank], mexpr))
+        lambda_ = ELambda([trank], mexpr)
 
-        range_ = ETuple([cast(Expression, EInt(0)),
-                        cast(Expression, EVar(rank))])
-        range_expr = cast(Expression, range_)
+        range_ = ETuple([EInt(0), EVar(rank)])
 
-        args = [
-            cast(
-                Argument, AParam(
-                    "trans_fn", lambda_)), cast(
-                Argument, AParam(
-                    "interval", range_expr))]
-        method = EMethod(tensor.fiber_name(), "project", args)
-
-        return cast(Expression, method)
+        args = [AParam("trans_fn", lambda_), AParam("interval", range_)]
+        return EMethod(tensor.fiber_name(), "project", args)
 
     def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
         """
