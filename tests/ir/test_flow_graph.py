@@ -1,13 +1,26 @@
 import networkx as nx
+import pytest
 
 from es2hfa.ir.flow_graph import FlowGraph
+from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 
 
-def build_program(mapping):
+def build_program_no_loops():
+    einsum = Einsum.from_file("tests/integration/test_translate_no_loops.yaml")
+    mapping = Mapping.from_file(
+        "tests/integration/test_translate_no_loops.yaml")
+
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    return program
+
+
+def build_program_matmul(mapping):
     yaml = """
     einsum:
         declaration:
@@ -24,13 +37,25 @@ def build_program(mapping):
     return program
 
 
-def test_graph_no_loops():
-    einsum = Einsum.from_file("tests/integration/test_translate_no_loops.yaml")
-    mapping = Mapping.from_file(
-        "tests/integration/test_translate_no_loops.yaml")
-
-    program = Program(einsum, mapping)
+def build_program_conv(mapping):
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [Q]
+        expressions:
+            - O[q] = sum(S).(I[q + s] + F[s])
+    mapping:
+    """ + mapping
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
+
+    return program
+
+
+def test_graph_no_loops():
+    program = build_program_no_loops()
     graph = FlowGraph(program).get_graph()
 
     corr = nx.DiGraph()
@@ -44,7 +69,7 @@ def test_graph_no_loops():
 
 
 def test_graph():
-    program = build_program("")
+    program = build_program_matmul("")
     graph = FlowGraph(program).get_graph()
 
     corr = nx.DiGraph()
@@ -69,7 +94,7 @@ def test_graph_loop_order():
         loop-order:
             Z: [K, M, N]
     """
-    program = build_program(spec)
+    program = build_program_matmul(spec)
     graph = FlowGraph(program).get_graph()
 
     corr = nx.DiGraph()
@@ -98,7 +123,7 @@ def test_graph_static_parts():
         loop-order:
             Z: [K2, M, N1, K1, N0, K0]
     """
-    program = build_program(spec)
+    program = build_program_matmul(spec)
     graph = FlowGraph(program).get_graph()
 
     corr = nx.DiGraph()
@@ -147,7 +172,7 @@ def test_graph_dyn_parts():
         loop-order:
             Z: [K2, M, N1, K1, N0, K0]
     """
-    program = build_program(spec)
+    program = build_program_matmul(spec)
     graph = FlowGraph(program).get_graph()
 
     corr = nx.DiGraph()
@@ -194,3 +219,37 @@ def test_graph_dyn_parts():
     corr.add_edge(SRNode("B", ['K1', 'N0', 'K0']), LoopNode("K1"))
 
     assert nx.is_isomorphic(graph, corr)
+
+
+def test_graph_conv():
+    spec = """
+        loop-order:
+            O: [W, Q]
+    """
+    program = build_program_conv(spec)
+    graph = FlowGraph(program).get_graph()
+
+    corr = nx.DiGraph()
+    corr.add_edge(LoopNode("W"), LoopNode("Q"))
+    corr.add_edge(LoopNode("W"), OtherNode("Body"))
+    corr.add_edge(LoopNode("Q"), OtherNode("Body"))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("W"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), SRNode("O", ['Q']))
+    corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
+    corr.add_edge(SRNode("O", ['Q']), LoopNode("Q"))
+    corr.add_edge(SRNode("I", ['W']), LoopNode("W"))
+    corr.add_edge(SRNode("F", ['S']), LoopNode("Q"))
+
+    assert nx.is_isomorphic(graph, corr)
+
+
+def test_build_fiber_nodes_empty_graph():
+    program = build_program_no_loops()
+    flow_graph = FlowGraph(program)
+    iter_graph = IterationGraph(program)
+
+    with pytest.raises(ValueError) as excinfo:
+        flow_graph._FlowGraph__build_fiber_nodes(iter_graph)
+
+    assert str(excinfo.value) == "No loop node to connect"

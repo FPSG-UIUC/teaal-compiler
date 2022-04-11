@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 from typing import cast, List
 
+from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
@@ -105,26 +106,19 @@ class FlowGraph:
             # Get the root fiber
             self.__build_swizzle_root_fiber(tensor)
 
-            # Insert all other fiber nodes
-            opt_rank = tensor.peek()
-            while opt_rank is not None:
-                rank = opt_rank.upper()
+        # Connect all Fibers with the appropriate loop nodes
+        iter_graph = IterationGraph(self.program)
+        while iter_graph.peek()[0] is not None:
+            self.__build_fiber_nodes(iter_graph)
 
-                # If this is a dynamically partitioned rank, add the relevant
-                # FromFiberNode, SRNode and edges to the FiberNodes
-                if rank in part.get_dyn_parts():
-                    self.__connect_dyn_part(tensor, rank)
-
-                # Connect a loop to its relevant input and output fibers
-                self.__build_fiber_nodes(tensor, rank)
-
-                opt_rank = tensor.peek()
-
+        for tensor in self.program.get_tensors():
             # The last FiberNode is needed for the body
             self.graph.add_edge(
                 FiberNode(tensor.fiber_name()),
                 OtherNode("Body"))
 
+        # Reset all tensors
+        for tensor in self.program.get_tensors():
             is_output = tensor.get_is_output()
             tensor.reset()
             tensor.set_is_output(is_output)
@@ -153,18 +147,36 @@ class FlowGraph:
             for dst in dsts:
                 self.graph.add_edge(part_node, RankNode(root, dst))
 
-    def __build_fiber_nodes(self, tensor: Tensor, rank: str) -> None:
+    def __build_fiber_nodes(self, iter_graph: IterationGraph) -> None:
         """
         Build the FiberNodes between loops
         """
-        fiber_node = FiberNode(tensor.fiber_name())
-        rank = tensor.pop().upper()
-        new_fnode = FiberNode(tensor.fiber_name())
+        # If this is a dynamically partitioned rank, add the relevant nodes
+        part = self.program.get_partitioning()
+        for tensor in self.program.get_tensors():
+            rank = tensor.peek()
+            if rank is not None:
+                rank = rank.upper()
 
-        # Add the nodes corresponding to the inputs and outputs of this
-        # loop
-        self.graph.add_edge(fiber_node, LoopNode(rank))
-        self.graph.add_edge(LoopNode(rank), new_fnode)
+            if rank in part.get_dyn_parts():
+                self.__connect_dyn_part(tensor, rank)
+
+        rank, tensors = iter_graph.peek()
+
+        if rank is None:
+            raise ValueError("No loop node to connect")
+
+        for tensor in tensors:
+            # Connect the old fiber to the LoopNode
+            fiber_node = FiberNode(tensor.fiber_name())
+            self.graph.add_edge(fiber_node, LoopNode(rank))
+
+        _, tensors = iter_graph.pop()
+
+        # Connect the new fiber to the LoopNode
+        for tensor in tensors:
+            new_fnode = FiberNode(tensor.fiber_name())
+            self.graph.add_edge(LoopNode(rank), new_fnode)
 
     def __build_loop_nest(self) -> None:
         """
