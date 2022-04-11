@@ -28,9 +28,7 @@ from functools import reduce
 
 from lark.lexer import Token
 from lark.tree import Tree
-from sympy import Symbol
-from sympy.core.expr import Expr
-from sympy.solvers import solve
+from sympy import Expr, solve, Symbol
 from typing import Any, Dict, Iterable, List, Optional
 
 from es2hfa.ir.partitioning import Partitioning

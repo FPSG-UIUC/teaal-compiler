@@ -41,6 +41,11 @@ def test_eint():
     assert int_.gen() == "5"
 
 
+def test_elambda():
+    lambda_ = ELambda(["a", "b"], EBinOp(EVar("a"), OAdd(), EVar("b")))
+    assert lambda_.gen() == "lambda a, b: a + b"
+
+
 def test_elist():
     list_ = EList([EVar("a"), EVar("b")])
     assert list_.gen() == "[a, b]"

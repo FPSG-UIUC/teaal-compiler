@@ -174,6 +174,23 @@ class EInt:
 
 
 @Expression.register
+class ELambda:
+    """
+    An HFA lambda
+    """
+
+    def __init__(self, args: List[str], body: Expression) -> None:
+        self.args = args
+        self.body = body
+
+    def gen(self) -> str:
+        """
+        Generate HFA code for an ELambda
+        """
+        return "lambda " + ", ".join(self.args) + ": " + self.body.gen()
+
+
+@Expression.register
 class EList:
     """
     An HFA list

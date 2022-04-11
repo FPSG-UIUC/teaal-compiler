@@ -1,5 +1,10 @@
 einsum:
-  declaration:
-    Z: [M]
-  expressions:
-    - Z[m] = b
+    declaration:
+        F: [S]
+        I: [W]
+        O: [Q]
+    expressions:
+        - O[q] = sum(S).(I[q + s] + F[s])
+mapping:
+    loop-order:
+        O: [W, Q]

@@ -24,10 +24,10 @@ SOFTWARE.
 Representation of how tensors and variables are combined
 """
 
-from typing import cast, Dict, List, Optional
-
 from lark.lexer import Token
 from lark.tree import Tree
+from sympy import Add, Basic, Integer, Mul, Symbol
+from typing import cast, Dict, List, Optional, Type
 
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
@@ -138,13 +138,11 @@ class Equation:
         # Combine terms with intersections
         intersections = []
         for term in terms:
-            expr = cast(Expression, EVar(term[-1].fiber_name()))
+            expr = self.__iter_fiber(rank, term[-1])
             for factor in reversed(term[:-1]):
+                fiber = self.__iter_fiber(rank, factor)
                 expr = Equation.__add_operator(
-                    cast(
-                        Expression, EVar(
-                            factor.fiber_name())), cast(
-                        Operator, OAnd()), expr)
+                    fiber, cast(Operator, OAnd()), expr)
             intersections.append(expr)
 
         # Combine intersections with a union
@@ -278,6 +276,39 @@ class Equation:
         pvar = cast(Payload, PVar(var))
         return cast(Payload, PTuple([pvar, payload]))
 
+    @staticmethod
+    def __build_expr(sexpr: Basic) -> Expression:
+        """
+        Build an HFA expression from a SymPy expression
+        """
+        if isinstance(sexpr, Symbol):
+            return cast(Expression, EVar(str(sexpr)))
+
+        elif isinstance(sexpr, Integer):
+            return cast(Expression, EInt(int(sexpr)))
+
+        elif isinstance(sexpr, Add):
+            return Equation.__combine(sexpr, cast(Type[Operator], OAdd))
+
+        elif isinstance(sexpr, Mul):
+            return Equation.__combine(sexpr, cast(Type[Operator], OMul))
+
+        else:
+            raise ValueError("Unable to translate expression " + repr(sexpr))
+
+    @staticmethod
+    def __combine(sexpr: Basic, op: Type[Operator]) -> Expression:
+        """
+        Fold together an expression
+        """
+        hexprs = [Equation.__build_expr(arg) for arg in sexpr.args]
+        bexpr = cast(Expression, EBinOp(hexprs[-2], op(), hexprs[-1]))
+
+        for hexpr in reversed(hexprs[:-2]):
+            bexpr = cast(Expression, EBinOp(hexpr, op(), bexpr))
+
+        return bexpr
+
     def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
         """
         Get the output tensor if it exists
@@ -295,6 +326,40 @@ class Equation:
         """
         i, j = self.factor_order[factor]
         return self.in_update[i][j]
+
+    def __iter_fiber(self, rank: str, tensor: Tensor) -> Expression:
+        """
+        Get fiber for iteration (may involve projection)
+        """
+        trank = tensor.peek()
+        if trank is None:
+            raise ValueError(
+                "Cannot iterate over payload " +
+                tensor.fiber_name())
+
+        # If this fiber is already over the correct rank, we can iterate over it
+        # directly
+        if trank == rank.lower():
+            return cast(Expression, EVar(tensor.fiber_name()))
+
+        # Otherwise, we need to project
+        math = self.program.get_index_math().get_trans(trank)
+        mexpr = Equation.__build_expr(math)
+        lambda_ = cast(Expression, ELambda([trank], mexpr))
+
+        range_ = ETuple([cast(Expression, EInt(0)),
+                        cast(Expression, EVar(rank))])
+        range_expr = cast(Expression, range_)
+
+        args = [
+            cast(
+                Argument, AParam(
+                    "trans_fn", lambda_)), cast(
+                Argument, AParam(
+                    "interval", range_expr))]
+        method = EMethod(tensor.fiber_name(), "project", args)
+
+        return cast(Expression, method)
 
     def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
         """

@@ -1,4 +1,5 @@
 import pytest
+from sympy import symbols
 
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.program import Program
@@ -127,6 +128,27 @@ def make_display(style, opt):
     return IterationGraph(program), Equation(program)
 
 
+def make_conv(loop_order):
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [P, Q]
+        expressions:
+            - O[p, q] = sum(S).(I[p + q + s] + F[s])
+    mapping:
+        loop-order:
+            O: """ + loop_order
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    return IterationGraph(program), Equation(program)
+
+
 def test_mult_tensor_uses():
     program = make_other("A[i] = B[i] * B[i]")
     with pytest.raises(ValueError) as excinfo:
@@ -221,6 +243,22 @@ def test_make_iter_expr_output_only():
 
     rank, tensors = graph.peek()
     iter_expr = "a_i.iterShapeRef()"
+
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_conv():
+    graph, eqn = make_conv("[P, W, Q]")
+    graph.pop()
+
+    rank, tensors = graph.peek()
+    iter_expr = "i_w"
+
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+    graph.pop()
+    rank, tensors = graph.peek()
+    iter_expr = "o_q << f_s.project(trans_fn=lambda s: w + -1 * p + -1 * q, interval=(0, Q))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
@@ -332,3 +370,24 @@ def test_make_update_dot():
     _, eqn = make_dot()
     stmt = "z_ref += b"
     assert eqn.make_update().gen(depth=0) == stmt
+
+
+def test_build_expr_unknown_func():
+    a, b = symbols("a b")
+    with pytest.raises(ValueError) as excinfo:
+        Equation._Equation__build_expr(a ^ b)
+
+    assert str(excinfo.value) == "Unable to translate expression a ^ b"
+
+
+def test_iter_fiber_not_fiber():
+    graph, eqn = make_conv("[P, W, Q]")
+    graph.pop()
+    graph.pop()
+    graph.pop()
+    _, tensors = graph.peek()
+
+    with pytest.raises(ValueError) as excinfo:
+        eqn._Equation__iter_fiber(None, tensors[0])
+
+    assert str(excinfo.value) == "Cannot iterate over payload o_ref"
