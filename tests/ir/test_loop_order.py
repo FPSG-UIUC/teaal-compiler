@@ -20,7 +20,7 @@ def build_loop_order():
 
 
 def build_loop_order_conv():
-    equation = EquationParser.parse("O[q] = sum(S).(I[q + s] + F[s])")
+    equation = EquationParser.parse("O[q] = sum(S).(I[q + s] * F[s])")
 
     output = Tensor("O", ["Q"])
     output.set_is_output(True)

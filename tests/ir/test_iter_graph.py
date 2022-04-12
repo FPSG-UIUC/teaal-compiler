@@ -191,7 +191,7 @@ def test_peek_pop_index_math():
             I: [W]
             O: [Q]
         expressions:
-            - O[q] = sum(S).(I[q + s] + F[s])
+            - O[q] = sum(S).(I[q + s] * F[s])
     mapping:
         loop-order:
             O: [W, Q]

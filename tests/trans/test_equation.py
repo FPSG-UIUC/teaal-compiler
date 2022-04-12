@@ -136,7 +136,7 @@ def make_conv(loop_order):
             I: [W]
             O: [P, Q]
         expressions:
-            - O[p, q] = sum(S).(I[p + q + s] + F[s])
+            - O[p, q] = sum(S).(I[p + q + s] * F[s])
     mapping:
         loop-order:
             O: """ + loop_order
@@ -248,19 +248,32 @@ def test_make_iter_expr_output_only():
 
 
 def test_make_iter_expr_conv():
-    graph, eqn = make_conv("[P, W, Q]")
+    graph, eqn = make_conv("[P, S, Q]")
     graph.pop()
 
     rank, tensors = graph.peek()
-    iter_expr = "i_w"
+    iter_expr = "f_s"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
     graph.pop()
     rank, tensors = graph.peek()
-    iter_expr = "o_q << f_s.project(trans_fn=lambda s: w + -1 * p + -1 * q, interval=(0, Q))"
+    iter_expr = "o_q << i_w.project(trans_fn=lambda w: w + -1 * p + -1 * s, interval=(0, Q))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_conv_project_output():
+    graph, eqn = make_conv("[P, S, W]")
+    graph.pop()
+    graph.pop()
+
+    with pytest.raises(ValueError) as excinfo:
+        print(graph.peek())
+        eqn.make_iter_expr(*graph.peek())
+
+    assert str(
+        excinfo.value) == "Cannot project into the output tensor. Replace W with Q in the loop order"
 
 
 def test_make_payload_no_tensors():
@@ -377,7 +390,7 @@ def test_build_expr_unknown_func():
     with pytest.raises(ValueError) as excinfo:
         Equation._Equation__build_expr(a ^ b)
 
-    assert str(excinfo.value) == "Unable to translate expression a ^ b"
+    assert str(excinfo.value) == "Unable to translate operator Xor"
 
 
 def test_iter_fiber_not_fiber():

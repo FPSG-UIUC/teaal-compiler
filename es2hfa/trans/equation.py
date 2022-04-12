@@ -26,7 +26,7 @@ Representation of how tensors and variables are combined
 
 from lark.lexer import Token
 from lark.tree import Tree
-from sympy import Add, Basic, Integer, Mul, Symbol
+from sympy import Add, Basic, Integer, Mul, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
 from es2hfa.hfa import *
@@ -150,6 +150,18 @@ class Equation:
 
         # Finally, add in the output
         if output_tensor:
+            trank = output_tensor.peek()
+            if trank is not None:
+                trank = trank.upper()
+
+            if trank != rank:
+                raise ValueError(
+                    "Cannot project into the output tensor. Replace " +
+                    rank +
+                    " with " +
+                    str(trank) +
+                    " in the loop order")
+
             expr = Equation.__add_operator(
                 EVar(output_tensor.fiber_name()), OLtLt(), expr)
 
@@ -270,7 +282,10 @@ class Equation:
             return Equation.__combine(sexpr, OMul)
 
         else:
-            raise ValueError("Unable to translate expression " + repr(sexpr))
+            raise ValueError(
+                "Unable to translate operator " +
+                repr(
+                    sexpr.func))
 
     @staticmethod
     def __combine(sexpr: Basic, op: Type[Operator]) -> Expression:
@@ -320,12 +335,10 @@ class Equation:
 
         # Otherwise, we need to project
         math = self.program.get_index_math().get_trans(trank)
-        mexpr = Equation.__build_expr(math)
-        lambda_ = ELambda([trank], mexpr)
+        sexpr = solve(math - Symbol(trank), Symbol(rank.lower()))[0]
 
-        range_ = ETuple([EInt(0), EVar(rank)])
-
-        args = [AParam("trans_fn", lambda_), AParam("interval", range_)]
+        args = [AParam("trans_fn", ELambda([trank], self.__build_expr(sexpr))),
+                AParam("interval", ETuple([EInt(0), EVar(rank)]))]
         return EMethod(tensor.fiber_name(), "project", args)
 
     def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
