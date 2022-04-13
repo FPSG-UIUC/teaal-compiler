@@ -52,7 +52,7 @@ def test_elist():
 
 
 def test_emethod():
-    method = EMethod("foo", "bar", [AJust(EVar("x")), AJust(EVar("y"))])
+    method = EMethod(EVar("foo"), "bar", [AJust(EVar("x")), AJust(EVar("y"))])
     assert method.gen() == "foo.bar(x, y)"
 
 

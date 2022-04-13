@@ -52,6 +52,30 @@ class OAnd(Operator):
         return "&"
 
 
+class ODiv(Operator):
+    """
+    The HFA divide operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for the ODiv operator
+        """
+        return "/"
+
+
+class OEqEq(Operator):
+    """
+    The HFA equal-equal operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for the OEqEq operator
+        """
+        return "=="
+
+
 class OFDiv(Operator):
     """
     The HFA floor divide operator
@@ -86,6 +110,18 @@ class OLtLt(Operator):
         Generate the HFA code for the OLtLt operator
         """
         return "<<"
+
+
+class OMod(Operator):
+    """
+    The HFA modulo operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HFA code for the OMod operator
+        """
+        return "%"
 
 
 class OMul(Operator):

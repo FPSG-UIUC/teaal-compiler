@@ -101,7 +101,7 @@ class Header:
             block.add(TransUtils.build_swizzle(tensor, old_name))
 
         # Add the call to getRoot()
-        get_root_call = EMethod(tensor.tensor_name(), "getRoot", [])
+        get_root_call = EMethod(EVar(tensor.tensor_name()), "getRoot", [])
         fiber_name = AVar(tensor.fiber_name())
         block.add(SAssign(fiber_name, get_root_call))
 
@@ -118,6 +118,6 @@ class Header:
         args = [AParam("rank_ids", EList(ranks)),
                 AParam("fiber", EVar(tensor.fiber_name()))]
 
-        from_fiber = EMethod("Tensor", "fromFiber", args)
+        from_fiber = EMethod(EVar("Tensor"), "fromFiber", args)
         tensor_name = AVar(tensor.tensor_name())
         return SAssign(tensor_name, from_fiber)

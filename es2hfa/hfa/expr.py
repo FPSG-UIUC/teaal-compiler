@@ -201,7 +201,8 @@ class EMethod(Expression):
     An HFA method call
     """
 
-    def __init__(self, obj: str, name: str, args: Sequence[Argument]) -> None:
+    def __init__(self, obj: Expression, name: str,
+                 args: Sequence[Argument]) -> None:
         self.obj = obj
         self.name = name
         self.args = args
@@ -210,7 +211,7 @@ class EMethod(Expression):
         """
         Generate the HFA code for an EMethod
         """
-        return self.obj + "." + self.name + \
+        return self.obj.gen() + "." + self.name + \
             "(" + ", ".join([a.gen() for a in self.args]) + ")"
 
 

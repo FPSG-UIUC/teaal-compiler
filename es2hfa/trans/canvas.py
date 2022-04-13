@@ -79,7 +79,7 @@ class Canvas:
         args.append(AParam("spacetime", ETuple([space, time])))
 
         # Create call to addActivity
-        add = EMethod("canvas", "addActivity", args)
+        add = EMethod(EVar("canvas"), "addActivity", args)
 
         # Create the corresponding statement
         return SExpr(add)

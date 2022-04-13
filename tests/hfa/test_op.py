@@ -11,6 +11,16 @@ def test_oand():
     assert and_.gen() == "&"
 
 
+def test_odiv():
+    div = ODiv()
+    assert div.gen() == "/"
+
+
+def test_oeqeq():
+    eqeq = OEqEq()
+    assert eqeq.gen() == "=="
+
+
 def test_ofdiv():
     fdiv = OFDiv()
     assert fdiv.gen() == "//"
@@ -24,6 +34,11 @@ def test_oin():
 def test_oltlt():
     ltlt = OLtLt()
     assert ltlt.gen() == "<<"
+
+
+def test_omod():
+    mod = OMod()
+    assert mod.gen() == "%"
 
 
 def test_omul():

@@ -26,7 +26,7 @@ Representation of how tensors and variables are combined
 
 from lark.lexer import Token
 from lark.tree import Tree
-from sympy import Add, Basic, Integer, Mul, solve, Symbol
+from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
 from es2hfa.hfa import *
@@ -132,7 +132,11 @@ class Equation:
         # If there are no input tensors, we just need to iterShapeRef on the
         # output
         if not terms and output_tensor:
-            return EMethod(output_tensor.fiber_name(), "iterShapeRef", [])
+            return EMethod(
+                EVar(
+                    output_tensor.fiber_name()),
+                "iterShapeRef",
+                [])
 
         # Combine terms with intersections
         intersections = []
@@ -275,6 +279,9 @@ class Equation:
         elif isinstance(sexpr, Integer):
             return EInt(int(sexpr))
 
+        elif isinstance(sexpr, Rational):
+            return EBinOp(EInt(sexpr.p), ODiv(), EInt(sexpr.q))
+
         elif isinstance(sexpr, Add):
             return Equation.__combine(sexpr, OAdd)
 
@@ -299,6 +306,16 @@ class Equation:
             bexpr = EBinOp(hexpr, op(), bexpr)
 
         return bexpr
+
+    @staticmethod
+    def __frac_coords(sexpr: Basic) -> bool:
+        """
+        Return True if fractional coordinates will be generated
+        """
+        if not isinstance(sexpr, Integer) and isinstance(sexpr, Rational):
+            return True
+
+        return any(Equation.__frac_coords(arg) for arg in sexpr.args)
 
     def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
         """
@@ -339,7 +356,18 @@ class Equation:
 
         args = [AParam("trans_fn", ELambda([trank], self.__build_expr(sexpr))),
                 AParam("interval", ETuple([EInt(0), EVar(rank)]))]
-        return EMethod(tensor.fiber_name(), "project", args)
+        project = EMethod(EVar(tensor.fiber_name()), "project", args)
+
+        # If there are no fractional coordinates, we are done
+        if not Equation.__frac_coords(sexpr):
+            return project
+
+        # Otherwise, we need to prune out the fractional coordinates
+        # We do this by pruning on the function c % 1 == 0
+        int_test = EBinOp(EBinOp(EVar("c"), OMod(), EInt(1)), OEqEq(), EInt(0))
+        trans_fn = AParam("trans_fn", ELambda(["i", "c", "p"], int_test))
+
+        return EMethod(project, "prune", [trans_fn])
 
     def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
         """

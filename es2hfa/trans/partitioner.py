@@ -142,7 +142,9 @@ class Partitioner:
             arg2 = AParam("levels", EInt(len(partitioning[rank])))
             arg3 = AParam("coord_style", EString("absolute"))
 
-            flat_call = EMethod(curr_tmp, "flattenRanks", [arg1, arg2, arg3])
+            flat_call = EMethod(
+                EVar(curr_tmp), "flattenRanks", [
+                    arg1, arg2, arg3])
             block.add(SAssign(next_tmp, flat_call))
 
         # Switch back to tensor name and rename the rank_ids
@@ -173,7 +175,8 @@ class Partitioner:
         Build call to splitEqual
         """
         arg = AJust(EInt(size))
-        part_call = EMethod(self.trans_utils.curr_tmp(), "splitEqual", [arg])
+        curr_tmp = self.trans_utils.curr_tmp()
+        part_call = EMethod(EVar(curr_tmp), "splitEqual", [arg])
 
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, part_call)
@@ -184,7 +187,7 @@ class Partitioner:
         """
         fiber = EVar(self.program.get_tensor(leader).fiber_name())
         curr_tmp = self.trans_utils.curr_tmp()
-        part_call = EMethod(curr_tmp, "splitNonUniform", [AJust(fiber)])
+        part_call = EMethod(EVar(curr_tmp), "splitNonUniform", [AJust(fiber)])
 
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, part_call)
@@ -199,7 +202,7 @@ class Partitioner:
 
         # Build the call to splitUniform()
         curr_tmp = self.trans_utils.curr_tmp()
-        part_call = EMethod(curr_tmp, "splitUniform", [arg1, arg2])
+        part_call = EMethod(EVar(curr_tmp), "splitUniform", [arg1, arg2])
 
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, part_call)

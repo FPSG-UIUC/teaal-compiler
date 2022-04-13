@@ -54,7 +54,7 @@ class Graphics:
             if spacetime.get_slip():
 
                 # If this is the first time we are seeing the space stamp
-                keys = EMethod("timestamps", "keys", [])
+                keys = EMethod(EVar("timestamps"), "keys", [])
                 space_tup = self.canvas.get_space_tuple()
                 cond = EBinOp(space_tup, OIn(), keys)
 

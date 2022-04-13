@@ -128,7 +128,7 @@ def make_display(style, opt):
     return IterationGraph(program), Equation(program)
 
 
-def make_conv(loop_order):
+def make_conv(coord_math, loop_order):
     yaml = """
     einsum:
         declaration:
@@ -136,7 +136,7 @@ def make_conv(loop_order):
             I: [W]
             O: [P, Q]
         expressions:
-            - O[p, q] = sum(S).(I[p + q + s] * F[s])
+            - O[p, q] = sum(S).(I[""" + coord_math + """] * F[s])
     mapping:
         loop-order:
             O: """ + loop_order
@@ -248,7 +248,7 @@ def test_make_iter_expr_output_only():
 
 
 def test_make_iter_expr_conv():
-    graph, eqn = make_conv("[P, S, Q]")
+    graph, eqn = make_conv("p + q + s", "[P, S, Q]")
     graph.pop()
 
     rank, tensors = graph.peek()
@@ -263,8 +263,24 @@ def test_make_iter_expr_conv():
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
+def test_make_iter_expr_conv_frac():
+    graph, eqn = make_conv("2 * q + s", "[P, S, Q]")
+    graph.pop()
+
+    rank, tensors = graph.peek()
+    iter_expr = "f_s"
+
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+    graph.pop()
+    rank, tensors = graph.peek()
+    iter_expr = "o_q << i_w.project(trans_fn=lambda w: 1 / 2 * w + -1 / 2 * s, interval=(0, Q)).prune(trans_fn=lambda i, c, p: c % 1 == 0)"
+
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
 def test_make_iter_expr_conv_project_output():
-    graph, eqn = make_conv("[P, S, W]")
+    graph, eqn = make_conv("p + q + s", "[P, S, W]")
     graph.pop()
     graph.pop()
 
@@ -394,7 +410,7 @@ def test_build_expr_unknown_func():
 
 
 def test_iter_fiber_not_fiber():
-    graph, eqn = make_conv("[P, W, Q]")
+    graph, eqn = make_conv("q + s", "[P, W, Q]")
     graph.pop()
     graph.pop()
     graph.pop()
