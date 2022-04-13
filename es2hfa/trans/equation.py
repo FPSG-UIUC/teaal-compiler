@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Representation of how tensors and variables are combined
+Translation for how tensors and variables are combined
 """
 
 from lark.lexer import Token
@@ -33,6 +33,7 @@ from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
+from es2hfa.trans.coord_access import CoordAccess
 
 
 class Equation:
@@ -132,11 +133,9 @@ class Equation:
         # If there are no input tensors, we just need to iterShapeRef on the
         # output
         if not terms and output_tensor:
-            return EMethod(
-                EVar(
-                    output_tensor.fiber_name()),
-                "iterShapeRef",
-                [])
+            out_name = output_tensor.fiber_name()
+            iter_shape = EMethod(EVar(out_name), "iterShapeRef", [])
+            return self.__add_spacetime(rank, iter_shape)
 
         # Combine terms with intersections
         intersections = []
@@ -169,13 +168,7 @@ class Equation:
             expr = Equation.__add_operator(
                 EVar(output_tensor.fiber_name()), OLtLt(), expr)
 
-        # If the spacetime style is occupancy, we also need to enumerate the
-        # iterations
-        spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.emit_pos(rank):
-            expr = EFunc("enumerate", [AJust(expr)])
-
-        return expr
+        return self.__add_spacetime(rank, expr)
 
     def make_payload(self, rank: str, tensors: List[Tensor]) -> Payload:
         """
@@ -268,44 +261,15 @@ class Equation:
 
         return EBinOp(exprs[0], op, exprs[1])
 
-    @staticmethod
-    def __build_expr(sexpr: Basic) -> Expression:
+    def __add_spacetime(self, rank: str, expr: Expression) -> Expression:
         """
-        Build an HFA expression from a SymPy expression
+        If the spacetime style is occupancy, we also need to enumerate the
+        iterations
         """
-        if isinstance(sexpr, Symbol):
-            return EVar(str(sexpr))
-
-        elif isinstance(sexpr, Integer):
-            return EInt(int(sexpr))
-
-        elif isinstance(sexpr, Rational):
-            return EBinOp(EInt(sexpr.p), ODiv(), EInt(sexpr.q))
-
-        elif isinstance(sexpr, Add):
-            return Equation.__combine(sexpr, OAdd)
-
-        elif isinstance(sexpr, Mul):
-            return Equation.__combine(sexpr, OMul)
-
-        else:
-            raise ValueError(
-                "Unable to translate operator " +
-                repr(
-                    sexpr.func))
-
-    @staticmethod
-    def __combine(sexpr: Basic, op: Type[Operator]) -> Expression:
-        """
-        Fold together an expression
-        """
-        hexprs = [Equation.__build_expr(arg) for arg in sexpr.args]
-        bexpr = EBinOp(hexprs[-2], op(), hexprs[-1])
-
-        for hexpr in reversed(hexprs[:-2]):
-            bexpr = EBinOp(hexpr, op(), bexpr)
-
-        return bexpr
+        spacetime = self.program.get_spacetime()
+        if spacetime is not None and spacetime.emit_pos(rank):
+            expr = EFunc("enumerate", [AJust(expr)])
+        return expr
 
     @staticmethod
     def __frac_coords(sexpr: Basic) -> bool:
@@ -354,8 +318,8 @@ class Equation:
         math = self.program.get_coord_math().get_trans(trank)
         sexpr = solve(math - Symbol(trank), Symbol(rank.lower()))[0]
 
-        args = [AParam("trans_fn", ELambda([trank], self.__build_expr(sexpr))),
-                AParam("interval", ETuple([EInt(0), EVar(rank)]))]
+        args = [AParam("trans_fn", ELambda([trank], CoordAccess.build_expr(
+            sexpr))), AParam("interval", ETuple([EInt(0), EVar(rank)]))]
         project = EMethod(EVar(tensor.fiber_name()), "project", args)
 
         # If there are no fractional coordinates, we are done

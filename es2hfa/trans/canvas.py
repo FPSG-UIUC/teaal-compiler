@@ -23,11 +23,15 @@ SOFTWARE.
 
 Translate the canvas spacetime information
 """
+from copy import deepcopy
+
+from sympy import Symbol
 from typing import List, Optional
 
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
+from es2hfa.trans.coord_access import CoordAccess
 
 
 class Canvas:
@@ -57,9 +61,7 @@ class Canvas:
         # Create tensor rank arguments
         args: List[Argument] = []
         for tensor in self.tensors:
-            ranks = [self.program.get_partitioning().get_dyn_rank(rank)
-                     for rank in tensor.get_access()]
-            access = [EVar(rank) for rank in ranks]
+            access = [self.__build_access(rank) for rank in tensor.get_access()]
             args.append(AJust(ETuple(access)))
 
         # Get the space and time tuples
@@ -93,7 +95,7 @@ class Canvas:
         self.tensors = []
         for tensor in self.program.get_tensors():
             if tensor != self.program.get_output():
-                self.tensors.append(tensor)
+                self.tensors.append(deepcopy(tensor))
         self.tensors.append(self.program.get_output())
 
         # Build the args
@@ -137,6 +139,33 @@ class Canvas:
 
         return ETuple([self.__rel_coord(rank)
                       for rank in spacetime.get_time()])
+
+    def __build_access(self, rank: str) -> Expression:
+        """
+        Build an expression to describe the relevant rank
+        """
+        root = self.program.get_partitioning().get_root_name(rank.upper())
+        suffix = rank[len(root):]
+
+        # This is not the innermost rank
+        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "i":
+            return EVar(rank)
+
+        # Otherwise, this is the innermost rank; so translate
+        sexpr = self.program.get_coord_math().get_trans(root.lower())
+
+        # Now, we need to replace the roots with their dynamic names
+        for symbol in sexpr.atoms(Symbol):
+            # Fix dynamic partitioning variable name
+            new = self.program.get_partitioning().get_dyn_rank(str(symbol))
+
+            # Fix static partitioning variable name
+            if root in self.program.get_partitioning().get_static_parts():
+                new += "0"
+
+            sexpr = sexpr.subs(symbol, Symbol(new))
+
+        return CoordAccess.build_expr(sexpr)
 
     def __rel_coord(self, rank: str) -> Expression:
         """

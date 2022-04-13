@@ -4,7 +4,11 @@ einsum:
         I: [W]
         O: [Q]
     expressions:
-        - O[q] = sum(S).(I[2 * q + s] * F[s])
+        - O[q] = sum(S).(I[q + s] * F[s])
 mapping:
     loop-order:
         O: [Q, S]
+    spacetime:
+        O:
+            space: []
+            time: [Q, S]

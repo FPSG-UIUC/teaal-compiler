@@ -121,8 +121,9 @@ class LoopOrder:
             return self.ranks[pos] == rank
 
         # Otherwise, check if we have all index variables available
-        avail = [self.partitioning.get_root_name(lrank).lower(
-        ) for lrank in self.ranks[:(pos + 1)] if self.__innermost_rank(lrank)]
+        avail = [self.partitioning.get_root_name(lrank).lower()
+                 for lrank in self.ranks[:(pos + 1)]
+                 if self.__innermost_rank(lrank)]
 
         root = self.partitioning.get_root_name(rank).lower()
         math = self.coord_math.get_trans(root)

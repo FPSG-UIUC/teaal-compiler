@@ -73,11 +73,11 @@ def create_dyn_partitioned():
     mapping:
         partitioning:
             Z:
-                M: [uniform_occupancy(A.5)]
+                M: [uniform_shape(20), uniform_occupancy(A.5)]
         spacetime:
             Z:
                 space: []
-                time: [K, M1, M0, N]
+                time: [M2, K, M1, M0, N]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -102,6 +102,24 @@ def create_slip():
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
+def create_conv():
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [Q]
+        expressions:
+            - O[q] = sum(S).(I[q + s] * F[s])
+    mapping:
+        loop-order:
+            O: [W, Q]
+        spacetime:
+            O:
+                space: []
+                time: [W, Q]
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 def test_create_canvas():
     program = create_spacetime()
@@ -209,13 +227,23 @@ def test_add_activity_dyn_part():
     program = create_dyn_partitioned()
     program.add_einsum(0)
     program.apply_all_partitioning(program.get_output())
+    program.apply_partitioning(program.get_tensor("A"), "M")
 
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m0), (k, n), (m1, m0, n), spacetime=((), (k_pos, m1_pos, m0_pos, n_pos)))"
+    hfa = "canvas.addActivity((k, m2, m0), (k, n), (m2, m1, m0, n), spacetime=((), (m2_pos, k_pos, m1_pos, m0_pos, n_pos)))"
     assert canvas.add_activity().gen(0) == hfa
 
+def test_add_activity_conv():
+    program = create_conv()
+    program.add_einsum(0)
+
+    canvas = Canvas(program)
+    canvas.create_canvas()
+
+    hfa = "canvas.addActivity((w,), (w + -1 * q,), (q,), spacetime=((), (w_pos, q_pos)))"
+    assert canvas.add_activity().gen(0) == hfa
 
 def test_display_canvas_no_canvas():
     program = create_default()

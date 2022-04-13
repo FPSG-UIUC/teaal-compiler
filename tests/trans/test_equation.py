@@ -86,7 +86,7 @@ def make_dot():
     return IterationGraph(program), Equation(program)
 
 
-def make_other(einsum):
+def make_other(einsum, mapping):
     yaml = """
     einsum:
         declaration:
@@ -95,7 +95,8 @@ def make_other(einsum):
             C: [I]
             D: [I]
         expressions:
-            - """ + einsum
+            - """ + einsum + """
+    mapping: """ + mapping
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
     program = Program(einsum, mapping)
@@ -150,7 +151,7 @@ def make_conv(coord_math, loop_order):
 
 
 def test_mult_tensor_uses():
-    program = make_other("A[i] = B[i] * B[i]")
+    program = make_other("A[i] = B[i] * B[i]", "")
     with pytest.raises(ValueError) as excinfo:
         Equation(program)
 
@@ -158,7 +159,7 @@ def test_mult_tensor_uses():
 
 
 def test_tensor_in_out():
-    program = make_other("A[i] = A[i] * B[i]")
+    program = make_other("A[i] = A[i] * B[i]", "")
     with pytest.raises(ValueError) as excinfo:
         Equation(program)
 
@@ -237,12 +238,30 @@ def test_make_iter_expr_display_slip():
 
 
 def test_make_iter_expr_output_only():
-    program = make_other("A[i] = b")
+    program = make_other("A[i] = b", "")
     graph = IterationGraph(program)
     eqn = Equation(program)
 
     rank, tensors = graph.peek()
     iter_expr = "a_i.iterShapeRef()"
+
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_output_only_display():
+    mapping = """
+        spacetime:
+            A:
+                space: []
+                time: [I]
+    """
+    program = make_other("A[i] = b", mapping)
+
+    graph = IterationGraph(program)
+    eqn = Equation(program)
+
+    rank, tensors = graph.peek()
+    iter_expr = "enumerate(a_i.iterShapeRef())"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
@@ -365,7 +384,7 @@ def test_make_payload_display_slip():
 
 
 def test_make_payload_output_only():
-    program = make_other("A[i] = b")
+    program = make_other("A[i] = b", "")
     graph = IterationGraph(program)
     eqn = Equation(program)
 
@@ -382,14 +401,14 @@ def test_make_update():
 
 
 def test_make_update_vars():
-    program = make_other("A[i] = b * c * d")
+    program = make_other("A[i] = b * c * d", "")
     eqn = Equation(program)
     stmt = "a_ref += b * c * d"
     assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_mult_terms():
-    program = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]")
+    program = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]", "")
     eqn = Equation(program)
     stmt = "a_ref += b * b_val + c * c_val + d * d_val"
     assert eqn.make_update().gen(depth=0) == stmt
@@ -399,14 +418,6 @@ def test_make_update_dot():
     _, eqn = make_dot()
     stmt = "z_ref += b"
     assert eqn.make_update().gen(depth=0) == stmt
-
-
-def test_build_expr_unknown_func():
-    a, b = symbols("a b")
-    with pytest.raises(ValueError) as excinfo:
-        Equation._Equation__build_expr(a ^ b)
-
-    assert str(excinfo.value) == "Unable to translate operator Xor"
 
 
 def test_iter_fiber_not_fiber():
