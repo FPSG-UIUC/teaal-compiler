@@ -351,7 +351,7 @@ class Equation:
             return EVar(tensor.fiber_name())
 
         # Otherwise, we need to project
-        math = self.program.get_index_math().get_trans(trank)
+        math = self.program.get_coord_math().get_trans(trank)
         sexpr = solve(math - Symbol(trank), Symbol(rank.lower()))[0]
 
         args = [AParam("trans_fn", ELambda([trank], self.__build_expr(sexpr))),

@@ -29,7 +29,7 @@ from collections import Counter
 from lark.tree import Tree
 from typing import Dict, List, Optional
 
-from es2hfa.ir.index_math import IndexMath
+from es2hfa.ir.coord_math import CoordMath
 from es2hfa.ir.loop_order import LoopOrder
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.spacetime import SpaceTime
@@ -72,7 +72,7 @@ class Program:
 
         self.equation: Optional[Tree] = None
         self.es_tensors: List[Tensor] = []
-        self.index_math: Optional[IndexMath] = None
+        self.coord_math: Optional[CoordMath] = None
         self.loop_order: Optional[LoopOrder] = None
         self.partitioning: Optional[Partitioning] = None
         self.spacetime: Optional[SpaceTime] = None
@@ -82,7 +82,7 @@ class Program:
         Configure the program for the i'th Einsum
         """
         self.equation = self.einsum.get_expressions()[i]
-        self.index_math = IndexMath()
+        self.coord_math = CoordMath()
 
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
@@ -115,10 +115,10 @@ class Program:
         if output.root_name() in loop_orders.keys():
             opt_loop_order = loop_orders[output.root_name()]
 
-        self.loop_order.add(opt_loop_order, self.index_math, self.partitioning)
+        self.loop_order.add(opt_loop_order, self.coord_math, self.partitioning)
 
-        # Prune the index math with this loop order
-        self.index_math.prune(self.loop_order.get_ranks(), self.partitioning)
+        # Prune the coord math with this loop order
+        self.coord_math.prune(self.loop_order.get_ranks(), self.partitioning)
 
         # Get the spacetime information
         spacetime: Optional[Dict[str, List[Tree]]] = None
@@ -166,16 +166,16 @@ class Program:
 
         return self.equation
 
-    def get_index_math(self) -> IndexMath:
+    def get_coord_math(self) -> CoordMath:
         """
-        Get the IndexMath intermediate representation
+        Get the CoordMath intermediate representation
         """
         # Make sure that the program is configured
-        if self.index_math is None:
+        if self.coord_math is None:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        return self.index_math
+        return self.coord_math
 
     def get_loop_order(self) -> LoopOrder:
         """
@@ -264,15 +264,15 @@ class Program:
 
     def __add_tranks(self, tensor: Tensor, tensor_tree: Tree) -> None:
         """
-        Add the tranks of a tensor to the index math
+        Add the tranks of a tensor to the coord math
         """
         # Note: this should always be called through add_einsum(), so we should
         # never encounter this problem
-        if self.index_math is None:
+        if self.coord_math is None:
             raise ValueError("Something is wrong...")  # pragma: no cover
 
         tranks = next(tensor_tree.find_data("tranks"))
-        self.index_math.add(self.decl_tensors[tensor.root_name()], tranks)
+        self.coord_math.add(self.decl_tensors[tensor.root_name()], tranks)
 
     def __get_tensor(self, tensor: Tree) -> Tensor:
         """

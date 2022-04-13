@@ -28,7 +28,7 @@ from lark.tree import Tree
 from sympy import Symbol
 from typing import Any, cast, Iterable, List, Optional
 
-from es2hfa.ir.index_math import IndexMath
+from es2hfa.ir.coord_math import CoordMath
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
 
@@ -46,20 +46,20 @@ class LoopOrder:
         self.equation = equation
         self.output = output
 
-        # Make placeholders for the loop order, index math, and partitioning
+        # Make placeholders for the loop order, coord math, and partitioning
         self.ranks: Optional[List[str]] = None
-        self.index_math: Optional[IndexMath] = None
+        self.coord_math: Optional[CoordMath] = None
         self.partitioning: Optional[Partitioning] = None
 
     def add(self,
             loop_order: Optional[List[str]],
-            index_math: IndexMath,
+            coord_math: CoordMath,
             partitioning: Partitioning) -> None:
         """
         Add the loop order information, selecting the default loop order if
         one was not provided
         """
-        self.index_math = index_math
+        self.coord_math = coord_math
         self.partitioning = partitioning
 
         # First build the final loop order
@@ -111,7 +111,7 @@ class LoopOrder:
 
         Assumes uppercase rank name
         """
-        if self.ranks is None or self.index_math is None or self.partitioning is None:
+        if self.ranks is None or self.coord_math is None or self.partitioning is None:
             raise ValueError(
                 "Unconfigured loop order. Make sure to first call add()")
 
@@ -125,7 +125,7 @@ class LoopOrder:
         ) for lrank in self.ranks[:(pos + 1)] if self.__innermost_rank(lrank)]
 
         root = self.partitioning.get_root_name(rank).lower()
-        math = self.index_math.get_trans(root)
+        math = self.coord_math.get_trans(root)
 
         ready = all(str(ind) in avail for ind in math.atoms(Symbol))
         curr = Symbol(self.partitioning.get_root_name(

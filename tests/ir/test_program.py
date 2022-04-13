@@ -2,7 +2,7 @@ from lark.tree import Tree
 import pytest
 from sympy import symbols
 
-from es2hfa.ir.index_math import IndexMath
+from es2hfa.ir.coord_math import CoordMath
 from es2hfa.ir.loop_order import LoopOrder
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.program import Program
@@ -205,40 +205,40 @@ def test_get_output():
     assert program.get_output() == result
 
 
-def test_get_index_math_unconfigured():
+def test_get_coord_math_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_index_math()
+        program.get_coord_math()
     assert str(excinfo.value) == \
         "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_get_index_math_conv():
+def test_get_coord_math_conv():
     program = create_conv()
     program.add_einsum(0)
 
     # Add the tensors
-    index_math = IndexMath()
-    index_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
-    index_math.add(Tensor("I", ["W"]), Tree(
+    coord_math = CoordMath()
+    coord_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
+    coord_math.add(Tensor("I", ["W"]), Tree(
         "tranks", [make_iplus(["q", "s"])]))
-    index_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
-    index_math.prune(
+    coord_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
+    coord_math.prune(
         program.get_loop_order().get_ranks(),
         program.get_partitioning())
 
-    assert program.get_index_math() == index_math
+    assert program.get_coord_math() == coord_math
 
 
-def test_get_index_math_rank_ordered():
+def test_get_coord_math_rank_ordered():
     program = create_rank_ordered()
     program.add_einsum(0)
 
     k, m, n = symbols("k m n")
-    assert program.get_index_math().get_all_exprs("k") == [k]
-    assert program.get_index_math().get_all_exprs("m") == [m]
-    assert program.get_index_math().get_all_exprs("n") == [n]
+    assert program.get_coord_math().get_all_exprs("k") == [k]
+    assert program.get_coord_math().get_all_exprs("m") == [m]
+    assert program.get_coord_math().get_all_exprs("n") == [n]
 
 
 def test_get_loop_order_unconfigured():
@@ -257,7 +257,7 @@ def test_get_loop_order():
 
     loop_order = LoopOrder(equation, program.get_output())
     ranks = ["K", "N", "M"]
-    loop_order.add(ranks, program.get_index_math(), Partitioning({}, ranks))
+    loop_order.add(ranks, program.get_coord_math(), Partitioning({}, ranks))
 
     assert program.get_loop_order() == loop_order
 

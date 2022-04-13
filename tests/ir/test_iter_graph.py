@@ -183,7 +183,7 @@ def test_pop_occupancy_partitioning():
     assert graph.pop()[0] == "M1"
 
 
-def test_peek_pop_index_math():
+def test_peek_pop_coord_math():
     yaml = """
     einsum:
         declaration:

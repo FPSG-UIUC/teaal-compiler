@@ -76,7 +76,7 @@ class IterationGraph:
 
     def __ready(self, tensor: Tensor) -> bool:
         """
-        Returns true if all indices are available to iterate over this tensor
+        Returns true if all coords are available to iterate over this tensor
         """
         rank = self.loop_order[self.pos]
         # If we are at the end, all tensors are involved

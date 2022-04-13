@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Representation of the tensor indices and their relationships
+Representation of the tensor coordinates and their relationships
 """
 
 from functools import reduce
@@ -36,14 +36,14 @@ from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
 
 
-class IndexMath:
+class CoordMath:
     """
-    Store the relationships between tensor indices
+    Store the relationships between tensor coordinates
     """
 
     def __init__(self) -> None:
         """
-        Construct the metadata for index math
+        Construct the metadata for coord math
         """
         self.all_exprs: Dict[Symbol, List[Expr]] = {}
         self.trans: Optional[Dict[Symbol, Expr]] = None
@@ -54,13 +54,13 @@ class IndexMath:
         """
         for rank, expr in zip(tensor.get_ranks(), tranks.children):
             if not isinstance(expr, Tree):
-                raise ValueError("Unknown index tree: " + repr(expr))
+                raise ValueError("Unknown coord tree: " + repr(expr))
 
             terms = []
             for term in expr.children:
 
                 if not isinstance(term, Tree):
-                    raise ValueError("Unknown index term: " + repr(term))
+                    raise ValueError("Unknown coord term: " + repr(term))
 
                 # Extract a term of the form "x"
                 if term.data == "ijust":
@@ -73,17 +73,17 @@ class IndexMath:
                     for token in term.children:
                         if not isinstance(token, Token):
                             raise ValueError(
-                                "Unknown index factor: " + repr(token))
+                                "Unknown coord factor: " + repr(token))
 
                         tokens.append(token)
 
                     if len(tokens) != 2:
-                        raise ValueError("Unknown index term: " + repr(term))
+                        raise ValueError("Unknown coord term: " + repr(term))
 
                     terms.append(int(tokens[0]) * Symbol(tokens[1]))
 
                 else:
-                    raise ValueError("Unknown index term: " + term.data)
+                    raise ValueError("Unknown coord term: " + term.data)
 
             # The relationship between the symbols given by this relation
             # (when set to 0)
@@ -92,7 +92,7 @@ class IndexMath:
 
             symbols = full_expr.atoms(Symbol)
 
-            # All indices map to themselves
+            # All coordinates map to themselves
             for ind in symbols | {init_ind}:
                 if ind not in self.all_exprs.keys():
                     self.all_exprs[ind] = [ind]
@@ -103,7 +103,7 @@ class IndexMath:
     def get_all_exprs(self, ind: str) -> List[Expr]:
         """
         Get expressions corresponding to the different ways to represent a
-        a given index
+        a given coord
 
         TODO: currently only used for testing
         """
@@ -111,16 +111,16 @@ class IndexMath:
 
     def get_trans(self, ind: str) -> Expr:
         """
-        Get the expression corresponding to the index with the current loop order
+        Get the expression corresponding to the coord with the current loop order
         """
         if self.trans is None:
-            raise ValueError("Unconfigured index math. First call prune()")
+            raise ValueError("Unconfigured coord math. First call prune()")
 
         return self.trans[Symbol(ind)]
 
     def prune(self, loop_order: List[str], partitioning: Partitioning) -> None:
         """
-        Prune out all index translations not available with this loop order
+        Prune out all coord translations not available with this loop order
         """
         self.trans = {}
 
@@ -136,15 +136,15 @@ class IndexMath:
 
     def __key(self) -> Iterable[Any]:
         """
-        Get all properties of the IndexMath
+        Get all properties of the CoordMath
         """
         return self.all_exprs, self.trans
 
     def __eq__(self, other) -> bool:
         """
-        Test IndexMath equality
+        Test CoordMath equality
         """
-        if not isinstance(other, IndexMath):
+        if not isinstance(other, CoordMath):
             return False
 
         return self.__key() == other.__key()
