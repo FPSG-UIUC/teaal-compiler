@@ -6,4 +6,5 @@ lark-parser
 ruamel-yaml
 networkx
 matplotlib
+sympy
 
