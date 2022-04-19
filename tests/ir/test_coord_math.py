@@ -107,6 +107,17 @@ def test_add_times():
     assert coord_math.get_all_exprs("q") == [q, w / 2]
 
 
+def test_get_eqn_expr():
+    coord_math = CoordMath()
+    tensor = Tensor("I", ["W"])
+    tranks = Tree("tranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, tranks)
+
+    q, s = symbols("q s")
+
+    assert coord_math.get_eqn_expr("w") == q + s
+
+
 def test_get_trans_no_prune():
     coord_math = CoordMath()
     tensor = Tensor("I", ["W"])

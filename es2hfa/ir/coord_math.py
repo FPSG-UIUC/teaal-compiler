@@ -28,7 +28,7 @@ from functools import reduce
 
 from lark.lexer import Token
 from lark.tree import Tree
-from sympy import Expr, solve, Symbol
+from sympy import Basic, solve, Symbol
 from typing import Any, Dict, Iterable, List, Optional
 
 from es2hfa.ir.partitioning import Partitioning
@@ -45,8 +45,9 @@ class CoordMath:
         """
         Construct the metadata for coord math
         """
-        self.all_exprs: Dict[Symbol, List[Expr]] = {}
-        self.trans: Optional[Dict[Symbol, Expr]] = None
+        self.all_exprs: Dict[Symbol, List[Basic]] = {}
+        self.eqn_exprs: Dict[Symbol, Basic] = {}
+        self.trans: Optional[Dict[Symbol, Basic]] = None
 
     def add(self, tensor: Tensor, tranks: Tree) -> None:
         """
@@ -88,8 +89,10 @@ class CoordMath:
             # The relationship between the symbols given by this relation
             # (when set to 0)
             init_ind = Symbol(rank.lower())
-            full_expr = reduce(lambda x, y: x + y, terms) - init_ind
+            eqn_expr = reduce(lambda x, y: x + y, terms)
+            self.eqn_exprs[init_ind] = eqn_expr
 
+            full_expr = eqn_expr - init_ind
             symbols = full_expr.atoms(Symbol)
 
             # All coordinates map to themselves
@@ -100,16 +103,23 @@ class CoordMath:
             for ind in symbols:
                 self.all_exprs[ind] += solve(full_expr, ind)
 
-    def get_all_exprs(self, ind: str) -> List[Expr]:
+    def get_all_exprs(self, ind: str) -> List[Basic]:
         """
         Get expressions corresponding to the different ways to represent a
-        a given coord
+        a given coordinate
 
         TODO: currently only used for testing
         """
         return self.all_exprs[Symbol(ind)]
 
-    def get_trans(self, ind: str) -> Expr:
+    def get_eqn_expr(self, ind: str) -> Basic:
+        """
+        Get the expression corresponding to the given coordinate as it was
+        declared in the Einsum
+        """
+        return self.eqn_exprs[Symbol(ind)]
+
+    def get_trans(self, ind: str) -> Basic:
         """
         Get the expression corresponding to the coord with the current loop order
         """

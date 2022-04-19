@@ -102,6 +102,7 @@ def create_slip():
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
+
 def create_conv():
     yaml = """
     einsum:
@@ -120,6 +121,7 @@ def create_conv():
                 time: [W, Q]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+
 
 def test_create_canvas():
     program = create_spacetime()
@@ -235,6 +237,7 @@ def test_add_activity_dyn_part():
     hfa = "canvas.addActivity((k, m2, m0), (k, n), (m2, m1, m0, n), spacetime=((), (m2_pos, k_pos, m1_pos, m0_pos, n_pos)))"
     assert canvas.add_activity().gen(0) == hfa
 
+
 def test_add_activity_conv():
     program = create_conv()
     program.add_einsum(0)
@@ -244,6 +247,7 @@ def test_add_activity_conv():
 
     hfa = "canvas.addActivity((w,), (w + -1 * q,), (q,), spacetime=((), (w_pos, q_pos)))"
     assert canvas.add_activity().gen(0) == hfa
+
 
 def test_display_canvas_no_canvas():
     program = create_default()

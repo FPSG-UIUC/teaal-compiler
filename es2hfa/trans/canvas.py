@@ -61,7 +61,8 @@ class Canvas:
         # Create tensor rank arguments
         args: List[Argument] = []
         for tensor in self.tensors:
-            access = [self.__build_access(rank) for rank in tensor.get_access()]
+            access = [self.__build_access(rank)
+                      for rank in tensor.get_access()]
             args.append(AJust(ETuple(access)))
 
         # Get the space and time tuples

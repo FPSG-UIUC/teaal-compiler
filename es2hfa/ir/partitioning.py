@@ -27,6 +27,7 @@ Intermediate representation of the partitioning information
 from lark.tree import Tree
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
 
 
@@ -212,6 +213,30 @@ class Partitioning:
         names.reverse()
 
         return names
+
+    def partition_tensor(
+            self,
+            tensor: Tensor,
+            ranks: Iterable[str],
+            all_: bool) -> List[str]:
+        """
+        Partition a tensor across all relevant ranks
+        """
+        all_parts = self.get_all_parts()
+        tensor_ranks = tensor.get_ranks().copy()
+
+        for rank in ranks:
+            if rank in all_parts.keys() and rank in tensor_ranks:
+                # Remove the old rank
+                i = tensor_ranks.index(rank)
+                tensor_ranks.pop(i)
+
+                # Insert the new ranks
+                new_ranks = self.partition_names(rank, all_)
+                for new_rank in new_ranks:
+                    tensor_ranks.insert(i, new_rank)
+
+        return tensor_ranks
 
     def __eq__(self, other) -> bool:
         """

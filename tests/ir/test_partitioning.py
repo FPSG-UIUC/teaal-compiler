@@ -1,6 +1,7 @@
 import pytest
 
 from es2hfa.ir.partitioning import Partitioning
+from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.mapping import Mapping
 
 
@@ -11,6 +12,11 @@ def parse_partitioning(parts):
             Z:
     """ + parts
     return Mapping.from_str(yaml).get_partitioning()
+
+
+def build_partitioning(parts):
+    dict_ = parse_partitioning(parts)["Z"]
+    return Partitioning(dict_, ["M", "N", "K"])
 
 
 def test_nway_after_dyn():
@@ -31,9 +37,8 @@ def test_get_all_partitioning():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    dict_ = parse_partitioning(all_parts)["Z"]
-    partitioning = Partitioning(dict_, ["M", "N", "K"])
-    assert partitioning.get_all_parts() == dict_
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.get_all_parts() == parse_partitioning(all_parts)["Z"]
 
 
 def test_mixed_partitioning():
@@ -48,9 +53,9 @@ def test_mixed_partitioning():
                     - uniform_shape(4)
                     - uniform_shape(2)
     """
-    dict_ = parse_partitioning(parts)["Z"]
-    partitioning = Partitioning(dict_, ["M", "N", "K"])
+    partitioning = build_partitioning(parts)
 
+    dict_ = parse_partitioning(parts)["Z"]
     dict_["K6I"] = dict_["K"][-6:]
     dict_["K5I"] = dict_["K"][-5:]
     dict_["K3I"] = dict_["K"][-3:]
@@ -61,8 +66,7 @@ def test_get_dyn_rank():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], ["M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     assert partitioning.get_dyn_rank("m") == "m0"
     assert partitioning.get_dyn_rank("m1") == "m1"
@@ -75,9 +79,7 @@ def test_get_dynamic_partitioning():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     dyn_parts = """
                 M: [uniform_occupancy(A.6)]
@@ -92,9 +94,7 @@ def test_get_final_rank_id():
                 M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     assert partitioning.get_final_rank_id("N") == "N2"
     assert partitioning.get_final_rank_id("N2") == "N2"
@@ -114,8 +114,7 @@ def test_get_intermediates():
                     - uniform_shape(4)
                     - uniform_shape(2)
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], ["M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     assert partitioning.get_intermediates("K") == ["K6I", "K5I", "K3I"]
 
@@ -124,7 +123,7 @@ def test_get_leader():
     parts = """
                 M: [uniform_occupancy(A.6)]
     """
-    partitioning = Partitioning(parse_partitioning(parts)["Z"], ["M"])
+    partitioning = build_partitioning(parts)
 
     part = partitioning.get_all_parts()["M"][0]
     assert partitioning.get_leader(part) == "A"
@@ -134,7 +133,7 @@ def test_get_leader_bad_style():
     parts = """
                 M: [uniform_shape(6)]
     """
-    partitioning = Partitioning(parse_partitioning(parts)["Z"], ["M"])
+    partitioning = build_partitioning(parts)
 
     part = partitioning.get_all_parts()["M"][0]
     with pytest.raises(ValueError) as excinfo:
@@ -147,7 +146,8 @@ def test_get_root_name():
     parts = """
                 M: [uniform_shape(6)]
     """
-    partitioning = Partitioning(parse_partitioning(parts)["Z"], ["M", "K"])
+    partitioning = build_partitioning(parts)
+
     assert partitioning.get_root_name("M1") == "M"
     assert partitioning.get_root_name("K") == "K"
 
@@ -158,9 +158,7 @@ def test_get_static_partitioning():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     static_parts = """
                 K: [uniform_shape(4)]
@@ -177,9 +175,7 @@ def test_get_tensor_spec():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     used_parts = """
                 K: [uniform_shape(4)]
@@ -206,9 +202,7 @@ def test_partition_names():
                     - uniform_shape(4)
                     - uniform_shape(2)
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     assert partitioning.partition_names("M", True) == ["M0", "M1", "M2"]
     assert partitioning.partition_names("M", False) == ["M1I", "M2"]
@@ -220,15 +214,44 @@ def test_partition_names():
         "K0", "K1", "K2", "K3"]
 
 
+def test_partition_tensor_all():
+    parts = """
+                M: [uniform_shape(3)]
+                K: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+    """
+    partitioning = build_partitioning(parts)
+
+    ranks = ["M", "N", "K"]
+    tensor = Tensor("T", ranks)
+    new_ranks = partitioning.partition_tensor(tensor, ranks, True)
+
+    assert new_ranks == ["M1", "M0", "N", "K2", "K1", "K0"]
+
+
+def test_partition_tensor_dyn():
+    parts = """
+                M: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+                K: [uniform_shape(6), uniform_shape(3)]
+    """
+    ranks = ["M", "N", "K"]
+    partitioning = build_partitioning(parts)
+    tensor = Tensor("T", ranks)
+
+    new_ranks = partitioning.partition_tensor(tensor, ranks, False)
+    assert new_ranks == ["M2", "M1I", "N", "K2", "K1", "K0"]
+
+    tensor.update_ranks(new_ranks)
+    new_ranks = partitioning.partition_tensor(tensor, {"M1I"}, False)
+    assert new_ranks == ["M2", "M1", "M0", "N", "K2", "K1", "K0"]
+
+
 def test_skip_empty_partitioning():
     all_parts = """
                 K: []
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning = build_partitioning(all_parts)
 
     assert "K" not in partitioning.get_all_parts()
 
@@ -238,13 +261,9 @@ def test_eq():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning1 = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning1 = build_partitioning(all_parts)
 
-    partitioning2 = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning2 = build_partitioning(all_parts)
 
     assert partitioning1 == partitioning2
 
@@ -254,17 +273,13 @@ def test_neq_dyn_parts():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning1 = Partitioning(
-        parse_partitioning(parts1)["Z"], [
-            "M", "N", "K"])
+    partitioning1 = build_partitioning(parts1)
 
     parts2 = """
                 M: [uniform_occupancy(A.5)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning2 = Partitioning(
-        parse_partitioning(parts2)["Z"], [
-            "M", "N", "K"])
+    partitioning2 = build_partitioning(parts2)
 
     assert partitioning1 != partitioning2
 
@@ -274,17 +289,13 @@ def test_neq_static_parts():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(3), nway_shape(7)]
     """
-    partitioning1 = Partitioning(
-        parse_partitioning(parts1)["Z"], [
-            "M", "N", "K"])
+    partitioning1 = build_partitioning(parts1)
 
     parts2 = """
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning2 = Partitioning(
-        parse_partitioning(parts2)["Z"], [
-            "M", "N", "K"])
+    partitioning2 = build_partitioning(parts2)
 
     assert partitioning1 != partitioning2
 
@@ -294,8 +305,6 @@ def test_neq_obj():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning1 = Partitioning(
-        parse_partitioning(all_parts)["Z"], [
-            "M", "N", "K"])
+    partitioning1 = build_partitioning(all_parts)
 
     assert partitioning1 != "foo"

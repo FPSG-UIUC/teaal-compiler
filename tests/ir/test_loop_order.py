@@ -133,11 +133,11 @@ def test_apply():
     loop_order.apply(A)
     assert A.get_ranks() == ["K", "M", "N"]
 
-    A.partition(partitioning, {"K"}, False)
+    A.update_ranks(partitioning.partition_tensor(A, {"K"}, False))
     loop_order.apply(A)
     assert A.get_ranks() == ["K2", "M", "K1I", "N"]
 
-    A.partition(partitioning, {"K1I"}, False)
+    A.update_ranks(partitioning.partition_tensor(A, {"K1I"}, False))
     loop_order.apply(A)
     assert A.get_ranks() == order
 
