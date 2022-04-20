@@ -92,20 +92,22 @@ class Partitioning:
             self.final_rank_id[rank] = rank
 
         # Partitioned ranks may change
-        for rank in self.all_parts.keys():
-            # for rank in self.__part_to_tensor_rank(part_rank, ranks):
-            top, all_ = self.__all_names(rank)
-
-            # Add unpartitioned to top rank, e.g., K -> K2
-            self.final_rank_id[rank] = top
-
+        for part_rank in self.all_parts.keys():
+            part_names = self.partition_names(part_rank, True)
             # Add partitioned to itself, e.g., K0 -> K0
-            for id_ in all_:
+            for id_ in part_names:
                 self.final_rank_id[id_] = id_
 
-            # Add intermediate to final names, e.g., K1I -> K1
-            for id_ in self.get_intermediates(rank):
-                self.final_rank_id[id_] = id_[:-1]
+            for rank in self.__part_to_tensor_rank(part_rank, ranks):
+                # Add unpartitioned to top rank, e.g., K -> K2 or W -> Q2
+                self.final_rank_id[rank] = part_names[-1]
+
+                # Add intermediate to final names, e.g., K1I -> K1 or W1I -> Q1
+                for id_ in self.get_intermediates(rank):
+                    self.final_rank_id[id_] = part_rank + id_[len(rank):-1]
+
+                # Add the bottom rank to itself, e.g., W0 -> W0
+                self.final_rank_id[rank + "0"] = rank + "0"
 
         # Save the partitioning information for intermediate ranks
         init_ranks = [rank for rank in self.all_parts.keys()]
@@ -264,18 +266,6 @@ class Partitioning:
             return self.__key() == other.__key()
 
         return False
-
-    def __all_names(self, rank: str) -> Tuple[str, List[str]]:
-        """
-        Get all names that will be associated with a rank
-        """
-        num_parts = len(self.all_parts[rank])
-
-        final = self.partition_names(rank, True)
-        inter = self.get_intermediates(rank)
-        all_ = final + inter
-
-        return rank + str(num_parts), all_
 
     @staticmethod
     def __is_static(part: Tree) -> bool:

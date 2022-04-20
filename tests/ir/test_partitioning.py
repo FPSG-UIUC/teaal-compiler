@@ -64,7 +64,9 @@ def test_multiple_partitionings_on_same_rank():
 
     assert str(
         excinfo.value) == "Cannot partition W with multiple specifications. " + \
-        "Partitioning specified by S, Q"
+        "Partitioning specified by S, Q" or \
+        str(excinfo.value) == "Cannot partition W with multiple specifications. " + \
+        "Partitioning specified by Q, S"
 
 
 def test_get_all_partitioning():
@@ -147,6 +149,19 @@ def test_get_final_rank_id():
     assert partitioning.get_final_rank_id("N2") == "N2"
     assert partitioning.get_final_rank_id("M1I") == "M1"
     assert partitioning.get_final_rank_id("K") == "K"
+
+
+def test_get_final_rank_id_conv():
+    all_parts = """
+                Q: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    assert partitioning.get_final_rank_id("W") == "Q2"
+    assert partitioning.get_final_rank_id("Q2") == "Q2"
+    assert partitioning.get_final_rank_id("W1I") == "Q1"
+    assert partitioning.get_final_rank_id("W0") == "W0"
+    assert partitioning.get_final_rank_id("S") == "S"
 
 
 def test_get_intermediates():
