@@ -1,5 +1,6 @@
 from lark.tree import Tree
 import pytest
+from sympy import symbols
 
 from es2hfa.ir.coord_math import CoordMath
 from es2hfa.ir.loop_order import LoopOrder
@@ -35,7 +36,11 @@ def build_partitioning(parts):
             Z:
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["Z"]
-    return Partitioning(dict_, ["K", "M", "N"])
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    return Partitioning(dict_, ["K", "M", "N"], eqn_exprs)
 
 
 def build_partitioning_conv(parts):
@@ -45,7 +50,11 @@ def build_partitioning_conv(parts):
             O:
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["O"]
-    return Partitioning(dict_, ["Q", "S", "W"])
+
+    q, s, w = symbols("q s w")
+    eqn_exprs = {q: q, s: s, w: q + s}
+
+    return Partitioning(dict_, ["Q", "S", "W"], eqn_exprs)
 
 
 def build_coord_math():

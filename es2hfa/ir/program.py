@@ -105,9 +105,10 @@ class Program:
         ranks = self.__all_ranks()
         if output.root_name() in partitioning.keys():
             self.partitioning = Partitioning(
-                partitioning[output.root_name()], ranks)
+                partitioning[output.root_name()], ranks, self.coord_math.get_eqn_exprs())
         else:
-            self.partitioning = Partitioning({}, ranks)
+            self.partitioning = Partitioning(
+                {}, ranks, self.coord_math.get_eqn_exprs())
 
         # Store the loop order
         loop_orders = self.mapping.get_loop_orders()

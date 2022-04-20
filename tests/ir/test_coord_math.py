@@ -107,15 +107,15 @@ def test_add_times():
     assert coord_math.get_all_exprs("q") == [q, w / 2]
 
 
-def test_get_eqn_expr():
+def test_get_eqn_exprs():
     coord_math = CoordMath()
     tensor = Tensor("I", ["W"])
     tranks = Tree("tranks", [make_iplus(["q", "s"])])
     coord_math.add(tensor, tranks)
 
-    q, s = symbols("q s")
+    q, s, w = symbols("q s w")
 
-    assert coord_math.get_eqn_expr("w") == q + s
+    assert coord_math.get_eqn_exprs() == {w: q + s}
 
 
 def test_get_trans_no_prune():
@@ -135,7 +135,7 @@ def test_prune():
     tranks = Tree("tranks", [make_iplus(["q", "s"])])
 
     loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"])
+    part = Partitioning({}, ["Q", "S", "W"], coord_math.get_eqn_exprs())
 
     coord_math.add(tensor, tranks)
     coord_math.prune(loop_order, part)
@@ -153,7 +153,9 @@ def test_prune_partitioned():
     tranks = Tree("tranks", [make_iplus(["q", "s"])])
 
     loop_order = ["Q1", "S", "Q0"]
-    part = Partitioning(parse_partitioning(), ["Q", "S", "W"])
+    part = Partitioning(
+        parse_partitioning(), [
+            "Q", "S", "W"], coord_math.get_eqn_exprs())
 
     coord_math.add(tensor, tranks)
     coord_math.prune(loop_order, part)
@@ -172,13 +174,14 @@ def test_eq_true():
     tranks = Tree("tranks", [make_iplus(["q", "s"])])
 
     loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"])
+    part0 = Partitioning({}, ["Q", "S", "W"], coord_math0.get_eqn_exprs())
+    part1 = Partitioning({}, ["Q", "S", "W"], coord_math1.get_eqn_exprs())
 
     coord_math0.add(tensor, tranks)
-    coord_math0.prune(loop_order, part)
+    coord_math0.prune(loop_order, part0)
 
     coord_math1.add(tensor, tranks)
-    coord_math1.prune(loop_order, part)
+    coord_math1.prune(loop_order, part1)
 
     assert coord_math0 == coord_math1
 
@@ -190,7 +193,7 @@ def test_eq_false():
     tensor = Tensor("I", ["W"])
     tranks = Tree("tranks", [make_iplus(["q", "s"])])
     loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"])
+    part = Partitioning({}, ["Q", "S", "W"], coord_math0.get_eqn_exprs())
 
     coord_math0.add(tensor, tranks)
     coord_math0.prune(loop_order, part)

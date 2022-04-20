@@ -1,4 +1,5 @@
 import pytest
+from sympy import symbols
 
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
@@ -16,7 +17,11 @@ def parse_partitioning(parts):
 
 def build_partitioning(parts):
     dict_ = parse_partitioning(parts)["Z"]
-    return Partitioning(dict_, ["M", "N", "K"])
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    return Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
 
 
 def test_nway_after_dyn():
@@ -24,8 +29,12 @@ def test_nway_after_dyn():
                 M: [uniform_occupancy(A.6), nway_shape(20)]
     """
     dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"])
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
 
     assert str(
         excinfo.value) == "N-way partitioning after dynamic partitioning on rank M"

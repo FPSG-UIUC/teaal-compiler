@@ -112,12 +112,12 @@ class CoordMath:
         """
         return self.all_exprs[Symbol(ind)]
 
-    def get_eqn_expr(self, ind: str) -> Basic:
+    def get_eqn_exprs(self) -> Dict[Symbol, Basic]:
         """
         Get the expression corresponding to the given coordinate as it was
         declared in the Einsum
         """
-        return self.eqn_exprs[Symbol(ind)]
+        return self.eqn_exprs
 
     def get_trans(self, ind: str) -> Basic:
         """

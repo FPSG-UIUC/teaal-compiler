@@ -25,6 +25,7 @@ Intermediate representation of the partitioning information
 """
 
 from lark.tree import Tree
+from sympy import Basic, Symbol
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from es2hfa.ir.tensor import Tensor
@@ -37,12 +38,14 @@ class Partitioning:
     """
 
     def __init__(self,
-                 partitioning: Dict[str,
-                                    List[Tree]],
-                 ranks: List[str]) -> None:
+                 partitioning: Dict[str, List[Tree]],
+                 ranks: List[str],
+                 eqn_exprs: Dict[Symbol, Basic]) -> None:
         """
         Create a new representation of the partitioning information
         """
+        self.eqn_exprs = eqn_exprs
+
         # Filter the partitioning information into the ranks that can
         # be partitioned statically vs dynamically
         self.dyn_parts = {}
