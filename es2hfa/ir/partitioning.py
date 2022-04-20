@@ -75,11 +75,14 @@ class Partitioning:
         for rank in ranks:
             self.root_names[rank] = rank
 
-        for rank in self.all_parts.keys():
+        for part_rank in self.all_parts.keys():
+            for rank in self.__part_to_tensor_rank(part_rank, ranks):
+                self.root_names.update(
+                    {inter: rank for inter in self.get_intermediates(rank)})
+                self.root_names.update({rank + "0": rank})
+
             self.root_names.update(
-                {inter: rank for inter in self.get_intermediates(rank)})
-            self.root_names.update(
-                {final: rank for final in self.partition_names(rank, True)})
+                {final: part_rank for final in self.partition_names(part_rank, True)})
 
         # All possible rank IDs to the final rank ID
         self.final_rank_id = {}
@@ -90,6 +93,7 @@ class Partitioning:
 
         # Partitioned ranks may change
         for rank in self.all_parts.keys():
+            # for rank in self.__part_to_tensor_rank(part_rank, ranks):
             top, all_ = self.__all_names(rank)
 
             # Add unpartitioned to top rank, e.g., K -> K2
@@ -124,8 +128,7 @@ class Partitioning:
 
         Used for the spacetime stamp of dynamically partitioned tensors
         """
-        part_rank = self.__tensor_to_part_rank(rank.upper(), self.dyn_parts.keys())
-        if part_rank is not None:
+        if self.__tensor_to_part_rank(rank.upper(), self.dyn_parts.keys()):
             return rank + "0"
         return rank
 
@@ -146,10 +149,12 @@ class Partitioning:
         """
         Get the names of all intermediate ranks (e.g., K2I)
         """
-        intermediates = []
-        for i, part in enumerate(self.all_parts[rank][1:]):
+        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts.keys())
+        part_rank = Partitioning.__single_part_rank(rank, part_ranks)
 
-            num = len(self.all_parts[rank]) - i - 1
+        intermediates = []
+        for i, part in enumerate(self.all_parts[part_rank][1:]):
+            num = len(self.all_parts[part_rank]) - i - 1
             if not Partitioning.__is_static(part):
                 intermediates.append(rank + str(num) + "I")
 
@@ -184,7 +189,8 @@ class Partitioning:
         """
         partitioning = {}
         for rank, part in self.all_parts.items():
-            if rank in part_ranks and self.__part_to_tensor_rank(rank, tensor_ranks) is not None:
+            if rank in part_ranks and self.__part_to_tensor_rank(
+                    rank, tensor_ranks):
                 partitioning[rank] = part
         return partitioning
 
@@ -192,20 +198,28 @@ class Partitioning:
         """
         Get the list of names that this rank will be partitioned into
         """
-        parts = self.all_parts[rank]
+        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts.keys())
+        part_rank = Partitioning.__single_part_rank(rank, part_ranks)
+
+        parts = self.all_parts[part_rank]
         # Return all final rank names
         if all_:
-            return [rank + str(j) for j in range(len(parts) + 1)]
+            parted_ = [part_rank + str(j) for j in range(len(parts) + 1)]
+            # The bottom rank is named with the original rank name
+            parted_[0] = rank + "0"
+            return parted_
+
+        part_root = self.root_names[part_rank]
+        names = [part_root + str(len(parts))]
 
         root = self.root_names[rank]
-        names = [root + str(len(parts))]
 
         early_exit = False
         # Otherwise, add rank names until another dynamic partitioning
         for i, part in enumerate(parts[1:]):
             num = len(parts) - i - 1
             if Partitioning.__is_static(part):
-                names.append(root + str(num))
+                names.append(part_root + str(num))
                 continue
 
             names.append(root + str(num) + "I")
@@ -291,23 +305,48 @@ class Partitioning:
 
         return False
 
-    def __part_to_tensor_rank(self, part_rank: str, tensor_ranks: Iterable[str]) -> Optional[str]:
+    def __part_to_tensor_rank(
+            self,
+            part_rank: str,
+            tensor_ranks: Iterable[str]) -> List[str]:
         """
         Returns a tensor rank if one corresponds to the given partition rank
         """
         part_root = self.get_root_name(part_rank).lower()
         part_suffix = part_rank[len(part_root):]
+
+        matches = []
         for tensor_rank in tensor_ranks:
             tensor_root = self.get_root_name(tensor_rank).lower()
             tensor_suffix = tensor_rank[len(tensor_root):]
 
             atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
             if Symbol(part_root) in atoms and part_suffix == tensor_suffix:
-                return tensor_rank
+                matches.append(tensor_rank)
 
-        return None
+        return matches
 
-    def __tensor_to_part_rank(self, tensor_rank: str, part_ranks: Iterable[str]) -> Optional[str]:
+    @staticmethod
+    def __single_part_rank(rank: str, part_ranks: List[str]) -> str:
+        """
+        Get a single part rank from a list
+        Raises an error if there is not exactly one element in the list
+        """
+        if not part_ranks:
+            raise ValueError("No partitioning for rank " + rank)
+        elif len(part_ranks) > 1:
+            raise ValueError(
+                "Cannot partition " +
+                rank +
+                " with multiple specifications. Partitioning specified by " +
+                ", ".join(part_ranks))
+
+        return part_ranks[0]
+
+    def __tensor_to_part_rank(
+            self,
+            tensor_rank: str,
+            part_ranks: Iterable[str]) -> List[str]:
         """
         Return a partition rank if one corresponds to the given tensor rank
         """
@@ -317,8 +356,9 @@ class Partitioning:
         atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
         eqn_ranks = {str(atom).upper() + tensor_suffix for atom in atoms}
 
+        matches = []
         for eqn_rank in eqn_ranks:
             if eqn_rank in part_ranks:
-                return eqn_rank
+                matches.append(eqn_rank)
 
-        return None
+        return matches

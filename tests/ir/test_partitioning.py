@@ -23,6 +23,7 @@ def build_partitioning(parts):
 
     return Partitioning(dict_, ["J", "M", "N", "K"], eqn_exprs)
 
+
 def build_partitioning_conv(parts):
     dict_ = parse_partitioning(parts)["Z"]
 
@@ -46,6 +47,24 @@ def test_nway_after_dyn():
 
     assert str(
         excinfo.value) == "N-way partitioning after dynamic partitioning on rank M"
+
+
+def test_multiple_partitionings_on_same_rank():
+    all_parts = """
+                Q: [uniform_shape(4)]
+                S: [uniform_occupancy(A.6)]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    q, s, w = symbols("q s w")
+    eqn_exprs = {q: q, s: s, w: q + s}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["Q", "S", "W"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Cannot partition W with multiple specifications. " + \
+        "Partitioning specified by S, Q"
 
 
 def test_get_all_partitioning():
@@ -88,6 +107,7 @@ def test_get_dyn_rank():
     assert partitioning.get_dyn_rank("m") == "m0"
     assert partitioning.get_dyn_rank("m1") == "m1"
     assert partitioning.get_dyn_rank("n") == "n"
+
 
 def test_get_dyn_rank_conv():
     all_parts = """
@@ -146,6 +166,23 @@ def test_get_intermediates():
     assert partitioning.get_intermediates("K") == ["K6I", "K5I", "K3I"]
 
 
+def test_get_intermediates_conv():
+    all_parts = """
+                Q:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    assert partitioning.get_intermediates("W") == ["W6I", "W5I", "W3I"]
+
+
 def test_get_leader():
     parts = """
                 M: [uniform_occupancy(A.6)]
@@ -177,6 +214,17 @@ def test_get_root_name():
 
     assert partitioning.get_root_name("M1") == "M"
     assert partitioning.get_root_name("K") == "K"
+
+
+def test_get_root_name_conv():
+    parts = """
+                Q: [uniform_shape(20), uniform_occupancy(I.5)]
+    """
+    partitioning = build_partitioning_conv(parts)
+
+    assert partitioning.get_root_name("W0") == "W"
+    assert partitioning.get_root_name("W1I") == "W"
+    assert partitioning.get_root_name("Q1") == "Q"
 
 
 def test_get_static_partitioning():
@@ -214,6 +262,7 @@ def test_get_tensor_spec():
 
     assert partitioning.get_tensor_spec(tensor_ranks, {"K", "M"}) == used
 
+
 def test_get_tensor_spec_conv():
     all_parts = """
                 P: [uniform_shape(4)]
@@ -229,6 +278,16 @@ def test_get_tensor_spec_conv():
     tensor_ranks = ["W"]
 
     assert partitioning.get_tensor_spec(tensor_ranks, {"P", "Q"}) == used
+
+
+def test_partition_names_unpartitioned():
+    partitioning = build_partitioning("")
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.partition_names("M", True)
+
+    assert str(excinfo.value) == "No partitioning for rank M"
+
 
 def test_partition_names():
     all_parts = """
@@ -254,6 +313,26 @@ def test_partition_names():
     assert partitioning.partition_names("K", False) == ["K6I", "K7", "K8"]
     assert partitioning.partition_names("K3I", False) == [
         "K0", "K1", "K2", "K3"]
+
+
+def test_partition_names_conv():
+    all_parts = """
+                Q:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
+    """
+    partitioning = build_partitioning_conv(all_parts)
+    all_head = ["Q" + str(i + 1) for i in range(8)]
+
+    assert partitioning.partition_names("W", True) == ["W0"] + all_head
+    assert partitioning.partition_names("W", False) == ["W6I", "Q7", "Q8"]
+    assert partitioning.partition_names("W3I", False) == ["W0"] + all_head[:3]
 
 
 def test_partition_tensor_all():

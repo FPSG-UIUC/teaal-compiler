@@ -28,7 +28,7 @@ def build_program_matmul(mapping):
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[M, N] = sum(K).(A[K, M] * B[K, N])
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
     """ + mapping
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))

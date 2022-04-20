@@ -151,13 +151,21 @@ def test_prune_partitioned():
     coord_math = CoordMath()
     tensor = Tensor("I", ["W"])
     tranks = Tree("tranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, tranks)
+
+    tensor = Tensor("O", ["Q"])
+    tranks = make_tranks(["q"])
+    coord_math.add(tensor, tranks)
+
+    tensor = Tensor("F", ["S"])
+    tranks = make_tranks(["s"])
+    coord_math.add(tensor, tranks)
 
     loop_order = ["Q1", "S", "Q0"]
     part = Partitioning(
         parse_partitioning(), [
             "Q", "S", "W"], coord_math.get_eqn_exprs())
 
-    coord_math.add(tensor, tranks)
     coord_math.prune(loop_order, part)
 
     q, s, w = symbols("q s w")

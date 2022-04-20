@@ -304,7 +304,6 @@ def test_make_iter_expr_conv_project_output():
     graph.pop()
 
     with pytest.raises(ValueError) as excinfo:
-        print(graph.peek())
         eqn.make_iter_expr(*graph.peek())
 
     assert str(

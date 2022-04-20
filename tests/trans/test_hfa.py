@@ -105,7 +105,7 @@ def test_hfa_dyn_part():
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[M, N] = sum(K).(A[K, M] * B[K, N])
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
         partitioning:
             Z:
