@@ -124,7 +124,8 @@ class Partitioning:
 
         Used for the spacetime stamp of dynamically partitioned tensors
         """
-        if rank.upper() in self.dyn_parts.keys():
+        part_rank = self.__tensor_to_part_rank(rank.upper(), self.dyn_parts.keys())
+        if part_rank is not None:
             return rank + "0"
         return rank
 
@@ -183,7 +184,7 @@ class Partitioning:
         """
         partitioning = {}
         for rank, part in self.all_parts.items():
-            if rank in part_ranks and rank in tensor_ranks:
+            if rank in part_ranks and self.__part_to_tensor_rank(rank, tensor_ranks) is not None:
                 partitioning[rank] = part
         return partitioning
 
@@ -289,3 +290,35 @@ class Partitioning:
                 return True
 
         return False
+
+    def __part_to_tensor_rank(self, part_rank: str, tensor_ranks: Iterable[str]) -> Optional[str]:
+        """
+        Returns a tensor rank if one corresponds to the given partition rank
+        """
+        part_root = self.get_root_name(part_rank).lower()
+        part_suffix = part_rank[len(part_root):]
+        for tensor_rank in tensor_ranks:
+            tensor_root = self.get_root_name(tensor_rank).lower()
+            tensor_suffix = tensor_rank[len(tensor_root):]
+
+            atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
+            if Symbol(part_root) in atoms and part_suffix == tensor_suffix:
+                return tensor_rank
+
+        return None
+
+    def __tensor_to_part_rank(self, tensor_rank: str, part_ranks: Iterable[str]) -> Optional[str]:
+        """
+        Return a partition rank if one corresponds to the given tensor rank
+        """
+        tensor_root = self.get_root_name(tensor_rank).lower()
+        tensor_suffix = tensor_rank[len(tensor_root):]
+
+        atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
+        eqn_ranks = {str(atom).upper() + tensor_suffix for atom in atoms}
+
+        for eqn_rank in eqn_ranks:
+            if eqn_rank in part_ranks:
+                return eqn_rank
+
+        return None

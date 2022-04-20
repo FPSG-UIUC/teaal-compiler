@@ -18,10 +18,18 @@ def parse_partitioning(parts):
 def build_partitioning(parts):
     dict_ = parse_partitioning(parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    j, k, m, n = symbols("j k m n")
+    eqn_exprs = {j: j, k: k, m: m, n: n}
 
-    return Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+    return Partitioning(dict_, ["J", "M", "N", "K"], eqn_exprs)
+
+def build_partitioning_conv(parts):
+    dict_ = parse_partitioning(parts)["Z"]
+
+    p, q, s, w = symbols("p q s w")
+    eqn_exprs = {p: p, q: q, s: s, w: q + s}
+
+    return Partitioning(dict_, ["P", "Q", "S", "W"], eqn_exprs)
 
 
 def test_nway_after_dyn():
@@ -80,6 +88,16 @@ def test_get_dyn_rank():
     assert partitioning.get_dyn_rank("m") == "m0"
     assert partitioning.get_dyn_rank("m1") == "m1"
     assert partitioning.get_dyn_rank("n") == "n"
+
+def test_get_dyn_rank_conv():
+    all_parts = """
+                Q: [uniform_occupancy(I.6)]
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    assert partitioning.get_dyn_rank("q") == "q0"
+    assert partitioning.get_dyn_rank("w") == "w0"
+    assert partitioning.get_dyn_rank("s") == "s"
 
 
 def test_get_dynamic_partitioning():
@@ -196,6 +214,21 @@ def test_get_tensor_spec():
 
     assert partitioning.get_tensor_spec(tensor_ranks, {"K", "M"}) == used
 
+def test_get_tensor_spec_conv():
+    all_parts = """
+                P: [uniform_shape(4)]
+                Q: [uniform_shape(5)]
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    used_parts = """
+                Q: [uniform_shape(5)]
+    """
+    used = parse_partitioning(used_parts)["Z"]
+
+    tensor_ranks = ["W"]
+
+    assert partitioning.get_tensor_spec(tensor_ranks, {"P", "Q"}) == used
 
 def test_partition_names():
     all_parts = """
