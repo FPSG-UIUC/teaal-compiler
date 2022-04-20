@@ -381,6 +381,24 @@ def test_partition_tensor_dyn():
     assert new_ranks == ["M2", "M1", "M0", "N", "K2", "K1", "K0"]
 
 
+def test_partition_tensor_conv():
+    parts = """
+                Q: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+    """
+    partitioning = build_partitioning_conv(parts)
+    tensor = Tensor("I", ["W"])
+
+    new_ranks = partitioning.partition_tensor(tensor, ["W"], True)
+    assert new_ranks == ["Q2", "Q1", "W0"]
+
+    new_ranks = partitioning.partition_tensor(tensor, ["Q"], False)
+    assert new_ranks == ["Q2", "W1I"]
+
+    tensor.update_ranks(new_ranks)
+    new_ranks = partitioning.partition_tensor(tensor, ["Q1I"], False)
+    assert new_ranks == ["Q2", "Q1", "W0"]
+
+
 def test_skip_empty_partitioning():
     all_parts = """
                 K: []

@@ -245,8 +245,15 @@ class Partitioning:
         all_parts = self.get_all_parts()
         tensor_ranks = tensor.get_ranks().copy()
 
-        for rank in ranks:
-            if rank in all_parts.keys() and rank in tensor_ranks:
+        for rank in tensor.get_ranks():
+            # Check if there is anything to partition
+            part_ranks = self.__tensor_to_part_rank(rank, all_parts.keys())
+            if not part_ranks:
+                continue
+
+            # Check if we want to partition it
+            part_rank = Partitioning.__single_part_rank(rank, part_ranks)
+            if rank in ranks or part_rank in ranks:
                 # Remove the old rank
                 i = tensor_ranks.index(rank)
                 tensor_ranks.pop(i)
@@ -278,7 +285,7 @@ class Partitioning:
         """
         Get all relevant fields of the Partitioning
         """
-        return self.dyn_parts, self.static_parts
+        return self.dyn_parts, self.static_parts, self.eqn_exprs
 
     @staticmethod
     def __nway_after_dyn(parts: List[Tree]) -> bool:
