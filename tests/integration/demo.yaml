@@ -6,26 +6,8 @@ einsum:
   expressions:
     - Z[m,n] = sum(K).(A[k,m] * B[k,n])
 mapping:
-  rank-order:
-    A: [K, M]
-    B: [K, N]
-    Z: [M, N]
-  partitioning:
-    Z:
-      K:
-        - uniform_shape(K1)
-        - uniform_shape(K0)
-      M:
-        - uniform_shape(M1)
-        - uniform_shape(M0)
-      N:
-        - uniform_shape(N1)
-        - uniform_shape(N0)
-  loop-order:
-    Z: [N2, K2, M2, M1,
-        N1, K1, M0, N0, K0]
-  spacetime:
-    Z:
-      space: [K1]
-      time: [N2, K2, M2, M1,
-             N1, M0, N0, K0]
+    partitioning:
+        Z:
+            K: [uniform_shape(20), uniform_occupancy(A.6), uniform_occupancy(A.3)]
+    loop-order:
+        Z: [K3, M, K2, K1, N, K0]

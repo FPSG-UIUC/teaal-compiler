@@ -350,6 +350,27 @@ def test_partition_names_conv():
     assert partitioning.partition_names("W3I", False) == ["W0"] + all_head[:3]
 
 
+def test_partition_rank():
+    all_parts = """
+                P: [uniform_shape(500)]
+                Q:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    assert partitioning.partition_rank("S") is None
+    assert partitioning.partition_rank("P") == "P"
+    assert partitioning.partition_rank("W") == "Q"
+    assert partitioning.partition_rank("W6I") == "Q6I"
+
+
 def test_partition_tensor_all():
     parts = """
                 M: [uniform_shape(3)]

@@ -221,6 +221,65 @@ def test_graph_dyn_parts():
     assert nx.is_isomorphic(graph, corr)
 
 
+def test_graph_mixed_parts():
+    spec = """
+        partitioning:
+            Z:
+                K: [uniform_shape(20), uniform_occupancy(A.6), uniform_occupancy(A.3)]
+        loop-order:
+            Z: [K3, M, K2, K1, N, K0]
+    """
+    program = build_program_matmul(spec)
+    graph = FlowGraph(program).get_graph()
+
+    corr = nx.DiGraph()
+
+    corr.add_edge(LoopNode("K3"), LoopNode("M"))
+    corr.add_edge(LoopNode("K3"), FromFiberNode("B", "K2I"))
+    corr.add_edge(LoopNode("M"), LoopNode("K2"))
+    corr.add_edge(LoopNode("M"), LoopNode("N"))
+    corr.add_edge(LoopNode("M"), FromFiberNode("A", "K2I"))
+    corr.add_edge(LoopNode("K2"), LoopNode("K1"))
+    corr.add_edge(LoopNode("K2"), FromFiberNode("A", "K1I"))
+    corr.add_edge(LoopNode("K2"), FromFiberNode("B", "K1I"))
+    corr.add_edge(LoopNode("K1"), LoopNode("N"))
+    corr.add_edge(LoopNode("K1"), LoopNode("K0"))
+    corr.add_edge(LoopNode("N"), LoopNode("K0"))
+    corr.add_edge(LoopNode("N"), OtherNode("Body"))
+    corr.add_edge(LoopNode("K0"), OtherNode("Body"))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("K3"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), SRNode("Z", ["M", "N"]))
+    corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
+    corr.add_edge(SRNode("Z", ["M", "N"]), LoopNode("M"))
+    corr.add_edge(PartNode("A", ("K",)), OtherNode("Graphics"))
+    corr.add_edge(PartNode("A", ("K",)), PartNode("A", ("K2I",)))
+    corr.add_edge(PartNode("A", ("K",)), SRNode("A", ["K3", "M", "K2I"]))
+    corr.add_edge(PartNode("A", ("K2I",)), PartNode("A", ("K1I",)))
+    corr.add_edge(PartNode("A", ("K2I",)), SRNode("A", ["K2", "K1I"]))
+    corr.add_edge(PartNode("A", ("K1I",)), SRNode("A", ["K1", "K0"]))
+    corr.add_edge(SRNode("A", ["K3", "M", "K2I"]), LoopNode("K3"))
+    corr.add_edge(PartNode("B", ("K",)), OtherNode("Graphics"))
+    corr.add_edge(PartNode("B", ("K",)), PartNode("B", ("K2I",)))
+    corr.add_edge(PartNode("B", ("K",)), SRNode("B", ["K3", "K2I", "N"]))
+    corr.add_edge(PartNode("B", ("K2I",)), PartNode("B", ("K1I",)))
+    corr.add_edge(PartNode("B", ("K2I",)), SRNode("B", ["K2", "K1I", "N"]))
+    corr.add_edge(PartNode("B", ("K1I",)), SRNode("B", ["K1", "N", "K0"]))
+    corr.add_edge(SRNode("B", ["K3", "K2I", "N"]), LoopNode("K3"))
+    corr.add_edge(FromFiberNode("B", "K2I"), PartNode("B", ("K2I",)))
+    corr.add_edge(SRNode("B", ["K2", "K1I", "N"]), LoopNode("K2"))
+    corr.add_edge(FromFiberNode("A", "K2I"), PartNode("A", ("K2I",)))
+    corr.add_edge(SRNode("A", ["K2", "K1I"]), PartNode("B", ("K2I",)))
+    corr.add_edge(SRNode("A", ["K2", "K1I"]), LoopNode("K2"))
+    corr.add_edge(FromFiberNode("A", "K1I"), PartNode("A", ("K1I",)))
+    corr.add_edge(SRNode("A", ["K1", "K0"]), PartNode("B", ("K1I",)))
+    corr.add_edge(SRNode("A", ["K1", "K0"]), LoopNode("K1"))
+    corr.add_edge(FromFiberNode("B", "K1I"), PartNode("B", ("K1I",)))
+    corr.add_edge(SRNode("B", ["K1", "N", "K0"]), LoopNode("K1"))
+
+    assert nx.is_isomorphic(graph, corr)
+
+
 def test_graph_conv():
     spec = """
         loop-order:
@@ -240,6 +299,45 @@ def test_graph_conv():
     corr.add_edge(SRNode("O", ['Q']), LoopNode("Q"))
     corr.add_edge(SRNode("I", ['W']), LoopNode("W"))
     corr.add_edge(SRNode("F", ['S']), LoopNode("Q"))
+
+    assert nx.is_isomorphic(graph, corr)
+
+
+def test_graph_conv_part():
+    spec = """
+        partitioning:
+            O:
+                Q: [uniform_shape(20), uniform_occupancy(I.10)]
+        loop-order:
+            O: [Q2, Q1, S, Q0]
+    """
+    program = build_program_conv(spec)
+    graph = FlowGraph(program).get_graph()
+
+    corr = nx.DiGraph()
+
+    corr.add_edge(LoopNode("Q2"), LoopNode("Q1"))
+    corr.add_edge(LoopNode("Q2"), FromFiberNode("I", "W1I"))
+    corr.add_edge(LoopNode("Q1"), LoopNode("S"))
+    corr.add_edge(LoopNode("Q1"), LoopNode("Q0"))
+    corr.add_edge(LoopNode("S"), LoopNode("Q0"))
+    corr.add_edge(LoopNode("S"), OtherNode("Body"))
+    corr.add_edge(LoopNode("Q0"), OtherNode("Body"))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("Q2"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), SRNode("O", ["Q2", "Q1", "Q0"]))
+    corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
+    corr.add_edge(SRNode("O", ["Q2", "Q1", "Q0"]), LoopNode("Q2"))
+    corr.add_edge(PartNode("I", ("W",)), OtherNode("Graphics"))
+    corr.add_edge(PartNode("I", ("W",)), PartNode("I", ("W1I",)))
+    corr.add_edge(PartNode("I", ("W",)), SRNode("I", ["Q2", "W1I"]))
+    corr.add_edge(PartNode("I", ("W1I",)), SRNode("I", ["Q1", "W0"]))
+    corr.add_edge(SRNode("I", ["Q2", "W1I"]), LoopNode("Q2"))
+    corr.add_edge(SRNode("F", ["S"]), LoopNode("S"))
+    corr.add_edge(FromFiberNode("I", "W1I"), PartNode("I", ("W1I",)))
+    corr.add_edge(SRNode("I", ["Q1", "W0"]), LoopNode("Q1"))
+    corr.add_edge(LoopNode("Q1"), IntervalNode("Q0"))
+    corr.add_edge(IntervalNode("Q0"), LoopNode("Q0"))
 
     assert nx.is_isomorphic(graph, corr)
 

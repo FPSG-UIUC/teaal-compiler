@@ -63,13 +63,12 @@ class Node(metaclass=abc.ABCMeta):
         return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
 
 
-@Node.register
 class FiberNode(Node):
     """
     A Node representing a fiber
     """
 
-    def __init__(self, fiber: str):
+    def __init__(self, fiber: str) -> None:
         """
         Construct a FiberNode
         """
@@ -88,13 +87,12 @@ class FiberNode(Node):
         return self.fiber,
 
 
-@Node.register
 class FromFiberNode(Node):
     """
     A Node representing a call to Tensor.fromFiber()
     """
 
-    def __init__(self, tensor: str, rank: str):
+    def __init__(self, tensor: str, rank: str) -> None:
         """
         Construct a FromFiberNode
         """
@@ -120,13 +118,37 @@ class FromFiberNode(Node):
         return self.tensor, self.rank
 
 
-@Node.register
+class IntervalNode(Node):
+    """
+    A Node representing the computation of the interval for projection of a
+    fiber (or fibers)
+    """
+
+    def __init__(self, rank: str) -> None:
+        """
+        Construct an IntervalNode
+        """
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of an IntervalNode
+        """
+        return self.rank,
+
+
 class LoopNode(Node):
     """
     A Node representing a loop
     """
 
-    def __init__(self, rank: str):
+    def __init__(self, rank: str) -> None:
         """
         Construct a LoopNode
         """
@@ -145,13 +167,12 @@ class LoopNode(Node):
         return self.rank,
 
 
-@Node.register
 class OtherNode(Node):
     """
     Another type of node
     """
 
-    def __init__(self, type_: str):
+    def __init__(self, type_: str) -> None:
         """
         Construct another type of node
         Should be used for required, one-off nodes
@@ -171,13 +192,12 @@ class OtherNode(Node):
         return self.type,
 
 
-@Node.register
 class PartNode(Node):
     """
     A Node representing a partitioning function
     """
 
-    def __init__(self, tensor: str, ranks: Tuple[str]):
+    def __init__(self, tensor: str, ranks: Tuple[str]) -> None:
         """
         Build a partitioning node for a given tensor and ranks
         """
@@ -203,13 +223,12 @@ class PartNode(Node):
         return self.tensor, self.ranks
 
 
-@Node.register
 class RankNode(Node):
     """
     A Node representing a rank
     """
 
-    def __init__(self, tensor: str, rank: str):
+    def __init__(self, tensor: str, rank: str) -> None:
         """
         Construct a node for a rank name, tagged with its tensor
         """
@@ -235,13 +254,12 @@ class RankNode(Node):
         return self.tensor, self.rank
 
 
-@Node.register
 class SRNode(Node):
     """
     A Node representing a swizzleRanks and getRoot
     """
 
-    def __init__(self, tensor: str, ranks: List[str]):
+    def __init__(self, tensor: str, ranks: List[str]) -> None:
         """
         Construct a swizzleRanks and getRoot node
         """
@@ -267,13 +285,12 @@ class SRNode(Node):
         return self.tensor, self.ranks
 
 
-@Node.register
 class TensorNode(Node):
     """
     A Node representing a Tensor
     """
 
-    def __init__(self, tensor: str):
+    def __init__(self, tensor: str) -> None:
         """
         Construct a tensor node
         """

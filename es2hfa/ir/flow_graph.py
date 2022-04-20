@@ -61,7 +61,7 @@ class FlowGraph:
             font_size=8,
             pos=nx.random_layout(
                 self.graph,
-                seed=10))
+                seed=2))
         plt.savefig("foo.png")
 
     def get_graph(self) -> nx.DiGraph:
@@ -96,11 +96,16 @@ class FlowGraph:
                 self.graph.add_edge(TensorNode(root), RankNode(root, rank))
 
                 # Add the static partitioning
-                if rank in part.get_static_parts():
+                part_rank = part.partition_rank(rank)
+                if part_rank in part.get_static_parts():
                     self.__build_static_part(tensor, rank)
 
+                    in_rank = part.partition_names(rank, False)[0]
+                    if in_rank != part.get_final_rank_id(in_rank):
+                        self.__build_dyn_part(tensor, rank)
+
                 # Add the dynamic partitioning
-                if rank in part.get_dyn_parts():
+                if part_rank in part.get_dyn_parts():
                     self.__build_dyn_part(tensor, rank)
 
             # Get the root fiber
@@ -130,10 +135,24 @@ class FlowGraph:
         part = self.program.get_partitioning()
         root = tensor.root_name()
 
-        for src in [rank] + part.get_intermediates(rank):
+        int_ranks = part.get_intermediates(rank)
+        part_rank = part.partition_rank(rank)
+        if part_rank and part_rank in part.get_dyn_parts().keys():
+            int_ranks += [rank]
+
+        for src in int_ranks:
             part_node = PartNode(root, (src,))
             dsts = part.partition_names(src, False)
-            leader = part.get_leader(part.get_dyn_parts()[src][0])
+
+            part_rank = part.partition_rank(src)
+            # Very hard to test, since this means there is a problem with
+            # part.get_intermediates()
+            if part_rank is None:
+                raise ValueError(
+                    "Unknown intermediate: " +
+                    src)  # pragma: no cover
+
+            leader = part.get_leader(part.get_dyn_parts()[part_rank][0])
 
             # Add the edge from the source rank and fiber to the
             # PartNode
@@ -155,10 +174,12 @@ class FlowGraph:
         part = self.program.get_partitioning()
         for tensor in self.program.get_tensors():
             rank = tensor.peek()
-            if rank is not None:
-                rank = rank.upper()
+            if rank is None:
+                continue
 
-            if rank in part.get_dyn_parts():
+            rank = rank.upper()
+            part_rank = part.partition_rank(rank)
+            if part_rank and part_rank in part.get_dyn_parts():
                 self.__connect_dyn_part(tensor, rank)
 
         rank, tensors = iter_graph.peek()
@@ -170,6 +191,15 @@ class FlowGraph:
             # Connect the old fiber to the LoopNode
             fiber_node = FiberNode(tensor.fiber_name())
             self.graph.add_edge(fiber_node, LoopNode(rank))
+
+        # We need an IntervalNode if:
+        # - at least one tensor will be projected
+        # - the rank is partitioned
+        root = part.get_root_name(rank)
+        if any(tensor.peek() != rank.lower() for tensor in tensors) and \
+                root in part.get_all_parts().keys():
+            self.graph.add_edge(LoopNode(root + "1"), IntervalNode(root + "0"))
+            self.graph.add_edge(IntervalNode(root + "0"), LoopNode(root + "0"))
 
         _, tensors = iter_graph.pop()
 

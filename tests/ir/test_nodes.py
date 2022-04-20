@@ -25,6 +25,12 @@ def test_from_fiber_node():
     assert FromFiberNode("A", "K").get_rank() == "K"
 
 
+def test_interval_node():
+    assert repr(IntervalNode("Q1")) == "(IntervalNode, Q1)"
+
+    assert IntervalNode("Q1").get_rank() == "Q1"
+
+
 def test_loop_node():
     assert repr(LoopNode("K1")) == "(LoopNode, K1)"
 

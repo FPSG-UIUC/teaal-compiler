@@ -234,6 +234,16 @@ class Partitioning:
 
         return names
 
+    def partition_rank(self, rank: str) -> Optional[str]:
+        """
+        Get the name of the corresponding partitioned rank, should one exist
+        """
+        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts.keys())
+        if not part_ranks:
+            return None
+
+        return Partitioning.__single_part_rank(rank, part_ranks)
+
     def partition_tensor(
             self,
             tensor: Tensor,
