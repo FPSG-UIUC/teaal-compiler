@@ -338,6 +338,8 @@ def test_graph_conv_part():
     corr.add_edge(SRNode("I", ["Q1", "W0"]), LoopNode("Q1"))
     corr.add_edge(LoopNode("Q1"), IntervalNode("Q0"))
     corr.add_edge(IntervalNode("Q0"), LoopNode("Q0"))
+    corr.add_edge(SRNode("I", ["Q1", "W0"]), FromLazyNode("Q1", ["I"]))
+    corr.add_edge(FromLazyNode("Q1", ["I"]), IntervalNode("Q0"))
 
     assert nx.is_isomorphic(graph, corr)
 

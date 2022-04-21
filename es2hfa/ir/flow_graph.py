@@ -26,7 +26,7 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-from typing import cast, List
+from typing import cast, Dict, List
 
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.nodes import *
@@ -81,6 +81,7 @@ class FlowGraph:
         Build the flow graph
         """
         self.graph = nx.DiGraph()
+        self.iter_map: Dict[str, List[str]] = {}
 
         self.__build_loop_nest()
         self.__build_output()
@@ -192,14 +193,16 @@ class FlowGraph:
             fiber_node = FiberNode(tensor.fiber_name())
             self.graph.add_edge(fiber_node, LoopNode(rank))
 
-        # We need an IntervalNode if:
-        # - at least one tensor will be projected
-        # - the rank is partitioned
-        root = part.get_root_name(rank)
+        # Update the iter_map with the tensors iterated on at this rank
+        self.iter_map[rank] = [tensor.root_name()
+                               for tensor in tensors if not tensor.get_is_output()]
+
+        # We need a FromLazyNode and an IntervalNode if at least one tensor
+        # will be projected and it is a partitioned rank (so we don't know the
+        # bounds)
         if any(tensor.peek() != rank.lower() for tensor in tensors) and \
-                root in part.get_all_parts().keys():
-            self.graph.add_edge(LoopNode(root + "1"), IntervalNode(root + "0"))
-            self.graph.add_edge(IntervalNode(root + "0"), LoopNode(root + "0"))
+                part.get_root_name(rank) != rank:
+            self.__build_project_interval(rank, tensors)
 
         _, tensors = iter_graph.pop()
 
@@ -215,9 +218,9 @@ class FlowGraph:
         loop_order = self.program.get_loop_order().get_ranks()
 
         # Add the edges connecting the LoopNodes
-        chain: List[Node] = [cast(Node, OtherNode("StartLoop"))]
+        chain: List[Node] = [OtherNode("StartLoop")]
         for rank in loop_order:
-            chain.append(cast(Node, LoopNode(rank)))
+            chain.append(LoopNode(rank))
             self.graph.add_edge(chain[-2], chain[-1])
 
         # Add the graphics generation, body, and footer
@@ -236,6 +239,30 @@ class FlowGraph:
 
         # Construct the output for the relevant tensor to be available
         self.graph.add_edge(OtherNode("Output"), TensorNode(root))
+
+    def __build_project_interval(
+            self,
+            rank: str,
+            tensors: List[Tensor]) -> None:
+        """
+        Build the FromLazyNode and IntervalNode if the projection is over a
+        partitioned rank
+        """
+        part = self.program.get_partitioning()
+        part_names = part.partition_names(part.get_root_name(rank), True)
+        rank0 = part_names[0]
+        rank1 = part_names[1]
+
+        # Connect the FromLazyNode
+        from_lazy_node = FromLazyNode(rank1, self.iter_map[rank1])
+        for tname in self.iter_map[rank1]:
+            fiber_name = tname.lower() + "_" + rank1.lower()
+            self.graph.add_edge(FiberNode(fiber_name), from_lazy_node)
+
+        # Connect the IntervalNode
+        self.graph.add_edge(LoopNode(rank1), IntervalNode(rank0))
+        self.graph.add_edge(from_lazy_node, IntervalNode(rank0))
+        self.graph.add_edge(IntervalNode(rank0), LoopNode(rank0))
 
     def __build_static_part(self, tensor: Tensor, rank: str) -> None:
         """

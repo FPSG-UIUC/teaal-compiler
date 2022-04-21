@@ -25,6 +25,14 @@ def test_from_fiber_node():
     assert FromFiberNode("A", "K").get_rank() == "K"
 
 
+def test_from_lazy_node():
+    assert repr(FromLazyNode("Q1", ["I", "J"])
+                ) == "(FromLazyNode, Q1, ['I', 'J'])"
+
+    assert FromLazyNode("Q1", ["I", "J"]).get_rank() == "Q1"
+    assert FromLazyNode("Q1", ["I", "J"]).get_tensors() == ["I", "J"]
+
+
 def test_interval_node():
     assert repr(IntervalNode("Q1")) == "(IntervalNode, Q1)"
 

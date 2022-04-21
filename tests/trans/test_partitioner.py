@@ -10,8 +10,8 @@ from es2hfa.trans.utils import TransUtils
 
 def assert_partition(tensor, parts, hfa):
     program, partitioner = build_partitioner(parts)
-    ranks = program.get_partitioning().get_all_parts().keys()
-    assert partitioner.partition(tensor, ranks).gen(depth=0) == hfa
+    rank = [r for r in program.get_partitioning().get_all_parts().keys()][0]
+    assert partitioner.partition(tensor, rank).gen(depth=0) == hfa
 
 
 def build_partitioner(parts):
@@ -34,15 +34,50 @@ def build_partitioner(parts):
     return program, partitioner
 
 
+def build_partitioner_conv(expr, parts):
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            J: [W]
+            O: [Q]
+        expressions:
+            - """ + expr + """
+    mapping:
+        partitioning:
+            O:
+        """ + parts
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    partitioner = Partitioner(program, TransUtils())
+    return program, partitioner
+
+
 def test_no_partitioning():
-    tensor = Tensor("B", ["I", "K"])
-    assert_partition(tensor, "", "")
+    tensor = Tensor("B", ["K", "N"])
+    _, partitioner = build_partitioner("")
+    assert partitioner.partition(tensor, "N").gen(0) == ""
+
+
+def test_bad_halo():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = sum(S).(I[2 * q + s] * F[s])"
+    spec = """
+                Q: [uniform_shape(6)]
+    """
+    _, partitioner = build_partitioner_conv(expr, spec)
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioner.partition(tensor, "W")
+
+    assert str(excinfo.value) == "Non-constant halo partitioning rank W"
 
 
 def test_nway_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """
-                M: [nway_shape(5)]
                 N: [nway_shape(6), nway_shape(3)]
     """
     hfa = "tmp0 = B_KN\n" + \
@@ -52,6 +87,21 @@ def test_nway_shape():
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, spec, hfa)
+
+
+def test_nway_shape_conv():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = sum(S).(I[q + s] * F[s])"
+    spec = """
+                Q: [nway_shape(6)]
+    """
+    hfa = "tmp0 = I_W\n" + \
+          "tmp1 = tmp0.splitUniform((Q - 1) // 6 + 1, depth=0, halo=-1 + S)\n" + \
+          "I_Q1W0 = tmp1\n" + \
+          "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, "W").gen(depth=0) == hfa
 
 
 def test_uniform_occupancy_leader():
@@ -79,7 +129,7 @@ def test_uniform_occupancy_follower():
 
     program, partitioner = build_partitioner(spec)
     program.apply_partitioning(program.get_tensor("A"), "K")
-    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K").gen(depth=0) == hfa
 
 
 def test_uniform_occupancy_multiple():
@@ -96,7 +146,7 @@ def test_uniform_occupancy_multiple():
     program, partitioner = build_partitioner(spec)
     tensor = program.get_tensor("A")
     tensor.from_fiber()
-    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K").gen(depth=0) == hfa
 
     hfa = "tmp2 = A_K1IM\n" + \
           "tmp3 = tmp2.splitEqual(3)\n" + \
@@ -105,13 +155,43 @@ def test_uniform_occupancy_multiple():
 
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, {"K1I"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K1I").gen(depth=0) == hfa
+
+
+def test_uniform_occupancy_conv():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = sum(S).(I[q + s] * F[s])"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+    """
+    hfa = "tmp0 = I_W\n" + \
+          "tmp1 = tmp0.splitEqual(6, halo=-1 + S)\n" + \
+          "I_Q1W0 = tmp1\n" + \
+          "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, "W").gen(depth=0) == hfa
+
+
+def test_uniform_occupancy_follower_conv():
+    tensor = Tensor("J", ["W"])
+    expr = "O[q] = sum(S).(I[q + s] * J[q + s] * F[s])"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+    """
+    hfa = "tmp0 = J_W\n" + \
+          "tmp1 = tmp0.splitNonUniform(i_q1, halo=-1 + S)\n" + \
+          "J_Q1W0 = tmp1\n" + \
+          "J_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
+
+    program, partitioner = build_partitioner_conv(expr, spec)
+    program.apply_partitioning(program.get_tensor("I"), "W")
+    assert partitioner.partition(tensor, "W").gen(depth=0) == hfa
 
 
 def test_uniform_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """
-                M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
     hfa = "tmp0 = B_KN\n" + \
@@ -121,6 +201,21 @@ def test_uniform_shape():
           "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, spec, hfa)
+
+
+def test_uniform_shape_conv():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = sum(S).(I[q + s] * F[s])"
+    spec = """
+                Q: [uniform_shape(6)]
+    """
+    hfa = "tmp0 = I_W\n" + \
+          "tmp1 = tmp0.splitUniform(6, depth=0, halo=-1 + S)\n" + \
+          "I_Q1W0 = tmp1\n" + \
+          "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, "W").gen(depth=0) == hfa
 
 
 def test_mixed():
@@ -144,7 +239,7 @@ def test_mixed():
     program, partitioner = build_partitioner(spec)
     tensor = program.get_tensor("A")
     tensor.from_fiber()
-    assert partitioner.partition(tensor, {"K"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K").gen(depth=0) == hfa
 
     hfa = "tmp3 = A_K6IM\n" + \
           "tmp4 = tmp3.splitEqual(100)\n" + \
@@ -154,7 +249,7 @@ def test_mixed():
     tensor.pop()
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, {"K6I"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K6I").gen(depth=0) == hfa
 
     hfa = "tmp5 = A_K5IM\n" + \
           "tmp6 = tmp5.splitEqual(50)\n" + \
@@ -164,7 +259,7 @@ def test_mixed():
 
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, {"K5I"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K5I").gen(depth=0) == hfa
 
     hfa = "tmp8 = A_K3IM\n" + \
           "tmp9 = tmp8.splitEqual(6)\n" + \
@@ -176,7 +271,7 @@ def test_mixed():
     tensor.pop()
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, {"K3I"}).gen(depth=0) == hfa
+    assert partitioner.partition(tensor, "K3I").gen(depth=0) == hfa
 
 
 def assert_unpartition(spec, hfa):

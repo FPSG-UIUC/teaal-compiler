@@ -145,7 +145,7 @@ class HFA:
                 rank = node.get_ranks()[0]
 
                 tensor.from_fiber()
-                code.add(self.partitioner.partition(tensor, {rank}))
+                code.add(self.partitioner.partition(tensor, rank))
 
             elif isinstance(node, SRNode):
                 tensor = self.program.get_tensor(node.get_tensor())

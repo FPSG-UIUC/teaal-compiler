@@ -118,6 +118,37 @@ class FromFiberNode(Node):
         return self.tensor, self.rank
 
 
+class FromLazyNode(Node):
+    """
+    A Node representing a call to Fiber.fromLazy()
+    """
+
+    def __init__(self, rank: str, tensors: List[str]) -> None:
+        """
+        Construct a FromLazyNode
+        """
+        self.rank = rank
+        self.tensors = tensors
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def get_tensors(self) -> List[str]:
+        """
+        Accessor for the tensor
+        """
+        return self.tensors
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a FromFiberNode
+        """
+        return self.rank, self.tensors
+
+
 class IntervalNode(Node):
     """
     A Node representing the computation of the interval for projection of a

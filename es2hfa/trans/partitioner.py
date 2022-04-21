@@ -23,14 +23,15 @@ SOFTWARE.
 
 Translate the partitiong specification
 """
-from typing import Set
-
 from lark.tree import Tree
+from sympy import Symbol
+from typing import List, Set
 
 from es2hfa.hfa import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
 from es2hfa.parse.utils import ParseUtils
+from es2hfa.trans.coord_access import CoordAccess
 from es2hfa.trans.utils import TransUtils
 
 
@@ -46,18 +47,20 @@ class Partitioner:
         self.program = program
         self.trans_utils = trans_utils
 
-    def partition(self, tensor: Tensor, ranks: Set[str]) -> Statement:
+    def partition(self, tensor: Tensor, rank: str) -> Statement:
         """
         Partition the given tensor according to the stored program
         """
-        # Check if we need to partition at all
         part_ir = self.program.get_partitioning()
-        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), ranks)
-        if not partitioning:
-            return SBlock([])
+        part_rank = part_ir.partition_rank(rank)
 
         # We will build a block with the partitioning code
         block = SBlock([])
+
+        if part_rank is None:
+            return block
+
+        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), {part_rank})
 
         # Rename the variable
         next_tmp = AVar(self.trans_utils.next_tmp())
@@ -65,35 +68,34 @@ class Partitioner:
         block.add(SAssign(next_tmp, EVar(old_name)))
 
         # Emit the partitioning code
-        for i, rank in reversed(list(enumerate(tensor.get_ranks()))):
-            # Continue if no partitioning across this rank
-            if rank not in partitioning.keys():
-                continue
+        i = tensor.get_ranks().index(rank)
 
-            first = True
-            for j, part in enumerate(partitioning[rank]):
-                if part.data == "nway_shape":
-                    block.add(self.__nway_shape(rank, part, i))
+        first = True
+        for j, part in enumerate(partitioning[part_rank]):
+            if part.data == "nway_shape":
+                block.add(self.__nway_shape(rank, part_rank, part, i))
 
-                elif part.data == "uniform_occupancy":
-                    # The dynamic partitioning must be of the current top rank
-                    if not first:
-                        break
+            elif part.data == "uniform_occupancy":
+                # The dynamic partitioning must be of the current top rank
+                if not first:
+                    break
 
-                    block.add(self.__uniform_occupancy(tensor, part))
+                block.add(
+                    self.__uniform_occupancy(
+                        rank, part_rank, tensor, part))
 
-                elif part.data == "uniform_shape":
-                    block.add(self.__uniform_shape(part, i + j))
+            elif part.data == "uniform_shape":
+                block.add(self.__uniform_shape(rank, part_rank, part, i + j))
 
-                else:
-                    # Note: there is no good way to test this error. Bad
-                    # partitioning styles should be caught by the
-                    # Partitioning
-                    raise ValueError(
-                        "Unknown partitioning style: " +
-                        part.data)  # pragma: no cover
+            else:
+                # Note: there is no good way to test this error. Bad
+                # partitioning styles should be caught by the
+                # Partitioning
+                raise ValueError(
+                    "Unknown partitioning style: " +
+                    part.data)  # pragma: no cover
 
-                first = False
+            first = False
 
             # Finally, update the tensor with this partition
             self.program.apply_partitioning(tensor, rank)
@@ -155,7 +157,38 @@ class Partitioner:
 
         return block
 
-    def __nway_shape(self, rank: str, part: Tree, depth: int) -> Statement:
+    def __build_halo(self, rank: str, part_rank: str) -> Expression:
+        """
+        Build halo expression
+        """
+        sexpr = self.program.get_coord_math().get_eqn_exprs()[
+            Symbol(rank.lower())]
+        part = self.program.get_partitioning()
+        part_symbol = Symbol(part_rank.lower())
+
+        replace = {}
+        for symbol in sexpr.atoms(Symbol):
+            final = str(symbol).upper()
+
+            # Replace each value with the largest value it can take on
+            if symbol != part_symbol:
+                replace[symbol] = Symbol(final) - 1
+
+        for symbol, max_ in replace.items():
+            sexpr = sexpr.subs(symbol, max_)
+
+        sexpr -= part_symbol
+        if part_symbol in sexpr.atoms(Symbol):
+            raise ValueError("Non-constant halo partitioning rank " + rank)
+
+        return CoordAccess.build_expr(sexpr)
+
+    def __nway_shape(
+            self,
+            rank: str,
+            part_rank: str,
+            part: Tree,
+            depth: int) -> Statement:
         """
         Partition into the given number of partitions in coordinate space
         """
@@ -163,51 +196,76 @@ class Partitioner:
         parts = ParseUtils.next_int(part)
 
         # Ceiling divide: (rank - 1) // parts + 1
-        parens = EParens(EBinOp(EVar(rank), OSub(), EInt(1)))
+        parens = EParens(EBinOp(EVar(part_rank), OSub(), EInt(1)))
         fdiv = EBinOp(parens, OFDiv(), EInt(parts))
         step = EBinOp(fdiv, OAdd(), EInt(1))
 
         # Build the splitUniform
-        return self.__split_uniform(step, depth)
+        return self.__split_uniform(rank, part_rank, step, depth)
 
-    def __split_equal(self, size: int) -> Statement:
+    def __split_equal(self, rank: str, part_rank: str, size: int) -> Statement:
         """
         Build call to splitEqual
         """
-        arg = AJust(EInt(size))
+        args: List[Argument] = [AJust(EInt(size))]
+        if rank != part_rank:
+            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+
         curr_tmp = self.trans_utils.curr_tmp()
-        part_call = EMethod(EVar(curr_tmp), "splitEqual", [arg])
+        part_call = EMethod(EVar(curr_tmp), "splitEqual", args)
 
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, part_call)
 
-    def __split_follower(self, leader: str) -> Statement:
+    def __split_follower(
+            self,
+            rank: str,
+            part_rank: str,
+            leader: str) -> Statement:
         """
         Build a call to splitNonUniform
         """
         fiber = EVar(self.program.get_tensor(leader).fiber_name())
+        args: List[Argument] = [AJust(fiber)]
+        if rank != part_rank:
+            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+
         curr_tmp = self.trans_utils.curr_tmp()
-        part_call = EMethod(EVar(curr_tmp), "splitNonUniform", [AJust(fiber)])
+        part_call = EMethod(EVar(curr_tmp), "splitNonUniform", args)
 
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, part_call)
 
-    def __split_uniform(self, step: Expression, depth: int) -> Statement:
+    def __split_uniform(
+            self,
+            rank: str,
+            part_rank: str,
+            step: Expression,
+            depth: int) -> Statement:
         """
         Build a call to splitUniform
         """
         # Build the depth and the arguments
-        arg1 = AJust(step)
-        arg2 = AParam("depth", EInt(depth))
+        args: List[Argument] = []
+        args.append(AJust(step))
+        args.append(AParam("depth", EInt(depth)))
+
+        if rank != part_rank:
+            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
 
         # Build the call to splitUniform()
         curr_tmp = self.trans_utils.curr_tmp()
-        part_call = EMethod(EVar(curr_tmp), "splitUniform", [arg1, arg2])
+        part_call = EMethod(EVar(curr_tmp), "splitUniform", args)
 
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, part_call)
 
-    def __uniform_occupancy(self, tensor: Tensor, part: Tree) -> Statement:
+    def __uniform_occupancy(
+            self,
+            rank: str,
+            part_rank: str,
+            tensor: Tensor,
+            part: Tree) -> Statement:
         """
         Partition with a uniform occupancy
         """
@@ -215,11 +273,16 @@ class Partitioner:
         size = ParseUtils.find_int(part, "size")
 
         if tensor.root_name() == leader:
-            return self.__split_equal(size)
+            return self.__split_equal(rank, part_rank, size)
         else:
-            return self.__split_follower(leader)
+            return self.__split_follower(rank, part_rank, leader)
 
-    def __uniform_shape(self, part: Tree, depth: int) -> Statement:
+    def __uniform_shape(
+            self,
+            rank: str,
+            part_rank: str,
+            part: Tree,
+            depth: int) -> Statement:
         """
         Partition with a uniform shape
         """
@@ -227,4 +290,4 @@ class Partitioner:
         step = ParseUtils.next_int(part)
 
         # Build the splitUniform()
-        return self.__split_uniform(EInt(step), depth)
+        return self.__split_uniform(rank, part_rank, EInt(step), depth)
