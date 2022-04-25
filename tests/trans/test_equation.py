@@ -129,15 +129,16 @@ def make_display(style, opt):
     return IterationGraph(program), Equation(program)
 
 
-def make_conv(coord_math, loop_order):
+def make_conv(expr, loop_order):
     yaml = """
     einsum:
         declaration:
             F: [S]
             I: [W]
+            J: [W]
             O: [P, Q]
         expressions:
-            - O[p, q] = sum(S).(I[""" + coord_math + """] * F[s])
+            - """ + expr + """
     mapping:
         loop-order:
             O: """ + loop_order
@@ -146,6 +147,39 @@ def make_conv(coord_math, loop_order):
     mapping = Mapping.from_str(yaml)
     program = Program(einsum, mapping)
     program.add_einsum(0)
+
+    for tensor in program.get_tensors():
+        program.apply_all_partitioning(tensor)
+        program.get_loop_order().apply(tensor)
+
+    return IterationGraph(program), Equation(program)
+
+
+def make_conv_part(expr, loop_order):
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            J: [W]
+            O: [P, Q]
+        expressions:
+            - """ + expr + """
+    mapping:
+        partitioning:
+            O:
+                Q: [uniform_shape(10)]
+        loop-order:
+            O: """ + loop_order
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    for tensor in program.get_tensors():
+        program.apply_all_partitioning(tensor)
+        program.get_loop_order().apply(tensor)
 
     return IterationGraph(program), Equation(program)
 
@@ -164,6 +198,52 @@ def test_tensor_in_out():
         Equation(program)
 
     assert str(excinfo.value) == "A appears multiple times in the einsum"
+
+
+def test_eager_inputs_one_fiber():
+    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    _, eqn = make_conv_part(expr, "[Q1, P, S, Q]")
+    hfa = "inputs_q1 = i_q1"
+
+    assert eqn.make_eager_inputs("Q1", ["I"]).gen(0) == hfa
+
+
+def test_eager_inputs_multiple_fibers():
+    expr = "O[p, q] = sum(S).(I[q + s] * J[q + s] * F[s])"
+    mapping = """[Q1, P, S, Q]
+        partitioning:
+            O:
+                Q: [uniform_shape(10)]
+    """
+    _, eqn = make_conv(expr, mapping)
+    hfa = "inputs_q1 = Fiber.fromLazy(i_q1 & j_q1)"
+
+    assert eqn.make_eager_inputs("Q1", ["I", "J"]).gen(0) == hfa
+
+
+def test_make_interval_bad_rank():
+    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    _, eqn = make_conv_part(expr, "[Q1, P, S, Q]")
+    with pytest.raises(ValueError) as excinfo:
+        eqn.make_interval("S")
+
+    assert str(excinfo.value) == "Interval not necessary for rank S"
+
+
+def test_make_interval():
+    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    _, eqn = make_conv_part(expr, "[Q1, P, S, Q]")
+
+    hfa = "if q1_pos == 0:\n" + \
+          "    q0_start = 0\n" + \
+          "else:\n" + \
+          "    q0_start = q1\n" + \
+          "if q1_pos + 1 < len(inputs_q1):\n" + \
+          "    q0_end = inputs_q1.getCoords()[q1_pos + 1]\n" + \
+          "else:\n" + \
+          "    q0_end = Q"
+
+    assert eqn.make_interval("Q0").gen(0) == hfa
 
 
 def test_make_iter_expr_no_tensors():
@@ -267,7 +347,8 @@ def test_make_iter_expr_output_only_display():
 
 
 def test_make_iter_expr_conv():
-    graph, eqn = make_conv("p + q + s", "[P, S, Q]")
+    expr = "O[p, q] = sum(S).(I[p + q + s] * F[s])"
+    graph, eqn = make_conv(expr, "[P, S, Q]")
     graph.pop()
 
     rank, tensors = graph.peek()
@@ -283,7 +364,8 @@ def test_make_iter_expr_conv():
 
 
 def test_make_iter_expr_conv_frac():
-    graph, eqn = make_conv("2 * q + s", "[P, S, Q]")
+    expr = "O[p, q] = sum(S).(I[2 * q + s] * F[s])"
+    graph, eqn = make_conv(expr, "[P, S, Q]")
     graph.pop()
 
     rank, tensors = graph.peek()
@@ -299,7 +381,8 @@ def test_make_iter_expr_conv_frac():
 
 
 def test_make_iter_expr_conv_project_output():
-    graph, eqn = make_conv("p + q + s", "[P, S, W]")
+    expr = "O[p, q] = sum(S).(I[p + q + s] * F[s])"
+    graph, eqn = make_conv(expr, "[P, S, W]")
     graph.pop()
     graph.pop()
 
@@ -308,6 +391,14 @@ def test_make_iter_expr_conv_project_output():
 
     assert str(
         excinfo.value) == "Cannot project into the output tensor. Replace W with Q in the loop order"
+
+
+def test_make_iter_expr_conv_enum():
+    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    graph, eqn = make_conv_part(expr, "[Q1, P, S, Q]")
+    hfa = "enumerate(o_q1 << i_q1)"
+
+    assert eqn.make_iter_expr(*graph.peek()).gen() == hfa
 
 
 def test_make_payload_no_tensors():
@@ -393,6 +484,14 @@ def test_make_payload_output_only():
     assert eqn.make_payload(rank, tensors).gen(False) == iter_expr
 
 
+def test_make_payload_conv_enum():
+    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    graph, eqn = make_conv_part(expr, "[Q1, P, S, Q]")
+    hfa = "q1_pos, (q1, (o_p, i_w0))"
+
+    assert eqn.make_payload(*graph.pop()).gen(parens=False) == hfa
+
+
 def test_make_update():
     _, eqn = make_basic()
     stmt = "a_ref += b_val * c_val * d_val"
@@ -420,7 +519,8 @@ def test_make_update_dot():
 
 
 def test_iter_fiber_not_fiber():
-    graph, eqn = make_conv("q + s", "[P, W, Q]")
+    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    graph, eqn = make_conv(expr, "[P, W, Q]")
     graph.pop()
     graph.pop()
     graph.pop()

@@ -71,7 +71,7 @@ class Canvas:
         # If slip, the timestamp is actually (timestamps[space] - 1,)
         time: Expression
         if spacetime.get_slip():
-            bop = EBinOp(EAccess("timestamps", space), OSub(), EInt(1))
+            bop = EBinOp(EAccess(EVar("timestamps"), space), OSub(), EInt(1))
             time = ETuple([bop])
 
         # Otherwise, it is just the time tuple

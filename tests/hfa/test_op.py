@@ -31,6 +31,11 @@ def test_oin():
     assert in_.gen() == "in"
 
 
+def test_olt():
+    lt = OLt()
+    assert lt.gen() == "<"
+
+
 def test_oltlt():
     ltlt = OLtLt()
     assert ltlt.gen() == "<<"

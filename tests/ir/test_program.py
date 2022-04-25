@@ -138,17 +138,17 @@ def test_apply_all_partitioning_unconfigured():
 def test_apply_all_partitioning_default():
     program = create_default()
     program.add_einsum(0)
-    program.apply_all_partitioning(program.get_tensors()[1])
+    program.apply_all_partitioning(program.get_tensor("A"))
 
-    assert program.get_tensors()[1] == Tensor("A", ["K", "M"])
+    assert program.get_tensor("A") == Tensor("A", ["K", "M"])
 
 
 def test_apply_all_partitioning_mapped():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_all_partitioning(program.get_tensors()[1])
+    program.apply_all_partitioning(program.get_tensor("A"))
 
-    assert program.get_tensors()[1] == Tensor(
+    assert program.get_tensor("A") == Tensor(
         "A", ["K1", "K0", "M2", "M1", "M0"])
 
 
@@ -164,9 +164,9 @@ def test_apply_partitioning_unconfigured():
 def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensors()[1], "M")
+    program.apply_partitioning(program.get_tensor("A"), "M")
 
-    assert program.get_tensors()[1] == Tensor("A", ["K", "M2", "M1", "M0"])
+    assert program.get_tensor("A") == Tensor("A", ["K", "M2", "M1", "M0"])
 
 
 def test_get_einsum_unconfigured():

@@ -29,7 +29,7 @@ from functools import reduce
 from lark.lexer import Token
 from lark.tree import Tree
 from sympy import Basic, solve, Symbol
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from es2hfa.ir.partitioning import Partitioning
 from es2hfa.ir.tensor import Tensor
@@ -119,14 +119,17 @@ class CoordMath:
         """
         return self.eqn_exprs
 
-    def get_trans(self, ind: str) -> Basic:
+    def get_trans(self, ind: Union[str, Symbol]) -> Basic:
         """
         Get the expression corresponding to the coord with the current loop order
         """
         if self.trans is None:
             raise ValueError("Unconfigured coord math. First call prune()")
 
-        return self.trans[Symbol(ind)]
+        if isinstance(ind, str):
+            ind = Symbol(ind)
+
+        return self.trans[ind]
 
     def prune(self, loop_order: List[str], partitioning: Partitioning) -> None:
         """

@@ -34,15 +34,15 @@ class EAccess(Expression):
     An access into a list or dictionary
     """
 
-    def __init__(self, var: str, ind: Expression) -> None:
-        self.var = var
+    def __init__(self, obj: Expression, ind: Expression) -> None:
+        self.obj = obj
         self.ind = ind
 
     def gen(self) -> str:
         """
         Generate the HFA code for an EAccess
         """
-        return self.var + "[" + self.ind.gen() + "]"
+        return self.obj.gen() + "[" + self.ind.gen() + "]"
 
 
 class EBinOp(Expression):

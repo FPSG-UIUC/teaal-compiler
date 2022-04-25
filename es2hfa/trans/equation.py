@@ -118,6 +118,59 @@ class Equation:
             raise ValueError(self.output +
                              " appears multiple times in the einsum")
 
+    def make_eager_inputs(self, rank: str, inputs: List[str]) -> Statement:
+        """
+        Given a rank to make eager inputs out of and a list of tensors, combine them
+        """
+        tensors = [self.program.get_tensor(input_) for input_ in inputs]
+        iter_expr = self.__make_input_iter_expr(rank, tensors)
+
+        # If there is only one fiber, its already eager
+        if len(inputs) == 1:
+            return SAssign(AVar("inputs_" + rank.lower()), iter_expr)
+
+        # Otherwise, use Fiber.fromLazy()
+        method_call = EMethod(EVar("Fiber"), "fromLazy", [AJust(iter_expr)])
+        return SAssign(AVar("inputs_" + rank.lower()), method_call)
+
+    def make_interval(self, rank: str) -> Statement:
+        """
+        Make the interval to project over: [rank_start, rank_end)
+        """
+        root = self.program.get_partitioning().get_root_name(rank)
+
+        # This should be the bottom of the partition
+        if rank[len(root):] != "0":
+            raise ValueError("Interval not necessary for rank " + rank)
+
+        rank = rank.lower()
+        root = root.lower()
+
+        # Set rank_start
+        pos = EVar(root + "1_pos")
+        start_cond = EBinOp(pos, OEqEq(), EInt(0))
+        start_then = SAssign(AVar(rank + "_start"), EInt(0))
+        start_else = SAssign(AVar(rank + "_start"), EVar(root + "1"))
+        start_if = SIf((start_cond, start_then), [], start_else)
+
+        # Set rank_end
+        # root1_pos + 1 < len(inputs_root1)
+        inputs = EVar("inputs_" + root + "1")
+        len_call = EFunc("len", [AJust(inputs)])
+        pos_plus_1 = EBinOp(pos, OAdd(), EInt(1))
+        end_cond = EBinOp(pos_plus_1, OLt(), len_call)
+
+        # rank_end = inputs_root1.getCoords()[root1_pos + 1]
+        coords = EMethod(inputs, "getCoords", [])
+        bound = EAccess(coords, EBinOp(pos, OAdd(), EInt(1)))
+        end_then = SAssign(AVar(rank + "_end"), bound)
+
+        # rank_end = ROOT
+        end_else = SAssign(AVar(rank + "_end"), EVar(root.upper()))
+        end_if = SIf((end_cond, end_then), [], end_else)
+
+        return SBlock([start_if, end_if])
+
     def make_iter_expr(self, rank: str, tensors: List[Tensor]) -> Expression:
         """
         Given a list of tensors, make the expression used to combine them
@@ -126,30 +179,16 @@ class Equation:
         if not tensors:
             raise ValueError("Must iterate over at least one tensor")
 
-        # Separate the tensors into terms
-        terms = self.__separate_terms(tensors)
-        output_tensor = self.__get_output_tensor(tensors)
-
         # If there are no input tensors, we just need to iterShapeRef on the
         # output
-        if not terms and output_tensor:
+        output_tensor = self.__get_output_tensor(tensors)
+        if len(tensors) == 1 and output_tensor:
             out_name = output_tensor.fiber_name()
             iter_shape = EMethod(EVar(out_name), "iterShapeRef", [])
-            return self.__add_spacetime(rank, iter_shape)
+            return self.__add_enumerate(rank, iter_shape)
 
-        # Combine terms with intersections
-        intersections = []
-        for term in terms:
-            expr = self.__iter_fiber(rank, term[-1])
-            for factor in reversed(term[:-1]):
-                fiber = self.__iter_fiber(rank, factor)
-                expr = Equation.__add_operator(fiber, OAnd(), expr)
-            intersections.append(expr)
-
-        # Combine intersections with a union
-        expr = intersections[-1]
-        for intersection in reversed(intersections[:-1]):
-            expr = Equation.__add_operator(intersection, OOr(), expr)
+        # Build the expression of the inputs
+        expr = self.__make_input_iter_expr(rank, tensors)
 
         # Finally, add in the output
         if output_tensor:
@@ -168,7 +207,7 @@ class Equation:
             expr = Equation.__add_operator(
                 EVar(output_tensor.fiber_name()), OLtLt(), expr)
 
-        return self.__add_spacetime(rank, expr)
+        return self.__add_enumerate(rank, expr)
 
     def make_payload(self, rank: str, tensors: List[Tensor]) -> Payload:
         """
@@ -215,8 +254,7 @@ class Equation:
 
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
-        spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.emit_pos(rank):
+        if self.__need_enumerate(rank):
             payload = PTuple([PVar(rank_var + "_pos"), payload])
 
         return payload
@@ -261,15 +299,45 @@ class Equation:
 
         return EBinOp(exprs[0], op, exprs[1])
 
-    def __add_spacetime(self, rank: str, expr: Expression) -> Expression:
+    def __add_enumerate(self, rank: str, expr: Expression) -> Expression:
         """
-        If the spacetime style is occupancy, we also need to enumerate the
-        iterations
+        Enumerate the iterations if necessary
         """
-        spacetime = self.program.get_spacetime()
-        if spacetime is not None and spacetime.emit_pos(rank):
+        if self.__need_enumerate(rank):
             expr = EFunc("enumerate", [AJust(expr)])
         return expr
+
+    def __need_enumerate(self, rank: str) -> bool:
+        """
+        Returns True if new need to enumerate over this rank
+        """
+        # Check the interval
+        enum_int = False
+        root = self.program.get_partitioning().get_root_name(rank)
+        # If this is not right before the bottom rank, we don't need to worry
+        # about it
+        if rank[len(root):] == "1":
+            coord_math = self.program.get_coord_math()
+            root_symbol = Symbol(root.lower())
+
+            # Get all possibly affected symbols
+            symbols = set()
+            for trans in coord_math.get_all_exprs(root.lower()):
+                if trans != root_symbol:
+                    symbols.update(trans.atoms(Symbol))
+
+            # If this rank is in any of the translations of these symbols,
+            # then we will need to project that symbol, meaning we need the
+            # enumerate
+            for symbol in symbols:
+                if root_symbol in coord_math.get_trans(symbol).atoms(Symbol):
+                    enum_int = True
+
+        # Check the spacetime
+        spacetime = self.program.get_spacetime()
+        enum_st = spacetime is not None and spacetime.emit_pos(rank)
+
+        return enum_int or enum_st
 
     @staticmethod
     def __frac_coords(sexpr: Basic) -> bool:
@@ -332,6 +400,32 @@ class Equation:
         trans_fn = AParam("trans_fn", ELambda(["i", "c", "p"], int_test))
 
         return EMethod(project, "prune", [trans_fn])
+
+    def __make_input_iter_expr(
+            self,
+            rank: str,
+            tensors: List[Tensor]) -> Expression:
+        """
+        Make the iteration expression for the inputs
+        """
+        # Separate the tensors into terms
+        terms = self.__separate_terms(tensors)
+
+        # Combine terms with intersections
+        intersections = []
+        for term in terms:
+            expr = self.__iter_fiber(rank, term[-1])
+            for factor in reversed(term[:-1]):
+                fiber = self.__iter_fiber(rank, factor)
+                expr = Equation.__add_operator(fiber, OAnd(), expr)
+            intersections.append(expr)
+
+        # Combine intersections with a union
+        expr = intersections[-1]
+        for intersection in reversed(intersections[:-1]):
+            expr = Equation.__add_operator(intersection, OOr(), expr)
+
+        return expr
 
     def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
         """

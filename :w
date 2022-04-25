@@ -99,7 +99,6 @@ class OIn(Operator):
         """
         return "in"
 
-
 class OLt(Operator):
     """
     The HFA less-than less-than operator
@@ -109,7 +108,8 @@ class OLt(Operator):
         """
         Generate the HFA code for the OLt operator
         """
-        return "<"
+        return "<<"
+
 
 
 class OLtLt(Operator):
