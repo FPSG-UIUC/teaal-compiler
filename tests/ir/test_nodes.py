@@ -25,7 +25,7 @@ def test_from_fiber_node():
     assert FromFiberNode("A", "K").get_rank() == "K"
 
 
-def test_from_lazy_node():
+def test_eager_input_node():
     assert repr(EagerInputNode("Q1", ["I", "J"])
                 ) == "(EagerInputNode, Q1, ['I', 'J'])"
 

@@ -254,14 +254,14 @@ class FlowGraph:
         rank1 = part_names[1]
 
         # Connect the EagerInputNode
-        from_lazy_node = EagerInputNode(rank1, self.iter_map[rank1])
+        eager_input_node = EagerInputNode(rank1, self.iter_map[rank1])
         for tname in self.iter_map[rank1]:
             fiber_name = tname.lower() + "_" + rank1.lower()
-            self.graph.add_edge(FiberNode(fiber_name), from_lazy_node)
+            self.graph.add_edge(FiberNode(fiber_name), eager_input_node)
 
         # Connect the IntervalNode
         self.graph.add_edge(LoopNode(rank1), IntervalNode(rank0))
-        self.graph.add_edge(from_lazy_node, IntervalNode(rank0))
+        self.graph.add_edge(eager_input_node, IntervalNode(rank0))
         self.graph.add_edge(IntervalNode(rank0), LoopNode(rank0))
 
     def __build_static_part(self, tensor: Tensor, rank: str) -> None:
