@@ -93,12 +93,13 @@ def test_nway_shape_conv():
     tensor = Tensor("I", ["W"])
     expr = "O[q] = sum(S).(I[q + s] * F[s])"
     spec = """
-                Q: [nway_shape(6)]
+                Q: [nway_shape(6), nway_shape(3)]
     """
     hfa = "tmp0 = I_W\n" + \
           "tmp1 = tmp0.splitUniform((Q - 1) // 6 + 1, depth=0, halo=-1 + S)\n" + \
-          "I_Q1W0 = tmp1\n" + \
-          "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
+          "tmp2 = tmp1.splitUniform((Q - 1) // 3 + 1, depth=0)\n" + \
+          "I_Q2Q1W0 = tmp2\n" + \
+          "I_Q2Q1W0.setRankIds(rank_ids=[\"Q2\", \"Q1\", \"W0\"])"
 
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, "W").gen(depth=0) == hfa

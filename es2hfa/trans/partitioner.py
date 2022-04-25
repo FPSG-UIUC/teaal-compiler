@@ -73,7 +73,12 @@ class Partitioner:
         first = True
         for j, part in enumerate(partitioning[part_rank]):
             if part.data == "nway_shape":
-                block.add(self.__nway_shape(rank, part_rank, part, i))
+                # If j != 0, then the rank we are partitioning is already in
+                # the part_rank space
+                if j == 0:
+                    block.add(self.__nway_shape(rank, part_rank, part, i))
+                else:
+                    block.add(self.__nway_shape(part_rank, part_rank, part, i))
 
             elif part.data == "uniform_occupancy":
                 # The dynamic partitioning must be of the current top rank

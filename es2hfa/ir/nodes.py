@@ -118,14 +118,14 @@ class FromFiberNode(Node):
         return self.tensor, self.rank
 
 
-class FromLazyNode(Node):
+class EagerInputNode(Node):
     """
-    A Node representing a call to Fiber.fromLazy()
+    A node that ensures that the inputs are eager
     """
 
     def __init__(self, rank: str, tensors: List[str]) -> None:
         """
-        Construct a FromLazyNode
+        Construct a EagerInputNode
         """
         self.rank = rank
         self.tensors = tensors

@@ -197,7 +197,7 @@ class FlowGraph:
         self.iter_map[rank] = [tensor.root_name()
                                for tensor in tensors if not tensor.get_is_output()]
 
-        # We need a FromLazyNode and an IntervalNode if at least one tensor
+        # We need a EagerInputNode and an IntervalNode if at least one tensor
         # will be projected and it is a partitioned rank (so we don't know the
         # bounds)
         if any(tensor.peek() != rank.lower() for tensor in tensors) and \
@@ -245,7 +245,7 @@ class FlowGraph:
             rank: str,
             tensors: List[Tensor]) -> None:
         """
-        Build the FromLazyNode and IntervalNode if the projection is over a
+        Build the EagerInputNode and IntervalNode if the projection is over a
         partitioned rank
         """
         part = self.program.get_partitioning()
@@ -253,8 +253,8 @@ class FlowGraph:
         rank0 = part_names[0]
         rank1 = part_names[1]
 
-        # Connect the FromLazyNode
-        from_lazy_node = FromLazyNode(rank1, self.iter_map[rank1])
+        # Connect the EagerInputNode
+        from_lazy_node = EagerInputNode(rank1, self.iter_map[rank1])
         for tname in self.iter_map[rank1]:
             fiber_name = tname.lower() + "_" + rank1.lower()
             self.graph.add_edge(FiberNode(fiber_name), from_lazy_node)
