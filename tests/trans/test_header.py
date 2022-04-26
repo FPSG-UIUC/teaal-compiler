@@ -29,6 +29,27 @@ def build_header(exprs, mapping):
     return header
 
 
+def build_header_conv(loop_order):
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [Q]
+        expressions:
+            - O[q] = sum(S).(I[q + s] * F[s])
+    mapping:
+        loop-order:
+            O: """ + loop_order
+
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    header = Header(program, Partitioner(program, TransUtils()))
+
+    return header
+
+
 def build_matmul_header(mapping):
     exprs = """
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
@@ -51,7 +72,7 @@ def test_make_output():
     assert header.make_output().gen(depth=0) == hfa
 
 
-def test_make_output():
+def test_make_output_shape():
     exprs = """
             - Z[m, n] = sum(K).(A[k, m])
     """
@@ -60,6 +81,20 @@ def test_make_output():
 
     header = build_header(exprs, "")
     assert header.make_output().gen(depth=0) == hfa
+
+
+def test_make_output_conv_no_shape():
+    hfa = "O_Q = Tensor(rank_ids=[\"Q\"])"
+    header = build_header_conv("[S, Q]")
+
+    assert header.make_output().gen(0) == hfa
+
+
+def test_make_output_conv_shape():
+    hfa = "O_Q = Tensor(rank_ids=[\"Q\"], shape=[Q])"
+    header = build_header_conv("[Q, S]")
+
+    assert header.make_output().gen(0) == hfa
 
 
 def test_make_swizzle_root():

@@ -24,6 +24,7 @@ SOFTWARE.
 Translate the header above the HFA loop nest
 """
 
+from sympy import Symbol
 from typing import Set
 
 from es2hfa.hfa import *
@@ -66,8 +67,20 @@ class Header:
         has at least one rank of the output)
         """
         output = self.program.get_output()
+        part = self.program.get_partitioning()
+        loop_order = self.program.get_loop_order()
+        order = loop_order.get_ranks()
+
         ranks = output.get_init_ranks()
         avail = [False for _ in ranks]
+
+        final_pos = {}
+        for rank in ranks:
+            final_rank = rank
+            if rank in part.get_all_parts().keys():
+                final_rank += "0"
+
+            final_pos[rank] = order.index(final_rank)
 
         for tensor in self.program.get_tensors():
             # Skip the output
@@ -75,9 +88,10 @@ class Header:
                 continue
 
             # Mark all ranks in the input tensor available
-            for rank in tensor.get_init_ranks():
-                if rank in ranks:
-                    avail[ranks.index(rank)] = True
+            for trank in tensor.get_init_ranks():
+                for rank in ranks:
+                    if loop_order.is_ready(trank, final_pos[rank]):
+                        avail[ranks.index(rank)] = True
 
         # If at least one rank is not available, we need an explicit shape
         if not all(avail):

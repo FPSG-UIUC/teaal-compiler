@@ -199,10 +199,7 @@ class Equation:
             if trank != rank:
                 raise ValueError(
                     "Cannot project into the output tensor. Replace " +
-                    rank +
-                    " with " +
-                    str(trank) +
-                    " in the loop order")
+                    rank + " with " + str(trank) + " in the loop order")
 
             expr = Equation.__add_operator(
                 EVar(output_tensor.fiber_name()), OLtLt(), expr)
@@ -377,17 +374,35 @@ class Equation:
                 "Cannot iterate over payload " +
                 tensor.fiber_name())
 
-        # If this fiber is already over the correct rank, we can iterate over it
-        # directly
-        if trank == rank.lower():
+        # If this fiber is already over the correct rank, we can iterate over
+        # it directly
+        rank = rank.lower()
+        if trank == rank:
             return EVar(tensor.fiber_name())
 
         # Otherwise, we need to project
-        math = self.program.get_coord_math().get_trans(trank)
-        sexpr = solve(math - Symbol(trank), Symbol(rank.lower()))[0]
+        partitioning = self.program.get_partitioning()
+        root = partitioning.get_root_name(rank.upper()).lower()
+        troot = partitioning.get_root_name(trank.upper()).lower()
 
-        args = [AParam("trans_fn", ELambda([trank], CoordAccess.build_expr(
-            sexpr))), AParam("interval", ETuple([EInt(0), EVar(rank)]))]
+        # Solve for the tensor index and substitute in the partitioned rank (if
+        # relevant)
+        math = self.program.get_coord_math().get_trans(troot)
+        sexpr = solve(math - Symbol(troot), Symbol(root))[0]
+        partitioned = partitioning.get_all_parts().keys()
+
+        for symbol in sexpr.atoms(Symbol):
+            if partitioning.partition_rank(str(symbol).upper()) in partitioned:
+                sexpr = sexpr.subs(symbol, Symbol(str(symbol) + "0"))
+
+        # Build the interval
+        if rank == root:
+            interval = ETuple([EInt(0), EVar(rank.upper())])
+        else:
+            interval = ETuple([EVar(rank + "_start"), EVar(rank + "_end")])
+
+        lambda_ = ELambda([trank], CoordAccess.build_expr(sexpr))
+        args = [AParam("trans_fn", lambda_), AParam("interval", interval)]
         project = EMethod(EVar(tensor.fiber_name()), "project", args)
 
         # If there are no fractional coordinates, we are done

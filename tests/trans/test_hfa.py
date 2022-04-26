@@ -169,3 +169,52 @@ def test_hfa_dyn_part():
           "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
 
     assert str(HFA(einsum, mapping)) == hfa
+
+
+def test_hfa_conv():
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [Q]
+        expressions:
+            - O[q] = sum(S).(I[q + s] * F[s])
+    mapping:
+        partitioning:
+            O:
+                Q: [uniform_shape(10)]
+        loop-order:
+            O: [Q1, W0, Q0]
+    """
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    hfa = "f_s = F_S.getRoot()\n" + \
+          "tmp0 = I_W\n" + \
+          "tmp1 = tmp0.splitUniform(10, depth=0, halo=-1 + S)\n" + \
+          "I_Q1W0 = tmp1\n" + \
+          "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])\n" + \
+          "i_q1 = I_Q1W0.getRoot()\n" + \
+          "inputs_q1 = i_q1\n" + \
+          "O_Q1Q0 = Tensor(rank_ids=[\"Q1\", \"Q0\"])\n" + \
+          "o_q1 = O_Q1Q0.getRoot()\n" + \
+          "for q1_pos, (q1, (o_q0, i_w0)) in enumerate(o_q1 << i_q1):\n" + \
+          "    if q1_pos == 0:\n" + \
+          "        q0_start = 0\n" + \
+          "    else:\n" + \
+          "        q0_start = q1\n" + \
+          "    if q1_pos + 1 < len(inputs_q1):\n" + \
+          "        q0_end = inputs_q1.getCoords()[q1_pos + 1]\n" + \
+          "    else:\n" + \
+          "        q0_end = Q\n" + \
+          "    for w0, i_val in i_w0:\n" + \
+          "        for q0, (o_ref, f_val) in o_q0 << f_s.project(trans_fn=lambda s: w0 + -1 * s, interval=(q0_start, q0_end)):\n" + \
+          "            o_ref += i_val * f_val\n" + \
+          "tmp2 = O_Q1Q0\n" + \
+          "tmp3 = tmp2.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+          "O_Q = tmp3\n" + \
+          "O_Q.setRankIds(rank_ids=[\"Q\"])"
+
+    assert str(HFA(einsum, mapping)) == hfa

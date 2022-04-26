@@ -151,6 +151,15 @@ class HFA:
                 tensor = self.program.get_tensor(node.get_tensor())
                 code.add(self.header.make_swizzle_root(tensor))
 
+            elif isinstance(node, EagerInputNode):
+                code.add(
+                    self.eqn.make_eager_inputs(
+                        node.get_rank(),
+                        node.get_tensors()))
+
+            elif isinstance(node, IntervalNode):
+                code.add(self.eqn.make_interval(node.get_rank()))
+
             else:
                 raise ValueError(
                     "Unknown node: " +
