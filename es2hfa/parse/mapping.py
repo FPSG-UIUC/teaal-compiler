@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Parse the input YAML
+Parse the input YAML for the mapping
 """
 
 from lark.tree import Tree
@@ -34,7 +34,7 @@ from es2hfa.parse.yaml import YamlParser
 
 class Mapping:
     """
-    Parse the input YAML for the compiler
+    Parse the input YAML for the mapping
     """
 
     def __init__(self, yaml: Optional[dict]) -> None:

@@ -8,6 +8,6 @@ einsum:
 mapping:
     partitioning:
         O:
-            Q: [uniform_shape(10)]
+            Q: [uniform_shape(10), nway_shape(2)]
     loop-order:
-        O: [Q1, W0, Q0]
+        O: [Q2, Q1, W0, Q0]

@@ -1,0 +1,19 @@
+  architecture:
+    subtree:
+    - name: System
+      attributes:
+        clock_frequency: 1000000000
+
+      local:
+      - name: Memory
+        class: DRAM
+        attributes:
+          datawidth: 8
+          bandwidth: 128
+
+      subtree:
+      - name: PE[0..7]
+
+        local:
+        - name: MAC
+          class: compute
