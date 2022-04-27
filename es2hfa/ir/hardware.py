@@ -35,7 +35,7 @@ class Hardware:
     Representation of the hardware of an accelerator
     """
 
-    def __init__(self, arch: dict) -> None:
+    def __init__(self, arch: dict, bindings: dict) -> None:
         """
         Construct the hardware
         """
@@ -45,7 +45,7 @@ class Hardware:
         if len(subtree) != 1:
             raise ValueError("Architecture must have a single root level")
 
-        self.tree = self.__build_level(subtree[0])
+        self.tree = self.__build_level(subtree[0], bindings)
 
     def get_component(self, name: str) -> Component:
         """
@@ -59,7 +59,7 @@ class Hardware:
         """
         return self.tree
 
-    def __build_component(self, local: dict) -> Component:
+    def __build_component(self, local: dict, bindings: dict) -> Component:
         """
         Build a component
         """
@@ -88,17 +88,25 @@ class Hardware:
         else:
             raise ValueError("Unknown class: " + local["class"])
 
-        component = class_(local["name"], local["attributes"])
+        name = local["name"]
+        if name in bindings.keys():
+            binding = bindings[name]
+        else:
+            binding = []
+
+        component = class_(name, local["attributes"], binding)
         self.components[component.get_name()] = component
 
         return component
 
-    def __build_level(self, arch: dict) -> Level:
+    def __build_level(self, arch: dict, bindings: dict) -> Level:
         """
         Build the levels of the architecture tree
         """
         attrs = arch["attributes"]
-        local = [self.__build_component(comp) for comp in arch["local"]]
-        subtrees = [self.__build_level(tree) for tree in arch["subtree"]]
+        local = [self.__build_component(comp, bindings)
+                 for comp in arch["local"]]
+        subtrees = [self.__build_level(tree, bindings)
+                    for tree in arch["subtree"]]
 
         return Level(arch["name"], arch["num"], attrs, local, subtrees)

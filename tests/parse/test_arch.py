@@ -73,6 +73,15 @@ def test_empty():
     assert Architecture.from_str("").get_spec() is None
 
 
+def test_no_arch():
+    yaml = """
+    foo:
+      - bar
+      - baz
+    """
+    assert Architecture.from_str(yaml).get_spec() is None
+
+
 def test_unspecified():
     yaml = """
     architecture:

@@ -24,7 +24,7 @@ SOFTWARE.
 Representation an hardware component
 """
 
-from typing import Any, Iterable, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 
 class Component:
@@ -32,12 +32,13 @@ class Component:
     Representation an hardware component
     """
 
-    def __init__(self, name: str, attrs: dict) -> None:
+    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
         """
         Construct a component
         """
         self.name = name
         self.attrs = attrs
+        self.bindings: dict = {}
 
     def get_name(self) -> str:
         """
@@ -58,7 +59,7 @@ class Component:
         """
         A tuple of all fields of a component
         """
-        return (self.name, self.attrs)
+        return (self.name, self.attrs, self.bindings)
 
     def __repr__(self) -> str:
         """
@@ -69,7 +70,65 @@ class Component:
         return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
 
 
-class CacheComponent(Component):
+class ComputeComponent(Component):
+    """
+    A Component for compute (acting also as a superclass for all compute
+    operations)
+    """
+
+    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+        """
+        Construct a compute component
+        """
+        super().__init__(name, attrs, bindings)
+        self.bindings = {}
+
+        for binding in bindings:
+            einsum = binding["einsum"]
+            if einsum not in self.bindings.keys():
+                self.bindings[einsum] = []
+
+            # Append the dictionary containing the other properties
+            info = binding.copy()
+            del info["einsum"]
+            self.bindings[einsum].append(info)
+
+    def get_bindings(self, einsum: str) -> List[dict]:
+        """
+        Get the operations that are bound for this einsum
+        """
+        if einsum not in self.bindings.keys():
+            return []
+
+        return self.bindings[einsum]
+
+
+class MemoryComponent(Component):
+    """
+    Superclass for all memory components
+    """
+
+    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+        """
+        Construct a memory component
+        """
+        super().__init__(name, attrs, bindings)
+        self.bindings = {}
+
+        for binding in bindings:
+            self.bindings[binding["tensor"]] = binding["rank"]
+
+    def get_binding(self, tensor: str) -> Optional[str]:
+        """
+        Given a tensor, give the rank bound to this memory
+        """
+        if tensor not in self.bindings.keys():
+            return None
+
+        return self.bindings[tensor]
+
+
+class CacheComponent(MemoryComponent):
     """
     A Component for a Cache
     """
@@ -87,14 +146,7 @@ class CacheComponent(Component):
         return self.attrs["width"]
 
 
-class ComputeComponent(Component):
-    """
-    A Component for compute
-    """
-    pass
-
-
-class DRAMComponent(Component):
+class DRAMComponent(MemoryComponent):
     """
     A Component for DRAM
     """
@@ -112,7 +164,7 @@ class DRAMComponent(Component):
         return self.attrs["datawidth"]
 
 
-class LeaderFollowerComponent(Component):
+class LeaderFollowerComponent(ComputeComponent):
     """
     A Component for leader-follower intersection
     """
@@ -123,6 +175,32 @@ class MergerComponent(Component):
     """
     A Component for a merger
     """
+
+    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+        """
+        Construct a compute component
+        """
+        super().__init__(name, attrs, bindings)
+        self.bindings = {}
+
+        for binding in bindings:
+            tensor = binding["tensor"]
+            if tensor not in self.bindings.keys():
+                self.bindings[tensor] = []
+
+            # Append the dictionary containing the other properties
+            info = binding.copy()
+            del info["tensor"]
+            self.bindings[tensor].append(info)
+
+    def get_bindings(self, tensor: str) -> List[str]:
+        """
+        Get the operations that are bound for this tensor
+        """
+        if tensor not in self.bindings.keys():
+            return []
+
+        return self.bindings[tensor]
 
     def get_next_latency(self) -> Union[int, str]:
         """
@@ -140,14 +218,14 @@ class MergerComponent(Component):
         return self.attrs["radix"]
 
 
-class SkipAheadComponent(Component):
+class SkipAheadComponent(ComputeComponent):
     """
     A Component for skip-ahead intersection
     """
     pass
 
 
-class SRAMComponent(Component):
+class SRAMComponent(MemoryComponent):
     """
     A Component for SRAM
     """

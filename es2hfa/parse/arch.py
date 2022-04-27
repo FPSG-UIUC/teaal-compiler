@@ -41,9 +41,11 @@ class Architecture:
         Read the YAML input
         """
         # If there is an architecture specification, parse it
-        self.yaml = yaml
-        if self.yaml is None:
+        if yaml is None or "architecture" not in yaml.keys():
+            self.yaml = None
             return
+
+        self.yaml = yaml
 
         # We need to parse the tree names, check for errors, and add omitted
         # attributes

@@ -1,0 +1,13 @@
+bindings:
+  - name: Memory
+    bindings:
+    - tensor: A
+      rank: root
+    - tensor: Z
+      rank: root
+
+  - name: MAC
+    bindings:
+    - einsum: Z
+      ops:
+      - add

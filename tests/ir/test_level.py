@@ -3,7 +3,9 @@ from es2hfa.ir.level import Level
 
 
 def build_local():
-    return DRAMComponent("DRAM", {"datawidth": 8, "bandwidth": 128})
+    attrs = {"datawidth": 8, "bandwidth": 128}
+    bindings = [{"tensor": "A", "rank": "M"}]
+    return DRAMComponent("DRAM", attrs, bindings)
 
 
 def build_level():
@@ -17,7 +19,7 @@ def build_level():
 
 
 def build_subtree():
-    return Level("PE", 8, {}, [ComputeComponent("MAC", {})], [])
+    return Level("PE", 8, {}, [ComputeComponent("MAC", {}, [])], [])
 
 
 def test_get_attr():
@@ -51,6 +53,6 @@ def test_eq():
 
 def test_repr():
     level = build_level()
-    repr_ = "(Level, System, 1, {'clock_frequency': 1000000000}, [(DRAMComponent, DRAM, {'datawidth': 8, 'bandwidth': 128})], [(Level, PE, 8, {}, [(ComputeComponent, MAC, {})], [])])"
+    repr_ = "(Level, System, 1, {'clock_frequency': 1000000000}, [(DRAMComponent, DRAM, {'datawidth': 8, 'bandwidth': 128}, {'A': 'M'})], [(Level, PE, 8, {}, [(ComputeComponent, MAC, {}, {})], [])])"
 
     assert repr(level) == repr_
