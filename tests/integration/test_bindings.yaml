@@ -6,8 +6,14 @@ bindings:
     - tensor: Z
       rank: root
 
+  - name: Registers
+    bindings:
+    - tensor: A
+      rank: M
+    - tensor: Z
+      rank: M
+
   - name: MAC
     bindings:
     - einsum: Z
-      ops:
-      - add
+      op: add

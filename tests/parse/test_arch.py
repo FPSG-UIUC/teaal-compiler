@@ -104,8 +104,9 @@ def test_unspecified():
 
 
 def test_all_spec():
+    regs = build_local("Registers", "SRAM", {})
     mac = build_local("MAC", "compute", {})
-    subtree = build_subtree("PE", 8, {}, [mac], [])
+    subtree = build_subtree("PE", 8, {}, [regs, mac], [])
 
     mem = build_local("Memory", "DRAM", {"datawidth": 8, "bandwidth": 128})
     attrs = {"clock_frequency": 10 ** 9}

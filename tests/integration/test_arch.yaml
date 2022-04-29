@@ -15,5 +15,8 @@
       - name: PE[0..7]
 
         local:
+        - name: Registers
+          class: SRAM
+
         - name: MAC
           class: compute

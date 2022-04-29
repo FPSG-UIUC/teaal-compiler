@@ -24,7 +24,7 @@ SOFTWARE.
 Parse the input YAML for the bindings
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from es2hfa.parse.yaml import YamlParser
 
@@ -60,9 +60,11 @@ class Bindings:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get_components(self) -> dict:
+    def get(self, name) -> List[dict]:
         """
-        Get a dictionary from the component names to the corresponding binding
-        information
+        Get the binding information for a component
         """
-        return self.components
+        if name not in self.components.keys():
+            return []
+
+        return self.components[name]
