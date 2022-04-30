@@ -247,6 +247,130 @@ def test_not_implemented_root_not_in_dram():
         Metrics(program, hardware)
 
 
+def test_get_compute_components():
+    metrics = build_metrics()
+    bindings = Bindings.from_str(build_gamma_yaml())
+
+    intersect = LeaderFollowerComponent(
+        "Intersection", {}, bindings.get("Intersection"))
+
+    assert metrics.get_compute_components() == [intersect]
+
+
+def test_get_merger_components():
+    yaml = build_gamma_yaml()
+    program, hardware = build_program_hardware(yaml)
+    metrics = Metrics(program, hardware)
+
+    assert metrics.get_merger_components() == []
+
+    bindings = Bindings.from_str(yaml)
+    attrs = {"radix": 64, "next_latency": 1}
+    merger = MergerComponent(
+        "HighRadixMerger",
+        attrs,
+        bindings.get("HighRadixMerger"))
+
+    program.reset()
+    program.add_einsum(1)
+    metrics = Metrics(program, hardware)
+
+    assert metrics.get_merger_components() == [merger]
+
+
+def test_get_merger_components_output():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M, N]
+      expressions:
+        - Z[m, n] = a
+
+    mapping:
+      rank-order:
+        Z: [M, N]
+      loop-order:
+        Z: [N, M]
+
+    architecture:
+      subtree:
+      - name: System
+        local:
+        - name: Merger
+          class: Merger
+
+        - name: Compute
+          class: compute
+
+    bindings:
+    - name: Merger
+      bindings:
+      - tensor: Z
+        init_ranks: [N, M]
+        swap_depth: 0
+
+    - name: Compute
+      bindings:
+      - einsum: Z
+        op: add
+    """
+    program, hardware = build_program_hardware(yaml)
+    metrics = Metrics(program, hardware)
+
+    bindings = Bindings.from_str(yaml)
+    merger = MergerComponent("Merger", {}, bindings.get("Merger"))
+
+    assert metrics.get_merger_components() == [merger]
+
+
+def test_get_merger_components_dyn_merge():
+    yaml = """
+    einsum:
+      declaration:
+        A: [M, K]
+        Z: [M]
+      expressions:
+        - Z[m] = sum(K).A[m, k]
+
+    mapping:
+      partitioning:
+        Z:
+          K: [uniform_shape(20)]
+          M: [uniform_occupancy(A.10)]
+      loop-order:
+        Z: [K1, M1, K0, M0]
+
+    architecture:
+      subtree:
+      - name: System
+        local:
+        - name: Merger
+          class: Merger
+
+        - name: Compute
+          class: compute
+
+    bindings:
+    - name: Merger
+      bindings:
+      - tensor: A
+        init_ranks: [M1, M0, K0]
+        swap_depth: 1
+
+    - name: Compute
+      bindings:
+      - einsum: Z
+        op: add
+    """
+    program, hardware = build_program_hardware(yaml)
+    metrics = Metrics(program, hardware)
+
+    bindings = Bindings.from_str(yaml)
+    merger = MergerComponent("Merger", {}, bindings.get("Merger"))
+
+    assert metrics.get_merger_components() == [merger]
+
+
 def test_get_on_chip_buffer_not_in_dram():
     metrics = build_metrics()
 

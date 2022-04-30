@@ -76,9 +76,9 @@ def test_merger_component():
     binding = [{"tensor": "T", "init_ranks": ["M", "K", "N"], "swap_depth": 1}]
     merger = MergerComponent("HighRadixMerger", attrs, binding)
 
-    assert merger.get_bindings(
-        "T") == [{"init_ranks": ["M", "K", "N"], "swap_depth": 1}]
-    assert merger.get_bindings("A") == []
+    bindings = [{"tensor": "T", "init_ranks": [
+        "M", "K", "N"], "final_ranks": ["M", "N", "K"], "swap_depth": 1}]
+    assert merger.get_bindings() == bindings
 
     assert merger.get_next_latency() == 1
     assert merger.get_radix() == 64

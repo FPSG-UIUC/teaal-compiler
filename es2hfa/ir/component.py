@@ -38,7 +38,7 @@ class Component:
         """
         self.name = name
         self.attrs = attrs
-        self.bindings: dict = {}
+        self.bindings: Any = {}
 
     def get_name(self) -> str:
         """
@@ -188,26 +188,23 @@ class MergerComponent(Component):
         Construct a compute component
         """
         super().__init__(name, attrs, bindings)
-        self.bindings = {}
 
+        self.bindings = []
         for binding in bindings:
-            tensor = binding["tensor"]
-            if tensor not in self.bindings.keys():
-                self.bindings[tensor] = []
+            init = binding["init_ranks"]
+            d = binding["swap_depth"]
+            final = init[:d] + [init[d + 1]] + [init[d]] + init[(d + 2):]
 
-            # Append the dictionary containing the other properties
             info = binding.copy()
-            del info["tensor"]
-            self.bindings[tensor].append(info)
+            info["final_ranks"] = final
 
-    def get_bindings(self, tensor: str) -> List[str]:
-        """
-        Get the operations that are bound for this tensor
-        """
-        if tensor not in self.bindings.keys():
-            return []
+            self.bindings.append(info)
 
-        return self.bindings[tensor]
+    def get_bindings(self) -> List[dict]:
+        """
+        Get the operations that are bound to this merger
+        """
+        return self.bindings
 
     def get_next_latency(self) -> Union[int, str]:
         """

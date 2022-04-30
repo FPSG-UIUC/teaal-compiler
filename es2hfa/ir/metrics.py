@@ -57,7 +57,25 @@ class Metrics:
 
         # Reset all tensors
         for tensor in self.program.get_tensors():
+            is_output = tensor.get_is_output()
             tensor.reset()
+            tensor.set_is_output(is_output)
+
+        # Collect other information
+        self.__build_mergers()
+
+    def get_compute_components(self) -> List[ComputeComponent]:
+        """
+        Get all relevant compute components for this Einsum
+        """
+        einsum = self.program.get_output().root_name()
+        return self.hardware.get_compute_components(einsum)
+
+    def get_merger_components(self) -> List[MergerComponent]:
+        """
+        Get all relevant merger components
+        """
+        return self.mergers
 
     def get_on_chip_buffer(self, tensor: Tensor) -> MemoryComponent:
         """
@@ -96,6 +114,104 @@ class Metrics:
         """
         return tensor.root_name() in self.stationary
 
+    def __build_dram_tensors(self) -> None:
+        """
+        Build the set of tensors stored in DRAM
+        """
+        self.dram_tensors = set()
+        einsum = self.program.get_output().root_name()
+
+        # For each tensor
+        for tensor in self.program.get_tensors():
+            path = self.hardware.get_traffic_path(einsum, tensor.root_name())
+
+            if not path or not isinstance(path[0], DRAMComponent):
+                continue
+
+            if len(path) < 2:
+                raise ValueError(
+                    "Tensor " +
+                    tensor.root_name() +
+                    " never buffered on chip")
+
+            self.dram_tensors.add(tensor.root_name())
+
+    def __build_mergers(self) -> None:
+        """
+        Build a list of mergers that will be relevant
+        """
+        all_mergers = self.hardware.get_merger_components()
+        easy_access = {}
+
+        for merger in all_mergers:
+            for binding in merger.get_bindings():
+                # Create a map from
+                # (tensor name, init ranks, final ranks) to the component
+                name = binding["tensor"]
+                init = tuple(binding["init_ranks"])
+                final = tuple(binding["final_ranks"])
+
+                easy_access[(name, init, final)] = merger
+
+        self.mergers = []
+        part = self.program.get_partitioning()
+
+        def check_tensor(tensor):
+            """
+            Check if the tensor matches a merge operation, if so, add it
+            """
+            name = tensor.root_name()
+            init = tuple(tensor.get_ranks())
+            self.program.get_loop_order().apply(tensor)
+            final = tuple(tensor.get_ranks())
+
+            if (name, init, final) in easy_access.keys():
+                self.mergers.append(easy_access[(name, init, final)])
+
+        for tensor in self.program.get_tensors():
+            # If it is the output, we swizzle on the way out
+            is_output = tensor.get_is_output()
+            if is_output:
+                name = tensor.root_name()
+
+                # With the output, we first swizzle back, and then flatten
+                self.program.apply_all_partitioning(tensor)
+                self.program.get_loop_order().apply(tensor)
+
+                init = tuple(tensor.get_ranks())
+                tensor.reset()
+                self.program.apply_all_partitioning(tensor)
+                final = tuple(tensor.get_ranks())
+
+                if (name, init, final) in easy_access.keys():
+                    self.mergers.append(easy_access[(name, init, final)])
+
+            else:
+                name = tensor.root_name()
+
+                # First apply all static partitioning
+                for rank in part.get_static_parts().keys():
+                    if rank in tensor.get_ranks():
+                        self.program.apply_partitioning(tensor, rank)
+
+                check_tensor(tensor)
+
+                # Now check any dynamic swizzling after partitioning
+                opt_rank = tensor.peek()
+                while opt_rank is not None:
+                    if opt_rank.upper() in part.get_dyn_parts().keys():
+                        tensor.from_fiber()
+                        self.program.apply_partitioning(
+                            tensor, opt_rank.upper())
+
+                        check_tensor(tensor)
+
+                    tensor.pop()
+                    opt_rank = tensor.peek()
+
+            tensor.reset()
+            tensor.set_is_output(is_output)
+
     def __build_off_chip_traffic_info(self) -> None:
         """
         Build a mapping from tensors to the rank buffered on chip
@@ -127,28 +243,6 @@ class Metrics:
 
             # Save the component where the tensor is buffered on-chip
             self.on_chip_buffer[name] = path[1]
-
-    def __build_dram_tensors(self) -> None:
-        """
-        Build the set of tensors stored in DRAM
-        """
-        self.dram_tensors = set()
-        einsum = self.program.get_output().root_name()
-
-        # For each tensor
-        for tensor in self.program.get_tensors():
-            path = self.hardware.get_traffic_path(einsum, tensor.root_name())
-
-            if not path or not isinstance(path[0], DRAMComponent):
-                continue
-
-            if len(path) < 2:
-                raise ValueError(
-                    "Tensor " +
-                    tensor.root_name() +
-                    " never buffered on chip")
-
-            self.dram_tensors.add(tensor.root_name())
 
     def __build_stationary(self) -> None:
         """
