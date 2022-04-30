@@ -71,6 +71,9 @@ def test_get_component():
       subtree:
       - name: Base
         local:
+        - name: LLB
+          class: Buffet
+
         - name: FiberCache
           class: Cache
           attributes:
@@ -98,9 +101,16 @@ def test_get_component():
         - name: SAIntersect
           class: SkipAhead
 
-        - name: LLB
-          class: SRAM
     bindings:
+      - name: LLB
+        bindings:
+        - tensor: A
+          rank: K2
+        - tensor: B
+          rank: K2
+        - tensor: Z
+          rank: N2
+
       - name: FiberCache
         bindings:
         - tensor: B
@@ -138,15 +148,6 @@ def test_get_component():
         bindings:
         - einsum: Z
           rank: K2
-
-      - name: LLB
-        bindings:
-        - tensor: A
-          rank: K2
-        - tensor: B
-          rank: K2
-        - tensor: Z
-          rank: N2
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -156,6 +157,8 @@ def test_get_component():
         binding = bindings.get(name)
         component = type_(name, attrs, binding)
         assert hardware.get_component(name) == component
+
+    assert_component(BuffetComponent, "LLB", {})
 
     attrs = {"width": 8, "depth": 3145728}
     assert_component(CacheComponent, "FiberCache", attrs)
@@ -171,8 +174,6 @@ def test_get_component():
     assert_component(MergerComponent, "HighRadixMerger", attrs)
 
     assert_component(SkipAheadComponent, "SAIntersect", {})
-
-    assert_component(SRAMComponent, "LLB", {})
 
 
 def test_bad_compute_path():
@@ -385,13 +386,13 @@ def test_get_traffic_path():
             class: SkipAhead
 
           - name: LLB
-            class: SRAM
+            class: Buffet
 
           subtree:
           - name: Stage0
             local:
             - name: S0B
-              class: SRAM
+              class: Buffet
 
             - name: MAC0
               class: compute
@@ -399,7 +400,7 @@ def test_get_traffic_path():
           - name: Stage1
             local:
             - name: S1B
-              class: SRAM
+              class: Buffet
 
             - name: MAC1
               class: compute
@@ -407,7 +408,7 @@ def test_get_traffic_path():
           - name: Stage2
             local:
             - name: S2B
-              class: SRAM
+              class: Buffet
 
             - name: MAC2
               class: compute
@@ -459,9 +460,9 @@ def test_get_traffic_path():
     hardware = Hardware(arch, bindings)
 
     mem = DRAMComponent("Memory", {}, bindings.get("Memory"))
-    s0b = SRAMComponent("S0B", {}, bindings.get("S0B"))
-    s1b = SRAMComponent("S1B", {}, bindings.get("S1B"))
-    s2b = SRAMComponent("S2B", {}, bindings.get("S2B"))
+    s0b = BuffetComponent("S0B", {}, bindings.get("S0B"))
+    s1b = BuffetComponent("S1B", {}, bindings.get("S1B"))
+    s2b = BuffetComponent("S2B", {}, bindings.get("S2B"))
 
     assert hardware.get_traffic_path("A", "A") == [mem, s0b]
     assert hardware.get_traffic_path("Z", "A") == [mem, s2b]
@@ -474,7 +475,7 @@ def test_get_tree():
     bindings = Bindings.from_file("tests/integration/test_bindings.yaml")
     hardware = Hardware(arch, bindings)
 
-    regs = SRAMComponent("Registers", {}, bindings.get("Registers"))
+    regs = BuffetComponent("Registers", {}, bindings.get("Registers"))
     mac = ComputeComponent("MAC", {}, bindings.get("MAC"))
     pe = Level("PE", 8, {}, [regs, mac], [])
 

@@ -1,5 +1,6 @@
 import pytest
 
+from es2hfa.ir.component import *
 from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.program import Program
@@ -10,20 +11,7 @@ from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 
 
-def build_program_hardware(yaml):
-    einsum = Einsum.from_str(yaml)
-    mapping = Mapping.from_str(yaml)
-    program = Program(einsum, mapping)
-    program.add_einsum(0)
-
-    arch = Architecture.from_str(yaml)
-    bindings = Bindings.from_str(yaml)
-    hardware = Hardware(arch, bindings)
-
-    return program, hardware
-
-
-def build_metrics():
+def build_gamma_yaml():
     yaml = """
     einsum:
       declaration:
@@ -78,7 +66,7 @@ def build_metrics():
 
               local:
               - name: RegFile0
-                class: SRAM
+                class: Buffet
 
               - name: Intersection
                 class: LeaderFollower
@@ -96,7 +84,7 @@ def build_metrics():
 
               local:
               - name: RegFile1
-                class: SRAM
+                class: Buffet
 
               - name: MAC
                 class: compute
@@ -119,6 +107,8 @@ def build_metrics():
       bindings:
       - tensor: A
         rank: M
+      - tensor: B
+        rank: N
       - tensor: T
         rank: M
 
@@ -151,7 +141,25 @@ def build_metrics():
       - einsum: Z
         op: add
     """
+    return yaml
+
+
+def build_metrics():
+    yaml = build_gamma_yaml()
     return Metrics(*build_program_hardware(yaml))
+
+
+def build_program_hardware(yaml):
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    hardware = Hardware(arch, bindings)
+
+    return program, hardware
 
 
 def test_not_loaded_on_chip():
@@ -212,7 +220,7 @@ def test_not_implemented_root_not_in_dram():
         - name: PE
           local:
           - name: Buffer
-            class: SRAM
+            class: Buffet
 
           - name: MAC
             class: compute
@@ -239,19 +247,39 @@ def test_not_implemented_root_not_in_dram():
         Metrics(program, hardware)
 
 
-def test_get_dram_access_rank_not_in_dram():
+def test_get_on_chip_buffer_not_in_dram():
     metrics = build_metrics()
 
     with pytest.raises(ValueError) as excinfo:
-        metrics.get_dram_access_rank(Tensor("T", ["M", "K", "N"]))
+        metrics.get_on_chip_buffer(Tensor("T", ["M", "K", "N"]))
     assert str(excinfo.value) == "Tensor T not stored in DRAM"
 
 
-def test_get_dram_access_rank():
+def test_get_on_chip_buffer():
+    metrics = build_metrics()
+    bindings = Bindings.from_str(build_gamma_yaml())
+
+    attrs = {"width": 8, "depth": 3145728}
+    cache = CacheComponent("FiberCache", attrs, bindings.get("FiberCache"))
+    regs = BuffetComponent("RegFile0", {}, bindings.get("RegFile0"))
+
+    assert metrics.get_on_chip_buffer(Tensor("A", ["M", "K"])) == regs
+    assert metrics.get_on_chip_buffer(Tensor("B", ["K", "N"])) == cache
+
+
+def test_get_on_chip_rank_not_in_dram():
     metrics = build_metrics()
 
-    assert metrics.get_dram_access_rank(Tensor("A", ["M", "K"])) == "M"
-    assert metrics.get_dram_access_rank(Tensor("B", ["K", "N"])) == "K"
+    with pytest.raises(ValueError) as excinfo:
+        metrics.get_on_chip_rank(Tensor("T", ["M", "K", "N"]))
+    assert str(excinfo.value) == "Tensor T not stored in DRAM"
+
+
+def test_get_on_chip_rank():
+    metrics = build_metrics()
+
+    assert metrics.get_on_chip_rank(Tensor("A", ["M", "K"])) == "M"
+    assert metrics.get_on_chip_rank(Tensor("B", ["K", "N"])) == "K"
 
 
 def test_in_dram():
@@ -288,7 +316,7 @@ def test_on_chip_stationary_root_buffered():
         - name: PE
           local:
           - name: Buffer
-            class: SRAM
+            class: Buffet
 
           - name: MAC
             class: compute

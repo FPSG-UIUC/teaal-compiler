@@ -44,6 +44,11 @@ def test_memory_component():
     assert repr(memory) == "(MemoryComponent, Memory, {}, {'A': 'M'})"
 
 
+def test_buffet_component():
+    bindings = [{"tensor": "A", "rank": "M"}]
+    buffet = BuffetComponent("LLB", {}, bindings)
+
+
 def test_cache_component():
     attrs = {"width": 8, "depth": 3 * 2 ** 20}
     bindings = [{"tensor": "A", "rank": "M"}]
@@ -88,8 +93,3 @@ def test_merger_component():
 def test_skip_ahead_component():
     bindings = [{"einsum": "Z", "rank": "K2"}]
     skip_ahead = SkipAheadComponent("K2Intersection", {}, bindings)
-
-
-def test_sram_component():
-    bindings = [{"tensor": "A", "rank": "M"}]
-    sram = SRAMComponent("LLB", {}, bindings)

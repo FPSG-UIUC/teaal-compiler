@@ -16,7 +16,7 @@
 
         local:
         - name: Registers
-          class: SRAM
+          class: Buffet
 
         - name: MAC
           class: compute

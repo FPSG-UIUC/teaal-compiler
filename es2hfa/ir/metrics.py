@@ -52,14 +52,26 @@ class Metrics:
 
         # Collect the memory traffic information
         self.__build_dram_tensors()
-        self.__build_dram_access_rank()
+        self.__build_off_chip_traffic_info()
         self.__build_stationary()
 
         # Reset all tensors
         for tensor in self.program.get_tensors():
             tensor.reset()
 
-    def get_dram_access_rank(self, tensor: Tensor) -> str:
+    def get_on_chip_buffer(self, tensor: Tensor) -> MemoryComponent:
+        """
+        Gets the on-chip buffer for a particular tensor
+        """
+        if not self.in_dram(tensor):
+            raise ValueError(
+                "Tensor " +
+                tensor.root_name() +
+                " not stored in DRAM")
+
+        return self.on_chip_buffer[tensor.root_name()]
+
+    def get_on_chip_rank(self, tensor: Tensor) -> str:
         """
         Returns the rank of the given tensor that is used for memory traffic
         """
@@ -69,7 +81,7 @@ class Metrics:
                 tensor.root_name() +
                 " not stored in DRAM")
 
-        return self.dram_access_rank[tensor.root_name()][1]
+        return self.on_chip_rank[tensor.root_name()][1]
 
     def in_dram(self, tensor: Tensor) -> bool:
         """
@@ -84,11 +96,12 @@ class Metrics:
         """
         return tensor.root_name() in self.stationary
 
-    def __build_dram_access_rank(self) -> None:
+    def __build_off_chip_traffic_info(self) -> None:
         """
         Build a mapping from tensors to the rank buffered on chip
         """
-        self.dram_access_rank = {}
+        self.on_chip_rank = {}
+        self.on_chip_buffer = {}
         einsum = self.program.get_output().root_name()
 
         # For each tensor
@@ -97,18 +110,23 @@ class Metrics:
             if not self.in_dram(tensor):
                 continue
 
-            path = self.hardware.get_traffic_path(einsum, tensor.root_name())
+            name = tensor.root_name()
+            path = self.hardware.get_traffic_path(einsum, name)
 
             # Get the bindings
-            mem_binding = path[0].get_binding(tensor.root_name())
-            on_chip_binding = path[1].get_binding(tensor.root_name())
+            mem_binding = path[0].get_binding(name)
+            on_chip_binding = path[1].get_binding(name)
 
             # Indicates an error with Hardware.get_traffic_path()
             if not mem_binding or not on_chip_binding:
                 raise ValueError("Something is wrong...")  # pragma: no cover
 
-            self.dram_access_rank[tensor.root_name()] = (
-                mem_binding, on_chip_binding)
+            # Build a dictionary of tensors to the
+            # (rank in DRAM, rank in last on-chip buffer)
+            self.on_chip_rank[name] = (mem_binding, on_chip_binding)
+
+            # Save the component where the tensor is buffered on-chip
+            self.on_chip_buffer[name] = path[1]
 
     def __build_dram_tensors(self) -> None:
         """
@@ -139,7 +157,7 @@ class Metrics:
         self.stationary = set()
         einsum = self.program.get_output().root_name()
 
-        for name, (mem_rank, on_chip_rank) in self.dram_access_rank.items():
+        for name, (mem_rank, on_chip_rank) in self.on_chip_rank.items():
             tensor = self.program.get_tensor(name)
 
             if mem_rank != "root":

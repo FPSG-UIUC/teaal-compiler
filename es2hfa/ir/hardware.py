@@ -153,7 +153,10 @@ class Hardware:
         Build a component
         """
         class_: Type[Component]
-        if local["class"].lower() == "cache":
+        if local["class"].lower() == "buffet":
+            class_ = BuffetComponent
+
+        elif local["class"].lower() == "cache":
             class_ = CacheComponent
 
         elif local["class"].lower() == "compute":
@@ -170,9 +173,6 @@ class Hardware:
 
         elif local["class"].lower() == "skipahead":
             class_ = SkipAheadComponent
-
-        elif local["class"].lower() == "sram":
-            class_ = SRAMComponent
 
         else:
             raise ValueError("Unknown class: " + local["class"])

@@ -128,6 +128,13 @@ class MemoryComponent(Component):
         return self.bindings[tensor]
 
 
+class BuffetComponent(MemoryComponent):
+    """
+    A Component for Buffet
+    """
+    pass
+
+
 class CacheComponent(MemoryComponent):
     """
     A Component for a Cache
@@ -221,12 +228,5 @@ class MergerComponent(Component):
 class SkipAheadComponent(ComputeComponent):
     """
     A Component for skip-ahead intersection
-    """
-    pass
-
-
-class SRAMComponent(MemoryComponent):
-    """
-    A Component for SRAM
     """
     pass

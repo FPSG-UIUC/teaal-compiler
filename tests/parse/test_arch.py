@@ -104,7 +104,7 @@ def test_unspecified():
 
 
 def test_all_spec():
-    regs = build_local("Registers", "SRAM", {})
+    regs = build_local("Registers", "Buffet", {})
     mac = build_local("MAC", "compute", {})
     subtree = build_subtree("PE", 8, {}, [regs, mac], [])
 
