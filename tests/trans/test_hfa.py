@@ -1,3 +1,5 @@
+from es2hfa.parse.arch import Architecture
+from es2hfa.parse.bindings import Bindings
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.hfa import HFA
@@ -218,3 +220,36 @@ def test_hfa_conv():
           "O_Q.setRankIds(rank_ids=[\"Q\"])"
 
     assert str(HFA(einsum, mapping)) == hfa
+
+
+def test_hfa_hardware():
+    fname = "tests/integration/gamma.yaml"
+    einsum = Einsum.from_file(fname)
+    mapping = Mapping.from_file(fname)
+    arch = Architecture.from_file(fname)
+    bindings = Bindings.from_file(fname)
+
+    hfa = "B_KN.setCollecting(\"K\", True)\n" + \
+          "b_k = B_KN.getRoot()\n" + \
+          "a_m = A_MK.getRoot()\n" + \
+          "T_MKN = Tensor(rank_ids=[\"M\", \"K\", \"N\"])\n" + \
+          "t_m = T_MKN.getRoot()\n" + \
+          "Metrics.beginCollect([\"M\", \"K\", \"N\"])\n" + \
+          "for m, (t_k, a_k) in t_m << a_m:\n" + \
+          "    for k, (t_n, (a_val, b_n)) in t_k << (a_k & b_k):\n" + \
+          "        for n, (t_ref, b_val) in t_n << b_n:\n" + \
+          "            t_ref += b_val\n" + \
+          "Metrics.endCollect()\n" + \
+          "a_m = A_MK.getRoot()\n" + \
+          "T_MNK = T_MKN.swizzleRanks(rank_ids=[\"M\", \"N\", \"K\"])\n" + \
+          "t_m = T_MNK.getRoot()\n" + \
+          "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+          "z_m = Z_MN.getRoot()\n" + \
+          "Metrics.beginCollect([\"M\", \"N\", \"K\"])\n" + \
+          "for m, (z_n, (t_n, a_k)) in z_m << (t_m & a_m):\n" + \
+          "    for n, (z_ref, t_k) in z_n << t_n:\n" + \
+          "        for k, (t_val, a_val) in t_k & a_k:\n" + \
+          "            z_ref += t_val * a_val\n" + \
+          "Metrics.endCollect()"
+
+    assert str(HFA(einsum, mapping, arch, bindings)) == hfa

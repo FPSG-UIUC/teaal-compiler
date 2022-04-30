@@ -32,6 +32,8 @@ if __name__ == "__main__":  # pragma: no cover
         sys.path.append(path)
 
     # Import the necessary classes
+    from es2hfa.parse.arch import Architecture
+    from es2hfa.parse.bindings import Bindings
     from es2hfa.parse.einsum import Einsum
     from es2hfa.parse.mapping import Mapping
     from es2hfa.trans.hfa import HFA
@@ -44,5 +46,7 @@ if __name__ == "__main__":  # pragma: no cover
     else:
         einsum = Einsum.from_file(sys.argv[1])
         mapping = Mapping.from_file(sys.argv[1])
-        hfa = HFA(einsum, mapping)
+        arch = Architecture.from_file(sys.argv[1])
+        bindings = Bindings.from_file(sys.argv[1])
+        hfa = HFA(einsum, mapping, arch, bindings)
         print(hfa)

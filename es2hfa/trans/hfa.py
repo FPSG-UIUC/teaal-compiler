@@ -37,6 +37,7 @@ from es2hfa.parse.arch import Architecture
 from es2hfa.parse.bindings import Bindings
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
+from es2hfa.trans.collector import Collector
 from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.equation import Equation
 from es2hfa.trans.footer import Footer
@@ -94,6 +95,9 @@ class HFA:
         self.header = Header(self.program, self.partitioner)
         self.graph = IterationGraph(self.program)
         self.eqn = Equation(self.program)
+
+        if self.metrics:
+            self.collector = Collector(self.program, self.metrics)
 
         stmt = self.__trans_nodes(nodes, 0)[1]
 
@@ -179,6 +183,31 @@ class HFA:
 
             elif isinstance(node, IntervalNode):
                 code.add(self.eqn.make_interval(node.get_rank()))
+
+            elif isinstance(node, MetricsNode):
+                if node.get_type() == "Dump":
+                    code.add(self.collector.dump())
+
+                elif node.get_type() == "End":
+                    if depth == 0:
+                        code.add(self.collector.end())
+                    else:
+                        # Pop back up a level and retry this node
+                        return i, code
+
+                elif node.get_type() == "Start":
+                    code.add(self.collector.start())
+
+                else:
+                    raise ValueError(
+                        "Unknown node: " +
+                        repr(node))  # pragma: no cover
+
+            elif isinstance(node, CollectingNode):
+                code.add(
+                    self.collector.set_collecting(
+                        node.get_tensor(),
+                        node.get_rank()))
 
             else:
                 raise ValueError(
