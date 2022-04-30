@@ -12,6 +12,13 @@ def test_node():
     assert "" not in set_
 
 
+def test_collecting_node():
+    assert repr(CollectingNode("A", "K")) == "(CollectingNode, A, K)"
+
+    assert CollectingNode("A", "K").get_tensor() == "A"
+    assert CollectingNode("A", "K").get_rank() == "K"
+
+
 def test_eager_input_node():
     assert repr(EagerInputNode("Q1", ["I", "J"])
                 ) == "(EagerInputNode, Q1, ['I', 'J'])"
@@ -50,6 +57,12 @@ def test_loop_node():
     assert repr(LoopNode("K1")) == "(LoopNode, K1)"
 
     assert LoopNode("K1").get_rank() == "K1"
+
+
+def test_metrics_node():
+    assert repr(MetricsNode("Start")) == "(MetricsNode, Start)"
+
+    assert MetricsNode("Start").get_type() == "Start"
 
 
 def test_other_node():

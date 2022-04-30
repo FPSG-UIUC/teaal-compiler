@@ -2,9 +2,12 @@ import networkx as nx
 import pytest
 
 from es2hfa.ir.flow_graph import FlowGraph
+from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
+from es2hfa.parse.arch import Architecture
+from es2hfa.parse.bindings import Bindings
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 
@@ -52,6 +55,21 @@ def build_program_conv(mapping):
     program.add_einsum(0)
 
     return program
+
+
+def build_gamma():
+    with open("tests/integration/gamma.yaml", "r") as f:
+        yaml = f.read()
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    hardware = Hardware(arch, bindings)
+
+    return program, hardware
 
 
 def test_graph_no_loops():
@@ -454,6 +472,35 @@ def test_graph_conv_part():
                 "Q1", "W0"]), GetRootNode(
             "I", [
                 "Q1", "W0"]))
+
+    assert nx.is_isomorphic(graph, corr)
+
+
+def test_graph_metrics():
+    program, hardware = build_gamma()
+    program.add_einsum(0)
+    graph = FlowGraph(program, hardware).get_graph()
+
+    corr = nx.DiGraph()
+
+    corr.add_edge(LoopNode("M"), LoopNode("K"))
+    corr.add_edge(LoopNode("K"), LoopNode("N"))
+    corr.add_edge(LoopNode("K"), OtherNode("Body"))
+    corr.add_edge(LoopNode("N"), OtherNode("Body"))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("M"))
+    corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), GetRootNode("T", ["M", "K", "N"]))
+    corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
+    corr.add_edge(OtherNode("Body"), MetricsNode("End"))
+    corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+    corr.add_edge(MetricsNode("Start"), LoopNode("M"))
+    corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
+    corr.add_edge(GetRootNode("T", ["M", "K", "N"]), LoopNode("M"))
+    corr.add_edge(SwizzleNode("A", ["M", "K"]), GetRootNode("A", ["M", "K"]))
+    corr.add_edge(GetRootNode("A", ["M", "K"]), LoopNode("M"))
+    corr.add_edge(SwizzleNode("B", ["K", "N"]), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(GetRootNode("B", ["K", "N"]), LoopNode("K"))
 
     assert nx.is_isomorphic(graph, corr)
 

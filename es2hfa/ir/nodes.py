@@ -63,6 +63,39 @@ class Node(metaclass=abc.ABCMeta):
         return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
 
 
+class CollectingNode(Node):
+    """
+    A Node to turn on reuse distance collection for a particular rank of a
+    tensor
+    """
+
+    def __init__(self, tensor: str, rank: str) -> None:
+        """
+        Construct a node for the collection of reuse metrics for a tensor's
+        rank
+        """
+        self.tensor = tensor
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a Collecting
+        """
+        return self.tensor, self.rank
+
+
 class EagerInputNode(Node):
     """
     A node that ensures that the inputs are eager
@@ -227,6 +260,30 @@ class LoopNode(Node):
         Iterable of fields of a LoopNode
         """
         return self.rank,
+
+
+class MetricsNode(Node):
+    """
+    A Node for metrics collection
+    """
+
+    def __init__(self, type_: str) -> None:
+        """
+        A node for metrics collection, type can be Start, End, or Dump
+        """
+        self.type = type_
+
+    def get_type(self) -> str:
+        """
+        Accessor for the type
+        """
+        return self.type
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of the fields of an MetricsNode
+        """
+        return self.type,
 
 
 class OtherNode(Node):

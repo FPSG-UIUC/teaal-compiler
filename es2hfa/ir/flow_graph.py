@@ -234,6 +234,15 @@ class FlowGraph:
         self.graph.add_edge(chain[-1], OtherNode("Body"))
         self.graph.add_edge(OtherNode("Body"), OtherNode("Footer"))
 
+        # If we have Metrics, we need to add the MetricsNodes
+        if self.metrics:
+            self.graph.add_edge(OtherNode("StartLoop"), MetricsNode("Start"))
+            self.graph.add_edge(MetricsNode("Start"), chain[1])
+
+            self.graph.add_edge(OtherNode("Body"), MetricsNode("End"))
+            self.graph.add_edge(MetricsNode("End"), OtherNode("Footer"))
+            self.graph.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+
     def __build_output(self) -> None:
         """
         Build all of the output-specific edges
