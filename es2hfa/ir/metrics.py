@@ -45,6 +45,9 @@ class Metrics:
         self.program = program
         self.hardware = hardware
 
+        # Check that we can collect metrics for this accelerator
+        self.__check_configuration()
+
         # Get the final form of all tensors
         for tensor in self.program.get_tensors():
             self.program.apply_all_partitioning(tensor)
@@ -197,17 +200,17 @@ class Metrics:
                 check_tensor(tensor)
 
                 # Now check any dynamic swizzling after partitioning
-                opt_rank = tensor.peek()
-                while opt_rank is not None:
-                    if opt_rank.upper() in part.get_dyn_parts().keys():
-                        tensor.from_fiber()
-                        self.program.apply_partitioning(
-                            tensor, opt_rank.upper())
+                # opt_rank = tensor.peek()
+                # while opt_rank is not None:
+                #     if opt_rank.upper() in part.get_dyn_parts().keys():
+                #         tensor.from_fiber()
+                #         self.program.apply_partitioning(
+                #             tensor, opt_rank.upper())
 
-                        check_tensor(tensor)
+                #         check_tensor(tensor)
 
-                    tensor.pop()
-                    opt_rank = tensor.peek()
+                #     tensor.pop()
+                #     opt_rank = tensor.peek()
 
             tensor.reset()
             tensor.set_is_output(is_output)
@@ -268,3 +271,17 @@ class Metrics:
             if prefix == self.program.get_loop_order().get_ranks()[
                     :len(prefix)]:
                 self.stationary.add(name)
+
+    def __check_configuration(self) -> None:
+        """
+        There are many mappings that we cannot model right now. Make sure this
+        is a legal configuration
+        """
+        # Check that there is no dynamic partitioning
+        if self.program.get_partitioning().get_dyn_parts() != {}:
+            raise NotImplementedError
+
+        # Check that there are at most three tensors (no danger of multiple
+        # intersections per rank)
+        if len(self.program.get_tensors()) > 3:
+            raise NotImplementedError

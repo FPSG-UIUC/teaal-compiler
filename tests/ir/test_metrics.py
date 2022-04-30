@@ -34,12 +34,75 @@ def build_program_hardware(yaml):
     return program, hardware
 
 
+def test_check_configuration_no_dyn_part():
+    yaml = """
+    einsum:
+      declaration:
+        A: [M]
+        Z: [M]
+      expressions:
+        - Z[m] = A[m]
+    mapping:
+      partitioning:
+        Z:
+          M: [uniform_occupancy(A.10)]
+
+    architecture:
+      subtree:
+      - name: System
+        local:
+        - name: Compute
+          class: compute
+
+    binding:
+    - name: Compute
+      bindings:
+      - einsum: Z
+        op: add
+    """
+    program, hardware = build_program_hardware(yaml)
+
+    with pytest.raises(NotImplementedError):
+        Metrics(program, hardware)
+
+
+def test_check_configuration_three_tensors():
+    yaml = """
+    einsum:
+      declaration:
+        A: [M]
+        B: [M]
+        C: [M]
+        Z: [M]
+      expressions:
+        - Z[m] = A[m] * B[m] * C[m]
+
+    architecture:
+      subtree:
+      - name: System
+        local:
+        - name: Compute
+          class: compute
+
+    binding:
+    - name: Compute
+      bindings:
+      - einsum: Z
+        op: add
+    """
+    program, hardware = build_program_hardware(yaml)
+
+    with pytest.raises(NotImplementedError):
+        Metrics(program, hardware)
+
+
 def test_not_loaded_on_chip():
     yaml = """
     einsum:
       declaration:
         Z: [M]
       expressions:
+
         - Z[m] = a
 
     architecture:
@@ -195,22 +258,24 @@ def test_get_merger_components_output():
     assert metrics.get_merger_components() == [merger]
 
 
-def test_get_merger_components_dyn_merge():
+def test_get_merger_components_part_merge():
     yaml = """
     einsum:
       declaration:
-        A: [M, K]
+        A: [K, M]
         Z: [M]
       expressions:
-        - Z[m] = sum(K).A[m, k]
+        - Z[m] = sum(K).A[k, m]
 
     mapping:
+      rank-order:
+        A: [M, K]
+
       partitioning:
         Z:
-          K: [uniform_shape(20)]
-          M: [uniform_occupancy(A.10)]
+          M: [uniform_shape(10)]
       loop-order:
-        Z: [K1, M1, K0, M0]
+        Z: [M1, K, M0]
 
     architecture:
       subtree:
@@ -226,7 +291,7 @@ def test_get_merger_components_dyn_merge():
     - name: Merger
       bindings:
       - tensor: A
-        init_ranks: [M1, M0, K0]
+        init_ranks: [M1, M0, K]
         swap_depth: 1
 
     - name: Compute

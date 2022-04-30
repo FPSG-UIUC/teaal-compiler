@@ -117,6 +117,10 @@ class FlowGraph:
             # Get the root fiber
             self.__build_swizzle_root_fiber(tensor)
 
+        # Add CollectingNodes
+        for tensor in self.program.get_tensors():
+            self.__build_collecting(tensor)
+
         # Connect all Fibers with the appropriate loop nodes
         iter_graph = IterationGraph(self.program)
         while iter_graph.peek()[0] is not None:
@@ -133,6 +137,31 @@ class FlowGraph:
             is_output = tensor.get_is_output()
             tensor.reset()
             tensor.set_is_output(is_output)
+
+    def __build_collecting(self, tensor: Tensor) -> None:
+        """
+        Build a CollectingNode should it be required
+        """
+        # None if there is no hardware
+        if not self.metrics:
+            return
+
+        # None if the tensor is never stored in DRAM
+        if not self.metrics.in_dram(tensor):
+            return
+
+        # None if the tensor is stationary
+        if self.metrics.on_chip_stationary(tensor):
+            return
+
+        # Otherwise, add a CollectingNode
+        root = tensor.root_name()
+        rank = self.metrics.get_on_chip_rank(tensor)
+        swizzle_node = SwizzleNode(root, tensor.get_ranks())
+        collecting_node = CollectingNode(root, rank)
+
+        self.graph.add_edge(swizzle_node, collecting_node)
+        self.graph.add_edge(collecting_node, MetricsNode("Start"))
 
     def __build_dyn_part(self, tensor: Tensor, rank: str) -> None:
         """

@@ -4,6 +4,7 @@ import pytest
 from es2hfa.ir.flow_graph import FlowGraph
 from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
 from es2hfa.parse.arch import Architecture
@@ -479,7 +480,8 @@ def test_graph_conv_part():
 def test_graph_metrics():
     program, hardware = build_gamma()
     program.add_einsum(0)
-    graph = FlowGraph(program, hardware).get_graph()
+    metrics = Metrics(program, hardware)
+    graph = FlowGraph(program, metrics).get_graph()
 
     corr = nx.DiGraph()
 
@@ -501,6 +503,8 @@ def test_graph_metrics():
     corr.add_edge(GetRootNode("A", ["M", "K"]), LoopNode("M"))
     corr.add_edge(SwizzleNode("B", ["K", "N"]), GetRootNode("B", ["K", "N"]))
     corr.add_edge(GetRootNode("B", ["K", "N"]), LoopNode("K"))
+    corr.add_edge(SwizzleNode("B", ['K', 'N']), CollectingNode("B", "K"))
+    corr.add_edge(CollectingNode("B", "K"), MetricsNode("Start"))
 
     assert nx.is_isomorphic(graph, corr)
 
