@@ -57,6 +57,13 @@ def build_matmul_header(mapping):
     return build_header(exprs, mapping)
 
 
+def test_make_get_root():
+    hfa = "a_m = A_MK.getRoot()"
+
+    tensor = Tensor("A", ["M", "K"])
+    assert Header.make_get_root(tensor).gen(depth=0) == hfa
+
+
 def test_make_output():
     mapping = """
         partitioning:
@@ -97,13 +104,12 @@ def test_make_output_conv_shape():
     assert header.make_output().gen(0) == hfa
 
 
-def test_make_swizzle_root():
-    hfa = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
-          "a_m = A_MK.getRoot()"
+def test_make_swizzle():
+    hfa = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])"
 
     header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
-    assert header.make_swizzle_root(tensor).gen(depth=0) == hfa
+    assert header.make_swizzle(tensor).gen(depth=0) == hfa
 
 
 def test_make_tensor_from_fiber():

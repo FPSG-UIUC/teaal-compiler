@@ -28,9 +28,13 @@ from typing import cast, List, Optional
 
 from es2hfa.hfa import *
 from es2hfa.ir.flow_graph import FlowGraph
+from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
+from es2hfa.parse.arch import Architecture
+from es2hfa.parse.bindings import Bindings
 from es2hfa.parse.einsum import Einsum
 from es2hfa.parse.mapping import Mapping
 from es2hfa.trans.graphics import Graphics
@@ -46,14 +50,21 @@ class HFA:
     Translate a given Einsum into the corresponding HFA code
     """
 
-    def __init__(self, einsum: Einsum, mapping: Mapping) -> None:
+    def __init__(
+            self,
+            einsum: Einsum,
+            mapping: Mapping,
+            arch: Optional[Architecture] = None,
+            bindings: Optional[Bindings] = None) -> None:
         """
         Perform the Einsum to HFA translation
         """
-        self.einsum = einsum
-        self.mapping = mapping
-
         self.program = Program(einsum, mapping)
+
+        self.hardware: Optional[Hardware] = None
+        if arch and bindings and arch.get_spec():
+            self.hardware = Hardware(arch, bindings)
+
         self.trans_utils = TransUtils()
 
         self.hfa = SBlock([])
@@ -67,8 +78,13 @@ class HFA:
         # Generate for the given einsum
         self.program.add_einsum(i)
 
+        # Build metrics if there is hardware
+        self.metrics: Optional[Metrics] = None
+        if self.hardware:
+            self.metrics = Metrics(self.program, self.hardware)
+
         # Create the flow graph and get the relevant nodes
-        flow_graph = FlowGraph(self.program)
+        flow_graph = FlowGraph(self.program, self.metrics)
         self.fgraph = flow_graph
         nodes = flow_graph.get_sorted()
 
@@ -147,9 +163,13 @@ class HFA:
                 tensor.from_fiber()
                 code.add(self.partitioner.partition(tensor, rank))
 
-            elif isinstance(node, SRNode):
+            elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_tensor(node.get_tensor())
-                code.add(self.header.make_swizzle_root(tensor))
+                code.add(self.header.make_swizzle(tensor))
+
+            elif isinstance(node, GetRootNode):
+                tensor = self.program.get_tensor(node.get_tensor())
+                code.add(Header.make_get_root(tensor))
 
             elif isinstance(node, EagerInputNode):
                 code.add(

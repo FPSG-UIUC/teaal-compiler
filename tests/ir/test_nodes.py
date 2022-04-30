@@ -12,6 +12,14 @@ def test_node():
     assert "" not in set_
 
 
+def test_eager_input_node():
+    assert repr(EagerInputNode("Q1", ["I", "J"])
+                ) == "(EagerInputNode, Q1, ['I', 'J'])"
+
+    assert EagerInputNode("Q1", ["I", "J"]).get_rank() == "Q1"
+    assert EagerInputNode("Q1", ["I", "J"]).get_tensors() == ["I", "J"]
+
+
 def test_fiber_node():
     assert repr(FiberNode("a_k")) == "(FiberNode, a_k)"
 
@@ -25,12 +33,11 @@ def test_from_fiber_node():
     assert FromFiberNode("A", "K").get_rank() == "K"
 
 
-def test_eager_input_node():
-    assert repr(EagerInputNode("Q1", ["I", "J"])
-                ) == "(EagerInputNode, Q1, ['I', 'J'])"
+def test_get_root_node():
+    assert repr(GetRootNode("A", ["K"])) == "(GetRootNode, A, ['K'])"
 
-    assert EagerInputNode("Q1", ["I", "J"]).get_rank() == "Q1"
-    assert EagerInputNode("Q1", ["I", "J"]).get_tensors() == ["I", "J"]
+    assert GetRootNode("A", ["K"]).get_tensor() == "A"
+    assert GetRootNode("A", ["K"]).get_ranks() == ["K"]
 
 
 def test_interval_node():
@@ -65,11 +72,11 @@ def test_rank_node():
     assert RankNode("A", "K").get_rank() == "K"
 
 
-def test_sr_node():
-    assert repr(SRNode("A", ["K"])) == "(SRNode, A, ['K'])"
+def test_swizzle_root_node():
+    assert repr(SwizzleNode("A", ["K"])) == "(SwizzleNode, A, ['K'])"
 
-    assert SRNode("A", ["K"]).get_tensor() == "A"
-    assert SRNode("A", ["K"]).get_ranks() == ["K"]
+    assert SwizzleNode("A", ["K"]).get_tensor() == "A"
+    assert SwizzleNode("A", ["K"]).get_ranks() == ["K"]
 
 
 def test_tensor_node():

@@ -63,6 +63,37 @@ class Node(metaclass=abc.ABCMeta):
         return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
 
 
+class EagerInputNode(Node):
+    """
+    A node that ensures that the inputs are eager
+    """
+
+    def __init__(self, rank: str, tensors: List[str]) -> None:
+        """
+        Construct a EagerInputNode
+        """
+        self.rank = rank
+        self.tensors = tensors
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def get_tensors(self) -> List[str]:
+        """
+        Accessor for the tensor
+        """
+        return self.tensors
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a FromFiberNode
+        """
+        return self.rank, self.tensors
+
+
 class FiberNode(Node):
     """
     A Node representing a fiber
@@ -118,35 +149,35 @@ class FromFiberNode(Node):
         return self.tensor, self.rank
 
 
-class EagerInputNode(Node):
+class GetRootNode(Node):
     """
-    A node that ensures that the inputs are eager
+    A Node representing a getRoot call
     """
 
-    def __init__(self, rank: str, tensors: List[str]) -> None:
+    def __init__(self, tensor: str, ranks: List[str]) -> None:
         """
-        Construct a EagerInputNode
+        Construct a getRoot node
         """
-        self.rank = rank
-        self.tensors = tensors
+        self.tensor = tensor
+        self.ranks = ranks
 
-    def get_rank(self) -> str:
+    def get_ranks(self) -> List[str]:
         """
-        Accessor for the rank
+        Accessor for the ranks
         """
-        return self.rank
+        return self.ranks
 
-    def get_tensors(self) -> List[str]:
+    def get_tensor(self) -> str:
         """
         Accessor for the tensor
         """
-        return self.tensors
+        return self.tensor
 
     def _Node__key(self) -> Iterable[Any]:
         """
-        Iterable of fields of a FromFiberNode
+        Iterable of fields of a GetRootNode
         """
-        return self.rank, self.tensors
+        return self.tensor, self.ranks
 
 
 class IntervalNode(Node):
@@ -285,14 +316,14 @@ class RankNode(Node):
         return self.tensor, self.rank
 
 
-class SRNode(Node):
+class SwizzleNode(Node):
     """
-    A Node representing a swizzleRanks and getRoot
+    A Node representing a swizzleRanks call
     """
 
     def __init__(self, tensor: str, ranks: List[str]) -> None:
         """
-        Construct a swizzleRanks and getRoot node
+        Construct a swizzleRanks node
         """
         self.tensor = tensor
         self.ranks = ranks
@@ -311,7 +342,7 @@ class SRNode(Node):
 
     def _Node__key(self) -> Iterable[Any]:
         """
-        Iterable of fields of a SRNode
+        Iterable of fields of a SwizzleNode
         """
         return self.tensor, self.ranks
 

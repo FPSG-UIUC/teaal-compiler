@@ -48,6 +48,15 @@ class Header:
         self.program = program
         self.partitioner = partitioner
 
+    @staticmethod
+    def make_get_root(tensor: Tensor) -> Statement:
+        """
+        Make a call to getRoot()
+        """
+        get_root_call = EMethod(EVar(tensor.tensor_name()), "getRoot", [])
+        fiber_name = AVar(tensor.fiber_name())
+        return SAssign(fiber_name, get_root_call)
+
     def make_output(self) -> Statement:
         """
         Given an output tensor, generate the constructor
@@ -60,6 +69,36 @@ class Header:
         args = self.__make_shape([arg0])
         constr = EFunc("Tensor", args)
         return SAssign(AVar(tensor.tensor_name()), constr)
+
+    def make_swizzle(self, tensor: Tensor) -> Statement:
+        """
+        Make call to swizzleRanks() (as necessary)
+        """
+        # Swizzle for a concordant traversal
+        old_name = tensor.tensor_name()
+        self.program.get_loop_order().apply(tensor)
+        new_name = tensor.tensor_name()
+
+        # Emit code to perform the swizzle if necessary
+        if old_name == new_name:
+            return SBlock([])
+        else:
+            return TransUtils.build_swizzle(tensor, old_name)
+
+    @staticmethod
+    def make_tensor_from_fiber(tensor: Tensor) -> Statement:
+        """
+        Get a tensor from the current fiber
+        """
+        tensor.from_fiber()
+
+        ranks = [EString(rank) for rank in tensor.get_ranks()]
+        args = [AParam("rank_ids", EList(ranks)),
+                AParam("fiber", EVar(tensor.fiber_name()))]
+
+        from_fiber = EMethod(EVar("Tensor"), "fromFiber", args)
+        tensor_name = AVar(tensor.tensor_name())
+        return SAssign(tensor_name, from_fiber)
 
     def __make_shape(self, args: List[Argument]) -> List[Argument]:
         """
@@ -98,40 +137,3 @@ class Header:
             args.append(TransUtils.build_shape(output))
 
         return args
-
-    def make_swizzle_root(self, tensor: Tensor) -> Statement:
-        """
-        Make calls to swizzleRanks() (as necessary) and getRoot()
-        """
-        block = SBlock([])
-
-        # Swizzle for a concordant traversal
-        old_name = tensor.tensor_name()
-        self.program.get_loop_order().apply(tensor)
-        new_name = tensor.tensor_name()
-
-        # Emit code to perform the swizzle if necessary
-        if old_name != new_name:
-            block.add(TransUtils.build_swizzle(tensor, old_name))
-
-        # Add the call to getRoot()
-        get_root_call = EMethod(EVar(tensor.tensor_name()), "getRoot", [])
-        fiber_name = AVar(tensor.fiber_name())
-        block.add(SAssign(fiber_name, get_root_call))
-
-        return block
-
-    @staticmethod
-    def make_tensor_from_fiber(tensor: Tensor) -> Statement:
-        """
-        Get a tensor from the current fiber
-        """
-        tensor.from_fiber()
-
-        ranks = [EString(rank) for rank in tensor.get_ranks()]
-        args = [AParam("rank_ids", EList(ranks)),
-                AParam("fiber", EVar(tensor.fiber_name()))]
-
-        from_fiber = EMethod(EVar("Tensor"), "fromFiber", args)
-        tensor_name = AVar(tensor.tensor_name())
-        return SAssign(tensor_name, from_fiber)

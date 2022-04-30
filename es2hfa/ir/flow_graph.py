@@ -26,9 +26,10 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-from typing import cast, Dict, List
+from typing import cast, Dict, List, Optional
 
 from es2hfa.ir.iter_graph import IterationGraph
+from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
@@ -39,11 +40,12 @@ class FlowGraph:
     The control-dataflow graph for the HFA program
     """
 
-    def __init__(self, program: Program) -> None:
+    def __init__(self, program: Program, metrics: Optional[Metrics]) -> None:
         """
         Construct a new FlowGraph
         """
         self.program = program
+        self.metrics = metrics
 
         self.__build()
         self.__prune()
@@ -86,9 +88,12 @@ class FlowGraph:
         self.__build_loop_nest()
         self.__build_output()
 
-        # Add SRNodes and FiberNodes for each tensor
+        # Add Swizzle, GetRoot and FiberNodes for each tensor
         part = self.program.get_partitioning()
         for tensor in self.program.get_tensors():
+            if tensor.get_is_output():
+                continue
+
             root = tensor.root_name()
 
             # Add the partitioning
@@ -236,9 +241,12 @@ class FlowGraph:
         tensor = self.program.get_output()
         self.program.apply_all_partitioning(tensor)
         root = tensor.root_name()
+        get_root_node = GetRootNode(root, tensor.get_ranks())
 
         # Construct the output for the relevant tensor to be available
         self.graph.add_edge(OtherNode("Output"), TensorNode(root))
+        self.graph.add_edge(TensorNode(root), get_root_node)
+        self.graph.add_edge(get_root_node, FiberNode(tensor.fiber_name()))
 
     def __build_project_interval(
             self,
@@ -291,16 +299,18 @@ class FlowGraph:
         root = tensor.root_name()
 
         tensor_node = TensorNode(root)
-        sr_node = SRNode(root, tensor.get_ranks().copy())
+        swizzle_node = SwizzleNode(root, tensor.get_ranks().copy())
+        get_root_node = GetRootNode(root, tensor.get_ranks().copy())
         fiber_node = FiberNode(tensor.fiber_name())
 
-        self.graph.add_edge(tensor_node, sr_node)
-        self.graph.add_edge(sr_node, fiber_node)
+        self.graph.add_edge(tensor_node, swizzle_node)
+        self.graph.add_edge(swizzle_node, get_root_node)
+        self.graph.add_edge(get_root_node, fiber_node)
 
-        # An SR node always requires the TensorNode and RankNodes of the
+        # An SwizzleNode always requires the TensorNode and RankNodes of the
         # relevant ranks
         for rank in tensor.get_ranks():
-            self.graph.add_edge(RankNode(root, rank), sr_node)
+            self.graph.add_edge(RankNode(root, rank), swizzle_node)
 
     def __connect_dyn_part(self, tensor: Tensor, rank: str) -> None:
         """
