@@ -30,6 +30,7 @@ from es2hfa.ir.component import *
 from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
+from es2hfa.parse.format import Format
 
 
 class Metrics:
@@ -38,12 +39,17 @@ class Metrics:
     accelerator
     """
 
-    def __init__(self, program: Program, hardware: Hardware) -> None:
+    def __init__(
+            self,
+            program: Program,
+            hardware: Hardware,
+            format_: Format) -> None:
         """
         Construct a new metrics object
         """
         self.program = program
         self.hardware = hardware
+        self.format = format_
 
         # Check that we can collect metrics for this accelerator
         self.__check_configuration()

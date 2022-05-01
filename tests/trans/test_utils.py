@@ -4,6 +4,20 @@ from es2hfa.ir.tensor import Tensor
 from es2hfa.trans.utils import TransUtils
 
 
+def test_build_expr_bad():
+    with pytest.raises(ValueError) as excinfo:
+        TransUtils.build_expr(range(5))
+    assert str(
+        excinfo.value) == "Unable to translate range(0, 5) with type <class 'range'>"
+
+
+def test_build_expr():
+    assert TransUtils.build_expr(5).gen() == "5"
+    assert TransUtils.build_expr("foo").gen() == "\"foo\""
+    assert TransUtils.build_expr([1, 2, 3, 4]).gen() == "[1, 2, 3, 4]"
+    assert TransUtils.build_expr({1: 2, 3: 4}).gen() == "{1: 2, 3: 4}"
+
+
 def test_build_rank_ids():
     tensor = Tensor("A", ["I", "J"])
     assert TransUtils.build_rank_ids(tensor).gen() == "rank_ids=[\"I\", \"J\"]"

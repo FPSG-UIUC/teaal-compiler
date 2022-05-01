@@ -23,3 +23,9 @@ SOFTWARE.
 """
 
 # __init__.py file for parse module
+
+from .arch import Architecture
+from .bindings import Bindings
+from .einsum import Einsum
+from .format import Format
+from .mapping import Mapping

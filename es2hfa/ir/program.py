@@ -70,6 +70,7 @@ class Program:
 
             self.tensors[tensor.root_name()] = tensor
 
+        self.einsum_ind: Optional[int] = None
         self.equation: Optional[Tree] = None
         self.es_tensors: List[Tensor] = []
         self.coord_math: Optional[CoordMath] = None
@@ -81,6 +82,7 @@ class Program:
         """
         Configure the program for the i'th Einsum
         """
+        self.einsum_ind = i
         self.equation = self.einsum.get_expressions()[i]
         self.coord_math = CoordMath()
 
@@ -169,6 +171,17 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.equation
+
+    def get_einsum_ind(self) -> int:
+        """
+        Get the index of this einsum
+        """
+        # Make sure that the program is configured
+        if self.einsum_ind is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        return self.einsum_ind
 
     def get_coord_math(self) -> CoordMath:
         """

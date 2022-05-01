@@ -28,8 +28,7 @@ from typing import Dict, Type
 
 from es2hfa.ir.component import *
 from es2hfa.ir.level import Level
-from es2hfa.parse.arch import Architecture
-from es2hfa.parse.bindings import Bindings
+from es2hfa.parse import *
 
 
 class Hardware:

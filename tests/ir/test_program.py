@@ -186,6 +186,22 @@ def test_get_einsum():
     assert program.get_einsum() == equation
 
 
+def test_get_einsum_ind_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.get_einsum_ind()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_get_einsum():
+    program = create_default()
+    program.add_einsum(0)
+
+    assert program.get_einsum_ind() == 0
+
+
 def test_get_output_unconfigured():
     program = create_default()
 

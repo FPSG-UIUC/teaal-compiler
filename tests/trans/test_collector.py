@@ -1,10 +1,7 @@
 from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.program import Program
-from es2hfa.parse.arch import Architecture
-from es2hfa.parse.bindings import Bindings
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
+from es2hfa.parse import *
 from es2hfa.trans.collector import Collector
 
 
@@ -23,8 +20,10 @@ def build_collector():
     bindings = Bindings.from_str(yaml)
     hardware = Hardware(arch, bindings)
 
+    format_ = Format.from_str(yaml)
+
     program.add_einsum(0)
-    metrics = Metrics(program, hardware)
+    metrics = Metrics(program, hardware, format_)
     return Collector(program, metrics)
 
 

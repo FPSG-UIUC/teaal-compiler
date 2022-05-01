@@ -5,10 +5,7 @@ from es2hfa.ir.hardware import Hardware
 from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.program import Program
 from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.arch import Architecture
-from es2hfa.parse.bindings import Bindings
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
+from es2hfa.parse import *
 
 
 def build_gamma_yaml():
@@ -31,7 +28,9 @@ def build_program_hardware(yaml):
     bindings = Bindings.from_str(yaml)
     hardware = Hardware(arch, bindings)
 
-    return program, hardware
+    format_ = Format.from_str(yaml)
+
+    return program, hardware, format_
 
 
 def test_check_configuration_no_dyn_part():
@@ -60,10 +59,10 @@ def test_check_configuration_no_dyn_part():
       - einsum: Z
         op: add
     """
-    program, hardware = build_program_hardware(yaml)
+    program, hardware, format_ = build_program_hardware(yaml)
 
     with pytest.raises(NotImplementedError):
-        Metrics(program, hardware)
+        Metrics(program, hardware, format_)
 
 
 def test_check_configuration_three_tensors():
@@ -90,10 +89,10 @@ def test_check_configuration_three_tensors():
       - einsum: Z
         op: add
     """
-    program, hardware = build_program_hardware(yaml)
+    program, hardware, format_ = build_program_hardware(yaml)
 
     with pytest.raises(NotImplementedError):
-        Metrics(program, hardware)
+        Metrics(program, hardware, format_)
 
 
 def test_not_loaded_on_chip():
@@ -129,10 +128,10 @@ def test_not_loaded_on_chip():
       - einsum: Z
         op: add
     """
-    program, hardware = build_program_hardware(yaml)
+    program, hardware, format_ = build_program_hardware(yaml)
 
     with pytest.raises(ValueError) as excinfo:
-        Metrics(program, hardware)
+        Metrics(program, hardware, format_)
     assert str(excinfo.value) == "Tensor Z never buffered on chip"
 
 
@@ -176,10 +175,10 @@ def test_not_implemented_root_not_in_dram():
       - einsum: Z
         op: add
     """
-    program, hardware = build_program_hardware(yaml)
+    program, hardware, format_ = build_program_hardware(yaml)
 
     with pytest.raises(NotImplementedError):
-        Metrics(program, hardware)
+        Metrics(program, hardware, format_)
 
 
 def test_get_compute_components():
@@ -194,8 +193,8 @@ def test_get_compute_components():
 
 def test_get_merger_components():
     yaml = build_gamma_yaml()
-    program, hardware = build_program_hardware(yaml)
-    metrics = Metrics(program, hardware)
+    program, hardware, format_ = build_program_hardware(yaml)
+    metrics = Metrics(program, hardware, format_)
 
     assert metrics.get_merger_components() == []
 
@@ -208,7 +207,7 @@ def test_get_merger_components():
 
     program.reset()
     program.add_einsum(1)
-    metrics = Metrics(program, hardware)
+    metrics = Metrics(program, hardware, format_)
 
     assert metrics.get_merger_components() == [merger]
 
@@ -249,8 +248,8 @@ def test_get_merger_components_output():
       - einsum: Z
         op: add
     """
-    program, hardware = build_program_hardware(yaml)
-    metrics = Metrics(program, hardware)
+    program, hardware, format_ = build_program_hardware(yaml)
+    metrics = Metrics(program, hardware, format_)
 
     bindings = Bindings.from_str(yaml)
     merger = MergerComponent("Merger", {}, bindings.get("Merger"))
@@ -299,8 +298,8 @@ def test_get_merger_components_part_merge():
       - einsum: Z
         op: add
     """
-    program, hardware = build_program_hardware(yaml)
-    metrics = Metrics(program, hardware)
+    program, hardware, format_ = build_program_hardware(yaml)
+    metrics = Metrics(program, hardware, format_)
 
     bindings = Bindings.from_str(yaml)
     merger = MergerComponent("Merger", {}, bindings.get("Merger"))

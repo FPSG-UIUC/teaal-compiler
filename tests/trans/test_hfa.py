@@ -1,7 +1,4 @@
-from es2hfa.parse.arch import Architecture
-from es2hfa.parse.bindings import Bindings
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
+from es2hfa.parse import *
 from es2hfa.trans.hfa import HFA
 
 
@@ -228,6 +225,7 @@ def test_hfa_hardware():
     mapping = Mapping.from_file(fname)
     arch = Architecture.from_file(fname)
     bindings = Bindings.from_file(fname)
+    format_ = Format.from_file(fname)
 
     hfa = "B_KN.setCollecting(\"K\", True)\n" + \
           "b_k = B_KN.getRoot()\n" + \
@@ -252,4 +250,4 @@ def test_hfa_hardware():
           "            z_ref += t_val * a_val\n" + \
           "Metrics.endCollect()"
 
-    assert str(HFA(einsum, mapping, arch, bindings)) == hfa
+    assert str(HFA(einsum, mapping, arch, bindings, format_)) == hfa

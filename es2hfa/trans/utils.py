@@ -24,6 +24,8 @@ SOFTWARE.
 Useful functions for generating HFA code
 """
 
+from typing import Any
+
 from es2hfa.hfa import *
 from es2hfa.ir.tensor import Tensor
 
@@ -35,6 +37,30 @@ class TransUtils:
 
     def __init__(self) -> None:
         self.count = -1
+
+    @staticmethod
+    def build_expr(obj: Any) -> Expression:
+        """
+        Build an HFA expression for the given Python object
+        """
+        if isinstance(obj, int):
+            return EInt(obj)
+
+        elif isinstance(obj, str):
+            return EString(obj)
+
+        elif isinstance(obj, list):
+            list_ = [TransUtils.build_expr(elem) for elem in obj]
+            return EList(list_)
+
+        elif isinstance(obj, dict):
+            dict_ = {TransUtils.build_expr(key): TransUtils.build_expr(val)
+                     for key, val in obj.items()}
+            return EDict(dict_)
+
+        else:
+            raise ValueError("Unable to translate " +
+                             str(obj) + " with type " + str(type(obj)))
 
     @staticmethod
     def build_rank_ids(tensor: Tensor) -> Argument:

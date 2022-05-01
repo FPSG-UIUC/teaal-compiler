@@ -125,3 +125,34 @@ bindings:
     op: mul
   - einsum: Z
     op: add
+
+format:
+  A:
+    M:
+      format: U
+      rhbits: 32
+      pbits: 32
+    K:
+      format: C
+      cbits: 32
+      pbits: 64
+
+  B:
+    K:
+      format: U
+      rhbits: 32
+      pbits: 32
+    N:
+      format: C
+      cbits: 32
+      pbits: 64
+
+  Z:
+    M:
+      format: U
+      rhbits: 32
+      pbits: 32
+    N:
+      format: C
+      cbits: 32
+      pbits: 64

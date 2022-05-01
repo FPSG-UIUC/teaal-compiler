@@ -7,10 +7,7 @@ from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
-from es2hfa.parse.arch import Architecture
-from es2hfa.parse.bindings import Bindings
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
+from es2hfa.parse import *
 
 
 def build_program_no_loops():
@@ -70,7 +67,9 @@ def build_gamma():
     bindings = Bindings.from_str(yaml)
     hardware = Hardware(arch, bindings)
 
-    return program, hardware
+    format_ = Format.from_str(yaml)
+
+    return program, hardware, format_
 
 
 def test_graph_no_loops():
@@ -478,9 +477,9 @@ def test_graph_conv_part():
 
 
 def test_graph_metrics():
-    program, hardware = build_gamma()
+    program, hardware, format_ = build_gamma()
     program.add_einsum(0)
-    metrics = Metrics(program, hardware)
+    metrics = Metrics(program, hardware, format_)
     graph = FlowGraph(program, metrics).get_graph()
 
     corr = nx.DiGraph()

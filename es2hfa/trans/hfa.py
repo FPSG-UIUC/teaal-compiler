@@ -33,10 +33,7 @@ from es2hfa.ir.iter_graph import IterationGraph
 from es2hfa.ir.metrics import Metrics
 from es2hfa.ir.nodes import *
 from es2hfa.ir.program import Program
-from es2hfa.parse.arch import Architecture
-from es2hfa.parse.bindings import Bindings
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
+from es2hfa.parse import *
 from es2hfa.trans.collector import Collector
 from es2hfa.trans.graphics import Graphics
 from es2hfa.trans.equation import Equation
@@ -56,13 +53,15 @@ class HFA:
             einsum: Einsum,
             mapping: Mapping,
             arch: Optional[Architecture] = None,
-            bindings: Optional[Bindings] = None) -> None:
+            bindings: Optional[Bindings] = None,
+            format_: Optional[Format] = None) -> None:
         """
         Perform the Einsum to HFA translation
         """
         self.program = Program(einsum, mapping)
 
         self.hardware: Optional[Hardware] = None
+        self.format = format_
         if arch and bindings and arch.get_spec():
             self.hardware = Hardware(arch, bindings)
 
@@ -81,8 +80,8 @@ class HFA:
 
         # Build metrics if there is hardware
         self.metrics: Optional[Metrics] = None
-        if self.hardware:
-            self.metrics = Metrics(self.program, self.hardware)
+        if self.hardware and self.format:
+            self.metrics = Metrics(self.program, self.hardware, self.format)
 
         # Create the flow graph and get the relevant nodes
         flow_graph = FlowGraph(self.program, self.metrics)
