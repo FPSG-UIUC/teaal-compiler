@@ -2,7 +2,7 @@ from es2hfa.hfa import *
 
 
 def test_aaccess():
-    access = AAccess("A", EVar("i"))
+    access = AAccess(EVar("A"), EVar("i"))
     assert access.gen() == "A[i]"
 
 

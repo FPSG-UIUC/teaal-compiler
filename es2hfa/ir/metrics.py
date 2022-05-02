@@ -80,9 +80,15 @@ class Metrics:
         einsum = self.program.get_output().root_name()
         return self.hardware.get_compute_components(einsum)
 
-    def get_merger_components(self) -> List[MergerComponent]:
+    def get_format(self, tensor: Tensor) -> dict:
         """
-        Get all relevant merger components
+        Get the format specification for the given tensor
+        """
+        return self.format.get_spec(tensor.root_name())
+
+    def get_merger_components(self) -> List[Tuple[MergerComponent, dict]]:
+        """
+        Get all relevant merger components and the relevant tensor being merged
         """
         return self.mergers
 
@@ -160,7 +166,7 @@ class Metrics:
                 init = tuple(binding["init_ranks"])
                 final = tuple(binding["final_ranks"])
 
-                easy_access[(name, init, final)] = merger
+                easy_access[(name, init, final)] = (merger, binding)
 
         self.mergers = []
         part = self.program.get_partitioning()
@@ -266,11 +272,7 @@ class Metrics:
             if mem_rank != "root":
                 raise NotImplementedError
 
-            if on_chip_rank == "root":
-                prefix = []
-            else:
-                i = tensor.get_ranks().index(on_chip_rank)
-                prefix = tensor.get_ranks()[:(i + 1)]
+            prefix = tensor.get_prefix(on_chip_rank)
 
             # The tensor is stationary if its prefix is also a prefix to the
             # loop order

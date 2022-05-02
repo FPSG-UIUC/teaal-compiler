@@ -13,6 +13,7 @@ def test_build_expr_bad():
 
 def test_build_expr():
     assert TransUtils.build_expr(5).gen() == "5"
+    assert TransUtils.build_expr(1.23).gen() == "1.23"
     assert TransUtils.build_expr("foo").gen() == "\"foo\""
     assert TransUtils.build_expr([1, 2, 3, 4]).gen() == "[1, 2, 3, 4]"
     assert TransUtils.build_expr({1: 2, 3: 4}).gen() == "{1: 2, 3: 4}"

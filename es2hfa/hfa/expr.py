@@ -133,6 +133,26 @@ class EField(Expression):
         return self.obj + "." + self.field
 
 
+class EFloat(Expression):
+    """
+    An HFA float
+    """
+
+    def __init__(self, float_: float) -> None:
+        self.float = float_
+
+    def gen(self) -> str:
+        """
+        Generate HFA code for an EFloat
+        """
+        if self.float == float("inf"):
+            return "float(\"inf\")"
+        elif self.float == -float("inf"):
+            return "-float(\"inf\")"
+        else:
+            return str(self.float)
+
+
 class EFunc(Expression):
     """
     An HFA function call

@@ -82,17 +82,29 @@ class Tensor:
         """
         return self.init_ranks
 
-    def get_ranks(self) -> List[str]:
-        """
-        Return a (capitalized) list of ranks for this tensor
-        """
-        return self.ranks[self.rank_ptr:]
-
     def get_is_output(self) -> bool:
         """
         Returns true if this tensor is an output tensor
         """
         return self.is_output
+
+    def get_prefix(self, rank: str) -> List[str]:
+        """
+        Get a list of ranks up to the current rank
+
+        Note: "root" returns the empty list
+        """
+        if rank == "root":
+            return []
+
+        i = self.ranks.index(rank)
+        return self.ranks[self.rank_ptr:(i + 1)]
+
+    def get_ranks(self) -> List[str]:
+        """
+        Return a (capitalized) list of ranks for this tensor
+        """
+        return self.ranks[self.rank_ptr:]
 
     def peek(self) -> Optional[str]:
         """

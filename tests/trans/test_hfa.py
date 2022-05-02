@@ -238,6 +238,17 @@ def test_hfa_hardware():
           "        for n, (t_ref, b_val) in t_n << b_n:\n" + \
           "            t_ref += b_val\n" + \
           "Metrics.endCollect()\n" + \
+          "metrics = {}\n" + \
+          "metrics[\"T\"] = {}\n" + \
+          "metrics[\"T\"][\"T footprint\"] = 0\n" + \
+          "metrics[\"T\"][\"T traffic\"] = 0\n" + \
+          "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+          "metrics[\"T\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
+          "metrics[\"T\"][\"A traffic\"] = metrics[\"T\"][\"A footprint\"]\n" + \
+          "B_KN_format = Format(B_KN, {\"K\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+          "metrics[\"T\"][\"B footprint\"] = B_KN_format.getTensor()\n" + \
+          "metrics[\"T\"][\"B traffic\"] = Traffic.cacheTraffic(B_KN, \"K\", B_KN_format, 25165824) + B_KN_format.getRank(\"K\")\n" + \
+          "metrics[\"T\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 0)\n" + \
           "a_m = A_MK.getRoot()\n" + \
           "T_MNK = T_MKN.swizzleRanks(rank_ids=[\"M\", \"N\", \"K\"])\n" + \
           "t_m = T_MNK.getRoot()\n" + \
@@ -248,6 +259,18 @@ def test_hfa_hardware():
           "    for n, (z_ref, t_k) in z_n << t_n:\n" + \
           "        for k, (t_val, a_val) in t_k & a_k:\n" + \
           "            z_ref += t_val * a_val\n" + \
-          "Metrics.endCollect()"
+          "Metrics.endCollect()\n" + \
+          "metrics[\"Z\"] = {}\n" + \
+          "Z_MN_format = Format(Z_MN, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+          "metrics[\"Z\"][\"Z footprint\"] = Z_MN_format.getTensor()\n" + \
+          "metrics[\"Z\"][\"Z traffic\"] = metrics[\"Z\"][\"Z footprint\"]\n" + \
+          "metrics[\"Z\"][\"T footprint\"] = 0\n" + \
+          "metrics[\"Z\"][\"T traffic\"] = 0\n" + \
+          "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+          "metrics[\"Z\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
+          "metrics[\"Z\"][\"A traffic\"] = metrics[\"Z\"][\"A footprint\"]\n" + \
+          "metrics[\"Z\"][\"mul\"] = Compute.opCount(Metrics.dump(), \"mul\")\n" + \
+          "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")\n" + \
+          "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 1, 64)"
 
     assert str(HFA(einsum, mapping, arch, bindings, format_)) == hfa

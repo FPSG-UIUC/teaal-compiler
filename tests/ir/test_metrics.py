@@ -191,6 +191,20 @@ def test_get_compute_components():
     assert metrics.get_compute_components() == [intersect]
 
 
+def test_get_format():
+    metrics = build_metrics()
+    spec = {
+        "M": {
+            "format": "U",
+            "rhbits": 32,
+            "pbits": 32},
+        "K": {
+            "format": "C",
+            "cbits": 32,
+            "pbits": 64}}
+    assert metrics.get_format(Tensor("A", ["M", "K"])) == spec
+
+
 def test_get_merger_components():
     yaml = build_gamma_yaml()
     program, hardware, format_ = build_program_hardware(yaml)
@@ -205,11 +219,14 @@ def test_get_merger_components():
         attrs,
         bindings.get("HighRadixMerger"))
 
+    binding = bindings.get("HighRadixMerger")[0].copy()
+    binding["final_ranks"] = ["M", "N", "K"]
+
     program.reset()
     program.add_einsum(1)
     metrics = Metrics(program, hardware, format_)
 
-    assert metrics.get_merger_components() == [merger]
+    assert metrics.get_merger_components() == [(merger, binding)]
 
 
 def test_get_merger_components_output():
@@ -253,8 +270,10 @@ def test_get_merger_components_output():
 
     bindings = Bindings.from_str(yaml)
     merger = MergerComponent("Merger", {}, bindings.get("Merger"))
+    binding = bindings.get("Merger")[0].copy()
+    binding["final_ranks"] = ["M", "N"]
 
-    assert metrics.get_merger_components() == [merger]
+    assert metrics.get_merger_components() == [(merger, binding)]
 
 
 def test_get_merger_components_part_merge():
@@ -303,8 +322,10 @@ def test_get_merger_components_part_merge():
 
     bindings = Bindings.from_str(yaml)
     merger = MergerComponent("Merger", {}, bindings.get("Merger"))
+    binding = bindings.get("Merger")[0].copy()
+    binding["final_ranks"] = ["M1", "K", "M0"]
 
-    assert metrics.get_merger_components() == [merger]
+    assert metrics.get_merger_components() == [(merger, binding)]
 
 
 def test_get_on_chip_buffer_not_in_dram():

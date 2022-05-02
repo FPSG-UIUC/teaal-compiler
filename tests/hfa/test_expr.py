@@ -31,6 +31,17 @@ def test_efield():
     assert field.gen() == "foo.bar"
 
 
+def test_efloat():
+    float_ = EFloat(1.23)
+    assert float_.gen() == "1.23"
+
+    float_ = EFloat(float("inf"))
+    assert float_.gen() == "float(\"inf\")"
+
+    float_ = EFloat(-float("inf"))
+    assert float_.gen() == "-float(\"inf\")"
+
+
 def test_efunc():
     func = EFunc("foo", [AJust(EVar("x")), AJust(EVar("y"))])
     assert func.gen() == "foo(x, y)"

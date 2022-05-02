@@ -59,7 +59,7 @@ class Graphics:
                 cond = EBinOp(space_tup, OIn(), keys)
 
                 # Then add 1
-                acc = AAccess("timestamps", space_tup)
+                acc = AAccess(EVar("timestamps"), space_tup)
                 then = SIAssign(acc, OAdd(), EInt(1))
 
                 # Otherwise add it to the dictionary

@@ -1,13 +1,14 @@
 einsum:
     declaration:
-        F: [S]
-        I: [W]
-        O: [Q]
+        F: [M, C, R, S]
+        I: [B, C, H, W]
+        O: [B, M, P, Q]
     expressions:
-        - O[q] = sum(S).(I[q + s] * F[s])
+        - O[b, m, p, q] = sum(C, R, S).(I[b, c, p + r, q + s] * F[m, c, r, s])
 mapping:
     partitioning:
         O:
-            Q: [uniform_shape(10), nway_shape(2)]
+            P: [uniform_shape(10)]
+            Q: [uniform_shape(11)]
     loop-order:
-        O: [Q2, Q1, W0, Q0]
+        O: [M, C, R, S, B, P1, Q1, P0, Q0]

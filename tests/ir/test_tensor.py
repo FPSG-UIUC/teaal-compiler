@@ -51,6 +51,22 @@ def test_get_init_ranks():
     assert tensor.get_init_ranks() == ["I", "J", "K"]
 
 
+def test_get_is_output():
+    tensor = Tensor("A", ["I", "J"])
+    assert not tensor.get_is_output()
+
+    tensor.set_is_output(True)
+    assert tensor.get_is_output()
+
+
+def test_get_prefix():
+    tensor = Tensor("A", ["I", "J"])
+
+    assert tensor.get_prefix("root") == []
+    assert tensor.get_prefix("I") == ["I"]
+    assert tensor.get_prefix("J") == ["I", "J"]
+
+
 def test_get_ranks():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.get_ranks() == ["I", "J"]

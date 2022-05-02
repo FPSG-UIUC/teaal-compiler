@@ -46,6 +46,9 @@ class TransUtils:
         if isinstance(obj, int):
             return EInt(obj)
 
+        elif isinstance(obj, float):
+            return EFloat(obj)
+
         elif isinstance(obj, str):
             return EString(obj)
 
