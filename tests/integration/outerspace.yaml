@@ -1,0 +1,143 @@
+einsum:
+  declaration:
+    A: [K, M]
+    B: [K, N]
+    T: [K, M, N]
+    Z: [M, N]
+  expressions:
+    - T[k, m, n] = A[k, m] * B[k, n]
+    - Z[m, n] = sum(K).(T[k, m, n])
+
+mapping:
+  rank-order:
+    A: [K, M]
+    B: [K, N]
+    T: [M, K, N]
+    Z: [M, N]
+  loop-order:
+    T: [K, M, N]
+    Z: [M, N, K]
+
+architecture:
+  subtree:
+  - name: System
+    attributes:
+      clock_frequency: 1500000000
+
+    local:
+    - name: MainMemory
+      class: DRAM
+      attributes:
+        datawidth: 8
+        bandwidth: 85.333
+
+    subtree:
+    - name: Chip
+      subtree:
+      - name: PT[0..15]
+
+        local:
+        - name: CacheSPM
+          class: Cache
+          attributes:
+            width: 512
+            depth: inf
+
+          subtree:
+          - name: PE[0..256] # 16 PEs per PT
+            local:
+            - name: RegFile
+              class: Buffet
+
+            - name: Sort
+              class: Merger
+              attributes:
+                radix: inf
+                next_latency: N
+
+            - name: Compute
+              class: compute
+
+bindings:
+  - name: MainMemory
+    bindings:
+    - tensor: A
+      rank: root
+    - tensor: B
+      rank: root
+    - tensor: T
+      rank: root
+    - tensor: Z
+      rank: root
+
+  - name: CacheSPM
+    bindings:
+    - tensor: B
+      ranks: root
+
+  - name: RegFile
+    bindings:
+    - tensor: A
+      rank: M
+    - tensor: B
+      rank: N
+    - tensor: T
+      rank: root
+    - tensor: Z
+      rank: N
+
+  - name: Sort
+    bindings:
+    - tensor: T
+      init_ranks: [M, K, N]
+      swap_depth: 1
+
+  - name: Compute
+    bindings:
+    - einsum: T
+      op: mul
+    - einsum: Z
+      op: add
+
+format:
+  A:
+    M:
+      format: U
+      rhbits: 32
+      pbits: 32
+    K:
+      format: C
+      cbits: 32
+      pbits: 64
+
+  B:
+    K:
+      format: U
+      rhbits: 32
+      pbits: 32
+    N:
+      format: C
+      cbits: 32
+      pbits: 64
+
+  T:
+    M:
+      format: U
+      pbits: 32
+    K:
+      format: C
+      pbits: 32
+    N:
+      format: C
+      cbits: 32
+      pbits: 64
+
+  Z:
+    M:
+      format: U
+      rhbits: 32
+      pbits: 32
+    N:
+      format: C
+      cbits: 32
+      pbits: 64

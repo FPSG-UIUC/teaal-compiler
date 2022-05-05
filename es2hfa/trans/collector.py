@@ -259,9 +259,7 @@ class Collector:
 
         else:
             # This error should be caught by the Hardware constructor
-            raise ValueError(
-                "Unknown MemoryComponent " +
-                repr(buffer_))  # pragma: no cover
+            raise ValueError("Unknown MemoryComponent " + repr(buffer_)) # pragma: no cover
 
     def __merger_metrics(
             self,
@@ -275,10 +273,10 @@ class Collector:
 
         name = EVar(binding["tensor"] + "_" + "".join(binding["init_ranks"]))
         depth = EInt(binding["swap_depth"])
-        next_latency = TransUtils.build_expr(component.get_next_latency())
         radix = TransUtils.build_expr(component.get_radix())
+        next_latency = TransUtils.build_expr(component.get_next_latency())
 
-        args = [AJust(arg) for arg in [name, depth, next_latency, radix]]
+        args = [AJust(arg) for arg in [name, depth, radix, next_latency]]
 
         access = AAccess(metrics, EString(name.gen() + " merge ops"))
         count = EMethod(EVar("Compute"), "swapCount", args)

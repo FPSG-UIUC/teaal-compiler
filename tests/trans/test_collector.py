@@ -57,7 +57,7 @@ def test_dump():
           "metrics[\"Z\"][\"A traffic\"] = metrics[\"Z\"][\"A footprint\"]\n" + \
           "metrics[\"Z\"][\"mul\"] = Compute.opCount(Metrics.dump(), \"mul\")\n" + \
           "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")\n" + \
-          "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 1, 64)"
+          "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 64, 1)"
 
     assert collector.dump().gen(0) == hfa
 
@@ -127,7 +127,6 @@ def test_dump_buffet():
 
     assert collector.dump().gen(0) == hfa
 
-
 def test_dump_leader_follower_bad_rank():
     yaml = """
     einsum:
@@ -157,7 +156,6 @@ def test_dump_leader_follower_bad_rank():
     with pytest.raises(ValueError) as excinfo:
         collector.dump()
     assert str(excinfo.value) == "Tensor B has no rank P"
-
 
 def test_dump_leader_follower():
     yaml = """
@@ -196,7 +194,6 @@ def test_dump_leader_follower():
           "metrics[\"Z\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 1)"
 
     assert collector.dump().gen(0) == hfa
-
 
 def test_dump_skip_ahead():
     yaml = """

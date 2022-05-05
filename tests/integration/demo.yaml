@@ -1,14 +1,110 @@
 einsum:
-    declaration:
-        F: [M, C, R, S]
-        I: [B, C, H, W]
-        O: [B, M, P, Q]
-    expressions:
-        - O[b, m, p, q] = sum(C, R, S).(I[b, c, p + r, q + s] * F[m, c, r, s])
+  declaration:
+      F: [M, C, R, S]
+      I: [B, C, H, W]
+      O: [B, M, P, Q]
+  expressions:
+      - O[b, m, p, q] = sum(C, R, S).(I[b, c, 2 * p + r, 2 * q + s] * F[m, c, r, s])
 mapping:
-    partitioning:
-        O:
-            P: [uniform_shape(10)]
-            Q: [uniform_shape(11)]
-    loop-order:
-        O: [M, C, R, S, B, P1, Q1, P0, Q0]
+  loop-order:
+      O: [B, C, H, W, M, P, Q]
+architecture:
+  subtree:
+  - name: system
+    attributes:
+      #1 GHz
+      clock_frequency: 1000000000
+    local:
+     - name: MainMemory
+       class: dram
+       attributes:
+         datawidth: 8
+         bandwidth: 128
+    subtree:
+    - name: chip
+      local:
+      - name: LLB
+        class: buffet
+      subtree:
+      - name: PE[0..63] #64 PEs
+        local:
+        - name: PEB
+          class: buffet
+        - name: MAC
+          class: compute
+
+bindings:
+    - name: MainMemory
+      bindings:
+        - tensor: I
+          rank: root
+        - tensor: F
+          rank: root
+        - tensor: O
+          rank: root
+
+    - name: LLB
+      bindings:
+        - tensor: F
+          rank: C
+        - tensor: O
+          rank: B
+
+    - name: PEB
+      bindings:
+        - tensor: I
+          rank: W
+        - tensor: F
+          rank: S
+        - tensor: O
+          rank: Q
+
+    - name: MAC
+      bindings:
+        - einsum: O
+          op: mul
+        - einsum: O
+          op: add
+
+format:
+    I:
+        B:
+            format: U
+        C:
+            format: U
+        H:
+            format: U
+        W:
+            format: U
+            pbits: 32
+
+    O:
+        B:
+            format: U
+        M:
+            format: U
+        P:
+            format: U
+        Q:
+            format: U
+            pbits: 32
+
+    F:
+        C:
+            format: U
+            rhbits: 16
+            pbits: 16
+        M:
+            format: C
+            cbits: 8
+            rhbits: 16
+            pbits: 16
+        R:
+            format: C
+            cbits: 8
+            rhbits: 16
+            pbits: 16
+        S:
+            format: C
+            cbits: 8
+            pbits: 32

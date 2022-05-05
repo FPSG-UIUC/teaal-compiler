@@ -271,6 +271,6 @@ def test_hfa_hardware():
           "metrics[\"Z\"][\"A traffic\"] = metrics[\"Z\"][\"A footprint\"]\n" + \
           "metrics[\"Z\"][\"mul\"] = Compute.opCount(Metrics.dump(), \"mul\")\n" + \
           "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")\n" + \
-          "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 1, 64)"
+          "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 64, 1)"
 
     assert str(HFA(einsum, mapping, arch, bindings, format_)) == hfa
