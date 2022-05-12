@@ -47,7 +47,7 @@ pip install -e .
 
 or remotely via SSH with
 ```
-pip install -e git+ssh://git@github.com/FPSG-UIUC/hfa-compiler.git#egg=es2hfa
+pip install -e git+ssh://git@github.com/FPSG-UIUC/teaal-compiler.git#egg=es2hfa
 ```
 
 If installing this way, remember to remove `pipenv run` from the beginning of
