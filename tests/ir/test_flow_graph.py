@@ -74,7 +74,7 @@ def build_gamma():
 
 def test_graph_no_loops():
     program = build_program_no_loops()
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
     corr.add_edge(OtherNode("Output"), GetRootNode("A", []))
@@ -88,7 +88,7 @@ def test_graph_no_loops():
 
 def test_graph():
     program = build_program_matmul("")
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
     corr.add_edge(OtherNode("Output"), GetRootNode("Z", ["M", "N"]))
@@ -115,7 +115,7 @@ def test_graph_loop_order():
             Z: [K, M, N]
     """
     program = build_program_matmul(spec)
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
     corr.add_edge(OtherNode("Output"), GetRootNode("Z", ["M", "N"]))
@@ -146,7 +146,7 @@ def test_graph_static_parts():
             Z: [K2, M, N1, K1, N0, K0]
     """
     program = build_program_matmul(spec)
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
     corr.add_edge(LoopNode("K2"), LoopNode("M"))
@@ -214,7 +214,7 @@ def test_graph_dyn_parts():
             Z: [K2, M, N1, K1, N0, K0]
     """
     program = build_program_matmul(spec)
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
 
@@ -307,7 +307,7 @@ def test_graph_mixed_parts():
             Z: [K3, M, K2, K1, N, K0]
     """
     program = build_program_matmul(spec)
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
 
@@ -403,7 +403,7 @@ def test_graph_conv():
             O: [W, Q]
     """
     program = build_program_conv(spec)
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
     corr.add_edge(LoopNode("W"), LoopNode("Q"))
@@ -431,7 +431,7 @@ def test_graph_conv_part():
             O: [Q2, Q1, S, Q0]
     """
     program = build_program_conv(spec)
-    graph = FlowGraph(program, None).get_graph()
+    graph = FlowGraph(program, None, []).get_graph()
 
     corr = nx.DiGraph()
 
@@ -480,7 +480,7 @@ def test_graph_metrics():
     program, hardware, format_ = build_gamma()
     program.add_einsum(0)
     metrics = Metrics(program, hardware, format_)
-    graph = FlowGraph(program, metrics).get_graph()
+    graph = FlowGraph(program, metrics, []).get_graph()
 
     corr = nx.DiGraph()
 
@@ -510,10 +510,40 @@ def test_graph_metrics():
 
 def test_build_fiber_nodes_empty_graph():
     program = build_program_no_loops()
-    flow_graph = FlowGraph(program, None)
+    flow_graph = FlowGraph(program, None, [])
     iter_graph = IterationGraph(program)
 
     with pytest.raises(ValueError) as excinfo:
         flow_graph._FlowGraph__build_fiber_nodes(iter_graph)
 
     assert str(excinfo.value) == "No loop node to connect"
+
+
+def test_loop_hoisting():
+    spec = """
+        partitioning:
+            Z:
+                K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                N: [uniform_occupancy(B.5)]
+        loop-order:
+            Z: [K2, M, N1, K1, N0, K0]
+    """
+    program = build_program_matmul(spec)
+    corr = [15, 20, 25, 30, 31, 32]
+
+    flow_graph = FlowGraph(program, None, [])
+    pos = []
+    for rank in program.get_loop_order().get_ranks():
+        pos.append(flow_graph.get_sorted().index(LoopNode(rank)))
+
+    # Note that this can technically happen, we just need to make sure that
+    # the hoist option is doing something. If this test fails, try a different
+    # schedule
+    assert pos != corr
+
+    flow_graph = FlowGraph(program, None, ["hoist"])
+    pos = []
+    for rank in program.get_loop_order().get_ranks():
+        pos.append(flow_graph.get_sorted().index(LoopNode(rank)))
+
+    assert pos == corr

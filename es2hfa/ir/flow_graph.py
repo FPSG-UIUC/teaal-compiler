@@ -40,7 +40,11 @@ class FlowGraph:
     The control-dataflow graph for the HFA program
     """
 
-    def __init__(self, program: Program, metrics: Optional[Metrics]) -> None:
+    def __init__(
+            self,
+            program: Program,
+            metrics: Optional[Metrics],
+            opts: List[str]) -> None:
         """
         Construct a new FlowGraph
         """
@@ -49,7 +53,10 @@ class FlowGraph:
 
         self.__build()
         self.__prune()
-        self.sorted = self.__sort()
+        self.__sort()
+
+        if "hoist" in opts:
+            self.__hoist()
 
     def draw(self) -> None:  # pragma: no cover
         """
@@ -390,20 +397,33 @@ class FlowGraph:
             # Remove the node
             self.graph.remove_node(node)
 
-    def __sort(self) -> List[Node]:
+    def __sort(self) -> None:
         """
         Sort all nodes so that the generated code obeys all dependencies
         """
-        # Get the sort that places the loop orders the latest
-        best_pos = {}
-        for rank in self.program.get_loop_order().get_ranks():
-            loop_node = LoopNode(rank)
-            decs = nx.descendants(self.graph, loop_node)
-            best_pos[loop_node] = len(self.graph.nodes()) - len(decs) - 1
+        # Get a topological sort
+        self.sorted = list(nx.topological_sort(self.graph))
 
-        for sort in nx.all_topological_sorts(self.graph):
-            if all(sort.index(node) == i for node, i in best_pos.items()):
-                return sort
+    def __hoist(self) -> None:
+        """
+        Hoist all nodes above loops they do not depend on
+        """
+        # Hoist all statements not dependent on the loop
+        end = len(self.sorted)
+        for rank in reversed(self.program.get_loop_order().get_ranks()):
+            loop = self.sorted.index(LoopNode(rank))
+            i = loop + 1
+            descendants = nx.descendants(self.graph, LoopNode(rank))
 
-        # Note: we should never reach here, there is no way to test
-        raise ValueError("Something is wrong...")  # pragma: no cover
+            while i < end:
+                # If this node does not depend on the loop node, then we can
+                # hoist it
+                if self.sorted[i] not in descendants:
+                    node = self.sorted[i]
+                    del self.sorted[i]
+                    self.sorted.insert(loop, node)
+                    loop += 1
+
+                i += 1
+
+            end = loop

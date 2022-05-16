@@ -84,8 +84,7 @@ class HFA:
             self.metrics = Metrics(self.program, self.hardware, self.format)
 
         # Create the flow graph and get the relevant nodes
-        flow_graph = FlowGraph(self.program, self.metrics)
-        self.fgraph = flow_graph
+        flow_graph = FlowGraph(self.program, self.metrics, ["hoist"])
         nodes = flow_graph.get_sorted()
 
         # Create all relevant translator objects
