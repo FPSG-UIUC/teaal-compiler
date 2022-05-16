@@ -59,49 +59,53 @@ class Equation:
         for i, term in enumerate(einsum.find_data("times")):
             self.terms.append(cast(List[str], []))
             self.vars.append([])
-
             self.in_update.append(cast(List[bool], []))
 
-            # Find all unfiltered factors
-            for single in term.find_data("single"):
-                for var in single.find_data("var"):
-                    self.vars[-1].append(ParseUtils.next_str(var))
-                    self.factor_order[self.vars[-1][-1]
-                                      ] = (i, len(self.in_update[-1]))
-                    self.in_update[-1].append(True)
+            for var in term.find_data("var"):
+                self.vars[-1].append(ParseUtils.next_str(var))
+                self.factor_order[self.vars[-1][-1]
+                                  ] = (i, len(self.in_update[-1]))
+                self.in_update[-1].append(True)
 
-                for tensor in single.find_data("tensor"):
-                    self.terms[-1].append(ParseUtils.next_str(tensor))
-                    self.factor_order[self.terms[-1][-1]
-                                      ] = (i, len(self.in_update[-1]))
-                    self.in_update[-1].append(True)
+            for tensor in term.find_data("tensor"):
+                self.terms[-1].append(ParseUtils.next_str(tensor))
+                self.factor_order[self.terms[-1][-1]
+                                  ] = (i, len(self.in_update[-1]))
+                self.in_update[-1].append(True)
 
-            # Find all factors intersected together
-            in_update_off = len(self.in_update[-1])
-            for dot in term.find_data("dot"):
-                for child in dot.children:
-                    if isinstance(child, Tree):
-                        if child.data == "var":
-                            self.vars[-1].append(ParseUtils.next_str(child))
-                            self.factor_order[self.vars[-1][-1]
-                                              ] = (i, len(self.in_update[-1]))
-                            self.in_update[-1].append(False)
+        # Find all factors intersected together
+        for i, dot in enumerate(einsum.find_data("dot")):
+            self.terms.append(cast(List[str], []))
+            self.vars.append([])
+            self.in_update.append(cast(List[bool], []))
 
-                        elif child.data == "tensor":
-                            self.terms[-1].append(ParseUtils.next_str(child))
-                            self.factor_order[self.terms[-1][-1]
-                                              ] = (i, len(self.in_update[-1]))
-                            self.in_update[-1].append(False)
+            for child in dot.children:
+                if isinstance(child, Tree):
+                    if child.data == "var":
+                        self.vars[-1].append(ParseUtils.next_str(child))
+                        self.factor_order[self.vars[-1][-1]
+                                          ] = (i, len(self.in_update[-1]))
+                        self.in_update[-1].append(False)
 
-                        else:
-                            # Note: there is no way to test this error, bad
-                            # factors should be caught by the parser
-                            raise ValueError(
-                                "Unknown factor")  # pragma: no cover
+                    elif child.data == "tensor":
+                        self.terms[-1].append(ParseUtils.next_str(child))
+                        self.factor_order[self.terms[-1][-1]
+                                          ] = (i, len(self.in_update[-1]))
+                        self.in_update[-1].append(False)
 
-                    elif isinstance(child, Token):
-                        self.in_update[-1][in_update_off +
-                                           int(child.value)] = True
+                    else:
+                        # Note: there is no way to test this error, bad
+                        # factors should be caught by the parser
+                        raise ValueError(
+                            "Unknown factor")  # pragma: no cover
+
+                elif isinstance(child, Token):
+                    self.in_update[-1][int(child.value)] = True
+
+                else:
+                    # Note: there is no way to test this error, bad
+                    # factors should be caught by the parser
+                    raise ValueError("Unknown factor")  # pragma: no cover
 
         # Now create the reverse dictionary of factors to term #
         self.term_dict: Dict[str, int] = {}

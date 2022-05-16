@@ -259,7 +259,9 @@ class Collector:
 
         else:
             # This error should be caught by the Hardware constructor
-            raise ValueError("Unknown MemoryComponent " + repr(buffer_)) # pragma: no cover
+            raise ValueError(
+                "Unknown MemoryComponent " +
+                repr(buffer_))  # pragma: no cover
 
     def __merger_metrics(
             self,

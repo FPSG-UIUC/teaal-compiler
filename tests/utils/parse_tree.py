@@ -56,7 +56,7 @@ def make_tensor_tranks(name, tranks):
 
 
 def make_times(vars_):
-    return Tree("times", [Tree("single", [make_var(var)]) for var in vars_])
+    return Tree("times", [make_var(var) for var in vars_])
 
 
 def make_tranks(ranks):

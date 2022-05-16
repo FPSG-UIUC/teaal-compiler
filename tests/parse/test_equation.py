@@ -13,8 +13,8 @@ def test_einsum():
 def test_tensor():
     # Note: also tests ranks parsing
     tree = make_einsum(make_output("A", ["i", "j"]),
-                       Tree("plus", [Tree("times", [Tree("single",
-                                          [make_tensor("B", ["i", "j"])])])]))
+                       Tree("plus", [Tree("times",
+                                          [make_tensor("B", ["i", "j"])])]))
     assert EquationParser.parse("A[i, j] = B[i, j]") == tree
 
 

@@ -19,9 +19,6 @@ class EquationParser:
         ?factor: NAME -> var
                | tensor
 
-        ?filter: factor -> single
-               | "dot(" (factor ",")* factor "," NUMBER ")" -> dot
-
         ?iexpr: (iterm "+")* iterm -> iplus
 
         ?iterm: NAME -> ijust
@@ -36,7 +33,8 @@ class EquationParser:
 
         ?tensor: NAME "[" tranks "]"
 
-        ?term: (filter "*")* filter -> times
+        ?term: (factor "*")* factor -> times
+               | "dot(" (factor ",")* factor "," NUMBER ")" -> dot
 
         ?tranks: [iexpr ("," iexpr)*] -> tranks
 
