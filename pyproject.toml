@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "es2hfa"
+description = "A compiler from a YAML description to HFA code"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {file = "LICENSE"}
+authors = [
+    {"name" = "Nandeeka Nayak", "email" = "ndnayak2@illinois.edu"}
+]
+dependencies = [
+    "pytest",
+    "pytest-cov",
+    "autopep8",
+    "mypy",
+    "lark-parser",
+    "ruamel-yaml",
+    "networkx",
+    "matplotlib",
+    "sympy"
+]
