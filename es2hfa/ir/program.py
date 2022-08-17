@@ -27,7 +27,7 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from es2hfa.ir.coord_math import CoordMath
 from es2hfa.ir.loop_order import LoopOrder
@@ -301,12 +301,20 @@ class Program:
 
         return self.tensors[name]
 
-    def __all_ranks(self) -> List[str]:
+    def __all_ranks(self) -> Set[str]:
         """
         Get the set of all ranks
         """
+        if self.equation is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
         ranks = set()
         for tensor in self.es_tensors:
             ranks.update(tensor.get_ranks())
 
-        return list(ranks)
+        for sranks in self.equation.find_data("sranks"):
+            for rank in sranks.children:
+                ranks.add(str(rank))
+
+        return ranks

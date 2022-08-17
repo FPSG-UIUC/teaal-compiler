@@ -39,7 +39,7 @@ class Partitioning:
 
     def __init__(self,
                  partitioning: Dict[str, List[Tree]],
-                 ranks: List[str],
+                 ranks: Iterable[str],
                  eqn_exprs: Dict[Symbol, Basic]) -> None:
         """
         Create a new representation of the partitioning information

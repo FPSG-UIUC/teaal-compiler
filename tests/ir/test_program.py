@@ -161,6 +161,30 @@ def test_apply_partitioning_unconfigured():
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
+def test_all_rank_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program._Program__all_ranks()
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_all_ranks():
+    yaml = """
+    einsum:
+        declaration:
+            Z: []
+            A: [J]
+        expressions:
+            - Z[] = sum(K).(A[2 * k])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    assert program._Program__all_ranks() == {"J", "K"}
+
+
 def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
