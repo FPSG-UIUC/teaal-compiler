@@ -1,9 +1,9 @@
 import pytest
 from sympy import symbols
 
-from es2hfa.ir.partitioning import Partitioning
-from es2hfa.ir.spacetime import SpaceTime
-from es2hfa.parse.spacetime import SpaceTimeParser
+from teaal.ir.partitioning import Partitioning
+from teaal.ir.spacetime import SpaceTime
+from teaal.parse.spacetime import SpaceTimeParser
 from tests.utils.parse_tree import make_uniform_shape
 
 

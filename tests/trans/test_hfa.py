@@ -1,5 +1,5 @@
-from es2hfa.parse import *
-from es2hfa.trans.hfa import HFA
+from teaal.parse import *
+from teaal.trans.hfa import HFA
 
 
 def test_translate_no_loops():

@@ -1,4 +1,4 @@
-from es2hfa.parse.bindings import Bindings
+from teaal.parse.bindings import Bindings
 
 
 def test_empty():

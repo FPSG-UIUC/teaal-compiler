@@ -1,13 +1,13 @@
 import networkx as nx
 import pytest
 
-from es2hfa.ir.flow_graph import FlowGraph
-from es2hfa.ir.hardware import Hardware
-from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.metrics import Metrics
-from es2hfa.ir.nodes import *
-from es2hfa.ir.program import Program
-from es2hfa.parse import *
+from teaal.ir.flow_graph import FlowGraph
+from teaal.ir.hardware import Hardware
+from teaal.ir.iter_graph import IterationGraph
+from teaal.ir.metrics import Metrics
+from teaal.ir.nodes import *
+from teaal.ir.program import Program
+from teaal.parse import *
 
 
 def build_program_no_loops():

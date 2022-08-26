@@ -1,5 +1,5 @@
-from es2hfa.parse.mapping import Mapping
-from es2hfa.parse.spacetime import SpaceTimeParser
+from teaal.parse.mapping import Mapping
+from teaal.parse.spacetime import SpaceTimeParser
 from tests.utils.parse_tree import make_uniform_shape
 
 

@@ -47,7 +47,7 @@ pip install -e .
 
 or remotely via SSH with
 ```
-pip install -e git+ssh://git@github.com/FPSG-UIUC/teaal-compiler.git#egg=es2hfa
+pip install -e git+ssh://git@github.com/FPSG-UIUC/teaal-compiler.git#egg=teaal
 ```
 
 If installing this way, remember to remove `pipenv run` from the beginning of
@@ -65,7 +65,7 @@ The details for how to run specific checks can be found below.
 
 To type check, run
 ```
-pipenv run mypy es2hfa
+pipenv run mypy teaal
 ```
 
 In order for the YAML parser to typecheck, you may need to add an empty
@@ -76,7 +76,7 @@ In order for the YAML parser to typecheck, you may need to add an empty
 
 To lint, run
 ```
-pipenv run autopep8 -iraa es2hfa/
+pipenv run autopep8 -iraa teaal/
 pipenv run autopep8 -iraa tests/
 ```
 
@@ -93,5 +93,5 @@ pipenv run python -m pytest tests
 ```
 and to get the test coverage statistics, run
 ```
-pipenv run python -m pytest --cov=es2hfa --cov-report term-missing tests
+pipenv run python -m pytest --cov=teaal --cov-report term-missing tests
 ```

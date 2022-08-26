@@ -1,10 +1,10 @@
 import pytest
 
-from es2hfa.ir.hardware import Hardware
-from es2hfa.ir.metrics import Metrics
-from es2hfa.ir.program import Program
-from es2hfa.parse import *
-from es2hfa.trans.collector import Collector
+from teaal.ir.hardware import Hardware
+from teaal.ir.metrics import Metrics
+from teaal.ir.program import Program
+from teaal.parse import *
+from teaal.trans.collector import Collector
 
 
 def build_gamma_yaml():

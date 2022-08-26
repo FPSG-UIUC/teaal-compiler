@@ -1,7 +1,7 @@
 import pytest
 
-from es2hfa.ir.tensor import Tensor
-from es2hfa.trans.utils import TransUtils
+from teaal.ir.tensor import Tensor
+from teaal.trans.utils import TransUtils
 
 
 def test_build_expr_bad():

@@ -1,11 +1,11 @@
-from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.program import Program
-from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.header import Header
-from es2hfa.trans.partitioner import Partitioner
-from es2hfa.trans.utils import TransUtils
+from teaal.ir.iter_graph import IterationGraph
+from teaal.ir.program import Program
+from teaal.ir.tensor import Tensor
+from teaal.parse.einsum import Einsum
+from teaal.parse.mapping import Mapping
+from teaal.trans.header import Header
+from teaal.trans.partitioner import Partitioner
+from teaal.trans.utils import TransUtils
 
 
 def build_header(exprs, mapping):

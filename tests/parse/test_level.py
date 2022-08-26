@@ -1,7 +1,7 @@
 from lark.lexer import Token
 from lark.tree import Tree
 
-from es2hfa.parse.level import LevelParser
+from teaal.parse.level import LevelParser
 
 
 def test_multiple():

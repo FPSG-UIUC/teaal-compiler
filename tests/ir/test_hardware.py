@@ -1,9 +1,9 @@
 import pytest
 
-from es2hfa.ir.component import *
-from es2hfa.ir.hardware import Hardware
-from es2hfa.ir.level import Level
-from es2hfa.parse import *
+from teaal.ir.component import *
+from teaal.ir.hardware import Hardware
+from teaal.ir.level import Level
+from teaal.parse import *
 
 
 def test_no_arch():

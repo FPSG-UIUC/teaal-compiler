@@ -1,6 +1,6 @@
 from lark.tree import Tree
 
-from es2hfa.parse.equation import EquationParser
+from teaal.parse.equation import EquationParser
 from tests.utils.parse_tree import *
 
 

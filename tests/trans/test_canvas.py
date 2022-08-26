@@ -1,9 +1,9 @@
 import pytest
 
-from es2hfa.ir.program import Program
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.canvas import Canvas
+from teaal.ir.program import Program
+from teaal.parse.einsum import Einsum
+from teaal.parse.mapping import Mapping
+from teaal.trans.canvas import Canvas
 
 
 def create_default():

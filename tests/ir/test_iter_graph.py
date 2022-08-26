@@ -1,10 +1,10 @@
 import pytest
 
-from es2hfa.ir.iter_graph import IterationGraph
-from es2hfa.ir.program import Program
-from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
+from teaal.ir.iter_graph import IterationGraph
+from teaal.ir.program import Program
+from teaal.ir.tensor import Tensor
+from teaal.parse.einsum import Einsum
+from teaal.parse.mapping import Mapping
 
 
 def test_peek_rank0():

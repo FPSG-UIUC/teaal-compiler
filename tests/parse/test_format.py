@@ -1,6 +1,6 @@
 import pytest
 
-from es2hfa.parse.format import Format
+from teaal.parse.format import Format
 
 
 def build_format():

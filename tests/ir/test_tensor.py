@@ -1,6 +1,6 @@
 import pytest
 
-from es2hfa.ir.tensor import Tensor
+from teaal.ir.tensor import Tensor
 
 
 def test_repeat_ranks():

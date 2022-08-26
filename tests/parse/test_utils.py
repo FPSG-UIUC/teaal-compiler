@@ -1,7 +1,7 @@
 from lark.lexer import Token
 from lark.tree import Tree
 
-from es2hfa.parse.utils import ParseUtils
+from teaal.parse.utils import ParseUtils
 
 
 def test_find_int():

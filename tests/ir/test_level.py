@@ -1,5 +1,5 @@
-from es2hfa.ir.component import *
-from es2hfa.ir.level import Level
+from teaal.ir.component import *
+from teaal.ir.level import Level
 
 
 def build_local():

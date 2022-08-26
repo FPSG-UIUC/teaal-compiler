@@ -1,6 +1,6 @@
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.hfa import HFA
+from teaal.parse.einsum import Einsum
+from teaal.parse.mapping import Mapping
+from teaal.trans.hfa import HFA
 
 
 def read_hfa(filename):

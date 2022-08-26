@@ -1,7 +1,7 @@
 from lark.lexer import Token
 from lark.tree import Tree
 
-from es2hfa.parse.partitioning import PartitioningParser
+from teaal.parse.partitioning import PartitioningParser
 
 
 def test_nway_shape():

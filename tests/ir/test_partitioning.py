@@ -1,9 +1,9 @@
 import pytest
 from sympy import symbols
 
-from es2hfa.ir.partitioning import Partitioning
-from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.mapping import Mapping
+from teaal.ir.partitioning import Partitioning
+from teaal.ir.tensor import Tensor
+from teaal.parse.mapping import Mapping
 
 
 def parse_partitioning(parts):

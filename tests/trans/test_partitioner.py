@@ -1,11 +1,11 @@
 import pytest
 
-from es2hfa.ir.program import Program
-from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.partitioner import Partitioner
-from es2hfa.trans.utils import TransUtils
+from teaal.ir.program import Program
+from teaal.ir.tensor import Tensor
+from teaal.parse.einsum import Einsum
+from teaal.parse.mapping import Mapping
+from teaal.trans.partitioner import Partitioner
+from teaal.trans.utils import TransUtils
 
 
 def assert_partition(tensor, parts, hfa):

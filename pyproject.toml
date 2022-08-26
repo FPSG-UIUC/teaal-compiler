@@ -3,11 +3,11 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "es2hfa"
+name = "teaal"
 description = "A compiler from a YAML description to HFA code"
 version = "0.0.1"
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 license = {file = "LICENSE"}
 authors = [
     {"name" = "Nandeeka Nayak", "email" = "ndnayak2@illinois.edu"}

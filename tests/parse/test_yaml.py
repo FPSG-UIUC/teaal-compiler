@@ -1,4 +1,4 @@
-from es2hfa.parse.yaml import YamlParser
+from teaal.parse.yaml import YamlParser
 
 
 def test_parse_file():

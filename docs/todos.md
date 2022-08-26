@@ -5,13 +5,13 @@
 ## Minor Changes
 
 - [ ] Add tests to make sure that `get_all_parts` is used in the correct locations (vs `get_static_parts` and `get_dyn_parts`)
-- [ ] Add public interface to top-level `es2hfa` import
+- [ ] Add public interface to top-level `teaal` import
 - [ ] Clean up tests
     - Which example tests actually test something unique?
     - All tests should use the [tensor naming conventions](./tensor_naming.md)
     - Delete all unused tests except for cnn and conv2d
 - [ ] Introduce .coord in spacetime notebook before .pos/default
-- [ ] Rename HFA -> HiFiber and es2hfa -> teaal
+- [ ] Rename HFA -> HiFiber and teaal -> teaal
 - [ ] Allow variable names for partition sizes
 
 ## Major Changes

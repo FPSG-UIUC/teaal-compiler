@@ -1,5 +1,5 @@
-from es2hfa.parse.equation import EquationParser
-from es2hfa.parse.einsum import Einsum
+from teaal.parse.equation import EquationParser
+from teaal.parse.einsum import Einsum
 
 
 def test_declaration():

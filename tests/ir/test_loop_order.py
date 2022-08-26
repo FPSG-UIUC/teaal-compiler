@@ -2,12 +2,12 @@ from lark.tree import Tree
 import pytest
 from sympy import symbols
 
-from es2hfa.ir.coord_math import CoordMath
-from es2hfa.ir.loop_order import LoopOrder
-from es2hfa.ir.partitioning import Partitioning
-from es2hfa.ir.tensor import Tensor
-from es2hfa.parse.equation import EquationParser
-from es2hfa.parse.mapping import Mapping
+from teaal.ir.coord_math import CoordMath
+from teaal.ir.loop_order import LoopOrder
+from teaal.ir.partitioning import Partitioning
+from teaal.ir.tensor import Tensor
+from teaal.parse.equation import EquationParser
+from teaal.parse.mapping import Mapping
 from tests.utils.parse_tree import *
 
 

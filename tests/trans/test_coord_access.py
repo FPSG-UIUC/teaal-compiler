@@ -1,7 +1,7 @@
 import pytest
 from sympy import sympify
 
-from es2hfa.trans.coord_access import CoordAccess
+from teaal.trans.coord_access import CoordAccess
 
 
 def test_build_expr_symbol():

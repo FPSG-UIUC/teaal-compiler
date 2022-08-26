@@ -1,4 +1,4 @@
-from es2hfa.ir.component import *
+from teaal.ir.component import *
 
 
 def test_component_get_name():

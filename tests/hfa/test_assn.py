@@ -1,4 +1,4 @@
-from es2hfa.hfa import *
+from teaal.hfa import *
 
 
 def test_aaccess():

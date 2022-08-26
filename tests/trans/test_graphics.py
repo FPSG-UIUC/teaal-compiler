@@ -1,7 +1,7 @@
-from es2hfa.ir.program import Program
-from es2hfa.parse.einsum import Einsum
-from es2hfa.parse.mapping import Mapping
-from es2hfa.trans.graphics import Graphics
+from teaal.ir.program import Program
+from teaal.parse.einsum import Einsum
+from teaal.parse.mapping import Mapping
+from teaal.trans.graphics import Graphics
 
 
 def create_default():

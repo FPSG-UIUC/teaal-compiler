@@ -1,7 +1,7 @@
 from lark.lexer import Token
 from lark.tree import Tree
 
-from es2hfa.parse.spacetime import SpaceTimeParser
+from teaal.parse.spacetime import SpaceTimeParser
 
 
 def test_default():

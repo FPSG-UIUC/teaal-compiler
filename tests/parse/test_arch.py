@@ -1,6 +1,6 @@
 import pytest
 
-from es2hfa.parse.arch import Architecture
+from teaal.parse.arch import Architecture
 
 
 def build_local(name, class_, attrs):

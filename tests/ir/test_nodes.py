@@ -1,4 +1,4 @@
-from es2hfa.ir.nodes import *
+from teaal.ir.nodes import *
 
 
 def test_node():
