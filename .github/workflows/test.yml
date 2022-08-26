@@ -22,7 +22,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.6]
+        python-version: [3.8]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -47,6 +47,7 @@ jobs:
       - name: Run a multi-line script
         run: |
           # pipenv run python -m pytest tests
+          ls env/lib/python3.8/site-packages/
           source env/bin/activate
           python -m pytest
           deactivate
