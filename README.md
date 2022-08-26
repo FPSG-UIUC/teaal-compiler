@@ -4,30 +4,6 @@
 
 ## Installation
 
-### Pipenv
-
-Pipenv automatically manages the virtual environment and dependencies for you.
-It is the easiest way to get started.
-
-First, make sure you have [pipenv](https://pipenv.pypa.io/en/latest/).
-
-To set up the virtual environment, run
-```
-pipenv install
-```
-
-You can then run any commands in the virtual environment with
-```
-pipenv run [cmd]
-```
-or
-```
-pipenv shell
-[cmd]
-```
-
-### Manual Virtual Environment
-
 First, make sure you have [venv](https://docs.python.org/3/library/venv.html).
 
 To create the virtual environment,
@@ -50,14 +26,11 @@ or remotely via SSH with
 pip install -e git+ssh://git@github.com/FPSG-UIUC/teaal-compiler.git#egg=teaal
 ```
 
-If installing this way, remember to remove `pipenv run` from the beginning of
-each of the commands.
-
 ## All Checks
 
 All checks can be run with the command
 ```
-./check.sh
+./scripts/check.sh
 ```
 The details for how to run specific checks can be found below.
 
@@ -65,19 +38,19 @@ The details for how to run specific checks can be found below.
 
 To type check, run
 ```
-pipenv run mypy teaal
+mypy teaal
 ```
 
 In order for the YAML parser to typecheck, you may need to add an empty
 `__init__.pyi` in the directory
-`~/.local/share/virtualenvs/teaal-compiler-<hash>/lib/python3.<#>/site-packages/ruamel/yaml/`.
+`env/lib/python3.<#>/site-packages/ruamel/yaml/`.
 
 ## Linting
 
 To lint, run
 ```
-pipenv run autopep8 -iraa teaal/
-pipenv run autopep8 -iraa tests/
+autopep8 -iraa teaal/
+autopep8 -iraa tests/
 ```
 
 Note that this uses the most aggressive form of linting available with
@@ -89,9 +62,9 @@ agressive code changes) or none (whitespace changes only).
 
 To run tests, run
 ```
-pipenv run python -m pytest tests
+python -m pytest tests
 ```
 and to get the test coverage statistics, run
 ```
-pipenv run python -m pytest --cov=teaal --cov-report term-missing tests
+python -m pytest --cov=teaal --cov-report term-missing tests
 ```
