@@ -128,8 +128,8 @@ def test_create_canvas():
     program.add_einsum(0)
     canvas = Canvas(program)
 
-    hfa = "canvas = createCanvas(A_KM, B_KN, Z_MN)"
-    assert canvas.create_canvas().gen(0) == hfa
+    hifiber = "canvas = createCanvas(A_KM, B_KN, Z_MN)"
+    assert canvas.create_canvas().gen(0) == hifiber
 
 
 def test_create_canvas_partitioned():
@@ -144,8 +144,8 @@ def test_create_canvas_partitioned():
 
     canvas = Canvas(program)
 
-    hfa = "canvas = createCanvas(A_KM, B_N2KN1N0, Z_N2N1MN0)"
-    assert canvas.create_canvas().gen(0) == hfa
+    hifiber = "canvas = createCanvas(A_KM, B_N2KN1N0, Z_N2N1MN0)"
+    assert canvas.create_canvas().gen(0) == hifiber
 
 
 def test_add_activity_no_canvas():
@@ -180,8 +180,8 @@ def test_add_activity():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (k_pos, m)))"
-    assert canvas.add_activity().gen(0) == hfa
+    hifiber = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (k_pos, m)))"
+    assert canvas.add_activity().gen(0) == hifiber
 
 
 def test_add_activity_partitioned_coord():
@@ -195,8 +195,8 @@ def test_add_activity_partitioned_coord():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m), (n2, k, n1, n0), (n2, n1, m, n0), spacetime=((n2, n1 - n2), (k, m, n0 - n1)))"
-    assert canvas.add_activity().gen(0) == hfa
+    hifiber = "canvas.addActivity((k, m), (n2, k, n1, n0), (n2, n1, m, n0), spacetime=((n2, n1 - n2), (k, m, n0 - n1)))"
+    assert canvas.add_activity().gen(0) == hifiber
 
 
 def test_add_activity_partitioned_pos():
@@ -210,8 +210,8 @@ def test_add_activity_partitioned_pos():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m), (n2, k, n1, n0), (n2, n1, m, n0), spacetime=((n2_pos, n1_pos), (k_pos, m_pos, n0_pos)))"
-    assert canvas.add_activity().gen(0) == hfa
+    hifiber = "canvas.addActivity((k, m), (n2, k, n1, n0), (n2, n1, m, n0), spacetime=((n2_pos, n1_pos), (k_pos, m_pos, n0_pos)))"
+    assert canvas.add_activity().gen(0) == hifiber
 
 
 def test_add_activity_slip():
@@ -221,8 +221,8 @@ def test_add_activity_slip():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
-    assert canvas.add_activity().gen(0) == hfa
+    hifiber = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
+    assert canvas.add_activity().gen(0) == hifiber
 
 
 def test_add_activity_dyn_part():
@@ -234,8 +234,8 @@ def test_add_activity_dyn_part():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((k, m2, m0), (k, n), (m2, m1, m0, n), spacetime=((), (m2_pos, k_pos, m1_pos, m0_pos, n_pos)))"
-    assert canvas.add_activity().gen(0) == hfa
+    hifiber = "canvas.addActivity((k, m2, m0), (k, n), (m2, m1, m0, n), spacetime=((), (m2_pos, k_pos, m1_pos, m0_pos, n_pos)))"
+    assert canvas.add_activity().gen(0) == hifiber
 
 
 def test_add_activity_conv():
@@ -245,8 +245,8 @@ def test_add_activity_conv():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "canvas.addActivity((w,), (w + -1 * q,), (q,), spacetime=((), (w_pos, q_pos)))"
-    assert canvas.add_activity().gen(0) == hfa
+    hifiber = "canvas.addActivity((w,), (w + -1 * q,), (q,), spacetime=((), (w_pos, q_pos)))"
+    assert canvas.add_activity().gen(0) == hifiber
 
 
 def test_display_canvas_no_canvas():
@@ -268,8 +268,8 @@ def test_display_canvas():
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hfa = "displayCanvas(canvas)"
-    assert canvas.display_canvas().gen(0) == hfa
+    hifiber = "displayCanvas(canvas)"
+    assert canvas.display_canvas().gen(0) == hifiber
 
 
 def test_get_space_tuple():
@@ -277,8 +277,8 @@ def test_get_space_tuple():
     program.add_einsum(0)
     canvas = Canvas(program)
 
-    hfa = "(n_pos,)"
-    assert canvas.get_space_tuple().gen() == hfa
+    hifiber = "(n_pos,)"
+    assert canvas.get_space_tuple().gen() == hifiber
 
 
 def test_get_space_tuple_no_spacetime():
@@ -298,8 +298,8 @@ def test_get_time_tuple():
     program.add_einsum(0)
     canvas = Canvas(program)
 
-    hfa = "(k_pos, m)"
-    assert canvas.get_time_tuple().gen() == hfa
+    hifiber = "(k_pos, m)"
+    assert canvas.get_time_tuple().gen() == hifiber
 
 
 def test_get_time_tuple_no_spacetime():

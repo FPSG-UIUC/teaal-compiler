@@ -49,19 +49,19 @@ def test_make_body_none():
 def test_make_body_no_opt():
     graphics = create_spacetime("")
     graphics.make_header()
-    hfa = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (k_pos, m)))"
-    assert graphics.make_body().gen(0) == hfa
+    hifiber = "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (k_pos, m)))"
+    assert graphics.make_body().gen(0) == hifiber
 
 
 def test_make_body_slip():
     graphics = create_spacetime("slip")
     graphics.make_header()
-    hfa = "if (n_pos,) in timestamps.keys():\n" + \
-          "    timestamps[(n_pos,)] += 1\n" + \
-          "else:\n" + \
-          "    timestamps[(n_pos,)] = 1\n" + \
-          "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
-    assert graphics.make_body().gen(0) == hfa
+    hifiber = "if (n_pos,) in timestamps.keys():\n" + \
+        "    timestamps[(n_pos,)] += 1\n" + \
+        "else:\n" + \
+        "    timestamps[(n_pos,)] = 1\n" + \
+        "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
+    assert graphics.make_body().gen(0) == hifiber
 
 
 def test_make_footer_none():
@@ -72,8 +72,8 @@ def test_make_footer_none():
 def test_make_footer():
     graphics = create_spacetime("")
     graphics.make_header()
-    hfa = "displayCanvas(canvas)"
-    assert graphics.make_footer().gen(0) == hfa
+    hifiber = "displayCanvas(canvas)"
+    assert graphics.make_footer().gen(0) == hifiber
 
 
 def test_make_header_none():
@@ -83,12 +83,12 @@ def test_make_header_none():
 
 def test_make_header_no_opt():
     graphics = create_spacetime("")
-    hfa = "canvas = createCanvas(A_KM, B_KN, Z_MN)"
-    assert graphics.make_header().gen(0) == hfa
+    hifiber = "canvas = createCanvas(A_KM, B_KN, Z_MN)"
+    assert graphics.make_header().gen(0) == hifiber
 
 
 def test_make_header_slip():
     graphics = create_spacetime("slip")
-    hfa = "canvas = createCanvas(A_KM, B_KN, Z_MN)\n" + \
-          "timestamps = {}"
-    assert graphics.make_header().gen(0) == hfa
+    hifiber = "canvas = createCanvas(A_KM, B_KN, Z_MN)\n" + \
+        "timestamps = {}"
+    assert graphics.make_header().gen(0) == hifiber

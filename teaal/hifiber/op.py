@@ -21,152 +21,152 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-HFA AST and code generation for HFA operators
+HiFiber AST and code generation for HiFiber operators
 """
 
 
-from teaal.hfa.base import Operator
+from teaal.hifiber.base import Operator
 
 
 class OAdd(Operator):
     """
-    The HFA addition operator
+    The HiFiber addition operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OAdd operator
+        Generate the HiFiber code for the OAdd operator
         """
         return "+"
 
 
 class OAnd(Operator):
     """
-    The HFA and operator
+    The HiFiber and operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OAnd operator
+        Generate the HiFiber code for the OAnd operator
         """
         return "&"
 
 
 class ODiv(Operator):
     """
-    The HFA divide operator
+    The HiFiber divide operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the ODiv operator
+        Generate the HiFiber code for the ODiv operator
         """
         return "/"
 
 
 class OEqEq(Operator):
     """
-    The HFA equal-equal operator
+    The HiFiber equal-equal operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OEqEq operator
+        Generate the HiFiber code for the OEqEq operator
         """
         return "=="
 
 
 class OFDiv(Operator):
     """
-    The HFA floor divide operator
+    The HiFiber floor divide operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OFDiv operator
+        Generate the HiFiber code for the OFDiv operator
         """
         return "//"
 
 
 class OIn(Operator):
     """
-    The HFA in operator
+    The HiFiber in operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OIn operator
+        Generate the HiFiber code for the OIn operator
         """
         return "in"
 
 
 class OLt(Operator):
     """
-    The HFA less-than less-than operator
+    The HiFiber less-than less-than operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OLt operator
+        Generate the HiFiber code for the OLt operator
         """
         return "<"
 
 
 class OLtLt(Operator):
     """
-    The HFA less-than less-than operator
+    The HiFiber less-than less-than operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OLtLt operator
+        Generate the HiFiber code for the OLtLt operator
         """
         return "<<"
 
 
 class OMod(Operator):
     """
-    The HFA modulo operator
+    The HiFiber modulo operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OMod operator
+        Generate the HiFiber code for the OMod operator
         """
         return "%"
 
 
 class OMul(Operator):
     """
-    The HFA multiplication operator
+    The HiFiber multiplication operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OMul operator
+        Generate the HiFiber code for the OMul operator
         """
         return "*"
 
 
 class OOr(Operator):
     """
-    The HFA or operator
+    The HiFiber or operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OOr operator
+        Generate the HiFiber code for the OOr operator
         """
         return "|"
 
 
 class OSub(Operator):
     """
-    The HFA subtract operator
+    The HiFiber subtract operator
     """
 
     def gen(self) -> str:
         """
-        Generate the HFA code for the OSub operator
+        Generate the HiFiber code for the OSub operator
         """
         return "-"

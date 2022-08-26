@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-HFA AST and code generation for HFA statements
+HiFiber AST and code generation for HiFiber statements
 """
 
 from typing import List, Optional, Tuple
 
-from teaal.hfa.base import Assignable, Expression, Operator, Payload, Statement
-from teaal.hfa.expr import EVar
+from teaal.hifiber.base import Assignable, Expression, Operator, Payload, Statement
+from teaal.hifiber.expr import EVar
 
 
 class SAssign(Statement):
@@ -41,7 +41,7 @@ class SAssign(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SAssign
+        Generate the HiFiber output for an SAssign
         """
         return "    " * depth + self.assn.gen() + " = " + self.expr.gen()
 
@@ -56,7 +56,7 @@ class SBlock(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SBlock
+        Generate the HiFiber output for an SBlock
         """
         return "\n".join([s.gen(depth) for s in self.stmts])
 
@@ -81,14 +81,14 @@ class SExpr(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SExpr
+        Generate the HiFiber output for an SExpr
         """
         return "    " * depth + self.expr.gen()
 
 
 class SFor(Statement):
     """
-    A for loop for iterating over fibers in HFA
+    A for loop for iterating over fibers in HiFiber
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class SFor(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SFor
+        Generate the HiFiber output for an SFor
         """
         return "    " * depth + "for " + \
             self.payload.gen(False) + " in " + self.expr.gen() + ":\n" + self.stmt.gen(depth + 1)
@@ -120,7 +120,7 @@ class SFunc(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SFunc
+        Generate the HiFiber output for an SFunc
         """
         args = ", ".join([arg.gen() for arg in self.args])
         header = "def " + self.name + "(" + args + "):\n"
@@ -143,7 +143,7 @@ class SIAssign(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SIAssign
+        Generate the HiFiber output for an SIAssign
         """
         return "    " * depth + self.assn.gen() + " " + self.op.gen() + \
             "= " + self.expr.gen()
@@ -166,7 +166,7 @@ class SIf(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SIf
+        Generate the HiFiber output for an SIf
         """
         out = "    " * depth
         out += "if " + self.if_[0].gen() + ":\n" + self.if_[1].gen(depth + 1)
@@ -192,6 +192,6 @@ class SReturn(Statement):
 
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA output for an SReturn
+        Generate the HiFiber output for an SReturn
         """
         return "    " * depth + "return " + self.expr.gen()

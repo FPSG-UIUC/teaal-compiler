@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the footer below the loop nest
 """
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.program import Program
 from teaal.trans.graphics import Graphics
 from teaal.trans.partitioner import Partitioner
@@ -33,7 +33,7 @@ from teaal.trans.utils import TransUtils
 
 class Footer:
     """
-    Generate the HFA code for the footer below the loop nest
+    Generate the HiFiber code for the footer below the loop nest
     """
 
     @staticmethod

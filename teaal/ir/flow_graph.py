@@ -37,7 +37,7 @@ from teaal.ir.tensor import Tensor
 
 class FlowGraph:
     """
-    The control-dataflow graph for the HFA program
+    The control-dataflow graph for the HiFiber program
     """
 
     def __init__(

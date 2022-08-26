@@ -21,38 +21,45 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-HFA AST and code generation for HFA expressions
+HiFiber AST and code generation for HiFiber payloads (the output of iterating over fibers)
 """
 
-from teaal.hfa.base import Argument, Expression
+from typing import List
+
+from teaal.hifiber.base import Payload
 
 
-class AJust(Argument):
+class PTuple(Payload):
     """
-    An unparameterized argument to an HFA function
-    """
-
-    def __init__(self, expr: Expression) -> None:
-        self.expr = expr
-
-    def gen(self) -> str:
-        """
-        Generate the HFA code for an AJust
-        """
-        return self.expr.gen()
-
-
-class AParam(Argument):
-    """
-    A parameterized argument to an HFA function
+    A tuple of payloads
     """
 
-    def __init__(self, name: str, expr: Expression) -> None:
-        self.name = name
-        self.expr = expr
+    def __init__(self, payloads: List[Payload]) -> None:
+        self.payloads = payloads
 
-    def gen(self) -> str:
+    def gen(self, parens: bool) -> str:
         """
-        Generate the HFA code for an AParam
+        Generate the HiFiber output for an SBlock
         """
-        return self.name + "=" + self.expr.gen()
+        payload = ", ".join([p.gen(True) for p in self.payloads])
+        if parens:
+            return "(" + payload + ")"
+        return payload
+
+
+class PVar(Payload):
+    """
+    A single variable payload
+    """
+
+    def __init__(self, var: str) -> None:
+        self.var = var
+
+    def gen(self, parens: bool) -> str:
+        """
+        Generate the HiFiber output for an SBlock
+
+        Note: the parens argument has no impact on PVar because it is already
+        an atomic element
+        """
+        return self.var

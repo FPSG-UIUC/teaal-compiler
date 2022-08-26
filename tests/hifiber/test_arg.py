@@ -1,4 +1,4 @@
-from teaal.hfa import *
+from teaal.hifiber import *
 
 
 def test_ajust():

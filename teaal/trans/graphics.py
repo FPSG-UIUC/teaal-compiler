@@ -24,7 +24,7 @@ SOFTWARE.
 Translate all relevant graphics information
 """
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.program import Program
 from teaal.ir.spacetime import SpaceTime
 from teaal.trans.canvas import Canvas
@@ -32,7 +32,7 @@ from teaal.trans.canvas import Canvas
 
 class Graphics:
     """
-    Generate the HFA code for displaying tensors
+    Generate the HiFiber code for displaying tensors
     """
 
     def __init__(self, program: Program) -> None:

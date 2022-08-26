@@ -27,7 +27,7 @@ from lark.tree import Tree
 from sympy import Symbol
 from typing import List, Set
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -37,7 +37,7 @@ from teaal.trans.utils import TransUtils
 
 class Partitioner:
     """
-    Generate the HFA code for the partitioning information
+    Generate the HiFiber code for the partitioning information
     """
 
     def __init__(self, program: Program, trans_utils: TransUtils) -> None:

@@ -203,9 +203,9 @@ def test_tensor_in_out():
 def test_eager_inputs_one_fiber():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hfa = "inputs_q1 = i_q1"
+    hifiber = "inputs_q1 = i_q1"
 
-    assert eqn.make_eager_inputs("Q1", ["I"]).gen(0) == hfa
+    assert eqn.make_eager_inputs("Q1", ["I"]).gen(0) == hifiber
 
 
 def test_eager_inputs_multiple_fibers():
@@ -216,9 +216,9 @@ def test_eager_inputs_multiple_fibers():
                 Q: [uniform_shape(10)]
     """
     _, eqn = make_conv(expr, mapping)
-    hfa = "inputs_q1 = Fiber.fromLazy(i_q1 & j_q1)"
+    hifiber = "inputs_q1 = Fiber.fromLazy(i_q1 & j_q1)"
 
-    assert eqn.make_eager_inputs("Q1", ["I", "J"]).gen(0) == hfa
+    assert eqn.make_eager_inputs("Q1", ["I", "J"]).gen(0) == hifiber
 
 
 def test_make_interval_bad_rank():
@@ -234,16 +234,16 @@ def test_make_interval():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
 
-    hfa = "if q1_pos == 0:\n" + \
-          "    q0_start = 0\n" + \
-          "else:\n" + \
-          "    q0_start = q1\n" + \
-          "if q1_pos + 1 < len(inputs_q1):\n" + \
-          "    q0_end = inputs_q1.getCoords()[q1_pos + 1]\n" + \
-          "else:\n" + \
-          "    q0_end = Q"
+    hifiber = "if q1_pos == 0:\n" + \
+        "    q0_start = 0\n" + \
+        "else:\n" + \
+        "    q0_start = q1\n" + \
+        "if q1_pos + 1 < len(inputs_q1):\n" + \
+        "    q0_end = inputs_q1.getCoords()[q1_pos + 1]\n" + \
+        "else:\n" + \
+        "    q0_end = Q"
 
-    assert eqn.make_interval("Q0").gen(0) == hfa
+    assert eqn.make_interval("Q0").gen(0) == hifiber
 
 
 def test_make_iter_expr_no_tensors():
@@ -396,9 +396,9 @@ def test_make_iter_expr_conv_project_output():
 def test_make_iter_expr_conv_enum():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hfa = "enumerate(o_q1 << i_q1)"
+    hifiber = "enumerate(o_q1 << i_q1)"
 
-    assert eqn.make_iter_expr(*graph.peek()).gen() == hfa
+    assert eqn.make_iter_expr(*graph.peek()).gen() == hifiber
 
 
 def test_make_iter_expr_conv_enum():
@@ -409,9 +409,9 @@ def test_make_iter_expr_conv_enum():
     graph.pop()
     graph.pop()
 
-    hfa = "o_q0 << f_s.project(trans_fn=lambda s: w0 + -1 * s, interval=(q0_start, q0_end))"
+    hifiber = "o_q0 << f_s.project(trans_fn=lambda s: w0 + -1 * s, interval=(q0_start, q0_end))"
 
-    assert eqn.make_iter_expr(*graph.peek()).gen() == hfa
+    assert eqn.make_iter_expr(*graph.peek()).gen() == hifiber
 
 
 def test_make_payload_no_tensors():
@@ -500,9 +500,9 @@ def test_make_payload_output_only():
 def test_make_payload_conv_enum():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hfa = "q1_pos, (q1, (o_p, i_w0))"
+    hifiber = "q1_pos, (q1, (o_p, i_w0))"
 
-    assert eqn.make_payload(*graph.pop()).gen(parens=False) == hfa
+    assert eqn.make_payload(*graph.pop()).gen(parens=False) == hifiber
 
 
 def test_make_update():

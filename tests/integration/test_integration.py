@@ -1,9 +1,9 @@
 from teaal.parse.einsum import Einsum
 from teaal.parse.mapping import Mapping
-from teaal.trans.hfa import HFA
+from teaal.trans.hifiber import HiFiber
 
 
-def read_hfa(filename):
+def read_hifiber(filename):
     data = ""
     with open(filename, 'r') as stream:
         data = stream.read()
@@ -38,7 +38,7 @@ def test_integration():
 
         einsum = Einsum.from_file(filename + ".yaml")
         mapping = Mapping.from_file(filename + ".yaml")
-        output = str(HFA(einsum, mapping))
+        output = str(HiFiber(einsum, mapping))
 
-        hfa = read_hfa(filename + ".hfa")
-        assert output == hfa, test_name + " integration test failed!"
+        hifiber = read_hifiber(filename + ".py")
+        assert output == hifiber, test_name + " integration test failed!"

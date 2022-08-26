@@ -28,7 +28,7 @@ from copy import deepcopy
 from sympy import Symbol
 from typing import List, Optional
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.trans.coord_access import CoordAccess
@@ -36,7 +36,7 @@ from teaal.trans.coord_access import CoordAccess
 
 class Canvas:
     """
-    Generate the HFA code for the tensor graphics
+    Generate the HiFiber code for the tensor graphics
     """
 
     def __init__(self, program: Program) -> None:

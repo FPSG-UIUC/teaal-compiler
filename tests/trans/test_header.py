@@ -58,10 +58,10 @@ def build_matmul_header(mapping):
 
 
 def test_make_get_root():
-    hfa = "a_m = A_MK.getRoot()"
+    hifiber = "a_m = A_MK.getRoot()"
 
     tensor = Tensor("A", ["M", "K"])
-    assert Header.make_get_root(tensor).gen(depth=0) == hfa
+    assert Header.make_get_root(tensor).gen(depth=0) == hifiber
 
 
 def test_make_output():
@@ -73,10 +73,10 @@ def test_make_output():
             Z: [M1, K, N, M0]
     """
 
-    hfa = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])"
+    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])"
 
     header = build_matmul_header(mapping)
-    assert header.make_output().gen(depth=0) == hfa
+    assert header.make_output().gen(depth=0) == hifiber
 
 
 def test_make_output_shape():
@@ -84,35 +84,35 @@ def test_make_output_shape():
             - Z[m, n] = sum(K).(A[k, m])
     """
 
-    hfa = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], shape=[M, N])"
+    hifiber = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], shape=[M, N])"
 
     header = build_header(exprs, "")
-    assert header.make_output().gen(depth=0) == hfa
+    assert header.make_output().gen(depth=0) == hifiber
 
 
 def test_make_output_conv_no_shape():
-    hfa = "O_Q = Tensor(rank_ids=[\"Q\"])"
+    hifiber = "O_Q = Tensor(rank_ids=[\"Q\"])"
     header = build_header_conv("[S, Q]")
 
-    assert header.make_output().gen(0) == hfa
+    assert header.make_output().gen(0) == hifiber
 
 
 def test_make_output_conv_shape():
-    hfa = "O_Q = Tensor(rank_ids=[\"Q\"], shape=[Q])"
+    hifiber = "O_Q = Tensor(rank_ids=[\"Q\"], shape=[Q])"
     header = build_header_conv("[Q, S]")
 
-    assert header.make_output().gen(0) == hfa
+    assert header.make_output().gen(0) == hifiber
 
 
 def test_make_swizzle():
-    hfa = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])"
+    hifiber = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])"
 
     header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
-    assert header.make_swizzle(tensor).gen(depth=0) == hfa
+    assert header.make_swizzle(tensor).gen(depth=0) == hifiber
 
 
 def test_make_tensor_from_fiber():
-    hfa = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)"
+    hifiber = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)"
     tensor = Tensor("A", ["K", "M"])
-    assert Header.make_tensor_from_fiber(tensor).gen(depth=0) == hfa
+    assert Header.make_tensor_from_fiber(tensor).gen(depth=0) == hifiber

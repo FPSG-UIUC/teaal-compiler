@@ -1,5 +1,5 @@
-# Einsum to HFA Compiler
-![Build Status](https://github.com/FPSG-UIUC/hfa-compiler/actions/workflows/test.yml/badge.svg)
+# Einsum to HiFiber Compiler
+![Build Status](https://github.com/FPSG-UIUC/teaal-compiler/actions/workflows/test.yml/badge.svg)
 
 
 ## Installation

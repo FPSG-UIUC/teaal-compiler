@@ -33,7 +33,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # Import the necessary classes
     from teaal.parse import *
-    from teaal.trans.hfa import HFA
+    from teaal.trans.hifiber import HiFiber
 
     # Make sure we are given exactly one argument
     if len(sys.argv) != 2:
@@ -46,5 +46,5 @@ if __name__ == "__main__":  # pragma: no cover
         arch = Architecture.from_file(sys.argv[1])
         bindings = Bindings.from_file(sys.argv[1])
         format_ = Format.from_file(sys.argv[1])
-        hfa = HFA(einsum, mapping, arch, bindings, format_)
-        print(hfa)
+        hifiber = HiFiber(einsum, mapping, arch, bindings, format_)
+        print(hifiber)

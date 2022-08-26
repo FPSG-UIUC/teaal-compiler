@@ -60,7 +60,7 @@ Reasoning:
 Allows us to quickly look at complex einsums and figure out what is happening more quickly
 Matches up perfectly with Nvidia GEMM notation (not an accident)
 Because these variables start in the middle of the alphabet they are unlikely to clash with tensor names (A/B/C... and Z/Y/X...) even when written uppercase
-Works great when translating to HFA (e.g. "Hey that's a rank "K" so I bet I need an intersection")
+Works great when translating to HiFiber (e.g. "Hey that's a rank "K" so I bet I need an intersection")
 
 
 Serendipitous Bonuses:

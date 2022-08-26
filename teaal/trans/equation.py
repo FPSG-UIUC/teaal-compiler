@@ -29,7 +29,7 @@ from lark.tree import Tree
 from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils

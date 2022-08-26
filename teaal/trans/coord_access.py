@@ -22,24 +22,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Translation from a symbolic representation of an index access to the
-corresonding HFA
+corresonding HiFiber
 """
 
 from sympy import Add, Basic, Integer, Mul, Rational, Symbol
 from typing import Type
 
-from teaal.hfa import *
+from teaal.hifiber import *
 
 
 class CoordAccess:
     """
     A translator from the symbolic representation of an expression to the
-    corresponding HFA program
+    corresponding HiFiber program
     """
     @staticmethod
     def build_expr(sexpr: Basic) -> Expression:
         """
-        Build an HFA expression from a SymPy expression
+        Build an HiFiber expression from a SymPy expression
         """
         if isinstance(sexpr, Symbol):
             return EVar(str(sexpr))

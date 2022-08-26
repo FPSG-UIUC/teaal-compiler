@@ -11,7 +11,6 @@
     - All tests should use the [tensor naming conventions](./tensor_naming.md)
     - Delete all unused tests except for cnn and conv2d
 - [ ] Introduce .coord in spacetime notebook before .pos/default
-- [ ] Rename HFA -> HiFiber and teaal -> teaal
 - [ ] Allow variable names for partition sizes
 
 ## Major Changes

@@ -21,12 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Translate an Einsum to the corresponding HFA code
+Translate an Einsum to the corresponding HiFiber code
 """
 
 from typing import cast, List, Optional
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.flow_graph import FlowGraph
 from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
@@ -43,9 +43,9 @@ from teaal.trans.partitioner import Partitioner
 from teaal.trans.utils import TransUtils
 
 
-class HFA:
+class HiFiber:
     """
-    Translate a given Einsum into the corresponding HFA code
+    Translate a given Einsum into the corresponding HiFiber code
     """
 
     def __init__(
@@ -56,7 +56,7 @@ class HFA:
             bindings: Optional[Bindings] = None,
             format_: Optional[Format] = None) -> None:
         """
-        Perform the Einsum to HFA translation
+        Perform the Einsum to HiFiber translation
         """
         self.program = Program(einsum, mapping)
 
@@ -67,9 +67,9 @@ class HFA:
 
         self.trans_utils = TransUtils()
 
-        self.hfa = SBlock([])
+        self.hifiber = SBlock([])
         for i in range(len(einsum.get_expressions())):
-            self.hfa.add(self.__translate(i))
+            self.hifiber.add(self.__translate(i))
 
     def __translate(self, i: int) -> Statement:
         """
@@ -107,7 +107,7 @@ class HFA:
                       depth: int) -> Tuple[int,
                                            Statement]:
         """
-        Recursive function to generate the actual HFA program
+        Recursive function to generate the actual HiFiber program
         """
         code = SBlock([])
 
@@ -218,7 +218,7 @@ class HFA:
 
     def __str__(self) -> str:
         """
-        Return the string representation of this HFA program
+        Return the string representation of this HiFiber program
         """
 
-        return self.hfa.gen(0)
+        return self.hifiber.gen(0)

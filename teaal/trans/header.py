@@ -21,13 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Translate the header above the HFA loop nest
+Translate the header above the HiFiber loop nest
 """
 
 from sympy import Symbol
 from typing import Set
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -38,7 +38,7 @@ from teaal.trans.utils import TransUtils
 
 class Header:
     """
-    Generate the HFA code for loop headers
+    Generate the HiFiber code for loop headers
     """
 
     def __init__(self, program: Program, partitioner: Partitioner) -> None:

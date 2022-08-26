@@ -9,7 +9,7 @@ autopep8 -iraa teaal/
 autopep8 -iraa tests/
 
 # Testing
-for FILE in $(ls tests/integration | grep .hfa)
+for FILE in $(ls tests/integration | grep "\.py")
 do
     perl -pi -e 'chomp if eof' tests/integration/$FILE
 done

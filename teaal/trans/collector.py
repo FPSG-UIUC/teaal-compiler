@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the metrics collection
 """
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.component import *
 from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program

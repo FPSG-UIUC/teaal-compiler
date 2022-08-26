@@ -31,35 +31,35 @@ def build_collector(yaml, i):
 def test_dump():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
-    hfa = "metrics = {}\n" + \
-          "metrics[\"T\"] = {}\n" + \
-          "metrics[\"T\"][\"T footprint\"] = 0\n" + \
-          "metrics[\"T\"][\"T traffic\"] = 0\n" + \
-          "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-          "metrics[\"T\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
-          "metrics[\"T\"][\"A traffic\"] = metrics[\"T\"][\"A footprint\"]\n" + \
-          "B_KN_format = Format(B_KN, {\"K\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-          "metrics[\"T\"][\"B footprint\"] = B_KN_format.getTensor()\n" + \
-          "metrics[\"T\"][\"B traffic\"] = Traffic.cacheTraffic(B_KN, \"K\", B_KN_format, 25165824) + B_KN_format.getRank(\"K\")\n" + \
-          "metrics[\"T\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 0)"
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"T\"] = {}\n" + \
+        "metrics[\"T\"][\"T footprint\"] = 0\n" + \
+        "metrics[\"T\"][\"T traffic\"] = 0\n" + \
+        "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+        "metrics[\"T\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
+        "metrics[\"T\"][\"A traffic\"] = metrics[\"T\"][\"A footprint\"]\n" + \
+        "B_KN_format = Format(B_KN, {\"K\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+        "metrics[\"T\"][\"B footprint\"] = B_KN_format.getTensor()\n" + \
+        "metrics[\"T\"][\"B traffic\"] = Traffic.cacheTraffic(B_KN, \"K\", B_KN_format, 25165824) + B_KN_format.getRank(\"K\")\n" + \
+        "metrics[\"T\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 0)"
 
-    assert collector.dump().gen(0) == hfa
+    assert collector.dump().gen(0) == hifiber
 
     collector = build_collector(yaml, 1)
-    hfa = "metrics[\"Z\"] = {}\n" + \
-          "Z_MN_format = Format(Z_MN, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-          "metrics[\"Z\"][\"Z footprint\"] = Z_MN_format.getTensor()\n" + \
-          "metrics[\"Z\"][\"Z traffic\"] = metrics[\"Z\"][\"Z footprint\"]\n" + \
-          "metrics[\"Z\"][\"T footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"T traffic\"] = 0\n" + \
-          "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-          "metrics[\"Z\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
-          "metrics[\"Z\"][\"A traffic\"] = metrics[\"Z\"][\"A footprint\"]\n" + \
-          "metrics[\"Z\"][\"mul\"] = Compute.opCount(Metrics.dump(), \"mul\")\n" + \
-          "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")\n" + \
-          "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 64, 1)"
+    hifiber = "metrics[\"Z\"] = {}\n" + \
+        "Z_MN_format = Format(Z_MN, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+        "metrics[\"Z\"][\"Z footprint\"] = Z_MN_format.getTensor()\n" + \
+        "metrics[\"Z\"][\"Z traffic\"] = metrics[\"Z\"][\"Z footprint\"]\n" + \
+        "metrics[\"Z\"][\"T footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"T traffic\"] = 0\n" + \
+        "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+        "metrics[\"Z\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
+        "metrics[\"Z\"][\"A traffic\"] = metrics[\"Z\"][\"A footprint\"]\n" + \
+        "metrics[\"Z\"][\"mul\"] = Compute.opCount(Metrics.dump(), \"mul\")\n" + \
+        "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")\n" + \
+        "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 64, 1)"
 
-    assert collector.dump().gen(0) == hfa
+    assert collector.dump().gen(0) == hifiber
 
 
 def test_dump_buffet():
@@ -116,16 +116,16 @@ def test_dump_buffet():
           pbits: 64
     """
     collector = build_collector(yaml, 0)
-    hfa = "metrics = {}\n" + \
-          "metrics[\"Z\"] = {}\n" + \
-          "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
-          "A_M_format = Format(A_M, {\"M\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-          "metrics[\"Z\"][\"A footprint\"] = A_M_format.getTensor()\n" + \
-          "metrics[\"Z\"][\"A traffic\"] = Traffic.buffetTraffic(A_M, \"M\", A_M_format) + A_M_format.getRank(\"M\")\n" + \
-          "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")"
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
+        "A_M_format = Format(A_M, {\"M\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
+        "metrics[\"Z\"][\"A footprint\"] = A_M_format.getTensor()\n" + \
+        "metrics[\"Z\"][\"A traffic\"] = Traffic.buffetTraffic(A_M, \"M\", A_M_format) + A_M_format.getRank(\"M\")\n" + \
+        "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")"
 
-    assert collector.dump().gen(0) == hfa
+    assert collector.dump().gen(0) == hifiber
 
 
 def test_dump_leader_follower_bad_rank():
@@ -185,17 +185,17 @@ def test_dump_leader_follower():
     """
     collector = build_collector(yaml, 0)
 
-    hfa = "metrics = {}\n" + \
-          "metrics[\"Z\"] = {}\n" + \
-          "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
-          "metrics[\"Z\"][\"A footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"A traffic\"] = 0\n" + \
-          "metrics[\"Z\"][\"B footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"B traffic\"] = 0\n" + \
-          "metrics[\"Z\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 1)"
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
+        "metrics[\"Z\"][\"A footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"A traffic\"] = 0\n" + \
+        "metrics[\"Z\"][\"B footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"B traffic\"] = 0\n" + \
+        "metrics[\"Z\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 1)"
 
-    assert collector.dump().gen(0) == hfa
+    assert collector.dump().gen(0) == hifiber
 
 
 def test_dump_skip_ahead():
@@ -223,17 +223,17 @@ def test_dump_skip_ahead():
     """
     collector = build_collector(yaml, 0)
 
-    hfa = "metrics = {}\n" + \
-          "metrics[\"Z\"] = {}\n" + \
-          "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
-          "metrics[\"Z\"][\"A footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"A traffic\"] = 0\n" + \
-          "metrics[\"Z\"][\"B footprint\"] = 0\n" + \
-          "metrics[\"Z\"][\"B traffic\"] = 0\n" + \
-          "metrics[\"Z\"][\"K intersections\"] = Compute.skipCount(Metrics.dump(), \"K\")"
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
+        "metrics[\"Z\"][\"A footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"A traffic\"] = 0\n" + \
+        "metrics[\"Z\"][\"B footprint\"] = 0\n" + \
+        "metrics[\"Z\"][\"B traffic\"] = 0\n" + \
+        "metrics[\"Z\"][\"K intersections\"] = Compute.skipCount(Metrics.dump(), \"K\")"
 
-    assert collector.dump().gen(0) == hfa
+    assert collector.dump().gen(0) == hifiber
 
 # def test_dump_leader_follower_not_intersected():
 #     yaml = """
@@ -262,7 +262,7 @@ def test_dump_skip_ahead():
 #     """
 #     collector = build_collector(yaml, 0)
 #
-#     hfa = "metrics = {}\n" + \
+#     hifiber = "metrics = {}\n" + \
 #           "metrics[\"Z\"] = {}\n" + \
 #           "metrics[\"Z\"][\"Z footprint\"] = 0\n" + \
 #           "metrics[\"Z\"][\"Z traffic\"] = 0\n" + \
@@ -274,26 +274,26 @@ def test_dump_skip_ahead():
 #           "metrics[\"Z\"][\"C traffic\"] = 0\n" + \
 #           "metrics[\"Z\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 1)"
 #
-#     assert collector.dump().gen(0) == hfa
+#     assert collector.dump().gen(0) == hifiber
 
 
 def test_end():
-    hfa = "Metrics.endCollect()"
+    hifiber = "Metrics.endCollect()"
 
-    assert Collector.end().gen(0) == hfa
+    assert Collector.end().gen(0) == hifiber
 
 
 def test_set_collecting():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
-    hfa = "B_KN.setCollecting(\"K\", True)"
+    hifiber = "B_KN.setCollecting(\"K\", True)"
 
-    assert collector.set_collecting("B", "K").gen(0) == hfa
+    assert collector.set_collecting("B", "K").gen(0) == hifiber
 
 
 def test_start():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
-    hfa = "Metrics.beginCollect([\"M\", \"K\", \"N\"])"
+    hifiber = "Metrics.beginCollect([\"M\", \"K\", \"N\"])"
 
-    assert collector.start().gen(0) == hfa
+    assert collector.start().gen(0) == hifiber

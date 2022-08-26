@@ -21,18 +21,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Useful functions for generating HFA code
+Useful functions for generating HiFiber code
 """
 
 from typing import Any
 
-from teaal.hfa import *
+from teaal.hifiber import *
 from teaal.ir.tensor import Tensor
 
 
 class TransUtils:
     """
-    Different utilities for generating HFA programs
+    Different utilities for generating HiFiber programs
     """
 
     def __init__(self) -> None:
@@ -41,7 +41,7 @@ class TransUtils:
     @staticmethod
     def build_expr(obj: Any) -> Expression:
         """
-        Build an HFA expression for the given Python object
+        Build an HiFiber expression for the given Python object
         """
         if isinstance(obj, int):
             return EInt(obj)

@@ -20,14 +20,55 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+HiFiber AST and code generation for expressions that can be assigned to
 """
 
-# HFA code generation __init__
+from teaal.hifiber.base import Assignable, Expression
 
-from .arg import *
-from .assn import *
-from .base import *
-from .expr import *
-from .op import *
-from .payload import *
-from .stmt import *
+
+class AAccess(Assignable):
+    """
+    An access into a list or dictionary
+    """
+
+    def __init__(self, obj: Expression, ind: Expression) -> None:
+        self.obj = obj
+        self.ind = ind
+
+    def gen(self) -> str:
+        """
+        Generate the HiFiber code for an AAccess
+        """
+        return self.obj.gen() + "[" + self.ind.gen() + "]"
+
+
+class AField(Assignable):
+    """
+    An HiFiber object field access
+    """
+
+    def __init__(self, obj: str, field: str):
+        self.obj = obj
+        self.field = field
+
+    def gen(self) -> str:
+        """
+        Generate the HiFiber code for an AField
+        """
+        return self.obj + "." + self.field
+
+
+class AVar(Assignable):
+    """
+    An HiFiber variable
+    """
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def gen(self) -> str:
+        """
+        Generate the HiFiber code for an AVar
+        """
+        return self.name

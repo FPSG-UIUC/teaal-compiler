@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-HFA AST base classes
+HiFiber AST base classes
 """
 
 import abc
@@ -35,7 +35,7 @@ class Argument(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def gen(self) -> str:
         """
-        Generate the HFA code for this Argument
+        Generate the HiFiber code for this Argument
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -48,7 +48,7 @@ class Assignable(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def gen(self) -> str:
         """
-        Generate the HFA code for this Assignable
+        Generate the HiFiber code for this Assignable
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -61,7 +61,7 @@ class Expression(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def gen(self) -> str:
         """
-        Generate the HFA code for this Expression
+        Generate the HiFiber code for this Expression
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -74,7 +74,7 @@ class Operator(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def gen(self) -> str:
         """
-        Generate the HFA code for this Operator
+        Generate the HiFiber code for this Operator
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -87,7 +87,7 @@ class Payload(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def gen(self, parens: bool) -> str:
         """
-        Generate the HFA code for this Payload
+        Generate the HiFiber code for this Payload
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -100,6 +100,6 @@ class Statement(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def gen(self, depth: int) -> str:
         """
-        Generate the HFA code for this Statement
+        Generate the HiFiber code for this Statement
         """
         raise NotImplementedError  # pragma: no cover

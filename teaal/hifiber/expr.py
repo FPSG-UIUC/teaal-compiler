@@ -21,12 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-HFA AST and code generation for HFA expressions
+HiFiber AST and code generation for HiFiber expressions
 """
 
 from typing import Dict, Sequence
 
-from teaal.hfa.base import Argument, Expression, Operator
+from teaal.hifiber.base import Argument, Expression, Operator
 
 
 class EAccess(Expression):
@@ -40,14 +40,14 @@ class EAccess(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EAccess
+        Generate the HiFiber code for an EAccess
         """
         return self.obj.gen() + "[" + self.ind.gen() + "]"
 
 
 class EBinOp(Expression):
     """
-    An HFA binary operation
+    An HiFiber binary operation
     """
 
     def __init__(
@@ -61,14 +61,14 @@ class EBinOp(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EBinOp
+        Generate the HiFiber code for an EBinOp
         """
         return self.expr1.gen() + " " + self.op.gen() + " " + self.expr2.gen()
 
 
 class EBool(Expression):
     """
-    An HFA boolean variable
+    An HiFiber boolean variable
     """
 
     def __init__(self, bool_: bool) -> None:
@@ -76,14 +76,14 @@ class EBool(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EBool
+        Generate the HiFiber code for an EBool
         """
         return str(self.bool)
 
 
 class EComp(Expression):
     """
-    An HFA list comprehension
+    An HiFiber list comprehension
     """
 
     def __init__(self, elem: Expression, var: str, iter_: Expression) -> None:
@@ -93,7 +93,7 @@ class EComp(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EComp
+        Generate the HiFiber code for an EComp
         """
         return "[" + self.elem.gen() + " for " + self.var + \
             " in " + self.iter.gen() + "]"
@@ -101,7 +101,7 @@ class EComp(Expression):
 
 class EDict(Expression):
     """
-    An HFA dictionary
+    An HiFiber dictionary
     """
 
     def __init__(self, dict_: Dict[Expression, Expression]):
@@ -109,7 +109,7 @@ class EDict(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EDict
+        Generate the HiFiber code for an EDict
         """
         items = []
         for key, val in self.dict.items():
@@ -119,7 +119,7 @@ class EDict(Expression):
 
 class EField(Expression):
     """
-    An HFA object field access
+    An HiFiber object field access
     """
 
     def __init__(self, obj: str, field: str):
@@ -128,14 +128,14 @@ class EField(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EField
+        Generate the HiFiber code for an EField
         """
         return self.obj + "." + self.field
 
 
 class EFloat(Expression):
     """
-    An HFA float
+    An HiFiber float
     """
 
     def __init__(self, float_: float) -> None:
@@ -143,7 +143,7 @@ class EFloat(Expression):
 
     def gen(self) -> str:
         """
-        Generate HFA code for an EFloat
+        Generate HiFiber code for an EFloat
         """
         if self.float == float("inf"):
             return "float(\"inf\")"
@@ -155,7 +155,7 @@ class EFloat(Expression):
 
 class EFunc(Expression):
     """
-    An HFA function call
+    An HiFiber function call
     """
 
     def __init__(self, name: str, args: Sequence[Argument]) -> None:
@@ -164,7 +164,7 @@ class EFunc(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EFunc
+        Generate the HiFiber code for an EFunc
         """
         return self.name + \
             "(" + ", ".join([a.gen() for a in self.args]) + ")"
@@ -172,7 +172,7 @@ class EFunc(Expression):
 
 class EInt(Expression):
     """
-    An HFA integer
+    An HiFiber integer
     """
 
     def __init__(self, int_: int) -> None:
@@ -180,14 +180,14 @@ class EInt(Expression):
 
     def gen(self) -> str:
         """
-        Generate HFA code for an EInt
+        Generate HiFiber code for an EInt
         """
         return str(self.int)
 
 
 class ELambda(Expression):
     """
-    An HFA lambda
+    An HiFiber lambda
     """
 
     def __init__(self, args: Sequence[str], body: Expression) -> None:
@@ -196,14 +196,14 @@ class ELambda(Expression):
 
     def gen(self) -> str:
         """
-        Generate HFA code for an ELambda
+        Generate HiFiber code for an ELambda
         """
         return "lambda " + ", ".join(self.args) + ": " + self.body.gen()
 
 
 class EList(Expression):
     """
-    An HFA list
+    An HiFiber list
     """
 
     def __init__(self, list_: Sequence[Expression]) -> None:
@@ -211,14 +211,14 @@ class EList(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EList
+        Generate the HiFiber code for an EList
         """
         return "[" + ", ".join([e.gen() for e in self.list]) + "]"
 
 
 class EMethod(Expression):
     """
-    An HFA method call
+    An HiFiber method call
     """
 
     def __init__(self, obj: Expression, name: str,
@@ -229,7 +229,7 @@ class EMethod(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EMethod
+        Generate the HiFiber code for an EMethod
         """
         return self.obj.gen() + "." + self.name + \
             "(" + ", ".join([a.gen() for a in self.args]) + ")"
@@ -237,7 +237,7 @@ class EMethod(Expression):
 
 class EParens(Expression):
     """
-    An HFA expression surrounded by parentheses
+    An HiFiber expression surrounded by parentheses
     """
 
     def __init__(self, expr: Expression) -> None:
@@ -245,14 +245,14 @@ class EParens(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EParens
+        Generate the HiFiber code for an EParens
         """
         return "(" + self.expr.gen() + ")"
 
 
 class EString(Expression):
     """
-    A string in HFA
+    A string in HiFiber
     """
 
     def __init__(self, string: str) -> None:
@@ -260,14 +260,14 @@ class EString(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EString
+        Generate the HiFiber code for an EString
         """
         return "\"" + self.string + "\""
 
 
 class ETuple(Expression):
     """
-    A tuple in HFA
+    A tuple in HiFiber
     """
 
     def __init__(self, elems: Sequence[Expression]) -> None:
@@ -275,7 +275,7 @@ class ETuple(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for this tuple
+        Generate the HiFiber code for this tuple
         """
         # A single element tuple in Python needs an extra trailing comma
         if len(self.elems) == 1:
@@ -287,7 +287,7 @@ class ETuple(Expression):
 
 class EVar(Expression):
     """
-    An HFA variable
+    An HiFiber variable
     """
 
     def __init__(self, name: str) -> None:
@@ -295,6 +295,6 @@ class EVar(Expression):
 
     def gen(self) -> str:
         """
-        Generate the HFA code for an EVar
+        Generate the HiFiber code for an EVar
         """
         return self.name

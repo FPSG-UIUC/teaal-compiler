@@ -20,55 +20,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-HFA AST and code generation for expressions that can be assigned to
 """
 
-from teaal.hfa.base import Assignable, Expression
+# HiFiber code generation __init__
 
-
-class AAccess(Assignable):
-    """
-    An access into a list or dictionary
-    """
-
-    def __init__(self, obj: Expression, ind: Expression) -> None:
-        self.obj = obj
-        self.ind = ind
-
-    def gen(self) -> str:
-        """
-        Generate the HFA code for an AAccess
-        """
-        return self.obj.gen() + "[" + self.ind.gen() + "]"
-
-
-class AField(Assignable):
-    """
-    An HFA object field access
-    """
-
-    def __init__(self, obj: str, field: str):
-        self.obj = obj
-        self.field = field
-
-    def gen(self) -> str:
-        """
-        Generate the HFA code for an AField
-        """
-        return self.obj + "." + self.field
-
-
-class AVar(Assignable):
-    """
-    An HFA variable
-    """
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def gen(self) -> str:
-        """
-        Generate the HFA code for an AVar
-        """
-        return self.name
+from .arg import *
+from .assn import *
+from .base import *
+from .expr import *
+from .op import *
+from .payload import *
+from .stmt import *
