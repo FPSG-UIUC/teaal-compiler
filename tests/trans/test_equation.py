@@ -401,7 +401,7 @@ def test_make_iter_expr_conv_enum():
     assert eqn.make_iter_expr(*graph.peek()).gen() == hifiber
 
 
-def test_make_iter_expr_conv_enum():
+def test_make_iter_expr_conv_part():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     graph, eqn = make_conv_part(expr, "[Q1, P, W0, Q0]")
 

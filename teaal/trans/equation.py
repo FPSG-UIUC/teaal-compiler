@@ -396,7 +396,8 @@ class Equation:
         partitioned = partitioning.get_all_parts().keys()
 
         for symbol in sexpr.atoms(Symbol):
-            if partitioning.partition_rank(str(symbol).upper()) in partitioned:
+            # TODO allow for flattening
+            if (partitioning.partition_rank(str(symbol).upper()),) in partitioned:
                 sexpr = sexpr.subs(symbol, Symbol(str(symbol) + "0"))
 
         # Build the interval

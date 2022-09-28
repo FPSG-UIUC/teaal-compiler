@@ -42,7 +42,7 @@ class Mapping:
         Read the YAML input
         """
         loop_orders = None
-        partitioning: Optional[Dict[str, Dict[str, List[Tree]]]] = None
+        partitioning: Optional[Dict[str, Dict[Tree, List[Tree]]]] = None
         rank_orders = None
         # Use type dict, since the dictionary is very heterogeneous
         spacetime: Optional[dict] = None
@@ -62,11 +62,12 @@ class Mapping:
                     if ranks is None:
                         continue
 
-                    for rank, parts in ranks.items():
-                        partitioning[tensor][rank] = []
+                    for ranks_str, parts in ranks.items():
+                        ranks_tree = PartitioningParser.parse_ranks(ranks_str)
+                        partitioning[tensor][ranks_tree] = []
                         for part in parts:
-                            partitioning[tensor][rank].append(
-                                PartitioningParser.parse(part))
+                            partitioning[tensor][ranks_tree].append(
+                                PartitioningParser.parse_partitioning(part))
 
             if "rank-order" in mapping.keys():
                 rank_orders = mapping["rank-order"]
@@ -128,7 +129,7 @@ class Mapping:
         """
         return self.loop_orders
 
-    def get_partitioning(self) -> Dict[str, Dict[str, List[Tree]]]:
+    def get_partitioning(self) -> Dict[str, Dict[Tree, List[Tree]]]:
         """
         Get a dictionary from output tensors to a dictionary of rank variables
         to partitioning information

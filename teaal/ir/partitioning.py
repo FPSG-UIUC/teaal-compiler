@@ -38,7 +38,7 @@ class Partitioning:
     """
 
     def __init__(self,
-                 partitioning: Dict[str, List[Tree]],
+                 partitioning: Dict[Tree, List[Tree]],
                  ranks: Iterable[str],
                  eqn_exprs: Dict[Symbol, Basic]) -> None:
         """
@@ -51,21 +51,23 @@ class Partitioning:
         self.dyn_parts = {}
         self.static_parts = {}
 
-        for rank, parts in partitioning.items():
-
+        for ranks_tree, parts in partitioning.items():
             # Continue if this rank is not actually partitioned
             if not parts:
                 continue
 
+            part_ranks = tuple(str(child) for child in ranks_tree.children)
+
             if Partitioning.__nway_after_dyn(parts):
                 raise ValueError(
-                    "N-way partitioning after dynamic partitioning on rank " + rank)
+                    "N-way partitioning after dynamic partitioning on rank " +
+                    part_ranks[0])
 
             # Add the partitioning specification to the appropriate dictionary
             if Partitioning.__is_static(parts[0]):
-                self.static_parts[rank] = parts
+                self.static_parts[part_ranks] = parts
             else:
-                self.dyn_parts[rank] = parts
+                self.dyn_parts[part_ranks] = parts
 
         self.all_parts = {**self.static_parts, **self.dyn_parts}
 
@@ -75,7 +77,11 @@ class Partitioning:
         for rank in ranks:
             self.root_names[rank] = rank
 
-        for part_rank in self.all_parts.keys():
+        for part_ranks in self.all_parts.keys():
+            if len(part_ranks) > 1:
+                raise ValueError("TODO: not yet ready")
+            part_rank = part_ranks[0]
+
             for rank in self.__part_to_tensor_rank(part_rank, ranks):
                 self.root_names.update(
                     {inter: rank for inter in self.get_intermediates(rank)})
@@ -92,7 +98,11 @@ class Partitioning:
             self.final_rank_id[rank] = rank
 
         # Partitioned ranks may change
-        for part_rank in self.all_parts.keys():
+        for part_ranks in self.all_parts.keys():
+            if len(part_ranks) > 1:
+                raise ValueError("TODO: not yet ready")
+            part_rank = part_ranks[0]
+
             part_names = self.partition_names(part_rank, True)
             # Add partitioned to itself, e.g., K0 -> K0
             for id_ in part_names:
@@ -110,14 +120,15 @@ class Partitioning:
                 self.final_rank_id[rank + "0"] = rank + "0"
 
         # Save the partitioning information for intermediate ranks
-        init_ranks = [rank for rank in self.all_parts.keys()]
+        # TODO: allow for more than one part_rank
+        init_ranks = [part_ranks[0] for part_ranks in self.all_parts.keys()]
         for rank in init_ranks:
             for i, int_ in enumerate(self.get_intermediates(rank)):
                 i = int(int_[len(rank):-1])
-                self.dyn_parts[int_] = self.all_parts[rank][-i:]
-                self.all_parts[int_] = self.all_parts[rank][-i:]
+                self.dyn_parts[(int_,)] = self.all_parts[(rank,)][-i:]
+                self.all_parts[(int_,)] = self.all_parts[(rank,)][-i:]
 
-    def get_all_parts(self) -> Dict[str, List[Tree]]:
+    def get_all_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
         """
         Get the partitioning information for all partitioned ranks
         """
@@ -130,11 +141,15 @@ class Partitioning:
 
         Used for the spacetime stamp of dynamically partitioned tensors
         """
-        if self.__tensor_to_part_rank(rank.upper(), self.dyn_parts.keys()):
+        # TODO allow for flattened ranks
+        ranks = []
+        for key in self.dyn_parts.keys():
+            ranks += list(key)
+        if self.__tensor_to_part_rank(rank.upper(), ranks):
             return rank + "0"
         return rank
 
-    def get_dyn_parts(self) -> Dict[str, List[Tree]]:
+    def get_dyn_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
         """
         Get the partitioning information for all dynamically partitioned
         ranks
@@ -151,12 +166,18 @@ class Partitioning:
         """
         Get the names of all intermediate ranks (e.g., K2I)
         """
-        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts.keys())
+        # TODO allow for flattened ranks
+        ranks = []
+        for key in self.all_parts.keys():
+            ranks += list(key)
+
+        part_ranks = self.__tensor_to_part_rank(rank, ranks)
         part_rank = Partitioning.__single_part_rank(rank, part_ranks)
 
         intermediates = []
-        for i, part in enumerate(self.all_parts[part_rank][1:]):
-            num = len(self.all_parts[part_rank]) - i - 1
+        # TODO: allow for flattened ranks
+        for i, part in enumerate(self.all_parts[(part_rank,)][1:]):
+            num = len(self.all_parts[(part_rank,)]) - i - 1
             if not Partitioning.__is_static(part):
                 intermediates.append(rank + str(num) + "I")
 
@@ -177,7 +198,7 @@ class Partitioning:
         """
         return self.root_names[rank]
 
-    def get_static_parts(self) -> Dict[str, List[Tree]]:
+    def get_static_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
         """
         Get the partitioning information for all statically partitioned
         ranks
@@ -185,25 +206,36 @@ class Partitioning:
         return self.static_parts
 
     def get_tensor_spec(self, tensor_ranks: Iterable[str],
-                        part_ranks: Iterable[str]) -> Dict[str, List[Tree]]:
+                        part_ranks: Iterable[str]) -> Dict[Tuple[str, ...], List[Tree]]:
         """
         Get the partitioning for a specific tensor's ranks
         """
-        partitioning = {}
-        for rank, part in self.all_parts.items():
+        # TODO: after flattening is fixed, check if we still need the type hint
+        partitioning: Dict[Tuple[str, ...], List[Tree]] = {}
+        for ranks, part in self.all_parts.items():
+            # TODO: allow for flattened ranks
+            rank = ranks[0]
+
             if rank in part_ranks and self.__part_to_tensor_rank(
                     rank, tensor_ranks):
-                partitioning[rank] = part
+                # TODO: allow for flattened ranks
+                partitioning[(rank,)] = part
         return partitioning
 
     def partition_names(self, rank: str, all_: bool) -> List[str]:
         """
         Get the list of names that this rank will be partitioned into
         """
-        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts.keys())
+        # TODO allow for flattened ranks
+        ranks = []
+        for key in self.all_parts.keys():
+            ranks += list(key)
+
+        part_ranks = self.__tensor_to_part_rank(rank, ranks)
         part_rank = Partitioning.__single_part_rank(rank, part_ranks)
 
-        parts = self.all_parts[part_rank]
+        # TODO allow for flattened ranks
+        parts = self.all_parts[(part_rank,)]
         # Return all final rank names
         if all_:
             parted_ = [part_rank + str(j) for j in range(len(parts) + 1)]
@@ -238,7 +270,12 @@ class Partitioning:
         """
         Get the name of the corresponding partitioned rank, should one exist
         """
-        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts.keys())
+        # TODO allow for flattened ranks
+        ranks = []
+        for key in self.all_parts.keys():
+            ranks += list(key)
+
+        part_ranks = self.__tensor_to_part_rank(rank, ranks)
         if not part_ranks:
             return None
 
@@ -255,9 +292,14 @@ class Partitioning:
         all_parts = self.get_all_parts()
         tensor_ranks = tensor.get_ranks().copy()
 
+        # TODO allow for flattened ranks
+        all_ranks = []
+        for key in self.all_parts.keys():
+            all_ranks += list(key)
+
         for rank in tensor.get_ranks():
             # Check if there is anything to partition
-            part_ranks = self.__tensor_to_part_rank(rank, all_parts.keys())
+            part_ranks = self.__tensor_to_part_rank(rank, all_ranks)
             if not part_ranks:
                 continue
 

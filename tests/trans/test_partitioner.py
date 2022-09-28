@@ -10,7 +10,8 @@ from teaal.trans.utils import TransUtils
 
 def assert_partition(tensor, parts, hifiber):
     program, partitioner = build_partitioner(parts)
-    rank = [r for r in program.get_partitioning().get_all_parts().keys()][0]
+    # TODO: allow for flattening
+    rank = [r for r in program.get_partitioning().get_all_parts().keys()][0][0]
     assert partitioner.partition(tensor, rank).gen(depth=0) == hifiber
 
 

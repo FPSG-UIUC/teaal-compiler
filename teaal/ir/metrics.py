@@ -205,7 +205,11 @@ class Metrics:
                 name = tensor.root_name()
 
                 # First apply all static partitioning
-                for rank in part.get_static_parts().keys():
+                for ranks in part.get_static_parts().keys():
+                    # TODO: allow flattening
+                    if len(ranks) > 1:
+                        raise ValueError("Cannot deal with this yet")
+                    rank = ranks[0]
                     if rank in tensor.get_ranks():
                         self.program.apply_partitioning(tensor, rank)
 

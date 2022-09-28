@@ -139,7 +139,7 @@ def test_create_canvas_partitioned():
     static_parts = program.get_partitioning().get_static_parts()
     for tensor in program.get_tensors():
         for rank in static_parts:
-            program.apply_partitioning(tensor, rank)
+            program.apply_partitioning(tensor, rank[0])
         program.get_loop_order().apply(tensor)
 
     canvas = Canvas(program)

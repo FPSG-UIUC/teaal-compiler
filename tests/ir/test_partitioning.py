@@ -15,6 +15,12 @@ def parse_partitioning(parts):
     return Mapping.from_str(yaml).get_partitioning()
 
 
+def build_part_dict(parts):
+    parsed = parse_partitioning(parts)
+    return {tuple(str(child) for child in key.children)
+                  : val for key, val in parsed["Z"].items()}
+
+
 def build_partitioning(parts):
     dict_ = parse_partitioning(parts)["Z"]
 
@@ -76,7 +82,7 @@ def test_get_all_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(all_parts)
-    assert partitioning.get_all_parts() == parse_partitioning(all_parts)["Z"]
+    assert partitioning.get_all_parts() == build_part_dict(all_parts)
 
 
 def test_mixed_partitioning():
@@ -93,10 +99,10 @@ def test_mixed_partitioning():
     """
     partitioning = build_partitioning(parts)
 
-    dict_ = parse_partitioning(parts)["Z"]
-    dict_["K6I"] = dict_["K"][-6:]
-    dict_["K5I"] = dict_["K"][-5:]
-    dict_["K3I"] = dict_["K"][-3:]
+    dict_ = build_part_dict(parts)
+    dict_[("K6I",)] = dict_[("K",)][-6:]
+    dict_[("K5I",)] = dict_[("K",)][-5:]
+    dict_[("K3I",)] = dict_[("K",)][-3:]
     assert partitioning.get_all_parts() == dict_
 
 
@@ -133,7 +139,7 @@ def test_get_dynamic_partitioning():
     dyn_parts = """
                 M: [uniform_occupancy(A.6)]
     """
-    dyn = parse_partitioning(dyn_parts)["Z"]
+    dyn = build_part_dict(dyn_parts)
 
     assert partitioning.get_dyn_parts() == dyn
 
@@ -204,7 +210,7 @@ def test_get_leader():
     """
     partitioning = build_partitioning(parts)
 
-    part = partitioning.get_all_parts()["M"][0]
+    part = partitioning.get_all_parts()[("M",)][0]
     assert partitioning.get_leader(part) == "A"
 
 
@@ -214,7 +220,7 @@ def test_get_leader_bad_style():
     """
     partitioning = build_partitioning(parts)
 
-    part = partitioning.get_all_parts()["M"][0]
+    part = partitioning.get_all_parts()[("M",)][0]
     with pytest.raises(ValueError) as excinfo:
         partitioning.get_leader(part)
 
@@ -254,7 +260,7 @@ def test_get_static_partitioning():
                 K: [uniform_shape(4)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    static = parse_partitioning(static_parts)["Z"]
+    static = build_part_dict(static_parts)
 
     assert partitioning.get_static_parts() == static
 
@@ -271,7 +277,7 @@ def test_get_tensor_spec():
                 K: [uniform_shape(4)]
                 M: [uniform_occupancy(A.6)]
     """
-    used = parse_partitioning(used_parts)["Z"]
+    used = build_part_dict(used_parts)
 
     tensor_ranks = ["J", "K", "M", "N"]
 
@@ -288,7 +294,7 @@ def test_get_tensor_spec_conv():
     used_parts = """
                 Q: [uniform_shape(5)]
     """
-    used = parse_partitioning(used_parts)["Z"]
+    used = build_part_dict(used_parts)
 
     tensor_ranks = ["W"]
 

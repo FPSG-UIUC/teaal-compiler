@@ -110,7 +110,8 @@ class FlowGraph:
 
                 # Add the static partitioning
                 part_rank = part.partition_rank(rank)
-                if part_rank in part.get_static_parts():
+                # TODO: allow for flattening
+                if (part_rank,) in part.get_static_parts():
                     self.__build_static_part(tensor, rank)
 
                     in_rank = part.partition_names(rank, False)[0]
@@ -118,7 +119,8 @@ class FlowGraph:
                         self.__build_dyn_part(tensor, rank)
 
                 # Add the dynamic partitioning
-                if part_rank in part.get_dyn_parts():
+                # TODO: allow for flattening
+                if (part_rank,) in part.get_dyn_parts():
                     self.__build_dyn_part(tensor, rank)
 
             # Get the root fiber
@@ -179,7 +181,8 @@ class FlowGraph:
 
         int_ranks = part.get_intermediates(rank)
         part_rank = part.partition_rank(rank)
-        if part_rank and part_rank in part.get_dyn_parts().keys():
+        # TODO: Allow flattening
+        if part_rank and (part_rank,) in part.get_dyn_parts().keys():
             int_ranks += [rank]
 
         for src in int_ranks:
@@ -194,7 +197,8 @@ class FlowGraph:
                     "Unknown intermediate: " +
                     src)  # pragma: no cover
 
-            leader = part.get_leader(part.get_dyn_parts()[part_rank][0])
+            # TODO: allow flattening
+            leader = part.get_leader(part.get_dyn_parts()[(part_rank,)][0])
 
             # Add the edge from the source rank and fiber to the
             # PartNode
@@ -221,7 +225,8 @@ class FlowGraph:
 
             rank = rank.upper()
             part_rank = part.partition_rank(rank)
-            if part_rank and part_rank in part.get_dyn_parts():
+            # TODO: allow for flattening
+            if part_rank and (part_rank,) in part.get_dyn_parts():
                 self.__connect_dyn_part(tensor, rank)
 
         rank, tensors = iter_graph.peek()

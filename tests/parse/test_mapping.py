@@ -1,6 +1,6 @@
 from teaal.parse.mapping import Mapping
 from teaal.parse.spacetime import SpaceTimeParser
-from tests.utils.parse_tree import make_uniform_shape
+from tests.utils.parse_tree import *
 
 
 def test_empty():
@@ -77,8 +77,8 @@ def test_no_mapping():
 
 def test_partitioning():
     mapping = Mapping.from_file("tests/integration/test_input.yaml")
-    partitioning = {"Z": {"M": make_uniform_shape(
-        [4, 2]), "N": make_uniform_shape([6, 3])}}
+    partitioning = {"Z": {make_prank("M"): make_uniform_shape([4, 2]),
+                          make_prank("N"): make_uniform_shape([6, 3])}}
 
     assert mapping.get_partitioning() == partitioning
 

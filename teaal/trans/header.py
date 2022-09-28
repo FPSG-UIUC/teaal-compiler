@@ -116,7 +116,8 @@ class Header:
         final_pos = {}
         for rank in ranks:
             final_rank = rank
-            if rank in part.get_all_parts().keys():
+            # TODO: allow flattening
+            if (rank,) in part.get_all_parts().keys():
                 final_rank += "0"
 
             final_pos[rank] = order.index(final_rank)

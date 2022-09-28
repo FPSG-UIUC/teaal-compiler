@@ -32,7 +32,7 @@ class PartitioningParser:
     """
     Lexing and parsing for partitioning mapping information
     """
-    grammar = """
+    partitioning_grammar = """
         ?start: "nway_shape(" NUMBER ")" -> nway_shape
               | "uniform_occupancy(" leader "." size ")" -> uniform_occupancy
               | "uniform_shape(" NUMBER ")" -> uniform_shape
@@ -47,8 +47,24 @@ class PartitioningParser:
 
         %ignore WS_INLINE
     """
-    parser = Lark(grammar)
+
+    ranks_grammar = """
+        ?start: NAME -> rank
+              | "(" NAME ("," NAME)+ ")" -> ranks
+
+        %import common.CNAME -> NAME
+        %import common.WS_INLINE
+
+        %ignore WS_INLINE
+    """
+
+    partitioning_parser = Lark(partitioning_grammar)
+    ranks_parser = Lark(ranks_grammar)
 
     @staticmethod
-    def parse(info: str) -> Tree:
-        return PartitioningParser.parser.parse(info)
+    def parse_partitioning(info: str) -> Tree:
+        return PartitioningParser.partitioning_parser.parse(info)
+
+    @staticmethod
+    def parse_ranks(info: str) -> Tree:
+        return PartitioningParser.ranks_parser.parse(info)

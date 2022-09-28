@@ -161,7 +161,8 @@ class Canvas:
             new = self.program.get_partitioning().get_dyn_rank(str(symbol))
 
             # Fix static partitioning variable name
-            if root in self.program.get_partitioning().get_static_parts():
+            # TODO: allow for flattening
+            if (root,) in self.program.get_partitioning().get_static_parts():
                 new += "0"
 
             sexpr = sexpr.subs(symbol, Symbol(new))

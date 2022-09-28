@@ -80,7 +80,12 @@ class SpaceTime:
 
         # Find the offset rank id associated with the partitioned ranks
         self.offsets = {}
-        for rank, parts in partitioning.get_all_parts().items():
+        for ranks, parts in partitioning.get_all_parts().items():
+            # TODO allow flattening
+            if len(ranks) > 1:
+                raise ValueError("Cannot flatten")
+            rank = ranks[0]
+
             for i in range(len(parts)):
                 self.offsets[rank + str(i)] = rank + str(i + 1)
 

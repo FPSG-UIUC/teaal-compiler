@@ -71,7 +71,8 @@ class Partitioner:
         i = tensor.get_ranks().index(rank)
 
         first = True
-        for j, part in enumerate(partitioning[part_rank]):
+        # TODO: allow for flattening
+        for j, part in enumerate(partitioning[(part_rank,)]):
             if part.data == "nway_shape":
                 # If j != 0, then the rank we are partitioning is already in
                 # the part_rank space
@@ -125,8 +126,14 @@ class Partitioner:
 
         # Get the partitioning
         part_ir = self.program.get_partitioning()
-        ranks = set(part_ir.get_all_parts().keys())
-        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), ranks)
+
+        # TODO allow flattening
+        ranks = []
+        for key in part_ir.all_parts.keys():
+            ranks += list(key)
+
+        part_ranks = set(ranks)
+        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), part_ranks)
 
         # If there was no partitioning, there is nothing to undo
         block = SBlock([])
@@ -139,14 +146,16 @@ class Partitioner:
 
         # For each rank
         for i, rank in enumerate(tensor.get_ranks()):
-            if rank not in partitioning.keys():
+            # TODO allow for flattened ranks
+            if (rank,) not in partitioning.keys():
                 continue
 
             # Flatten the rank
             curr_tmp = self.trans_utils.curr_tmp()
             next_tmp = AVar(self.trans_utils.next_tmp())
             arg1 = AParam("depth", EInt(i))
-            arg2 = AParam("levels", EInt(len(partitioning[rank])))
+            # TODO: allow for flattening
+            arg2 = AParam("levels", EInt(len(partitioning[(rank,)])))
             arg3 = AParam("coord_style", EString("absolute"))
 
             flat_call = EMethod(

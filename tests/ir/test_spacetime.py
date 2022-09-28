@@ -3,6 +3,7 @@ from sympy import symbols
 
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.spacetime import SpaceTime
+from teaal.parse.mapping import Mapping
 from teaal.parse.spacetime import SpaceTimeParser
 from tests.utils.parse_tree import make_uniform_shape
 
@@ -93,11 +94,16 @@ def test_get_offset():
     yaml = create_yaml(["N", "M"], ["K"])
     eqn_exprs = create_eqn_exprs()
 
-    parts = {"M": make_uniform_shape([6, 3]), "N": make_uniform_shape([5])}
+    part_yaml = """
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_shape(6), uniform_shape(3)]
+                N: [uniform_shape(5)]
+    """
+    parts = Mapping.from_str(part_yaml).get_partitioning()["Z"]
     spacetime = SpaceTime(
-        yaml, Partitioning(
-            parts, [
-                "M", "N", "K"], eqn_exprs), "Z")
+        yaml, Partitioning(parts, ["M", "N", "K"], eqn_exprs), "Z")
 
     assert spacetime.get_offset("M0") == "M1"
     assert spacetime.get_offset("M1") == "M2"
