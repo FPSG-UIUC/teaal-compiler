@@ -230,7 +230,8 @@ class Equation:
         # If this is the top partition, we start at 0 and end at the root
         start: Expression
         end: Expression
-        if part_num is None or part_num == len(part.get_all_parts()[root]):
+        # TODO: allow for flattened ranks
+        if part_num is None or part_num == len(part.get_all_parts()[(root,)]):
             start = EInt(0)
             end = EVar(root)
 
