@@ -1,6 +1,9 @@
 einsum:
     declaration:
-        Z: []
-        A: [J]
+        Z: [M]
     expressions:
-        - Z[] = sum(K).(A[2 * k])
+    - Z[m] = a
+mapping:
+    partitioning:
+        Z:
+            M: [uniform_shape(10), uniform_shape(5)]

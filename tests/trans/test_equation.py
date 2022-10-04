@@ -102,6 +102,10 @@ def make_other(einsum, mapping):
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
+    for tensor in program.get_tensors():
+        program.apply_all_partitioning(tensor)
+        program.get_loop_order().apply(tensor)
+
     return program
 
 
@@ -323,7 +327,7 @@ def test_make_iter_expr_output_only():
     eqn = Equation(program)
 
     rank, tensors = graph.peek()
-    iter_expr = "a_i.iterShapeRef()"
+    iter_expr = "a_i.iterRangeShapeRef(0, I, 1)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
@@ -341,8 +345,34 @@ def test_make_iter_expr_output_only_display():
     eqn = Equation(program)
 
     rank, tensors = graph.peek()
-    iter_expr = "enumerate(a_i.iterShapeRef())"
+    iter_expr = "enumerate(a_i.iterRangeShapeRef(0, I, 1))"
 
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
+def test_make_iter_expr_output_only_partition():
+    mapping = """
+        partitioning:
+            A:
+                I: [uniform_shape(10), uniform_shape(5)]
+    """
+    program = make_other("A[i] = b", mapping)
+
+    graph = IterationGraph(program)
+    eqn = Equation(program)
+
+    rank, tensors = graph.peek()
+    iter_expr = "a_i2.iterRangeShapeRef(0, I, I1)"
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+    graph.pop()
+    rank, tensors = graph.peek()
+    iter_expr = "a_i1.iterRangeShapeRef(i2, i2 + I1, I0)"
+    assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+    graph.pop()
+    rank, tensors = graph.peek()
+    iter_expr = "a_i0.iterRangeShapeRef(i1, i1 + I0, 1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 

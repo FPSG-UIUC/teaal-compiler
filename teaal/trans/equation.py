@@ -183,13 +183,12 @@ class Equation:
         if not tensors:
             raise ValueError("Must iterate over at least one tensor")
 
-        # If there are no input tensors, we just need to iterShapeRef on the
+        # If there are no input tensors, we need to iterRangeShapeRef on the
         # output
         output_tensor = self.__get_output_tensor(tensors)
         if len(tensors) == 1 and output_tensor:
-            out_name = output_tensor.fiber_name()
-            iter_shape = EMethod(EVar(out_name), "iterShapeRef", [])
-            return self.__add_enumerate(rank, iter_shape)
+            iter_output = self.__make_output_only_iter_expr(rank)
+            return self.__add_enumerate(rank, iter_output)
 
         # Build the expression of the inputs
         expr = self.__make_input_iter_expr(rank, tensors)
@@ -209,6 +208,49 @@ class Equation:
                 EVar(output_tensor.fiber_name()), OLtLt(), expr)
 
         return self.__add_enumerate(rank, expr)
+
+    def __make_output_only_iter_expr(self, rank: str) -> Expression:
+        """
+        Given a rank, iterate over just the output tensor's rank of that tensor
+        """
+        # out.iterRangeShapeRef(start, end, step) where
+        # start: beginning of partition
+        # end: end of partition
+        # step: size of partition
+        part = self.program.get_partitioning()
+        root = part.get_root_name(rank)
+
+        # Get the number of the partition; e.g., K2 -> 2
+        part_num: Optional[int]
+        if rank == root:
+            part_num = None
+        else:
+            part_num = int(rank[len(root):])
+
+        # If this is the top partition, we start at 0 and end at the root
+        start: Expression
+        end: Expression
+        if part_num is None or part_num == len(part.get_all_parts()[root]):
+            start = EInt(0)
+            end = EVar(root)
+
+        # Otherwise, start at the coordinate of the partition above
+        else:
+            start = EVar(root.lower() + str(part_num + 1))
+            end = EBinOp(start, OAdd(), EVar(rank))
+
+        # If this is the bottom partition of this rank, the step is 1
+        step: Expression
+        if part_num is None or part_num == 0:
+            step = EInt(1)
+        # Otherwise, the step is the size of the partitions below it
+        else:
+            step = EVar(root + str(part_num - 1))
+
+        out_name = self.program.get_output().fiber_name()
+        args = [AJust(start), AJust(end), AJust(step)]
+
+        return EMethod(EVar(out_name), "iterRangeShapeRef", args)
 
     def make_payload(self, rank: str, tensors: List[Tensor]) -> Payload:
         """
