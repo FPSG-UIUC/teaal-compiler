@@ -138,19 +138,15 @@ class Partitioning:
         Get the names of all intermediate ranks (e.g., K2I)
         """
         # TODO allow for flattened ranks
-        ranks = []
-        for key in self.all_parts.keys():
-            ranks += list(key)
+        intermediates: List[str] = []
+        node = None
+        succ = list(self.graph.successors(self.nodes[rank]))
+        while succ:
+            if node:
+                intermediates.append(node.get_rank())
 
-        part_ranks = self.__tensor_to_part_rank(rank, ranks)
-        part_rank = Partitioning.__single_part_rank(rank, part_ranks)
-
-        intermediates = []
-        # TODO: allow for flattened ranks
-        for i, part in enumerate(self.all_parts[(part_rank,)][1:]):
-            num = len(self.all_parts[(part_rank,)]) - i - 1
-            if not Partitioning.__is_static(part):
-                intermediates.append(rank + str(num) + "I")
+            node = min(succ, key=RankNode.get_priority)
+            succ = list(self.graph.successors(node))
 
         return intermediates
 
@@ -370,10 +366,13 @@ class Partitioning:
                 # TODO: Support flattening
                 else:
                     for k in range(len(sources)):
-                        int_rank = roots[k] + str(j) + "I"
-                        self.nodes[int_rank] = RankNode(int_rank, j)
-                        self.graph.add_edge(sources[k], self.nodes[int_rank])
-                        sources[k] = self.nodes[int_rank]
+                        # If this is not the first partition, we need an
+                        # explicit intermediate
+                        if i > 0:
+                            int_rank = roots[k] + str(j) + "I"
+                            self.nodes[int_rank] = RankNode(int_rank, j)
+                            self.graph.add_edge(sources[k], self.nodes[int_rank])
+                            sources[k] = self.nodes[int_rank]
 
                         rank = part_ranks[0] + str(j)
                         self.nodes[rank] = RankNode(rank, j)
