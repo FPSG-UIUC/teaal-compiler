@@ -1,15 +1,4 @@
-from teaal.ir.nodes import *
-
-
-def test_node():
-    assert Node() == Node()
-    assert Node() != ""
-
-    set_ = set()
-    set_.add(Node())
-
-    assert Node() in set_
-    assert "" not in set_
+from teaal.ir.flow_nodes import *
 
 
 def test_collecting_node():

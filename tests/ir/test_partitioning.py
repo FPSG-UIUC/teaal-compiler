@@ -52,7 +52,7 @@ def test_nway_after_dyn():
         partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
 
     assert str(
-        excinfo.value) == "N-way partitioning after dynamic partitioning on rank M"
+        excinfo.value) == "N-way partitioning after dynamic partitioning on rank(s) ('M',)"
 
 
 def test_multiple_partitionings_on_same_rank():

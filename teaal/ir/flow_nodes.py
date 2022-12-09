@@ -27,40 +27,7 @@ Representations of all of the nodes in the FlowGraph
 import abc
 from typing import Any, Iterable, List, Tuple
 
-
-class Node(metaclass=abc.ABCMeta):
-    """
-    FlowGraph node interface
-    """
-
-    def __eq__(self, other: object) -> bool:
-        """
-        The == operator for nodes
-
-        """
-        if isinstance(other, type(self)):
-            return self.__key() == other.__key()
-        return False
-
-    def __hash__(self) -> int:
-        """
-        Hash the node (needed to insert it into the graph)
-        """
-        return hash(repr(self))
-
-    def __key(self) -> Iterable[Any]:
-        """
-        A tuple of all fields of a node
-        """
-        return ()
-
-    def __repr__(self) -> str:
-        """
-        A string representation of the node for hashing
-        """
-        strs = [key if isinstance(key, str) else repr(key)
-                for key in self.__key()]
-        return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
+from teaal.ir.node import Node
 
 
 class CollectingNode(Node):

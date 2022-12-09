@@ -28,9 +28,10 @@ import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 from typing import cast, Dict, List, Optional
 
+from teaal.ir.flow_nodes import *
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
-from teaal.ir.nodes import *
+from teaal.ir.node import Node
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 

@@ -2,10 +2,10 @@ import networkx as nx
 import pytest
 
 from teaal.ir.flow_graph import FlowGraph
+from teaal.ir.flow_nodes import *
 from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
-from teaal.ir.nodes import *
 from teaal.ir.program import Program
 from teaal.parse import *
 
