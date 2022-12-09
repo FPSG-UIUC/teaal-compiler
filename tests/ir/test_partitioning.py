@@ -301,15 +301,6 @@ def test_get_tensor_spec_conv():
     assert partitioning.get_tensor_spec(tensor_ranks, {"P", "Q"}) == used
 
 
-def test_partition_names_unpartitioned():
-    partitioning = build_partitioning("")
-
-    with pytest.raises(ValueError) as excinfo:
-        partitioning.partition_names("M", True)
-
-    assert str(excinfo.value) == "No partitioning for rank M"
-
-
 def test_partition_names():
     all_parts = """
                 M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
@@ -325,6 +316,9 @@ def test_partition_names():
                     - uniform_shape(2)
     """
     partitioning = build_partitioning(all_parts)
+
+    assert partitioning.partition_names("J", True) == ["J"]
+    assert partitioning.partition_names("J", False) == ["J"]
 
     assert partitioning.partition_names("M", True) == ["M0", "M1", "M2"]
     assert partitioning.partition_names("M", False) == ["M1I", "M2"]

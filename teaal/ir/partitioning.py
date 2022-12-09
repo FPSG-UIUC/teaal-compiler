@@ -200,42 +200,27 @@ class Partitioning:
         Get the list of names that this rank will be partitioned into
         """
         # TODO allow for flattened ranks
-        ranks = []
-        for key in self.all_parts.keys():
-            ranks += list(key)
+        if not all_:
+            succ = list(self.graph.successors(self.nodes[rank]))
 
-        part_ranks = self.__tensor_to_part_rank(rank, ranks)
-        part_rank = Partitioning.__single_part_rank(rank, part_ranks)
+            if not succ:
+                return [rank]
 
-        # TODO allow for flattened ranks
-        parts = self.all_parts[(part_rank,)]
-        # Return all final rank names
-        if all_:
-            parted_ = [part_rank + str(j) for j in range(len(parts) + 1)]
-            # The bottom rank is named with the original rank name
-            parted_[0] = rank + "0"
-            return parted_
+            return [
+                node.get_rank() for node in sorted(
+                    succ, key=RankNode.get_priority)]
 
-        part_root = self.get_root_name(part_rank)
-        names = [part_root + str(len(parts))]
+        # Otherwise, do a depth-first traversal
+        names = []
+        curr = [self.nodes[rank]]
+        while curr:
+            node = curr.pop()
+            succ = list(self.graph.successors(node))
+            if not succ:
+                names.append(node.get_rank())
 
-        root = self.get_root_name(rank)
-
-        early_exit = False
-        # Otherwise, add rank names until another dynamic partitioning
-        for i, part in enumerate(parts[1:]):
-            num = len(parts) - i - 1
-            if Partitioning.__is_static(part):
-                names.append(part_root + str(num))
-                continue
-
-            names.append(root + str(num) + "I")
-            early_exit = True
-            break
-
-        if not early_exit:
-            names.append(root + "0")
-        names.reverse()
+            else:
+                curr.extend(succ)
 
         return names
 
@@ -371,7 +356,8 @@ class Partitioning:
                         if i > 0:
                             int_rank = roots[k] + str(j) + "I"
                             self.nodes[int_rank] = RankNode(int_rank, j)
-                            self.graph.add_edge(sources[k], self.nodes[int_rank])
+                            self.graph.add_edge(
+                                sources[k], self.nodes[int_rank])
                             sources[k] = self.nodes[int_rank]
 
                         rank = part_ranks[0] + str(j)
@@ -457,6 +443,7 @@ class Partitioning:
         """
         if not part_ranks:
             raise ValueError("No partitioning for rank " + rank)
+
         elif len(part_ranks) > 1:
             raise ValueError(
                 "Cannot partition " +
