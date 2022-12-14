@@ -60,12 +60,11 @@ class RankNode(Node):
     A node that represents a rank in the partitioning graph
     """
 
-    def __init__(self, rank: str, priority: float) -> None:
+    def __init__(self, rank: str) -> None:
         """
         Construct a rank node for partitioning
         """
         self.rank = rank
-        self.priority = priority
 
     def get_rank(self) -> str:
         """
@@ -73,14 +72,8 @@ class RankNode(Node):
         """
         return self.rank
 
-    def get_priority(self) -> float:
-        """
-        Accessor for the priority
-        """
-        return self.priority
-
     def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a RankNode
         """
-        return self.rank, self.priority
+        return self.rank,

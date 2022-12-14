@@ -125,10 +125,10 @@ class Partitioning:
             return part_rank + rank[len(root_name):-1]
 
         # Otherwise, simply find the leaf rank
-        node = self.nodes[rank]
+        node = RankNode(rank)
         succ = list(self.graph.successors(node))
         while succ:
-            node = max(succ, key=RankNode.get_priority)
+            node = max(succ, key=lambda n: self.graph.nodes[n]["priority"])
             succ = list(self.graph.successors(node))
 
         return node.get_rank()
@@ -140,12 +140,12 @@ class Partitioning:
         # TODO allow for flattened ranks
         intermediates: List[str] = []
         node = None
-        succ = list(self.graph.successors(self.nodes[rank]))
+        succ = list(self.graph.successors(RankNode(rank)))
         while succ:
             if node:
                 intermediates.append(node.get_rank())
 
-            node = min(succ, key=RankNode.get_priority)
+            node = min(succ, key=lambda n: self.graph.nodes[n]["priority"])
             succ = list(self.graph.successors(node))
 
         return intermediates
@@ -170,11 +170,11 @@ class Partitioning:
         if rank == root_name:
             return None
 
-        part_num = self.nodes[rank].get_priority()
+        part_num = self.graph.nodes[RankNode(rank)]["priority"]
 
         # If this is not the top partition, return the offset
         offset = root_name + str(part_num + 1)
-        if offset in self.nodes.keys():
+        if self.graph.has_node(RankNode(offset)):
             return offset
 
         return None
@@ -183,13 +183,18 @@ class Partitioning:
         """
         Get the root name for this partitioned rank (e.g., M1 -> M)
         """
-        node = self.nodes[rank]
+        node = RankNode(rank)
+
+        if "root" in self.graph.nodes[node].keys():
+            return self.graph.nodes[node]["root"]
+
         pred = [n.get_rank() for n in self.graph.predecessors(node)]
         while pred:
-            node = self.nodes[Partitioning.__best_match(rank, pred)]
+            node = RankNode(Partitioning.__best_match(rank, pred))
             pred = [n.get_rank() for n in self.graph.predecessors(node)]
 
-        return node.get_rank()
+        nx.set_node_attributes(self.graph, {node: {"root": node.get_rank()}})
+        return self.graph.nodes[node]["root"]
 
     def get_static_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
         """
@@ -240,18 +245,18 @@ class Partitioning:
         """
         # TODO allow for flattened ranks
         if not all_:
-            succ = list(self.graph.successors(self.nodes[rank]))
+            succ = list(self.graph.successors(RankNode(rank)))
 
             if not succ:
                 return [rank]
 
             return [
                 node.get_rank() for node in sorted(
-                    succ, key=RankNode.get_priority)]
+                    succ, key=lambda n: self.graph.nodes[n]["priority"])]
 
         # Otherwise, do a depth-first traversal
         names = []
-        curr = [self.nodes[rank]]
+        curr = [RankNode(rank)]
         while curr:
             node = curr.pop()
             succ = list(self.graph.successors(node))
@@ -318,27 +323,11 @@ class Partitioning:
         """
         Add the node if it does not exist, or update its priority
         """
-        if rank not in self.nodes.keys():
-            self.nodes[rank] = RankNode(rank, priority)
-            return
-
-        old_node = self.nodes[rank]
-        if priority == old_node.get_priority():
-            return
-
-        preds = list(self.graph.predecessors(old_node))
-        succs = list(self.graph.successors(old_node))
-
-        self.graph.remove_node(old_node)
-
-        new_node = RankNode(rank, priority)
-        for pred in preds:
-            self.graph.add_edge(pred, new_node)
-
-        for succ in succs:
-            self.graph.add_edge(new_node, succ)
-
-        self.nodes[rank] = new_node
+        node = RankNode(rank)
+        if node not in self.graph.nodes:
+            self.graph.add_node(node, priority=priority)
+        else:
+            self.graph.nodes[node]["priority"] = priority
 
     @staticmethod
     def __best_match(rank: str, test_ranks: List[str]) -> str:
@@ -373,23 +362,23 @@ class Partitioning:
         """
 
         self.graph = nx.DiGraph()
-        self.nodes = {}
 
         # Add all of the starting ranks to the graph
         for rank in ranks:
-            self.nodes[rank] = RankNode(rank, 0)
-            self.graph.add_node(self.nodes[rank])
+            self.__add_or_update_priority(rank, 0)
 
         # Some ranks used for partitioning may be created during partitioning
         # Add all needed ranks to ensure that they are available
         for ranks_tree in partitioning.keys():
             for rank_tree in ranks_tree.children:
-                if str(rank_tree) not in self.nodes.keys():
-                    self.nodes[rank] = RankNode(str(rank_tree), float("inf"))
+                rank = str(rank_tree)
+                if not self.graph.has_node(RankNode(rank)):
+                    self.__add_or_update_priority(rank, float("inf"))
 
         # Add the partitioning
         parted_by: Dict[str, List[str]] = {}
         roots: Dict[str, List[str]] = {}
+        edge: Tuple[Node, Node]
         for ranks_tree, parts in partitioning.items():
             part_ranks = tuple(str(child) for child in ranks_tree.children)
 
@@ -406,10 +395,12 @@ class Partitioning:
                 self.__add_or_update_priority(flattened_rank, 0)
 
                 flatten_node = FlattenNode(part_ranks)
-                self.graph.add_edge(flatten_node, self.nodes[flattened_rank])
+                edge = (flatten_node, RankNode(flattened_rank))
+                self.graph.add_edge(*edge, part=parts[0])
 
                 for part_rank in part_ranks:
-                    self.graph.add_edge(self.nodes[part_rank], flatten_node)
+                    edge = (RankNode(part_rank), flatten_node)
+                    self.graph.add_edge(*edge, part=parts[0])
 
                 continue
 
@@ -425,9 +416,7 @@ class Partitioning:
                 parted_by[root].append(part_rank)
 
             # Otherwise, divide the rank
-            sources = [self.nodes[root_name] for root_name in roots[part_rank]]
-            add_bottom_rank = False
-
+            sources = [RankNode(root_name) for root_name in roots[part_rank]]
             # Add edges
             for i, part in enumerate(parts):
                 j = len(parts) - i
@@ -436,33 +425,38 @@ class Partitioning:
                     self.__add_or_update_priority(rank, j)
 
                     for source in sources:
-                        self.graph.add_edge(source, self.nodes[rank])
+                        edge = (source, RankNode(rank))
+                        self.graph.add_edge(*edge, part=part)
 
-                    add_bottom_rank = True
+                    continue
 
                 # Else dynamic partitioning
-                else:
-                    for k in range(len(sources)):
-                        # If this is not the first partition, we need an
-                        # explicit intermediate
-                        if i > 0:
-                            int_rank = roots[part_rank][k] + str(j) + "I"
-                            self.__add_or_update_priority(int_rank, j)
-                            self.graph.add_edge(
-                                sources[k], self.nodes[int_rank])
-                            sources[k] = self.nodes[int_rank]
+                for k in range(len(sources)):
+                    # If this is not the first partition, we need an
+                    # explicit intermediate
+                    if i > 0:
+                        int_rank = roots[part_rank][k] + str(j) + "I"
+                        self.__add_or_update_priority(int_rank, j)
 
-                        rank = part_rank + str(j)
-                        self.__add_or_update_priority(rank, j)
-                        self.graph.add_edge(sources[k], self.nodes[rank])
+                        edge = (sources[k], RankNode(int_rank))
+                        self.graph.add_edge(*edge, part=parts[i - 1])
 
-                    add_bottom_rank = True
+                        sources[k] = RankNode(int_rank)
 
-            if add_bottom_rank:
+                    rank = part_rank + str(j)
+                    self.__add_or_update_priority(rank, j)
+
+                    edge = (sources[k], RankNode(rank))
+                    self.graph.add_edge(*edge, part=part)
+
+            # Add the bottom rank if needed
+            if len(parts) > 0:
                 for root_name, source in zip(roots[part_rank], sources):
                     rank = root_name + str(0)
                     self.__add_or_update_priority(rank, 0)
-                    self.graph.add_edge(source, self.nodes[rank])
+
+                    edge = (source, RankNode(rank))
+                    self.graph.add_edge(*edge, part=parts[-1])
 
         # Ensure that each rank is only partitioned with one set of
         # partitioning information
