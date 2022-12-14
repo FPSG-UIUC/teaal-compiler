@@ -143,16 +143,7 @@ class LoopOrder:
 
         loop_order = self.__default_loop_order_unpartitioned()
 
-        for ranks, parts in self.partitioning.get_all_parts().items():
-            # TODO allow for flattened ranks
-            if len(ranks) > 1:
-                raise ValueError("Cannot yet manage multiple")
-            rank = ranks[0]
-
-            # Skip intermediate ranks
-            if rank not in loop_order:
-                continue
-
+        for rank in loop_order:
             # Remove the old rank
             i = loop_order.index(rank)
             loop_order.pop(i)

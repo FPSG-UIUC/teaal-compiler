@@ -17,8 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)
-                  : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -53,6 +52,70 @@ def test_nway_after_dyn():
 
     assert str(
         excinfo.value) == "N-way partitioning after dynamic partitioning on rank(s) ('M',)"
+
+
+def test_check_flatten_single_rank_ops():
+    all_parts = """
+                (M, K): [nway_shape(5), uniform_shape(20)]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Operations ['nway_shape', 'uniform_shape'] can only be applied to one rank; not ('M', 'K')"
+
+
+def test_check_flatten_alone():
+    all_parts = """
+                (M, K): [flatten(), uniform_shape(20)]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "flatten() combined with other operators on rank(s) ('M', 'K')"
+
+
+def test_check_flatten_multiple_ranks():
+    all_parts = """
+                K: [flatten()]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "flatten() must combine at least two ranks; only ('K',) specified"
+
+
+def test_check_flatten_index_math():
+    all_parts = """
+                (B, Q): [flatten()]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    b, q, s, w = symbols("b q s w")
+    eqn_exprs = {b: b, q: q, s: s, w: q + s}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["B", "Q", "S", "W"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Cannot flatten rank Q because it is used in index math"
 
 
 def test_multiple_partitionings_on_same_rank():
@@ -227,6 +290,19 @@ def test_get_leader_bad_style():
     assert str(excinfo.value) == "Style uniform_shape has no leader"
 
 
+def test_get_offset():
+    parts = """
+                M: [uniform_shape(6), uniform_shape(3)]
+                N: [uniform_shape(5)]
+    """
+    partitioning = build_partitioning(parts)
+
+    assert partitioning.get_offset("M0") == "M1"
+    assert partitioning.get_offset("M1") == "M2"
+    assert partitioning.get_offset("M2") is None
+    assert partitioning.get_offset("K") is None
+
+
 def test_get_root_name():
     parts = """
                 M: [uniform_shape(6)]
@@ -263,6 +339,19 @@ def test_get_static_partitioning():
     static = build_part_dict(static_parts)
 
     assert partitioning.get_static_parts() == static
+
+
+def test_get_step():
+    parts = """
+                M: [uniform_shape(6), uniform_shape(3)]
+                N: [uniform_shape(5)]
+    """
+    partitioning = build_partitioning(parts)
+
+    assert partitioning.get_step("M0") is None
+    assert partitioning.get_step("M1") == "M0"
+    assert partitioning.get_step("M2") == "M1"
+    assert partitioning.get_step("K") is None
 
 
 def test_get_tensor_spec():

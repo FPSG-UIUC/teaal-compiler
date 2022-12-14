@@ -8,10 +8,8 @@ from teaal.trans.partitioner import Partitioner
 from teaal.trans.utils import TransUtils
 
 
-def assert_partition(tensor, parts, hifiber):
+def assert_partition(tensor, parts, rank, hifiber):
     program, partitioner = build_partitioner(parts)
-    # TODO: allow for flattening
-    rank = [r for r in program.get_partitioning().get_all_parts().keys()][0][0]
     assert partitioner.partition(tensor, rank).gen(depth=0) == hifiber
 
 
@@ -87,7 +85,7 @@ def test_nway_shape():
         "B_KN2N1N0 = tmp2\n" + \
         "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
-    assert_partition(tensor, spec, hifiber)
+    assert_partition(tensor, spec, "N", hifiber)
 
 
 def test_nway_shape_conv():
@@ -116,7 +114,7 @@ def test_uniform_occupancy_leader():
         "A_K1K0M = tmp1\n" + \
         "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
 
-    assert_partition(tensor, spec, hifiber)
+    assert_partition(tensor, spec, "K", hifiber)
 
 
 def test_uniform_occupancy_follower():
@@ -202,7 +200,7 @@ def test_uniform_shape():
         "B_KN2N1N0 = tmp2\n" + \
         "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
-    assert_partition(tensor, spec, hifiber)
+    assert_partition(tensor, spec, "N", hifiber)
 
 
 def test_uniform_shape_conv():

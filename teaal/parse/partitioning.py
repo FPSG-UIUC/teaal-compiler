@@ -36,6 +36,7 @@ class PartitioningParser:
         ?start: "nway_shape(" NUMBER ")" -> nway_shape
               | "uniform_occupancy(" leader "." size ")" -> uniform_occupancy
               | "uniform_shape(" NUMBER ")" -> uniform_shape
+              | "flatten(" ")" -> flatten
 
         ?leader: NAME -> leader
 

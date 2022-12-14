@@ -25,9 +25,34 @@ Representations of all of the nodes in the partitioning graph
 """
 
 import abc
-from typing import Any, Iterable
+from typing import Any, Iterable, Tuple
 
 from teaal.ir.node import Node
+
+
+class FlattenNode(Node):
+    """
+    A node that represents multiple ranks being combined together for
+    flattening
+    """
+
+    def __init__(self, ranks: Tuple[str, ...]) -> None:
+        """
+        Construct a flatten node for partitioning
+        """
+        self.ranks = ranks
+
+    def get_ranks(self) -> Tuple[str, ...]:
+        """
+        Accessor for the rank
+        """
+        return self.ranks
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a RankNode
+        """
+        return self.ranks,
 
 
 class RankNode(Node):
@@ -35,7 +60,7 @@ class RankNode(Node):
     A node that represents a rank in the partitioning graph
     """
 
-    def __init__(self, rank: str, priority: int) -> None:
+    def __init__(self, rank: str, priority: float) -> None:
         """
         Construct a rank node for partitioning
         """
@@ -48,7 +73,7 @@ class RankNode(Node):
         """
         return self.rank
 
-    def get_priority(self) -> int:
+    def get_priority(self) -> float:
         """
         Accessor for the priority
         """

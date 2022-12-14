@@ -6,6 +6,11 @@ from teaal.parse.partitioning import PartitioningParser
 from tests.utils.parse_tree import *
 
 
+def test_flatten():
+    tree = Tree("flatten", [])
+    assert PartitioningParser.parse_partitioning("flatten()") == tree
+
+
 def test_nway_shape():
     tree = Tree("nway_shape", [Token("NUMBER", 7)])
     assert PartitioningParser.parse_partitioning("nway_shape(7)") == tree

@@ -220,33 +220,24 @@ class Equation:
         part = self.program.get_partitioning()
         root = part.get_root_name(rank)
 
-        # Get the number of the partition; e.g., K2 -> 2
-        part_num: Optional[int]
-        if rank == root:
-            part_num = None
-        else:
-            part_num = int(rank[len(root):])
-
         # If this is the top partition, we start at 0 and end at the root
         start: Expression
         end: Expression
-        # TODO: allow for flattened ranks
-        if part_num is None or part_num == len(part.get_all_parts()[(root,)]):
+        offset = part.get_offset(rank)
+        if offset:
+            start = EVar(offset.lower())
+            end = EBinOp(start, OAdd(), EVar(rank))
+        else:
             start = EInt(0)
             end = EVar(root)
 
-        # Otherwise, start at the coordinate of the partition above
-        else:
-            start = EVar(root.lower() + str(part_num + 1))
-            end = EBinOp(start, OAdd(), EVar(rank))
-
         # If this is the bottom partition of this rank, the step is 1
         step: Expression
-        if part_num is None or part_num == 0:
-            step = EInt(1)
-        # Otherwise, the step is the size of the partitions below it
+        opt_step = part.get_step(rank)
+        if opt_step:
+            step = EVar(opt_step)
         else:
-            step = EVar(root + str(part_num - 1))
+            step = EInt(1)
 
         out_name = self.program.get_output().fiber_name()
         args = [AJust(start), AJust(end), AJust(step)]
@@ -436,12 +427,10 @@ class Equation:
         # relevant)
         math = self.program.get_coord_math().get_trans(troot)
         sexpr = solve(math - Symbol(troot), Symbol(root))[0]
-        partitioned = partitioning.get_all_parts().keys()
-
         for symbol in sexpr.atoms(Symbol):
-            # TODO allow for flattening
-            if (partitioning.partition_rank(str(symbol).upper()),) in partitioned:
-                sexpr = sexpr.subs(symbol, Symbol(str(symbol) + "0"))
+            new_rank = partitioning.partition_rank(str(symbol).upper())
+            if new_rank:
+                sexpr = sexpr.subs(symbol, str(symbol) + "0")
 
         # Build the interval
         if rank == root:
