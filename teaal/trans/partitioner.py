@@ -60,7 +60,9 @@ class Partitioner:
         if part_rank is None:
             return block
 
-        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), {part_rank})
+        # TODO: allow for flattening
+        partitioning = part_ir.get_tensor_spec(
+            tensor.get_ranks(), {(part_rank,)})
 
         # Rename the variable
         next_tmp = AVar(self.trans_utils.next_tmp())
@@ -72,6 +74,7 @@ class Partitioner:
 
         first = True
         # TODO: allow for flattening
+        root_name = part_ir.get_root_name(part_rank)
         for j, part in enumerate(partitioning[(part_rank,)]):
             if part.data == "nway_shape":
                 # If j != 0, then the rank we are partitioning is already in
@@ -86,9 +89,15 @@ class Partitioner:
                 if not first:
                     break
 
+                part_num = len(partitioning[(part_rank,)]) - j
                 block.add(
                     self.__uniform_occupancy(
-                        rank, part_rank, tensor, part))
+                        rank,
+                        part_rank,
+                        root_name +
+                        str(part_num),
+                        tensor,
+                        part))
 
             elif part.data == "uniform_shape":
                 block.add(self.__uniform_shape(rank, part_rank, part, i + j))
@@ -127,12 +136,7 @@ class Partitioner:
         # Get the partitioning
         part_ir = self.program.get_partitioning()
 
-        # TODO allow flattening
-        ranks = []
-        for key in part_ir.all_parts.keys():
-            ranks += list(key)
-
-        part_ranks = set(ranks)
+        part_ranks = part_ir.get_all_parts()
         partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), part_ranks)
 
         # If there was no partitioning, there is nothing to undo
@@ -277,19 +281,20 @@ class Partitioner:
     def __uniform_occupancy(
             self,
             rank: str,
-            part_rank: str,
+            src_rank: str,
+            dst_rank: str,
             tensor: Tensor,
             part: Tree) -> Statement:
         """
         Partition with a uniform occupancy
         """
-        leader = self.program.get_partitioning().get_leader(part)
+        leader = self.program.get_partitioning().get_leader(src_rank, dst_rank)
         size = ParseUtils.find_int(part, "size")
 
         if tensor.root_name() == leader:
-            return self.__split_equal(rank, part_rank, size)
+            return self.__split_equal(rank, src_rank, size)
         else:
-            return self.__split_follower(rank, part_rank, leader)
+            return self.__split_follower(rank, src_rank, leader)
 
     def __uniform_shape(
             self,

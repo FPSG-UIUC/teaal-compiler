@@ -17,7 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -118,6 +118,57 @@ def test_check_flatten_index_math():
         excinfo.value) == "Cannot flatten rank Q because it is used in index math"
 
 
+def test_check_flatten_multiple_partitionings():
+    all_parts = """
+                K: [uniform_shape(10)]
+                (M, K): [flatten()]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Cannot flatten rank K because it will also be independently partitioned"
+
+
+def test_check_flatten_flattened_rank():
+    all_parts = """
+                (K, N): [flatten()]
+                (M, KN): [flatten()]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Cannot flatten rank KN because it is an unknown or flattened rank"
+
+
+def test_check_flatten_not_bottom_rank():
+    all_parts = """
+                K: [uniform_shape(10)]
+                (M, K1): [flatten()]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Cannot flatten rank K1 because rank K will have multiple partitionings"
+
+
 def test_multiple_partitionings_on_same_rank():
     all_parts = """
                 Q: [uniform_shape(4)]
@@ -145,7 +196,8 @@ def test_get_all_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(all_parts)
-    assert partitioning.get_all_parts() == build_part_dict(all_parts)
+    corr = {("K",), ("M",), ("N",)}
+    assert partitioning.get_all_parts() == corr
 
 
 def test_mixed_partitioning():
@@ -162,11 +214,8 @@ def test_mixed_partitioning():
     """
     partitioning = build_partitioning(parts)
 
-    dict_ = build_part_dict(parts)
-    dict_[("K6I",)] = dict_[("K",)][-6:]
-    dict_[("K5I",)] = dict_[("K",)][-5:]
-    dict_[("K3I",)] = dict_[("K",)][-3:]
-    assert partitioning.get_all_parts() == dict_
+    corr = {("K",), ("K3I",), ("K5I",), ("K6I",)}
+    assert partitioning.get_all_parts() == corr
 
 
 def test_get_dyn_rank():
@@ -199,11 +248,7 @@ def test_get_dynamic_partitioning():
     """
     partitioning = build_partitioning(all_parts)
 
-    dyn_parts = """
-                M: [uniform_occupancy(A.6)]
-    """
-    dyn = build_part_dict(dyn_parts)
-
+    dyn = {("M",)}
     assert partitioning.get_dyn_parts() == dyn
 
 
@@ -272,9 +317,7 @@ def test_get_leader():
                 M: [uniform_occupancy(A.6)]
     """
     partitioning = build_partitioning(parts)
-
-    part = partitioning.get_all_parts()[("M",)][0]
-    assert partitioning.get_leader(part) == "A"
+    assert partitioning.get_leader("M", "M1") == "A"
 
 
 def test_get_leader_bad_style():
@@ -282,10 +325,8 @@ def test_get_leader_bad_style():
                 M: [uniform_shape(6)]
     """
     partitioning = build_partitioning(parts)
-
-    part = partitioning.get_all_parts()[("M",)][0]
     with pytest.raises(ValueError) as excinfo:
-        partitioning.get_leader(part)
+        partitioning.get_leader("M", "M1")
 
     assert str(excinfo.value) == "Style uniform_shape has no leader"
 
@@ -331,12 +372,7 @@ def test_get_static_partitioning():
                 N: [uniform_shape(2), nway_shape(7)]
     """
     partitioning = build_partitioning(all_parts)
-
-    static_parts = """
-                K: [uniform_shape(4)]
-                N: [uniform_shape(2), nway_shape(7)]
-    """
-    static = build_part_dict(static_parts)
+    static = {("K",), ("N",)}
 
     assert partitioning.get_static_parts() == static
 
@@ -370,7 +406,23 @@ def test_get_tensor_spec():
 
     tensor_ranks = ["J", "K", "M", "N"]
 
-    assert partitioning.get_tensor_spec(tensor_ranks, {"K", "M"}) == used
+    assert partitioning.get_tensor_spec(tensor_ranks, {("K",), ("M",)}) == used
+
+
+def test_get_tensor_spec_multiple_dyn():
+    all_parts = """
+                M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    used_parts = """
+                M1I: [uniform_occupancy(A.3)]
+    """
+    used = build_part_dict(used_parts)
+
+    tensor_ranks = ["J", "K", "M1I", "N"]
+
+    assert partitioning.get_tensor_spec(tensor_ranks, {("M1I",)}) == used
 
 
 def test_get_tensor_spec_conv():
@@ -387,7 +439,7 @@ def test_get_tensor_spec_conv():
 
     tensor_ranks = ["W"]
 
-    assert partitioning.get_tensor_spec(tensor_ranks, {"P", "Q"}) == used
+    assert partitioning.get_tensor_spec(tensor_ranks, {("P",), ("Q",)}) == used
 
 
 def test_partition_names():

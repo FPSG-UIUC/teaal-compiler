@@ -27,7 +27,7 @@ Intermediate representation of the partitioning information
 from lark.tree import Tree
 import networkx as nx  # type: ignore
 from sympy import Basic, Symbol
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.part_nodes import *
 from teaal.ir.tensor import Tensor
@@ -52,34 +52,38 @@ class Partitioning:
 
         # Filter the partitioning information into the ranks that can
         # be partitioned statically vs dynamically
-        self.dyn_parts = {}
-        self.static_parts = {}
+        self.dyn_parts: Set[Tuple[str, ...]] = set()
+        self.static_parts: Set[Tuple[str, ...]] = set()
 
-        for ranks_tree, parts in partitioning.items():
-            # Continue if this rank is not actually partitioned
-            if not parts:
+        for node in nx.topological_sort(self.graph):
+            if isinstance(node, FlattenNode):
+                ranks = node.get_ranks()
+                for rank in ranks:
+                    if rank in self.dyn_parts:
+                        self.dyn_parts.add(ranks)
+                        break
+
+                if ranks not in self.dyn_parts:
+                    self.static_parts.add(ranks)
                 continue
 
-            part_ranks = tuple(str(child) for child in ranks_tree.children)
+            succs = [succ for succ in self.graph.successors(node)]
+            if not succs:
+                continue
 
-            # Add the partitioning specification to the appropriate dictionary
-            if Partitioning.__is_static(parts[0]):
-                self.static_parts[part_ranks] = parts
+            if isinstance(succs[0], FlattenNode):
+                continue
+
+            first = max(succs, key=lambda n: self.graph.nodes[n]["priority"])
+            if Partitioning.__is_static(
+                    self.graph.edges[(node, first)]["part"]):
+                self.static_parts.add((node.get_rank(),))
             else:
-                self.dyn_parts[part_ranks] = parts
+                self.dyn_parts.add((node.get_rank(),))
 
-        self.all_parts = {**self.static_parts, **self.dyn_parts}
+        self.all_parts = self.static_parts.union(self.dyn_parts)
 
-        # Save the partitioning information for intermediate ranks
-        # TODO: allow for more than one part_rank
-        init_ranks = [part_ranks[0] for part_ranks in self.all_parts.keys()]
-        for rank in init_ranks:
-            for i, int_ in enumerate(self.get_intermediates(rank)):
-                i = int(int_[len(rank):-1])
-                self.dyn_parts[(int_,)] = self.all_parts[(rank,)][-i:]
-                self.all_parts[(int_,)] = self.all_parts[(rank,)][-i:]
-
-    def get_all_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
+    def get_all_parts(self) -> Set[Tuple[str, ...]]:
         """
         Get the partitioning information for all partitioned ranks
         """
@@ -93,14 +97,11 @@ class Partitioning:
         Used for the spacetime stamp of dynamically partitioned tensors
         """
         # TODO allow for flattened ranks
-        ranks = []
-        for key in self.dyn_parts.keys():
-            ranks += list(key)
-        if self.__tensor_to_part_rank(rank.upper(), ranks):
+        if self.__tensor_to_part_rank(rank.upper(), self.dyn_parts):
             return rank + "0"
         return rank
 
-    def get_dyn_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
+    def get_dyn_parts(self) -> Set[Tuple[str, ...]]:
         """
         Get the partitioning information for all dynamically partitioned
         ranks
@@ -115,11 +116,7 @@ class Partitioning:
         # If this is an intermediate, translate it and find the final rank
         if rank[len(root_name):][-1:] == "I":
             # TODO allow for flattened ranks
-            ranks = []
-            for key in self.all_parts.keys():
-                ranks += list(key)
-
-            part_ranks = self.__tensor_to_part_rank(root_name, ranks)
+            part_ranks = self.__tensor_to_part_rank(root_name, self.all_parts)
             part_rank = Partitioning.__single_part_rank(root_name, part_ranks)
 
             return part_rank + rank[len(root_name):-1]
@@ -150,10 +147,13 @@ class Partitioning:
 
         return intermediates
 
-    def get_leader(self, part: Tree) -> str:
+    def get_leader(self, src_rank: str, dst_rank: str) -> str:
         """
         Return the leader tensor for this partitioning
         """
+        part = self.graph.edges[(
+            RankNode(src_rank), RankNode(dst_rank))]["part"]
+
         if part.data == "uniform_occupancy":
             return ParseUtils.find_str(part, "leader")
 
@@ -188,15 +188,20 @@ class Partitioning:
         if "root" in self.graph.nodes[node].keys():
             return self.graph.nodes[node]["root"]
 
-        pred = [n.get_rank() for n in self.graph.predecessors(node)]
-        while pred:
-            node = RankNode(Partitioning.__best_match(rank, pred))
-            pred = [n.get_rank() for n in self.graph.predecessors(node)]
+        preds = [n.get_rank() for n in self.graph.predecessors(node)]
+        while preds:
+            node = RankNode(Partitioning.__best_match(rank, preds))
+            preds = []
+            for n in self.graph.predecessors(node):
+                if isinstance(n, FlattenNode):
+                    break
+
+                preds.append(n.get_rank())
 
         nx.set_node_attributes(self.graph, {node: {"root": node.get_rank()}})
         return self.graph.nodes[node]["root"]
 
-    def get_static_parts(self) -> Dict[Tuple[str, ...], List[Tree]]:
+    def get_static_parts(self) -> Set[Tuple[str, ...]]:
         """
         Get the partitioning information for all statically partitioned
         ranks
@@ -223,20 +228,39 @@ class Partitioning:
         return None
 
     def get_tensor_spec(self, tensor_ranks: Iterable[str],
-                        part_ranks: Iterable[str]) -> Dict[Tuple[str, ...], List[Tree]]:
+                        part_ranks: Iterable[Tuple[str, ...]]) -> Dict[Tuple[str, ...], List[Tree]]:
         """
         Get the partitioning for a specific tensor's ranks
         """
-        # TODO: after flattening is fixed, check if we still need the type hint
+        # TODO: allow for flattening
         partitioning: Dict[Tuple[str, ...], List[Tree]] = {}
-        for ranks, part in self.all_parts.items():
-            # TODO: allow for flattened ranks
-            rank = ranks[0]
+        for tensor_rank in tensor_ranks:
+            pranks = self.__tensor_to_part_rank(tensor_rank, part_ranks)
+            if not pranks:
+                continue
 
-            if rank in part_ranks and self.__part_to_tensor_rank(
-                    rank, tensor_ranks):
-                # TODO: allow for flattened ranks
-                partitioning[(rank,)] = part
+            rank = Partitioning.__single_part_rank(tensor_rank, pranks)
+            partitioning[(rank,)] = []
+            parent = RankNode(rank)
+            root = self.get_root_name(rank)
+            succs = [node for node in self.graph.successors(
+                parent) if self.graph.edges[(parent, node)]["part_ranks"] == (root,)]
+
+            while succs:
+
+                # Note that the last and second to last partition will have the
+                # same part, so we do not need to store this separately
+                succs.sort(
+                    key=lambda n: self.graph.nodes[n]["priority"],
+                    reverse=True)
+                for succ in succs[:-1]:
+                    partitioning[(rank,)].append(
+                        self.graph.edges[(parent, succ)]["part"])
+
+                parent = succs[-1]
+                succs = [node for node in self.graph.successors(
+                    parent) if self.graph.edges[(parent, node)]["part_ranks"] == (root,)]
+
         return partitioning
 
     def partition_names(self, rank: str, all_: bool) -> List[str]:
@@ -273,11 +297,7 @@ class Partitioning:
         Get the name of the corresponding partitioned rank, should one exist
         """
         # TODO allow for flattened ranks
-        ranks = []
-        for key in self.all_parts.keys():
-            ranks += list(key)
-
-        part_ranks = self.__tensor_to_part_rank(rank, ranks)
+        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts)
         if not part_ranks:
             return None
 
@@ -291,17 +311,12 @@ class Partitioning:
         """
         Partition a tensor across all relevant ranks
         """
-        all_parts = self.get_all_parts()
         tensor_ranks = tensor.get_ranks().copy()
 
         # TODO allow for flattened ranks
-        all_ranks = []
-        for key in self.all_parts.keys():
-            all_ranks += list(key)
-
         for rank in tensor.get_ranks():
             # Check if there is anything to partition
-            part_ranks = self.__tensor_to_part_rank(rank, all_ranks)
+            part_ranks = self.__tensor_to_part_rank(rank, self.all_parts)
             if not part_ranks:
                 continue
 
@@ -378,16 +393,18 @@ class Partitioning:
         # Add the partitioning
         parted_by: Dict[str, List[str]] = {}
         roots: Dict[str, List[str]] = {}
-        edge: Tuple[Node, Node]
-        for ranks_tree, parts in partitioning.items():
-            part_ranks = tuple(str(child) for child in ranks_tree.children)
-
+        edge: Tuple[PartitioningNode, PartitioningNode]
+        all_parts = {
+            tuple(
+                str(child) for child in ranks_tree.children): parts for ranks_tree,
+            parts in partitioning.items()}
+        for part_ranks, parts in all_parts.items():
             if Partitioning.__nway_after_dyn(parts):
                 raise ValueError(
                     "N-way partitioning after dynamic partitioning on rank(s) " +
                     str(part_ranks))
 
-            self.__check_flatten(part_ranks, parts, ranks)
+            self.__check_flatten(part_ranks, all_parts, ranks)
 
             # If we are flattening, add a flattening node to combine them
             if len(part_ranks) > 1:
@@ -396,11 +413,13 @@ class Partitioning:
 
                 flatten_node = FlattenNode(part_ranks)
                 edge = (flatten_node, RankNode(flattened_rank))
-                self.graph.add_edge(*edge, part=parts[0])
+                self.graph.add_edge(
+                    *edge, part=parts[0], part_ranks=part_ranks)
 
                 for part_rank in part_ranks:
                     edge = (RankNode(part_rank), flatten_node)
-                    self.graph.add_edge(*edge, part=parts[0])
+                    self.graph.add_edge(
+                        *edge, part=parts[0], part_ranks=part_ranks)
 
                 continue
 
@@ -426,7 +445,8 @@ class Partitioning:
 
                     for source in sources:
                         edge = (source, RankNode(rank))
-                        self.graph.add_edge(*edge, part=part)
+                        self.graph.add_edge(
+                            *edge, part=part, part_ranks=part_ranks)
 
                     continue
 
@@ -439,7 +459,8 @@ class Partitioning:
                         self.__add_or_update_priority(int_rank, j)
 
                         edge = (sources[k], RankNode(int_rank))
-                        self.graph.add_edge(*edge, part=parts[i - 1])
+                        self.graph.add_edge(
+                            *edge, part=parts[i - 1], part_ranks=part_ranks)
 
                         sources[k] = RankNode(int_rank)
 
@@ -447,7 +468,8 @@ class Partitioning:
                     self.__add_or_update_priority(rank, j)
 
                     edge = (sources[k], RankNode(rank))
-                    self.graph.add_edge(*edge, part=part)
+                    self.graph.add_edge(
+                        *edge, part=part, part_ranks=part_ranks)
 
             # Add the bottom rank if needed
             if len(parts) > 0:
@@ -456,7 +478,8 @@ class Partitioning:
                     self.__add_or_update_priority(rank, 0)
 
                     edge = (source, RankNode(rank))
-                    self.graph.add_edge(*edge, part=parts[-1])
+                    self.graph.add_edge(
+                        *edge, part=parts[-1], part_ranks=part_ranks)
 
         # Ensure that each rank is only partitioned with one set of
         # partitioning information
@@ -464,7 +487,7 @@ class Partitioning:
             Partitioning.__single_part_rank(rank, partitioners)
 
     def __check_flatten(
-            self, part_ranks: Tuple[str, ...], parts: List[Tree], all_ranks: Iterable[str]) -> None:
+            self, part_ranks: Tuple[str, ...], all_parts: Dict[Tuple[str, ...], List[Tree]], all_ranks: Iterable[str]) -> None:
         """
         Check all conditions associated with flattening, and raise the
         appropriate errors
@@ -477,7 +500,7 @@ class Partitioning:
         """
         flatten = False
         ops = []
-        for part in parts:
+        for part in all_parts[part_ranks]:
             ops.append(part.data)
             if part.data == "flatten":
                 flatten = True
@@ -493,7 +516,7 @@ class Partitioning:
 
             return
 
-        if len(parts) > 1:
+        if len(all_parts[part_ranks]) > 1:
             raise ValueError(
                 "flatten() combined with other operators on rank(s) " +
                 str(part_ranks))
@@ -510,6 +533,29 @@ class Partitioning:
                     "Cannot flatten rank " +
                     rank +
                     " because it is used in index math")
+
+        # Necessary to ensure concordant traversal
+        for rank in part_ranks:
+            if (rank,) in all_parts and all_parts[(rank,)]:
+                raise ValueError(
+                    "Cannot flatten rank " +
+                    rank +
+                    " because it will also be independently partitioned")
+
+            if rank not in all_ranks and (rank[:-1],) not in all_parts:
+                raise ValueError(
+                    "Cannot flatten rank " +
+                    rank +
+                    " because it is an unknown or flattened rank")
+
+            if rank not in all_ranks and (
+                    rank[:-1],) in all_parts and rank[-1] != "0":
+                raise ValueError("Cannot flatten rank " +
+                                 rank +
+                                 " because rank " +
+                                 rank[:-
+                                      1] +
+                                 " will have multiple partitionings")
 
     def __eq__(self, other) -> bool:
         """
@@ -531,7 +577,9 @@ class Partitioning:
         """
         Get all relevant fields of the Partitioning
         """
-        return self.dyn_parts, self.static_parts, self.eqn_exprs
+        edges = {edge: self.graph.edges[edge]["part"]
+                 for edge in self.graph.edges}
+        return set(self.graph.nodes), edges
 
     @staticmethod
     def __nway_after_dyn(parts: List[Tree]) -> bool:
@@ -590,7 +638,7 @@ class Partitioning:
     def __tensor_to_part_rank(
             self,
             tensor_rank: str,
-            part_ranks: Iterable[str]) -> List[str]:
+            part_ranks: Iterable[Tuple[str, ...]]) -> List[str]:
         """
         Return a partition rank if one corresponds to the given tensor rank
         """
@@ -602,7 +650,8 @@ class Partitioning:
 
         matches = []
         for eqn_rank in eqn_ranks:
-            if eqn_rank in part_ranks:
+            # TODO: Allow for flattening
+            if (eqn_rank,) in part_ranks:
                 matches.append(eqn_rank)
 
         return matches

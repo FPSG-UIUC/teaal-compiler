@@ -30,7 +30,19 @@ from typing import Any, Iterable, Tuple
 from teaal.ir.node import Node
 
 
-class FlattenNode(Node):
+class PartitioningNode(Node):
+    """
+    A node used in the partitioning graph
+    """
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the name associated with the rank
+        """
+        raise NotImplementedError  # pragma: no cover
+
+
+class FlattenNode(PartitioningNode):
     """
     A node that represents multiple ranks being combined together for
     flattening
@@ -41,6 +53,12 @@ class FlattenNode(Node):
         Construct a flatten node for partitioning
         """
         self.ranks = ranks
+
+    def get_rank(self) -> str:
+        """
+        Get the name of the resulting rank
+        """
+        return "".join(self.ranks)
 
     def get_ranks(self) -> Tuple[str, ...]:
         """
@@ -55,7 +73,7 @@ class FlattenNode(Node):
         return self.ranks,
 
 
-class RankNode(Node):
+class RankNode(PartitioningNode):
     """
     A node that represents a rank in the partitioning graph
     """

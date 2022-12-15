@@ -183,7 +183,7 @@ class FlowGraph:
         int_ranks = part.get_intermediates(rank)
         part_rank = part.partition_rank(rank)
         # TODO: Allow flattening
-        if part_rank and (part_rank,) in part.get_dyn_parts().keys():
+        if part_rank and (part_rank,) in part.get_dyn_parts():
             int_ranks += [rank]
 
         for src in int_ranks:
@@ -199,7 +199,8 @@ class FlowGraph:
                     src)  # pragma: no cover
 
             # TODO: allow flattening
-            leader = part.get_leader(part.get_dyn_parts()[(part_rank,)][0])
+            # TODO: use the correct destination rank
+            leader = part.get_leader(src, dsts[0])
 
             # Add the edge from the source rank and fiber to the
             # PartNode

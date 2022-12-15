@@ -205,7 +205,7 @@ class Metrics:
                 name = tensor.root_name()
 
                 # First apply all static partitioning
-                for ranks in part.get_static_parts().keys():
+                for ranks in part.get_static_parts():
                     # TODO: allow flattening
                     if len(ranks) > 1:
                         raise ValueError("Cannot deal with this yet")
@@ -290,7 +290,7 @@ class Metrics:
         is a legal configuration
         """
         # Check that there is no dynamic partitioning
-        if self.program.get_partitioning().get_dyn_parts() != {}:
+        if self.program.get_partitioning().get_dyn_parts() != set():
             raise NotImplementedError
 
         # Check that there are at most three tensors (no danger of multiple
