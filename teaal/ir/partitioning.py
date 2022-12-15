@@ -96,8 +96,11 @@ class Partitioning:
 
         Used for the spacetime stamp of dynamically partitioned tensors
         """
-        # TODO allow for flattened ranks
-        if self.__tensor_to_part_rank(rank.upper(), self.dyn_parts):
+        if self.is_flattened(rank):
+            raise ValueError(
+                "Should never be used for flattened ranks, used on rank " + rank)
+
+        if self.__tensor_to_part_rank(rank, self.dyn_parts):
             return rank + "0"
         return rank
 
@@ -262,6 +265,27 @@ class Partitioning:
                     parent) if self.graph.edges[(parent, node)]["part_ranks"] == (root,)]
 
         return partitioning
+
+    def is_flattened(self, rank: str) -> bool:
+        """
+        Return true if the rank is the result of a flattening
+        """
+        node = RankNode(rank)
+
+        if "is_flattened" in self.graph.nodes[node].keys():
+            return self.graph.nodes[node]["is_flattened"]
+
+        preds = [n.get_rank() for n in self.graph.predecessors(node)]
+        while preds:
+            node = RankNode(Partitioning.__best_match(rank, preds))
+            preds = []
+            for n in self.graph.predecessors(node):
+                if isinstance(n, FlattenNode):
+                    self.graph.nodes[node]["is_flattened"] = True
+                    return True
+
+        self.graph.nodes[node]["is_flattened"] = False
+        return False
 
     def partition_names(self, rank: str, all_: bool) -> List[str]:
         """

@@ -145,12 +145,19 @@ class Canvas:
         """
         Build an expression to describe the relevant rank
         """
-        root = self.program.get_partitioning().get_root_name(rank.upper())
+        part_ir = self.program.get_partitioning()
+        root = part_ir.get_root_name(rank.upper())
         suffix = rank[len(root):]
 
         # This is not the innermost rank
         if len(suffix) > 0 and suffix != "0" and suffix[-1] != "i":
             return EVar(rank)
+
+        # If this rank is the result of flattening, then build the access
+        # as a tuple of the constituent ranks
+        # TODO: allow for flattening
+        if part_ir.is_flattened(rank.upper()):
+            raise NotImplementedError
 
         # Otherwise, this is the innermost rank; so translate
         sexpr = self.program.get_coord_math().get_trans(root.lower())
@@ -158,11 +165,10 @@ class Canvas:
         # Now, we need to replace the roots with their dynamic names
         for symbol in sexpr.atoms(Symbol):
             # Fix dynamic partitioning variable name
-            new = self.program.get_partitioning().get_dyn_rank(str(symbol))
+            new = part_ir.get_dyn_rank(str(symbol).upper()).lower()
 
             # Fix static partitioning variable name
-            # TODO: allow for flattening
-            if (root,) in self.program.get_partitioning().get_static_parts():
+            if (root,) in part_ir.get_static_parts():
                 new += "0"
 
             sexpr = sexpr.subs(symbol, Symbol(new))

@@ -17,7 +17,8 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)
+                  : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -247,15 +248,30 @@ def test_mixed_partitioning():
     assert partitioning.get_all_parts() == corr
 
 
+def test_get_dyn_rank_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.get_dyn_rank("MK0")
+
+    assert str(
+        excinfo.value) == "Should never be used for flattened ranks, used on rank MK0"
+
+
 def test_get_dyn_rank():
     all_parts = """
                 M: [uniform_occupancy(A.6)]
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.get_dyn_rank("m") == "m0"
-    assert partitioning.get_dyn_rank("m1") == "m1"
-    assert partitioning.get_dyn_rank("n") == "n"
+    assert partitioning.get_dyn_rank("M") == "M0"
+    assert partitioning.get_dyn_rank("M1") == "M1"
+    assert partitioning.get_dyn_rank("N") == "N"
 
 
 def test_get_dyn_rank_conv():
@@ -264,9 +280,9 @@ def test_get_dyn_rank_conv():
     """
     partitioning = build_partitioning_conv(all_parts)
 
-    assert partitioning.get_dyn_rank("q") == "q0"
-    assert partitioning.get_dyn_rank("w") == "w0"
-    assert partitioning.get_dyn_rank("s") == "s"
+    assert partitioning.get_dyn_rank("Q") == "Q0"
+    assert partitioning.get_dyn_rank("W") == "W0"
+    assert partitioning.get_dyn_rank("S") == "S"
 
 
 def test_get_dynamic_partitioning():
@@ -509,6 +525,23 @@ def test_get_tensor_spec_conv():
     tensor_ranks = ["W"]
 
     assert partitioning.get_tensor_spec(tensor_ranks, {("P",), ("Q",)}) == used
+
+
+def test_is_flattened():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.6), uniform_occupancy(A.2)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert not partitioning.is_flattened("K")
+    assert not partitioning.is_flattened("M")
+    assert not partitioning.is_flattened("N")
+    assert not partitioning.is_flattened("K0")
+    assert partitioning.is_flattened("MK0")
+    assert partitioning.is_flattened("MK02")
+    assert partitioning.is_flattened("MK01I")
 
 
 def test_partition_names():
