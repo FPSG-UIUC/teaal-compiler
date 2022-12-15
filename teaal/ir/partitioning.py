@@ -59,7 +59,7 @@ class Partitioning:
             if isinstance(node, FlattenNode):
                 ranks = node.get_ranks()
                 for rank in ranks:
-                    if rank in self.dyn_parts:
+                    if (self.get_root_name(rank),) in self.dyn_parts:
                         self.dyn_parts.add(ranks)
                         break
 
@@ -371,12 +371,13 @@ class Partitioning:
 
     def __build_part_graph(self,
                            partitioning: Dict[Tree, List[Tree]],
-                           ranks: Iterable[str]) -> None:
+                           orig_ranks: Iterable[str]) -> None:
         """
         Build the graph of how the partitioning information is related
         """
 
         self.graph = nx.DiGraph()
+        ranks = set(orig_ranks)
 
         # Add all of the starting ranks to the graph
         for rank in ranks:
@@ -404,7 +405,7 @@ class Partitioning:
                     "N-way partitioning after dynamic partitioning on rank(s) " +
                     str(part_ranks))
 
-            self.__check_flatten(part_ranks, all_parts, ranks)
+            self.__check_flatten(part_ranks, all_parts, ranks, orig_ranks)
 
             # If we are flattening, add a flattening node to combine them
             if len(part_ranks) > 1:
@@ -420,6 +421,10 @@ class Partitioning:
                     edge = (RankNode(part_rank), flatten_node)
                     self.graph.add_edge(
                         *edge, part=parts[0], part_ranks=part_ranks)
+
+                ranks.add(flattened_rank)
+                self.eqn_exprs[Symbol(flattened_rank.lower())] = Symbol(
+                    flattened_rank.lower())
 
                 continue
 
@@ -440,6 +445,12 @@ class Partitioning:
             for i, part in enumerate(parts):
                 j = len(parts) - i
                 if Partitioning.__is_static(part):
+                    if part_rank not in orig_ranks:
+                        raise ValueError(
+                            "Shape-based partitioning found on rank " +
+                            part_rank +
+                            " after flattening")
+
                     rank = part_rank + str(j)
                     self.__add_or_update_priority(rank, j)
 
@@ -486,8 +497,8 @@ class Partitioning:
         for rank, partitioners in parted_by.items():
             Partitioning.__single_part_rank(rank, partitioners)
 
-    def __check_flatten(
-            self, part_ranks: Tuple[str, ...], all_parts: Dict[Tuple[str, ...], List[Tree]], all_ranks: Iterable[str]) -> None:
+    def __check_flatten(self, part_ranks: Tuple[str, ...], all_parts: Dict[Tuple[str, ...],
+                        List[Tree]], all_ranks: Iterable[str], orig_ranks: Iterable[str]) -> None:
         """
         Check all conditions associated with flattening, and raise the
         appropriate errors
@@ -542,20 +553,18 @@ class Partitioning:
                     rank +
                     " because it will also be independently partitioned")
 
-            if rank not in all_ranks and (rank[:-1],) not in all_parts:
-                raise ValueError(
-                    "Cannot flatten rank " +
-                    rank +
-                    " because it is an unknown or flattened rank")
+            if rank not in orig_ranks:
+                if rank in all_ranks:
+                    raise ValueError(
+                        "Cannot flatten rank " +
+                        rank +
+                        " because it is a flattened rank")
 
-            if rank not in all_ranks and (
-                    rank[:-1],) in all_parts and rank[-1] != "0":
-                raise ValueError("Cannot flatten rank " +
-                                 rank +
-                                 " because rank " +
-                                 rank[:-
-                                      1] +
-                                 " will have multiple partitionings")
+                if rank[:-1] not in orig_ranks or rank[-1] != "0":
+                    raise ValueError(
+                        "Cannot flatten rank " +
+                        rank +
+                        " because it will have multiple partitionings")
 
     def __eq__(self, other) -> bool:
         """

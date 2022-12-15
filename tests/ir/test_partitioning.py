@@ -149,7 +149,7 @@ def test_check_flatten_flattened_rank():
         partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
 
     assert str(
-        excinfo.value) == "Cannot flatten rank KN because it is an unknown or flattened rank"
+        excinfo.value) == "Cannot flatten rank KN because it is a flattened rank"
 
 
 def test_check_flatten_not_bottom_rank():
@@ -166,7 +166,25 @@ def test_check_flatten_not_bottom_rank():
         partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
 
     assert str(
-        excinfo.value) == "Cannot flatten rank K1 because rank K will have multiple partitionings"
+        excinfo.value) == "Cannot flatten rank K1 because it will have multiple partitionings"
+
+
+def test_only_occupancy_after_flattening():
+    all_parts = """
+                K: [uniform_occupancy(A.4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_shape(5)]
+    """
+    dict_ = parse_partitioning(all_parts)["Z"]
+
+    k, m, n = symbols("k m n")
+    eqn_exprs = {k: k, m: m, n: n}
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+
+    assert str(
+        excinfo.value) == "Shape-based partitioning found on rank MK0 after flattening"
 
 
 def test_multiple_partitionings_on_same_rank():
@@ -197,6 +215,17 @@ def test_get_all_partitioning():
     """
     partitioning = build_partitioning(all_parts)
     corr = {("K",), ("M",), ("N",)}
+    assert partitioning.get_all_parts() == corr
+
+
+def test_get_all_partitioning_flatten():
+    all_parts = """
+                K: [uniform_occupancy(A.4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    corr = {("K",), ("M", "K0"), ("MK0",)}
     assert partitioning.get_all_parts() == corr
 
 
@@ -250,6 +279,26 @@ def test_get_dynamic_partitioning():
 
     dyn = {("M",)}
     assert partitioning.get_dyn_parts() == dyn
+
+
+def test_get_dynamic_partitioning_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.get_dyn_parts() == {("MK0",)}
+
+
+def test_get_dynamic_partitioning_flattening_dyn():
+    all_parts = """
+                K: [uniform_occupancy(A.4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.get_dyn_parts() == {("K",), ("M", "K0"), ("MK0",)}
 
 
 def test_get_final_rank_id():
@@ -375,6 +424,26 @@ def test_get_static_partitioning():
     static = {("K",), ("N",)}
 
     assert partitioning.get_static_parts() == static
+
+
+def test_get_static_partitioning_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.get_static_parts() == {("K",), ("M", "K0")}
+
+
+def test_get_static_partitioning_flattening_dyn():
+    all_parts = """
+                K: [uniform_occupancy(A.4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.get_static_parts() == set()
 
 
 def test_get_step():
