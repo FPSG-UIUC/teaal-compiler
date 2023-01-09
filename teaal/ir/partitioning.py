@@ -111,24 +111,30 @@ class Partitioning:
         """
         return self.dyn_parts
 
-    def get_final_rank_id(self, rank: str) -> str:
+    def get_final_rank_id(self, tensor: Tensor, rank: str) -> str:
         """
         Get the name of this rank in the final loop order
         """
-        root_name = self.get_root_name(rank)
-        # If this is an intermediate, translate it and find the final rank
-        if rank[len(root_name):][-1:] == "I":
-            # TODO allow for flattened ranks
-            part_ranks = self.__tensor_to_part_rank(root_name, self.all_parts)
-            part_rank = Partitioning.__single_part_rank(root_name, part_ranks)
-
-            return part_rank + rank[len(root_name):-1]
-
-        # Otherwise, simply find the leaf rank
-        node = RankNode(rank)
+        # Find the leaf rank
+        node: PartitioningNode = RankNode(rank)
         succ = list(self.graph.successors(node))
+        comp = max
         while succ:
-            node = max(succ, key=lambda n: self.graph.nodes[n]["priority"])
+            if isinstance(succ[0], FlattenNode):
+                assert len(succ) == 1
+                node = succ[0]
+
+                # If all flattened ranks appear in this tensor, the final rank
+                # ID (location where this rank needs to be available) is the
+                # top flattened rank
+                # If all flattened ranks do not appear in the tensor, the final
+                # rank ID is the bottom flattened rank
+                for rank in node.get_ranks():
+                    if rank not in tensor.get_ranks():
+                        comp = min
+            else:
+                node = comp(succ, key=lambda n: self.graph.nodes[n]["priority"])
+
             succ = list(self.graph.successors(node))
 
         return node.get_rank()

@@ -80,7 +80,7 @@ class LoopOrder:
         # Get the names of the final rank ids for the tensor
         final_ids = []
         for rank in tensor.get_ranks():
-            final_ids.append(self.partitioning.get_final_rank_id(rank))
+            final_ids.append(self.partitioning.get_final_rank_id(tensor, rank))
 
         # Order the current rank ids based on their final posititon
         order = self.ranks.copy()

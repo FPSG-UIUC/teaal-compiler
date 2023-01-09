@@ -116,7 +116,7 @@ class FlowGraph:
                     self.__build_static_part(tensor, rank)
 
                     in_rank = part.partition_names(rank, False)[0]
-                    if in_rank != part.get_final_rank_id(in_rank):
+                    if in_rank != part.get_final_rank_id(tensor, in_rank):
                         self.__build_dyn_part(tensor, rank)
 
                 # Add the dynamic partitioning
