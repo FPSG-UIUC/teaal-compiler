@@ -180,7 +180,7 @@ class FlowGraph:
         part = self.program.get_partitioning()
         root = tensor.root_name()
 
-        int_ranks = part.get_intermediates(rank)
+        int_ranks = part.get_intermediates(tensor, rank)
         part_rank = part.partition_rank(rank)
         # TODO: Allow flattening
         if part_rank and (part_rank,) in part.get_dyn_parts():
