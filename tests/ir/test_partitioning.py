@@ -17,7 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -672,17 +672,33 @@ def test_partition_names():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.partition_names("J", True) == ["J"]
-    assert partitioning.partition_names("J", False) == ["J"]
+    assert partitioning.partition_names(["J"], True) == ["J"]
+    assert partitioning.partition_names(["J"], False) == ["J"]
 
-    assert partitioning.partition_names("M", True) == ["M0", "M1", "M2"]
-    assert partitioning.partition_names("M", False) == ["M1I", "M2"]
+    assert partitioning.partition_names(["M"], True) == ["M0", "M1", "M2"]
+    assert partitioning.partition_names(["M"], False) == ["M1I", "M2"]
 
-    assert partitioning.partition_names("N", False) == ["N0", "N1", "N2"]
+    assert partitioning.partition_names(["N"], False) == ["N0", "N1", "N2"]
 
-    assert partitioning.partition_names("K", False) == ["K6I", "K7", "K8"]
-    assert partitioning.partition_names("K3I", False) == [
+    assert partitioning.partition_names(["K"], False) == ["K6I", "K7", "K8"]
+    assert partitioning.partition_names(["K3I"], False) == [
         "K0", "K1", "K2", "K3"]
+
+
+def test_partition_names_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert partitioning.partition_names(["M"], True) == ["M"]
+    assert partitioning.partition_names(["K"], True) == ["K0", "K1"]
+    assert partitioning.partition_names(["K", "M"], True) == [
+        "K1", "MK00", "MK01"]
+    assert partitioning.partition_names(
+        ["K1", "K0", "M"], False) == ["K1", "MK0"]
 
 
 def test_partition_names_conv():
@@ -700,9 +716,10 @@ def test_partition_names_conv():
     partitioning = build_partitioning_conv(all_parts)
     all_head = ["Q" + str(i + 1) for i in range(8)]
 
-    assert partitioning.partition_names("W", True) == ["W0"] + all_head
-    assert partitioning.partition_names("W", False) == ["W6I", "Q7", "Q8"]
-    assert partitioning.partition_names("W3I", False) == ["W0"] + all_head[:3]
+    assert partitioning.partition_names(["W"], True) == ["W0"] + all_head
+    assert partitioning.partition_names(["W"], False) == ["W6I", "Q7", "Q8"]
+    assert partitioning.partition_names(["W3I"], False) == [
+        "W0"] + all_head[:3]
 
 
 def test_partition_rank():

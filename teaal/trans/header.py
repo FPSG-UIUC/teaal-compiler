@@ -110,13 +110,13 @@ class Header:
         loop_order = self.program.get_loop_order()
         order = loop_order.get_ranks()
 
-        ranks = output.get_init_ranks()
+        # ranks = output.get_init_ranks()
+        ranks = output.get_ranks()
         avail = [False for _ in ranks]
 
         final_pos = {}
         for rank in ranks:
-            final_rank = part.partition_names(rank, True)[0]
-            final_pos[rank] = order.index(final_rank)
+            final_pos[rank] = order.index(rank)
 
         for tensor in self.program.get_tensors():
             # Skip the output
@@ -124,10 +124,10 @@ class Header:
                 continue
 
             # Mark all ranks in the input tensor available
-            for trank in tensor.get_init_ranks():
-                for rank in ranks:
+            for trank in part.partition_names(tensor.get_init_ranks(), True):
+                for i, rank in enumerate(ranks):
                     if loop_order.is_ready(trank, final_pos[rank]):
-                        avail[ranks.index(rank)] = True
+                        avail[i] = True
 
         # If at least one rank is not available, we need an explicit shape
         if not all(avail):

@@ -340,32 +340,63 @@ class Partitioning:
         self.graph.nodes[node]["is_flattened"] = False
         return False
 
-    def partition_names(self, rank: str, all_: bool) -> List[str]:
+    def partition_names(self, ranks: List[str], all_: bool) -> List[str]:
         """
-        Get the list of names that this rank will be partitioned into
+        Get the list of names that these ranks will be partitioned into
         """
-        # TODO allow for flattened ranks
-        if not all_:
-            succ = list(self.graph.successors(RankNode(rank)))
+        frontier = [RankNode(rank) for rank in ranks]
+        key = {rank: (i,
+                      self.graph.nodes[RankNode(rank)]["priority"]) for i,
+               rank in enumerate(ranks)}
+        pos = len(ranks)
+        visited = set()
+        leaves: Set[RankNode] = set()
 
-            if not succ:
-                return [rank]
+        while frontier:
+            node = frontier.pop()
+            visited.add(node)
 
-            return [
-                node.get_rank() for node in sorted(
-                    succ, key=lambda n: self.graph.nodes[n]["priority"])]
+            succs = list(self.graph.successors(node))
+            is_leaf = True
+            for i in range(len(succs)):
+                succ = succs[i]
+                if isinstance(succ, RankNode):
+                    is_leaf = False
+                    key[succ.get_rank()] = (key[node.get_rank()][0],
+                                            self.graph.nodes[succ]["priority"])
+                    continue
 
-        # Otherwise, do a depth-first traversal
-        names = []
-        curr = [RankNode(rank)]
-        while curr:
-            node = curr.pop()
-            succ = list(self.graph.successors(node))
-            if not succ:
-                names.append(node.get_rank())
+                # Otherwise, we have a FlattenNode
+                preds = list(self.graph.predecessors(succ))
 
+                # Ensure that we have visited all input ranks
+                if not all(pred in visited for pred in preds):
+                    continue
+
+                is_leaf = False
+
+                # Mark all predecessors as no longer leaves
+                for pred in preds:
+                    if pred in leaves:
+                        leaves.remove(pred)
+
+                # Get the rank node
+                succ = next(self.graph.successors(succ))
+                succs[i] = succ
+
+                # Update the key (position of this rank in the final list)
+                key[succ.get_rank()] = (pos, self.graph.nodes[succ]["priority"])
+                pos += 1
+
+            if is_leaf:
+                leaves.add(node)
+            elif all_:
+                frontier.extend(succs)
             else:
-                curr.extend(succ)
+                leaves.update(succs)
+
+        names = [leaf.get_rank() for leaf in leaves]
+        names.sort(key=lambda n: key[n])
 
         return names
 
@@ -405,7 +436,7 @@ class Partitioning:
                 tensor_ranks.pop(i)
 
                 # Insert the new ranks
-                new_ranks = self.partition_names(rank, all_)
+                new_ranks = self.partition_names([rank], all_)
                 for new_rank in new_ranks:
                     tensor_ranks.insert(i, new_rank)
 
