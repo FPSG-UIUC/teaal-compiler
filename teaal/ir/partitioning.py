@@ -235,11 +235,15 @@ class Partitioning:
         """
         Get the size of the step used to traverse over the given rank
         """
-        # TODO: Raise error if the partition is dynamic
         # If this is an unpartitioned rank, return None
         root_name = self.get_root_name(rank)
         if rank == root_name:
             return None
+
+        # Check that this rank is statically partitioned
+        if (root_name,) in self.dyn_parts:
+            raise ValueError(
+                "No static step for dynamically partitioned rank " + rank)
 
         # Otherwise, get the partition number for this rank
         part_num = int(rank[len(root_name):])
@@ -255,34 +259,63 @@ class Partitioning:
         """
         Get the partitioning for a specific tensor's ranks
         """
-        # TODO: allow for flattening
         partitioning: Dict[Tuple[str, ...], List[Tree]] = {}
-        for tensor_rank in tensor_ranks:
-            pranks = self.__tensor_to_part_rank(tensor_rank, part_ranks)
-            if not pranks:
-                continue
+        used_pranks = []
+        # Separate out the used partitioning ranks
+        for pranks in part_ranks:
+            tranks = []
+            used = False
+            for prank in pranks:
+                trank = self.__part_to_tensor_rank(prank, tensor_ranks)
+                if len(trank) > 1:
+                    raise ValueError(
+                        "Partitioning rank " +
+                        prank +
+                        " maps to tensor ranks " +
+                        str(trank))
 
-            rank = Partitioning.__single_part_rank(tensor_rank, pranks)
-            partitioning[(rank,)] = []
-            parent = RankNode(rank)
-            root = self.get_root_name(rank)
-            succs = [node for node in self.graph.successors(
-                parent) if self.graph.edges[(parent, node)]["part_ranks"] == (root,)]
+                if trank:
+                    tranks.extend(trank)
+                    used = True
+                else:
+                    used = False
 
-            while succs:
+            if used:
+                used_pranks.append(pranks)
 
-                # Note that the last and second to last partition will have the
-                # same part, so we do not need to store this separately
-                succs.sort(
-                    key=lambda n: self.graph.nodes[n]["priority"],
-                    reverse=True)
-                for succ in succs[:-1]:
-                    partitioning[(rank,)].append(
-                        self.graph.edges[(parent, succ)]["part"])
+        # Get the specification for each partitioning
+        for pranks in used_pranks:
+            partitioning[pranks] = []
 
-                parent = succs[-1]
-                succs = [node for node in self.graph.successors(
-                    parent) if self.graph.edges[(parent, node)]["part_ranks"] == (root,)]
+            # If this is a splitting of a single rank into multiple
+            if len(pranks) == 1:
+                parent = RankNode(pranks[0])
+                succs = [node for node in self.graph.successors(parent)]
+
+                while succs:
+                    # Stop if we reach a FlattenNode (this should be covered
+                    # separately)
+                    if isinstance(succs[0], FlattenNode):
+                        break
+
+                    # Note that the last and second to last partition will have the
+                    # same part, so we do not need to add it twice
+                    succs.sort(
+                        key=lambda n: self.graph.nodes[n]["priority"],
+                        reverse=True)
+                    for succ in succs[:-1]:
+                        partitioning[pranks].append(
+                            self.graph.edges[(parent, succ)]["part"])
+
+                    parent = succs[-1]
+                    succs = [node for node in self.graph.successors(parent)]
+
+            # Otherwise, this is a flattening of many into one
+            else:
+                flat_node = FlattenNode(pranks)
+                rank_node = RankNode("".join(pranks))
+                partitioning[pranks].append(
+                    self.graph.edges[(flat_node, rank_node)]["part"])
 
         return partitioning
 

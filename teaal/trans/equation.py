@@ -231,6 +231,7 @@ class Equation:
             start = EInt(0)
             end = EVar(root)
 
+        # TODO: deal with flattening
         # If this is the bottom partition of this rank, the step is 1
         step: Expression
         opt_step = part.get_step(rank)

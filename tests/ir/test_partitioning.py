@@ -513,6 +513,19 @@ def test_get_static_partitioning_flattening_dyn():
     assert partitioning.get_static_parts() == set()
 
 
+def test_get_step_dyn_part():
+    parts = """
+                M: [uniform_occupancy(Z.5)]
+    """
+    partitioning = build_partitioning(parts)
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.get_step("M0")
+
+    assert str(
+        excinfo.value) == "No static step for dynamically partitioned rank M0"
+
+
 def test_get_step():
     parts = """
                 M: [uniform_shape(6), uniform_shape(3)]
@@ -561,6 +574,39 @@ def test_get_tensor_spec_multiple_dyn():
     assert partitioning.get_tensor_spec(tensor_ranks, {("M1I",)}) == used
 
 
+def test_get_tensor_spec_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    tensor_ranks = ["M", "K"]
+    part_ranks = {("K",), ("M", "K0"), ("MK0",)}
+
+    used_parts = """
+                K: [uniform_shape(4)]
+    """
+    used = build_part_dict(used_parts)
+    assert partitioning.get_tensor_spec(tensor_ranks, part_ranks) == used
+
+    tensor_ranks = ["M", "K1", "K0"]
+    used_parts = """
+                (M, K0): [flatten()]
+    """
+    used = build_part_dict(used_parts)
+    assert partitioning.get_tensor_spec(tensor_ranks, part_ranks) == used
+
+    tensor_ranks = ["K1", "MK0"]
+
+    used_parts = """
+                MK0: [uniform_occupancy(A.5)]
+    """
+    used = build_part_dict(used_parts)
+    assert partitioning.get_tensor_spec(tensor_ranks, part_ranks) == used
+
+
 def test_get_tensor_spec_conv():
     all_parts = """
                 P: [uniform_shape(4)]
@@ -576,6 +622,21 @@ def test_get_tensor_spec_conv():
     tensor_ranks = ["W"]
 
     assert partitioning.get_tensor_spec(tensor_ranks, {("P",), ("Q",)}) == used
+
+
+def test_tensor_spec_bad_conv():
+    all_parts = """
+                P: [uniform_shape(4)]
+                Q: [uniform_shape(5)]
+    """
+    partitioning = build_partitioning_conv(all_parts)
+    tensor_ranks = ["W", "Q"]
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.get_tensor_spec(tensor_ranks, {("Q",)})
+
+    assert str(
+        excinfo.value) == "Partitioning rank Q maps to tensor ranks ['W', 'Q']"
 
 
 def test_is_flattened():
