@@ -17,7 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -741,6 +741,23 @@ def test_partition_rank():
     assert partitioning.partition_rank("P") == "P"
     assert partitioning.partition_rank("W") == "Q"
     assert partitioning.partition_rank("W6I") == "Q6I"
+
+
+def test_partition_rank_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+    """
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.partition_rank("MK0") is None
+
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    assert partitioning.partition_rank("MK0") == "MK0"
 
 
 def test_partition_tensor_all():

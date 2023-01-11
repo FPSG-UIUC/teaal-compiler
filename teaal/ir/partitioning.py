@@ -404,7 +404,11 @@ class Partitioning:
         """
         Get the name of the corresponding partitioned rank, should one exist
         """
-        # TODO allow for flattened ranks
+        if self.is_flattened(rank):
+            if (rank,) in self.all_parts:
+                return rank
+            return None
+
         part_ranks = self.__tensor_to_part_rank(rank, self.all_parts)
         if not part_ranks:
             return None
