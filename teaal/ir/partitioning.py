@@ -263,22 +263,18 @@ class Partitioning:
         used_pranks = []
         # Separate out the used partitioning ranks
         for pranks in part_ranks:
-            tranks = []
+            tranks: List[str] = []
             used = False
             for prank in pranks:
-                trank = self.__part_to_tensor_rank(prank, tensor_ranks)
-                if len(trank) > 1:
-                    raise ValueError(
-                        "Partitioning rank " +
-                        prank +
-                        " maps to tensor ranks " +
-                        str(trank))
+                opt_tranks = self.__part_to_tensor_rank(prank, tensor_ranks)
+                trank = Partitioning.__opt_tensor_rank(prank, opt_tranks)
 
                 if trank:
                     tranks.extend(trank)
                     used = True
                 else:
                     used = False
+                    break
 
             if used:
                 used_pranks.append(pranks)
@@ -340,64 +336,41 @@ class Partitioning:
         self.graph.nodes[node]["is_flattened"] = False
         return False
 
-    def partition_names(self, ranks: List[str], all_: bool) -> List[str]:
+    def partition_names(self, ranks: Tuple[str, ...], all_: bool) -> List[str]:
         """
         Get the list of names that these ranks will be partitioned into
         """
-        frontier = [RankNode(rank) for rank in ranks]
-        key = {rank: (i,
-                      self.graph.nodes[RankNode(rank)]["priority"]) for i,
-               rank in enumerate(ranks)}
-        pos = len(ranks)
-        visited = set()
-        leaves: Set[RankNode] = set()
+        # Ensure there is at least 1 rank
+        if not ranks:
+            raise ValueError("At least one rank required")
 
+        # Otherwise, traverse the partitioning graph
+        frontier: List[Tuple[PartitioningNode, int]]
+        priorities = {}
+        if len(ranks) == 1:
+            frontier = [(RankNode(ranks[0]), 0)]
+            priorities[ranks[0]] = self.graph.nodes[RankNode(
+                ranks[0])]["priority"]
+        else:
+            frontier = [(FlattenNode(ranks), 0)]
+
+        names = []
         while frontier:
-            node = frontier.pop()
-            visited.add(node)
-
-            succs = list(self.graph.successors(node))
+            node, depth = frontier.pop()
             is_leaf = True
-            for i in range(len(succs)):
-                succ = succs[i]
-                if isinstance(succ, RankNode):
+            for succ in self.graph.successors(node):
+                if isinstance(succ, FlattenNode):
+                    continue
+
+                if all_ or depth == 0:
+                    frontier.append((succ, depth + 1))
                     is_leaf = False
-                    key[succ.get_rank()] = (key[node.get_rank()][0],
-                                            self.graph.nodes[succ]["priority"])
-                    continue
-
-                # Otherwise, we have a FlattenNode
-                preds = list(self.graph.predecessors(succ))
-
-                # Ensure that we have visited all input ranks
-                if not all(pred in visited for pred in preds):
-                    continue
-
-                is_leaf = False
-
-                # Mark all predecessors as no longer leaves
-                for pred in preds:
-                    if pred in leaves:
-                        leaves.remove(pred)
-
-                # Get the rank node
-                succ = next(self.graph.successors(succ))
-                succs[i] = succ
-
-                # Update the key (position of this rank in the final list)
-                key[succ.get_rank()] = (pos, self.graph.nodes[succ]["priority"])
-                pos += 1
 
             if is_leaf:
-                leaves.add(node)
-            elif all_:
-                frontier.extend(succs)
-            else:
-                leaves.update(succs)
+                names.append(node.get_rank())
+                priorities[node.get_rank()] = self.graph.nodes[node]["priority"]
 
-        names = [leaf.get_rank() for leaf in leaves]
-        names.sort(key=lambda n: key[n])
-
+        names.sort(key=lambda n: priorities[n])
         return names
 
     def partition_rank(self, rank: str) -> Optional[str]:
@@ -425,24 +398,17 @@ class Partitioning:
         """
         tensor_ranks = tensor.get_ranks().copy()
 
-        # TODO allow for flattened ranks
-        for rank in tensor.get_ranks():
-            # Check if there is anything to partition
-            part_ranks = self.__tensor_to_part_rank(rank, self.all_parts)
-            if not part_ranks:
-                continue
+        allowed_ranks, used_parts = self.__used_parts(ranks, tensor_ranks)
+        while used_parts:
+            for part_ranks in used_parts:
+                self.__update_ranks(part_ranks, tensor_ranks, all_)
+                self.__update_ranks(part_ranks, allowed_ranks, all_)
 
-            # Check if we want to partition it
-            part_rank = Partitioning.__single_part_rank(rank, part_ranks)
-            if rank in ranks or part_rank in ranks:
-                # Remove the old rank
-                i = tensor_ranks.index(rank)
-                tensor_ranks.pop(i)
+            if not all_:
+                break
 
-                # Insert the new ranks
-                new_ranks = self.partition_names([rank], all_)
-                for new_rank in new_ranks:
-                    tensor_ranks.insert(i, new_rank)
+            allowed_ranks, used_parts = self.__used_parts(
+                allowed_ranks, tensor_ranks)
 
         return tensor_ranks
 
@@ -756,6 +722,25 @@ class Partitioning:
 
         return part_ranks[0]
 
+    @staticmethod
+    def __opt_tensor_rank(
+            part_rank: str,
+            tensor_ranks: List[str]) -> Optional[str]:
+        """
+        Get a single tensor rank from the list should there be one
+        Raises an error if the part_rank maps to more than one tensor rank
+        """
+        if len(tensor_ranks) > 1:
+            raise ValueError(
+                "Partitioning rank " +
+                part_rank +
+                " maps to tensor ranks " +
+                str(tensor_ranks))
+
+        if tensor_ranks:
+            return tensor_ranks[0]
+        return None
+
     def __tensor_to_part_rank(
             self,
             tensor_rank: str,
@@ -776,3 +761,68 @@ class Partitioning:
                 matches.append(eqn_rank)
 
         return matches
+
+    def __update_ranks(
+            self, part_ranks: Tuple[str, ...], tensor_ranks: List[str], all_: bool) -> None:
+        """
+        Update a list of ranks with a given partitioning
+        Note: performs an in-place update
+        """
+        i = tensor_ranks.index(part_ranks[0])
+        for j in range(len(part_ranks)):
+            tensor_ranks.pop(i)
+
+        new_ranks = self.partition_names(part_ranks, all_)
+        for new_rank in new_ranks:
+            tensor_ranks.insert(i, new_rank)
+
+    def __used_parts(
+            self, ranks: Iterable[str], tensor_ranks: List[str]) -> Tuple[List[str], List[Tuple[str, ...]]]:
+        """
+        Get the partitioned used to partition the given ranks
+        """
+        allowed_ranks = []
+        for rank in tensor_ranks:
+            if rank in ranks:
+                allowed_ranks.append(rank)
+
+        used_parts = []
+        for part_ranks in self.all_parts:
+            # Check if this partitioning is used
+            used = True
+            next_ind = None
+            new_part_ranks = []
+            for part_rank in part_ranks:
+                # Get the tensor rank corresponding to this partitioning rank
+                # And ensure it is a rank we want to partition
+                if self.is_flattened(part_rank):
+                    tensor_rank = part_rank
+                    if tensor_rank not in allowed_ranks:
+                        used = False
+                        break
+
+                else:
+                    tranks = self.__part_to_tensor_rank(
+                        part_rank, allowed_ranks)
+                    opt_trank = Partitioning.__opt_tensor_rank(
+                        part_rank, tranks)
+                    if opt_trank is None:
+                        used = False
+                        break
+
+                    tensor_rank = opt_trank
+
+                if next_ind is None:
+                    next_ind = tensor_ranks.index(tensor_rank) + 1
+                    new_part_ranks.append(tensor_rank)
+                elif next_ind < len(tensor_ranks) and tensor_ranks[next_ind] == tensor_rank:
+                    next_ind += 1
+                    new_part_ranks.append(tensor_rank)
+                else:
+                    used = False
+                    break
+
+            if used:
+                used_parts.append(tuple(new_part_ranks))
+
+        return allowed_ranks, used_parts

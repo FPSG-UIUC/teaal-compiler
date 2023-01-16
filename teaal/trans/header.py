@@ -124,7 +124,12 @@ class Header:
                 continue
 
             # Mark all ranks in the input tensor available
-            for trank in part.partition_names(tensor.get_init_ranks(), True):
+            tranks = []
+            # TODO: support flattening
+            for rank in tensor.get_init_ranks():
+                tranks.extend(part.partition_names((rank,), True))
+
+            for trank in tranks:
                 for i, rank in enumerate(ranks):
                     if loop_order.is_ready(trank, final_pos[rank]):
                         avail[i] = True

@@ -115,7 +115,7 @@ class FlowGraph:
                 if (part_rank,) in part.get_static_parts():
                     self.__build_static_part(tensor, rank)
 
-                    in_rank = part.partition_names([rank], False)[0]
+                    in_rank = part.partition_names((rank,), False)[0]
                     if in_rank != part.get_final_rank_id(tensor, in_rank):
                         self.__build_dyn_part(tensor, rank)
 
@@ -188,7 +188,7 @@ class FlowGraph:
 
         for src in int_ranks:
             part_node = PartNode(root, (src,))
-            dsts = part.partition_names([src], False)
+            dsts = part.partition_names((src,), False)
 
             part_rank = part.partition_rank(src)
             # Very hard to test, since this means there is a problem with
@@ -310,7 +310,7 @@ class FlowGraph:
         """
         part = self.program.get_partitioning()
         # TODO: think about flattening (actually I don't think it matters here)
-        part_names = part.partition_names([part.get_root_name(rank)], True)
+        part_names = part.partition_names((part.get_root_name(rank),), True)
         rank0 = part_names[0]
         rank1 = part_names[1]
 
@@ -338,7 +338,7 @@ class FlowGraph:
 
         # Add edges to for all resulting ranks
         # TODO: support flattening
-        for res in part.partition_names([rank], False):
+        for res in part.partition_names((rank,), False):
             self.graph.add_edge(part_node, RankNode(root, res))
 
         # We must do graphics after any static partitioning

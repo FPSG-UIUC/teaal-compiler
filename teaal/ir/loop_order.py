@@ -150,7 +150,7 @@ class LoopOrder:
 
             # Insert the new ranks
             # TODO: Support flattening
-            new_ranks = self.partitioning.partition_names([rank], True)
+            new_ranks = self.partitioning.partition_names((rank,), True)
             for new_rank in new_ranks:
                 loop_order.insert(i, new_rank)
 

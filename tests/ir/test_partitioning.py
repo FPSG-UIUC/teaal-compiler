@@ -656,6 +656,19 @@ def test_is_flattened():
     assert partitioning.is_flattened("MK01I")
 
 
+def test_partition_names_empty():
+    all_parts = """
+                M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.partition_names((), True)
+
+    assert str(
+        excinfo.value) == "At least one rank required"
+
+
 def test_partition_names():
     all_parts = """
                 M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
@@ -672,16 +685,16 @@ def test_partition_names():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.partition_names(["J"], True) == ["J"]
-    assert partitioning.partition_names(["J"], False) == ["J"]
+    assert partitioning.partition_names(("J",), True) == ["J"]
+    assert partitioning.partition_names(("J",), False) == ["J"]
 
-    assert partitioning.partition_names(["M"], True) == ["M0", "M1", "M2"]
-    assert partitioning.partition_names(["M"], False) == ["M1I", "M2"]
+    assert partitioning.partition_names(("M",), True) == ["M0", "M1", "M2"]
+    assert partitioning.partition_names(("M",), False) == ["M1I", "M2"]
 
-    assert partitioning.partition_names(["N"], False) == ["N0", "N1", "N2"]
+    assert partitioning.partition_names(("N",), False) == ["N0", "N1", "N2"]
 
-    assert partitioning.partition_names(["K"], False) == ["K6I", "K7", "K8"]
-    assert partitioning.partition_names(["K3I"], False) == [
+    assert partitioning.partition_names(("K",), False) == ["K6I", "K7", "K8"]
+    assert partitioning.partition_names(("K3I",), False) == [
         "K0", "K1", "K2", "K3"]
 
 
@@ -693,12 +706,10 @@ def test_partition_names_flattening():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.partition_names(["M"], True) == ["M"]
-    assert partitioning.partition_names(["K"], True) == ["K0", "K1"]
-    assert partitioning.partition_names(["K", "M"], True) == [
-        "K1", "MK00", "MK01"]
-    assert partitioning.partition_names(
-        ["K1", "K0", "M"], False) == ["K1", "MK0"]
+    assert partitioning.partition_names(("M",), True) == ["M"]
+    assert partitioning.partition_names(("K",), True) == ["K0", "K1"]
+    assert partitioning.partition_names(("M", "K0"), True) == ["MK00", "MK01"]
+    assert partitioning.partition_names(("M", "K0"), False) == ["MK0"]
 
 
 def test_partition_names_conv():
@@ -716,9 +727,9 @@ def test_partition_names_conv():
     partitioning = build_partitioning_conv(all_parts)
     all_head = ["Q" + str(i + 1) for i in range(8)]
 
-    assert partitioning.partition_names(["W"], True) == ["W0"] + all_head
-    assert partitioning.partition_names(["W"], False) == ["W6I", "Q7", "Q8"]
-    assert partitioning.partition_names(["W3I"], False) == [
+    assert partitioning.partition_names(("W",), True) == ["W0"] + all_head
+    assert partitioning.partition_names(("W",), False) == ["W6I", "Q7", "Q8"]
+    assert partitioning.partition_names(("W3I",), False) == [
         "W0"] + all_head[:3]
 
 
@@ -791,6 +802,49 @@ def test_partition_tensor_dyn():
     assert new_ranks == ["M2", "M1", "M0", "N", "K2", "K1", "K0"]
 
 
+def test_partition_tensor_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    ranks = ["M", "K", "N"]
+    tensor = Tensor("T", ranks)
+
+    new_ranks = partitioning.partition_tensor(tensor, sorted(ranks), False)
+    assert new_ranks == ["M", "K1", "K0", "N"]
+
+    tensor.update_ranks(new_ranks)
+    assert partitioning.partition_tensor(
+        tensor, sorted(new_ranks), False) == new_ranks
+
+    tensor.update_ranks(["K1", "M", "K0", "N"])
+    new_ranks = partitioning.partition_tensor(tensor, sorted(new_ranks), False)
+    assert new_ranks == ["K1", "MK0", "N"]
+
+    tensor.update_ranks(new_ranks)
+    new_ranks = partitioning.partition_tensor(tensor, sorted(new_ranks), False)
+    assert new_ranks == ["K1", "MK01", "MK00", "N"]
+
+
+def test_partition_tensor_flattening_all():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (K0, M): [flatten()]
+                K0M: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+    ranks = ["K", "M", "N"]
+    tensor = Tensor("T", ranks)
+
+    new_ranks = partitioning.partition_tensor(tensor, ranks, False)
+    assert new_ranks == ["K1", "K0", "M", "N"]
+
+    new_ranks = partitioning.partition_tensor(tensor, sorted(ranks), True)
+    assert new_ranks == ["K1", "K0M1", "K0M0", "N"]
+
+
 def test_partition_tensor_conv():
     parts = """
                 Q: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
@@ -801,11 +855,11 @@ def test_partition_tensor_conv():
     new_ranks = partitioning.partition_tensor(tensor, ["W"], True)
     assert new_ranks == ["Q2", "Q1", "W0"]
 
-    new_ranks = partitioning.partition_tensor(tensor, ["Q"], False)
+    new_ranks = partitioning.partition_tensor(tensor, ["W"], False)
     assert new_ranks == ["Q2", "W1I"]
 
     tensor.update_ranks(new_ranks)
-    new_ranks = partitioning.partition_tensor(tensor, ["Q1I"], False)
+    new_ranks = partitioning.partition_tensor(tensor, ["W1I"], False)
     assert new_ranks == ["Q2", "Q1", "W0"]
 
 
