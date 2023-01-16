@@ -144,7 +144,6 @@ class Partitioning:
         """
         Get the names of all intermediate ranks (e.g., K2I)
         """
-        # TODO allow for flattened ranks
         intermediates: List[str] = []
         node = None
         succ = list(self.graph.successors(RankNode(rank)))
@@ -441,9 +440,7 @@ class Partitioning:
                 best = test_rank
                 match_len = new_match_len
 
-        if best is None:
-            raise ValueError(
-                "Must be given at least one rank option")  # pragma: no cover
+        assert best is not None
 
         return best
 
@@ -748,6 +745,8 @@ class Partitioning:
         """
         Return a partition rank if one corresponds to the given tensor rank
         """
+        assert not self.is_flattened(tensor_rank)
+
         tensor_root = self.get_root_name(tensor_rank).lower()
         tensor_suffix = tensor_rank[len(tensor_root):]
 
@@ -755,8 +754,9 @@ class Partitioning:
         eqn_ranks = {str(atom).upper() + tensor_suffix for atom in atoms}
 
         matches = []
+        # We do not need to worry about flattening, since we cannot do index
+        # math on flattened ranks (so they are handled separately)
         for eqn_rank in eqn_ranks:
-            # TODO: Allow for flattening
             if (eqn_rank,) in part_ranks:
                 matches.append(eqn_rank)
 
