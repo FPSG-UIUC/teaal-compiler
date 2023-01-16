@@ -707,10 +707,9 @@ class Partitioning:
         Get a single part rank from a list
         Raises an error if there is not exactly one element in the list
         """
-        if not part_ranks:
-            raise ValueError("No partitioning for rank " + rank)
+        assert part_ranks
 
-        elif len(part_ranks) > 1:
+        if len(part_ranks) > 1:
             raise ValueError(
                 "Cannot partition " +
                 rank +
