@@ -143,8 +143,8 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        new_ranks = self.partitioning.partition_tensor(
-            tensor, tensor.get_ranks(), True)
+        new_ranks = self.partitioning.partition_ranks(
+            tensor.get_ranks(), tensor.get_ranks(), True, False)
         tensor.update_ranks(new_ranks)
 
     def apply_partitioning(self, tensor: Tensor, rank: str) -> None:
@@ -158,7 +158,8 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        new_ranks = self.partitioning.partition_tensor(tensor, [rank], False)
+        new_ranks = self.partitioning.partition_ranks(
+            tensor.get_ranks(), [rank], False, False)
         tensor.update_ranks(new_ranks)
 
     def get_einsum(self) -> Tree:

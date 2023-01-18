@@ -141,19 +141,9 @@ class LoopOrder:
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
-        loop_order = self.__default_loop_order_unpartitioned()
-
-        for rank in loop_order:
-            # Remove the old rank
-            i = loop_order.index(rank)
-            loop_order.pop(i)
-
-            # Insert the new ranks
-            # TODO: Support flattening
-            new_ranks = self.partitioning.partition_names((rank,), True)
-            for new_rank in new_ranks:
-                loop_order.insert(i, new_rank)
-
+        unpartitioned_loop_order = self.__default_loop_order_unpartitioned()
+        loop_order = self.partitioning.partition_ranks(
+            unpartitioned_loop_order, unpartitioned_loop_order, True, True)
         return loop_order
 
     def __default_loop_order_unpartitioned(self) -> List[str]:

@@ -17,7 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -771,7 +771,7 @@ def test_partition_rank_flattening():
     assert partitioning.partition_rank("MK0") == "MK0"
 
 
-def test_partition_tensor_all():
+def test_partition_ranks_all():
     parts = """
                 M: [uniform_shape(3)]
                 K: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
@@ -779,30 +779,27 @@ def test_partition_tensor_all():
     partitioning = build_partitioning(parts)
 
     ranks = ["M", "N", "K"]
-    tensor = Tensor("T", ranks)
-    new_ranks = partitioning.partition_tensor(tensor, ranks, True)
+    new_ranks = partitioning.partition_ranks(ranks, ranks, True, False)
 
     assert new_ranks == ["M1", "M0", "N", "K2", "K1", "K0"]
 
 
-def test_partition_tensor_dyn():
+def test_partition_ranks_dyn():
     parts = """
                 M: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
                 K: [uniform_shape(6), uniform_shape(3)]
     """
     ranks = ["M", "N", "K"]
     partitioning = build_partitioning(parts)
-    tensor = Tensor("T", ranks)
 
-    new_ranks = partitioning.partition_tensor(tensor, ranks, False)
+    new_ranks = partitioning.partition_ranks(ranks, ranks, False, False)
     assert new_ranks == ["M2", "M1I", "N", "K2", "K1", "K0"]
 
-    tensor.update_ranks(new_ranks)
-    new_ranks = partitioning.partition_tensor(tensor, {"M1I"}, False)
+    new_ranks = partitioning.partition_ranks(new_ranks, {"M1I"}, False, False)
     assert new_ranks == ["M2", "M1", "M0", "N", "K2", "K1", "K0"]
 
 
-def test_partition_tensor_flattening():
+def test_partition_ranks_flattening():
     all_parts = """
                 K: [uniform_shape(4)]
                 (M, K0): [flatten()]
@@ -810,25 +807,29 @@ def test_partition_tensor_flattening():
     """
     partitioning = build_partitioning(all_parts)
     ranks = ["M", "K", "N"]
-    tensor = Tensor("T", ranks)
 
-    new_ranks = partitioning.partition_tensor(tensor, sorted(ranks), False)
+    new_ranks = partitioning.partition_ranks(
+        ranks, sorted(ranks), False, False)
     assert new_ranks == ["M", "K1", "K0", "N"]
 
-    tensor.update_ranks(new_ranks)
-    assert partitioning.partition_tensor(
-        tensor, sorted(new_ranks), False) == new_ranks
+    assert partitioning.partition_ranks(
+        new_ranks, sorted(new_ranks), False, False) == new_ranks
 
-    tensor.update_ranks(["K1", "M", "K0", "N"])
-    new_ranks = partitioning.partition_tensor(tensor, sorted(new_ranks), False)
+    new_ranks = partitioning.partition_ranks(
+        new_ranks, sorted(new_ranks), False, True)
+    assert new_ranks == ["K1", "N", "MK0"]
+
+    test_ranks = ["K1", "M", "K0", "N"]
+    new_ranks = partitioning.partition_ranks(
+        test_ranks, sorted(test_ranks), False, False)
     assert new_ranks == ["K1", "MK0", "N"]
 
-    tensor.update_ranks(new_ranks)
-    new_ranks = partitioning.partition_tensor(tensor, sorted(new_ranks), False)
+    new_ranks = partitioning.partition_ranks(
+        new_ranks, sorted(new_ranks), False, False)
     assert new_ranks == ["K1", "MK01", "MK00", "N"]
 
 
-def test_partition_tensor_flattening_all():
+def test_partition_ranks_flattening_all():
     all_parts = """
                 K: [uniform_shape(4)]
                 (K0, M): [flatten()]
@@ -836,30 +837,33 @@ def test_partition_tensor_flattening_all():
     """
     partitioning = build_partitioning(all_parts)
     ranks = ["K", "M", "N"]
-    tensor = Tensor("T", ranks)
 
-    new_ranks = partitioning.partition_tensor(tensor, ranks, False)
+    new_ranks = partitioning.partition_ranks(
+        ranks, sorted(ranks), False, False)
     assert new_ranks == ["K1", "K0", "M", "N"]
 
-    new_ranks = partitioning.partition_tensor(tensor, sorted(ranks), True)
+    new_ranks = partitioning.partition_ranks(ranks, sorted(ranks), True, False)
     assert new_ranks == ["K1", "K0M1", "K0M0", "N"]
 
+    ranks = ["M", "K", "N"]
+    new_ranks = partitioning.partition_ranks(ranks, sorted(ranks), True, True)
+    assert new_ranks == ["K1", "N", "K0M1", "K0M0"]
 
-def test_partition_tensor_conv():
+
+def test_partition_ranks_conv():
     parts = """
                 Q: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
     """
     partitioning = build_partitioning_conv(parts)
-    tensor = Tensor("I", ["W"])
+    ranks = ["W"]
 
-    new_ranks = partitioning.partition_tensor(tensor, ["W"], True)
+    new_ranks = partitioning.partition_ranks(ranks, ["W"], True, False)
     assert new_ranks == ["Q2", "Q1", "W0"]
 
-    new_ranks = partitioning.partition_tensor(tensor, ["W"], False)
+    new_ranks = partitioning.partition_ranks(ranks, ["W"], False, False)
     assert new_ranks == ["Q2", "W1I"]
 
-    tensor.update_ranks(new_ranks)
-    new_ranks = partitioning.partition_tensor(tensor, ["W1I"], False)
+    new_ranks = partitioning.partition_ranks(new_ranks, ["W1I"], False, False)
     assert new_ranks == ["Q2", "Q1", "W0"]
 
 

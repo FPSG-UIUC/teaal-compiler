@@ -387,27 +387,29 @@ class Partitioning:
 
         return Partitioning.__single_part_rank(rank, part_ranks)
 
-    def partition_tensor(
+    def partition_ranks(
             self,
-            tensor: Tensor,
-            ranks: Iterable[str],
-            all_: bool) -> List[str]:
+            tensor_ranks: List[str],
+            partitionable_ranks: Iterable[str],
+            all_levels: bool,
+            allow_swizzle: bool) -> List[str]:
         """
-        Partition a tensor across all relevant ranks
+        Partition a tensor across all relevant partitionable ranks
         """
-        tensor_ranks = tensor.get_ranks().copy()
+        tensor_ranks = tensor_ranks.copy()
 
-        allowed_ranks, used_parts = self.__used_parts(ranks, tensor_ranks)
+        allowed_ranks, used_parts = self.__used_parts(
+            partitionable_ranks, tensor_ranks, allow_swizzle)
         while used_parts:
             for part_ranks in used_parts:
-                self.__update_ranks(part_ranks, tensor_ranks, all_)
-                self.__update_ranks(part_ranks, allowed_ranks, all_)
+                self.__update_ranks(part_ranks, tensor_ranks, all_levels)
+                self.__update_ranks(part_ranks, allowed_ranks, all_levels)
 
-            if not all_:
+            if not all_levels:
                 break
 
             allowed_ranks, used_parts = self.__used_parts(
-                allowed_ranks, tensor_ranks)
+                allowed_ranks, tensor_ranks, allow_swizzle)
 
         return tensor_ranks
 
@@ -768,15 +770,21 @@ class Partitioning:
         Note: performs an in-place update
         """
         i = tensor_ranks.index(part_ranks[0])
-        for j in range(len(part_ranks)):
-            tensor_ranks.pop(i)
+        in_place = True
+        for part_rank in part_ranks:
+            if tensor_ranks[i] != part_rank:
+                in_place = False
+            tensor_ranks.remove(part_rank)
+
+        if not in_place:
+            i = len(tensor_ranks)
 
         new_ranks = self.partition_names(part_ranks, all_)
         for new_rank in new_ranks:
             tensor_ranks.insert(i, new_rank)
 
-    def __used_parts(
-            self, ranks: Iterable[str], tensor_ranks: List[str]) -> Tuple[List[str], List[Tuple[str, ...]]]:
+    def __used_parts(self, ranks: Iterable[str], tensor_ranks: List[str],
+                     allow_swizzle: bool) -> Tuple[List[str], List[Tuple[str, ...]]]:
         """
         Get the partitioned used to partition the given ranks
         """
@@ -814,7 +822,7 @@ class Partitioning:
                 if next_ind is None:
                     next_ind = tensor_ranks.index(tensor_rank) + 1
                     new_part_ranks.append(tensor_rank)
-                elif next_ind < len(tensor_ranks) and tensor_ranks[next_ind] == tensor_rank:
+                elif allow_swizzle or (next_ind < len(tensor_ranks) and tensor_ranks[next_ind] == tensor_rank):
                     next_ind += 1
                     new_part_ranks.append(tensor_rank)
                 else:

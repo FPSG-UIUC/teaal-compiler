@@ -142,11 +142,21 @@ def test_apply():
     loop_order.apply(A)
     assert A.get_ranks() == ["K", "M", "N"]
 
-    A.update_ranks(partitioning.partition_tensor(A, {"K"}, False))
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(),
+            {"K"},
+            False,
+            False))
     loop_order.apply(A)
     assert A.get_ranks() == ["K2", "M", "K1I", "N"]
 
-    A.update_ranks(partitioning.partition_tensor(A, {"K1I"}, False))
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(),
+            {"K1I"},
+            False,
+            False))
     loop_order.apply(A)
     assert A.get_ranks() == order
 
@@ -206,6 +216,21 @@ def test_default_loop_order_after_partitioning():
 
     assert loop_order.get_ranks() == [
         "M2", "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
+
+
+def test_default_loop_order_flattening():
+    loop_order = build_loop_order()
+
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+    loop_order.add(None, coord_math, partitioning)
+
+    assert loop_order.get_ranks() == ["N", "K1", "MK01", "MK00"]
 
 
 def test_default_loop_order_conv():
