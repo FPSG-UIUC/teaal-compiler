@@ -17,7 +17,8 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)
+                  : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -637,6 +638,44 @@ def test_tensor_spec_bad_conv():
 
     assert str(
         excinfo.value) == "Partitioning rank Q maps to tensor ranks ['W', 'Q']"
+
+
+def test_get_valid_partitionings():
+    all_parts = """
+                K: [uniform_shape(4)]
+                M: [uniform_shape(2), nway_shape(7)]
+                N: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert set(partitioning.get_valid_parts(["K", "N"], False)) == {
+        ("K",), ("N",), ("N1I",)}
+    assert set(partitioning.get_valid_parts(["K", "N"], True)) == {
+        ("K",), ("N",), ("N1I",)}
+
+
+def test_get_valid_partitionings_flattening():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert set(partitioning.get_valid_parts(["K", "M"], False)) == {("K",)}
+    assert set(partitioning.get_valid_parts(["K", "M"], True)) == {
+        ("K",), ("M", "K0"), ("MK0",)}
+
+
+def test_get_valid_partitionings_conv():
+    all_parts = """
+                P: [uniform_shape(4)]
+                Q: [uniform_shape(5)]
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    assert set(partitioning.get_valid_parts(["W"], False)) == {("W",)}
+    assert set(partitioning.get_valid_parts(["W"], True)) == {("W",)}
 
 
 def test_is_flattened():

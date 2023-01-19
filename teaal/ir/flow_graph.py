@@ -109,20 +109,12 @@ class FlowGraph:
             for rank in init_ranks:
                 self.graph.add_edge(TensorNode(root), RankNode(root, rank))
 
-                # Add the static partitioning
-                part_rank = part.partition_rank(rank)
-                # TODO: allow for flattening
-                if (part_rank,) in part.get_static_parts():
-                    self.__build_static_part(tensor, rank)
+            for partitioning in part.get_valid_parts(init_ranks, True):
+                if partitioning in part.get_static_parts():
+                    self.__build_static_part(tensor, partitioning)
 
-                    in_rank = part.partition_names((rank,), False)[0]
-                    if in_rank != part.get_final_rank_id(tensor, in_rank):
-                        self.__build_dyn_part(tensor, rank)
-
-                # Add the dynamic partitioning
-                # TODO: allow for flattening
-                if (part_rank,) in part.get_dyn_parts():
-                    self.__build_dyn_part(tensor, rank)
+                else:
+                    self.__build_dyn_part(tensor, partitioning)
 
             # Get the root fiber
             self.__build_swizzle_root_fiber(tensor)
@@ -173,10 +165,14 @@ class FlowGraph:
         self.graph.add_edge(swizzle_node, collecting_node)
         self.graph.add_edge(collecting_node, MetricsNode("Start"))
 
-    def __build_dyn_part(self, tensor: Tensor, rank: str) -> None:
+    def __build_dyn_part(self, tensor: Tensor,
+                         partitioning: Tuple[str, ...]) -> None:
         """
         Build a dynamic partitioning
         """
+        # TODO: Support flattening
+        rank = partitioning[0]
+
         part = self.program.get_partitioning()
         root = tensor.root_name()
 
@@ -191,12 +187,7 @@ class FlowGraph:
             dsts = part.partition_names((src,), False)
 
             part_rank = part.partition_rank(src)
-            # Very hard to test, since this means there is a problem with
-            # part.get_intermediates()
-            if part_rank is None:
-                raise ValueError(
-                    "Unknown intermediate: " +
-                    src)  # pragma: no cover
+            assert part_rank is not None
 
             # TODO: allow flattening
             # TODO: use the correct destination rank
@@ -325,10 +316,14 @@ class FlowGraph:
         self.graph.add_edge(eager_input_node, IntervalNode(rank0))
         self.graph.add_edge(IntervalNode(rank0), LoopNode(rank0))
 
-    def __build_static_part(self, tensor: Tensor, rank: str) -> None:
+    def __build_static_part(self, tensor: Tensor,
+                            partitioning: Tuple[str, ...]) -> None:
         """
         Build a static partitioning
         """
+        # TODO: Support flattening
+        rank = partitioning[0]
+
         part = self.program.get_partitioning()
         root = tensor.root_name()
         part_node = PartNode(root, (rank,))

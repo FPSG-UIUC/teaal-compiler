@@ -314,6 +314,26 @@ class Partitioning:
 
         return partitioning
 
+    def get_valid_parts(
+            self, ranks: List[str], allow_swizzle: bool) -> Iterable[Tuple[str, ...]]:
+        """
+        Get the valid partitionings for a given set of ranks
+
+        TODO: There may be an opportunity to combine get_valid_parts and get_tensor_spec
+        """
+        ranks = ranks.copy()
+        used_parts: List[Tuple[str, ...]] = []
+        _, new_parts = self.__used_parts(ranks, ranks, allow_swizzle)
+
+        while new_parts:
+            used_parts.extend(new_parts)
+            for part in new_parts:
+                self.__update_ranks(part, ranks, False)
+
+            _, new_parts = self.__used_parts(ranks, ranks, allow_swizzle)
+
+        return used_parts
+
     def is_flattened(self, rank: str) -> bool:
         """
         Return true if the rank is the result of a flattening
@@ -772,7 +792,7 @@ class Partitioning:
         i = tensor_ranks.index(part_ranks[0])
         in_place = True
         for part_rank in part_ranks:
-            if tensor_ranks[i] != part_rank:
+            if i >= len(tensor_ranks) or tensor_ranks[i] != part_rank:
                 in_place = False
             tensor_ranks.remove(part_rank)
 
@@ -784,7 +804,7 @@ class Partitioning:
             tensor_ranks.insert(i, new_rank)
 
     def __used_parts(self, ranks: Iterable[str], tensor_ranks: List[str],
-                     allow_swizzle: bool) -> Tuple[List[str], List[Tuple[str, ...]]]:
+                     allow_swizzle: bool) -> Tuple[List[str], Iterable[Tuple[str, ...]]]:
         """
         Get the partitioned used to partition the given ranks
         """
