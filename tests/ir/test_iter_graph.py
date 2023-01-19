@@ -177,7 +177,7 @@ def test_pop_occupancy_partitioning():
     # Apply the partitioning to the A tensor
     A = program.get_tensor("A")
     A.from_fiber()
-    program.apply_partitioning(A, "M")
+    program.apply_partitioning(A, ("M",))
 
     # Make sure that there are no errors on pop
     assert graph.pop()[0] == "M1"

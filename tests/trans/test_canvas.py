@@ -139,7 +139,7 @@ def test_create_canvas_partitioned():
     static_parts = program.get_partitioning().get_static_parts()
     for tensor in program.get_tensors():
         for rank in static_parts:
-            program.apply_partitioning(tensor, rank[0])
+            program.apply_partitioning(tensor, (rank[0],))
         program.get_loop_order().apply(tensor)
 
     canvas = Canvas(program)
@@ -229,7 +229,7 @@ def test_add_activity_dyn_part():
     program = create_dyn_partitioned()
     program.add_einsum(0)
     program.apply_all_partitioning(program.get_output())
-    program.apply_partitioning(program.get_tensor("A"), "M")
+    program.apply_partitioning(program.get_tensor("A"), ("M",))
 
     canvas = Canvas(program)
     canvas.create_canvas()

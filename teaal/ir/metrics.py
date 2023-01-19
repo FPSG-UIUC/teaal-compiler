@@ -211,7 +211,8 @@ class Metrics:
                         raise ValueError("Cannot deal with this yet")
                     rank = ranks[0]
                     if rank in tensor.get_ranks():
-                        self.program.apply_partitioning(tensor, rank)
+                        # TODO Support flattening
+                        self.program.apply_partitioning(tensor, (rank,))
 
                 check_tensor(tensor)
 
@@ -221,7 +222,7 @@ class Metrics:
                 #     if opt_rank.upper() in part.get_dyn_parts().keys():
                 #         tensor.from_fiber()
                 #         self.program.apply_partitioning(
-                #             tensor, opt_rank.upper())
+                #             tensor, (opt_rank.upper(),))
 
                 #         check_tensor(tensor)
 

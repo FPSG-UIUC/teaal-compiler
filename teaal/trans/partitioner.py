@@ -113,7 +113,8 @@ class Partitioner:
             first = False
 
             # Finally, update the tensor with this partition
-            self.program.apply_partitioning(tensor, rank)
+            # TODO Support flattening
+            self.program.apply_partitioning(tensor, (rank,))
 
         # Rename the tensor
         part_name = AVar(tensor.tensor_name())

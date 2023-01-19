@@ -156,7 +156,7 @@ def test_apply_partitioning_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_partitioning(Tensor("A", ["K", "M"]), "K")
+        program.apply_partitioning(Tensor("A", ["K", "M"]), ("K",))
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
@@ -188,7 +188,7 @@ def test_all_ranks():
 def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensor("A"), "M")
+    program.apply_partitioning(program.get_tensor("A"), ("M",))
 
     assert program.get_tensor("A") == Tensor("A", ["K", "M2", "M1", "M0"])
 

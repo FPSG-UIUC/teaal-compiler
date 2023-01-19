@@ -283,14 +283,14 @@ class PartNode(Node):
     A Node representing a partitioning function
     """
 
-    def __init__(self, tensor: str, ranks: Tuple[str]) -> None:
+    def __init__(self, tensor: str, ranks: Tuple[str, ...]) -> None:
         """
         Build a partitioning node for a given tensor and ranks
         """
         self.tensor = tensor
         self.ranks = ranks
 
-    def get_ranks(self) -> Tuple[str]:
+    def get_ranks(self) -> Tuple[str, ...]:
         """
         Accessor for the ranks
         """

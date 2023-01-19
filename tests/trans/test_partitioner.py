@@ -128,7 +128,7 @@ def test_uniform_occupancy_follower():
         "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])"
 
     program, partitioner = build_partitioner(spec)
-    program.apply_partitioning(program.get_tensor("A"), "K")
+    program.apply_partitioning(program.get_tensor("A"), ("K",))
     assert partitioner.partition(tensor, "K").gen(depth=0) == hifiber
 
 
@@ -185,7 +185,7 @@ def test_uniform_occupancy_follower_conv():
         "J_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
     program, partitioner = build_partitioner_conv(expr, spec)
-    program.apply_partitioning(program.get_tensor("I"), "W")
+    program.apply_partitioning(program.get_tensor("I"), ("W",))
     assert partitioner.partition(tensor, "W").gen(depth=0) == hifiber
 
 

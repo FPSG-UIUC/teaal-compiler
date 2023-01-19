@@ -321,24 +321,22 @@ class FlowGraph:
         """
         Build a static partitioning
         """
-        # TODO: Support flattening
-        rank = partitioning[0]
-
+        # TODO: Add test to show that this function supports flattening
         part = self.program.get_partitioning()
         root = tensor.root_name()
-        part_node = PartNode(root, (rank,))
+        part_node = PartNode(root, partitioning)
 
         # Add the edge from the source rank to the partitioning
-        self.graph.add_edge(RankNode(root, rank), part_node)
+        for rank in partitioning:
+            self.graph.add_edge(RankNode(root, rank), part_node)
 
         # Add edges to for all resulting ranks
-        # TODO: support flattening
-        for res in part.partition_names((rank,), False):
+        for res in part.partition_names(partitioning, False):
             self.graph.add_edge(part_node, RankNode(root, res))
 
         # We must do graphics after any static partitioning
         self.graph.add_edge(part_node, OtherNode("Graphics"))
-        self.program.apply_partitioning(tensor, rank)
+        self.program.apply_partitioning(tensor, partitioning)
 
     def __build_swizzle_root_fiber(self, tensor: Tensor) -> None:
         """
@@ -369,7 +367,8 @@ class FlowGraph:
         root = tensor.root_name()
 
         tensor.from_fiber()
-        self.program.apply_partitioning(tensor, rank)
+        # TODO Support flattening
+        self.program.apply_partitioning(tensor, (rank,))
         self.program.get_loop_order().apply(tensor)
 
         part_node = PartNode(root, (rank,))

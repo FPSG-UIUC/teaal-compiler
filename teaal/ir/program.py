@@ -27,7 +27,7 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.loop_order import LoopOrder
@@ -147,7 +147,7 @@ class Program:
             tensor.get_ranks(), tensor.get_ranks(), True, False)
         tensor.update_ranks(new_ranks)
 
-    def apply_partitioning(self, tensor: Tensor, rank: str) -> None:
+    def apply_partitioning(self, tensor: Tensor, part: Iterable[str]) -> None:
         """
         Partition the tensor according to the partitioning given in
         add_einsum() for the given rank
@@ -159,7 +159,7 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         new_ranks = self.partitioning.partition_ranks(
-            tensor.get_ranks(), [rank], False, False)
+            tensor.get_ranks(), part, False, False)
         tensor.update_ranks(new_ranks)
 
     def get_einsum(self) -> Tree:
