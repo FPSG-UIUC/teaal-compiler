@@ -48,9 +48,9 @@ class IterationGraph:
         loop_order = self.program.get_loop_order().get_ranks()
         self.loop_order = cast(List[Optional[str]], loop_order.copy()) + [None]
 
-    def peek(self) -> Tuple[Optional[str], List[Tensor]]:
+    def peek_concord(self) -> Tuple[Optional[str], List[Tensor]]:
         """
-        Peek at the next iteration
+        Peek at the next loop iteration
         """
         tensors = []
         for tensor in self.program.get_tensors():
@@ -59,11 +59,23 @@ class IterationGraph:
 
         return self.loop_order[self.pos], tensors
 
-    def pop(self) -> Tuple[Optional[str], List[Tensor]]:
+    # def peek_discord(self) -> List[Tuple[Tuple[str, ...], Tensor]]:
+    #     """
+    #     Peek at the tensors that need to be accessed discordantly
+    #     """
+    #     tensors = []
+    #     for tensor in self.program.get_tensors():
+    #         if self.__ready(tensor):
+    #             tensors.append(tensor)
+
+    #     info = []
+    #     for tensor in tensors:
+
+    def pop_concord(self) -> Tuple[Optional[str], List[Tensor]]:
         """
-        Pop the next iteration off the graph
+        Pop the next loop iteration off the graph
         """
-        rank, tensors = self.peek()
+        rank, tensors = self.peek_concord()
 
         # Update each of the tensors
         for tensor in tensors:

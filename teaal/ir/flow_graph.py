@@ -125,7 +125,7 @@ class FlowGraph:
 
         # Connect all Fibers with the appropriate loop nodes
         iter_graph = IterationGraph(self.program)
-        while iter_graph.peek()[0] is not None:
+        while iter_graph.peek_concord()[0] is not None:
             self.__build_fiber_nodes(iter_graph)
 
         for tensor in self.program.get_tensors():
@@ -222,7 +222,7 @@ class FlowGraph:
             if part_rank and (part_rank,) in part.get_dyn_parts():
                 self.__connect_dyn_part(tensor, rank)
 
-        rank, tensors = iter_graph.peek()
+        rank, tensors = iter_graph.peek_concord()
 
         if rank is None:
             raise ValueError("No loop node to connect")
@@ -241,9 +241,9 @@ class FlowGraph:
         # bounds)
         if any(tensor.peek() != rank.lower() for tensor in tensors) and \
                 part.get_root_name(rank) != rank:
-            self.__build_project_interval(rank, tensors)
+            self.__build_project_interval(rank)
 
-        _, tensors = iter_graph.pop()
+        _, tensors = iter_graph.pop_concord()
 
         # Connect the new fiber to the LoopNode
         for tensor in tensors:
@@ -293,8 +293,7 @@ class FlowGraph:
 
     def __build_project_interval(
             self,
-            rank: str,
-            tensors: List[Tensor]) -> None:
+            rank: str) -> None:
         """
         Build the EagerInputNode and IntervalNode if the projection is over a
         partitioned rank

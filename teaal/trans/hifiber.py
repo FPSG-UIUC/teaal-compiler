@@ -121,9 +121,9 @@ class HiFiber:
 
             elif isinstance(node, LoopNode):
                 # Generate the for loop
-                rank, tensors = self.graph.peek()
+                rank, tensors = self.graph.peek_concord()
                 expr = self.eqn.make_iter_expr(cast(str, rank), tensors)
-                _, tensors = self.graph.pop()
+                _, tensors = self.graph.pop_concord()
                 payload = self.eqn.make_payload(cast(str, rank), tensors)
 
                 # Recurse for the for loop body

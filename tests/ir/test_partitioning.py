@@ -247,6 +247,31 @@ def test_mixed_partitioning():
     corr = {("K",), ("K3I",), ("K5I",), ("K6I",)}
     assert partitioning.get_all_parts() == corr
 
+def test_get_available():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert partitioning.get_available("N") == {"N"}
+    assert partitioning.get_available("K1") == {"K1"}
+    assert partitioning.get_available("K0") == {"K0", "K"}
+    assert partitioning.get_available("MK0") == {"MK0", "M", "K0", "K"}
+    assert partitioning.get_available("MK01") == {"MK01"}
+    assert partitioning.get_available("MK00") == {"MK00", "MK0", "M", "K0", "K"}
+
+def test_get_available_conv():
+    parts = """
+                Q: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+    """
+    partitioning = build_partitioning_conv(parts)
+
+    assert partitioning.get_available("Q") == {"Q", "W"}
+    assert partitioning.get_available("Q1") == {"Q1"}
+    assert partitioning.get_available("Q0") == {"Q0", "W0", "Q1I", "W1I", "Q", "W"}
+
 
 def test_get_dyn_rank_flattening():
     all_parts = """

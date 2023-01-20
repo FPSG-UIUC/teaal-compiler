@@ -22,7 +22,7 @@ def test_peek_rank0():
     tensor = Tensor("A", [])
     tensor.set_is_output(True)
 
-    assert graph.peek() == (None, [tensor])
+    assert graph.peek_concord() == (None, [tensor])
 
 
 def test_peek_default():
@@ -42,7 +42,7 @@ def test_peek_default():
     results = [Tensor("A", ["I", "J"]), Tensor("B", ["I", "K"])]
     results[0].set_is_output(True)
 
-    assert graph.peek() == ("I", results)
+    assert graph.peek_concord() == ("I", results)
 
 
 def test_peek_order():
@@ -68,7 +68,7 @@ def test_peek_order():
     results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
     results[0].set_is_output(True)
 
-    assert graph.peek() == ("J", results)
+    assert graph.peek_concord() == ("J", results)
 
 
 def test_pop_default():
@@ -92,17 +92,17 @@ def test_pop_default():
 
     A.pop()
     B.pop()
-    assert graph.pop() == ("I", [A, B])
+    assert graph.pop_concord() == ("I", [A, B])
 
     A.pop()
     C.pop()
-    assert graph.pop() == ("J", [A, C])
+    assert graph.pop_concord() == ("J", [A, C])
 
     B.pop()
     C.pop()
-    assert graph.pop() == ("K", [B, C])
+    assert graph.pop_concord() == ("K", [B, C])
 
-    assert graph.peek() == (None, [A, B, C])
+    assert graph.peek_concord() == (None, [A, B, C])
 
 
 def test_pop_order():
@@ -132,17 +132,17 @@ def test_pop_order():
 
     A.pop()
     C.pop()
-    assert graph.pop() == ("J", [A, C])
+    assert graph.pop_concord() == ("J", [A, C])
 
     B.pop()
     C.pop()
-    assert graph.pop() == ("K", [B, C])
+    assert graph.pop_concord() == ("K", [B, C])
 
     A.pop()
     B.pop()
-    assert graph.pop() == ("I", [A, B])
+    assert graph.pop_concord() == ("I", [A, B])
 
-    assert graph.peek() == (None, [A, B, C])
+    assert graph.peek_concord() == (None, [A, B, C])
 
 
 def test_pop_occupancy_partitioning():
@@ -180,7 +180,7 @@ def test_pop_occupancy_partitioning():
     program.apply_partitioning(A, ("M",))
 
     # Make sure that there are no errors on pop
-    assert graph.pop()[0] == "M1"
+    assert graph.pop_concord()[0] == "M1"
 
 
 def test_peek_pop_coord_math():
@@ -206,15 +206,15 @@ def test_peek_pop_coord_math():
     O = Tensor("O", ["Q"])
     O.set_is_output(True)
 
-    assert graph.peek() == ("W", [I])
+    assert graph.peek_concord() == ("W", [I])
 
     I.pop()
-    assert graph.pop() == ("W", [I])
+    assert graph.pop_concord() == ("W", [I])
 
-    assert graph.peek() == ("Q", [O, F])
+    assert graph.peek_concord() == ("Q", [O, F])
 
     F.pop()
     O.pop()
-    assert graph.pop() == ("Q", [O, F])
+    assert graph.pop_concord() == ("Q", [O, F])
 
-    assert graph.peek() == (None, [O, I, F])
+    assert graph.peek_concord() == (None, [O, I, F])

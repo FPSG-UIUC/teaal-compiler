@@ -46,9 +46,10 @@ class Partitioning:
         """
         Create a new representation of the partitioning information
         """
+        self.orig_ranks = ranks
         self.eqn_exprs = eqn_exprs
 
-        self.__build_part_graph(partitioning, ranks)
+        self.__build_part_graph(partitioning)
 
         # Filter the partitioning information into the ranks that can
         # be partitioned statically vs dynamically
@@ -88,6 +89,42 @@ class Partitioning:
         Get the partitioning information for all partitioned ranks
         """
         return self.all_parts
+
+    def get_available(self, rank: str) -> Set[str]:
+        """
+        Get the tensor ranks that may be available with this rank
+        """
+        avail: Set[str] = set()
+        all_ranks = [node.get_rank() for node in self.graph.nodes if isinstance(node, RankNode)]
+        avail.update(self.__part_to_tensor_rank(rank, all_ranks))
+
+        frontier = [RankNode(rank)]
+        while frontier:
+            node = frontier.pop()
+            preds = list(self.graph.predecessors(node))
+            if not preds:
+                continue
+
+            if len(preds) == 1:
+                parent = preds[0]
+            else:
+                pred_ranks = [pred.get_rank() for pred in preds]
+                parent = RankNode(Partitioning.__best_match(node.get_rank(), pred_ranks))
+
+
+            if isinstance(parent, FlattenNode):
+                # Ranks involved in flattening do not need to be translated
+                avail.update(parent.get_ranks())
+                frontier.extend(self.graph.predecessors(parent))
+                continue
+
+            min_child = min(self.graph.successors(parent), key=lambda n: self.graph.nodes[n]["priority"])
+            if min_child == node:
+                avail.update(self.__part_to_tensor_rank(parent.get_rank(), all_ranks))
+                frontier.append(parent)
+
+        return avail
+
 
     def get_dyn_rank(self, rank: str) -> str:
         """
@@ -444,7 +481,7 @@ class Partitioning:
             self.graph.nodes[node]["priority"] = priority
 
     @staticmethod
-    def __best_match(rank: str, test_ranks: List[str]) -> str:
+    def __best_match(rank: str, test_ranks: Iterable[str]) -> str:
         """Find the best match for a rank given a list of options"""
 
         def prefix_match_len(rank0: str, rank1: str) -> int:
@@ -466,15 +503,13 @@ class Partitioning:
 
         return best
 
-    def __build_part_graph(self,
-                           partitioning: Dict[Tree, List[Tree]],
-                           orig_ranks: Iterable[str]) -> None:
+    def __build_part_graph(self, partitioning: Dict[Tree, List[Tree]]) -> None:
         """
         Build the graph of how the partitioning information is related
         """
 
         self.graph = nx.DiGraph()
-        ranks = set(orig_ranks)
+        ranks = set(self.orig_ranks)
 
         # Add all of the starting ranks to the graph
         for rank in ranks:
@@ -502,7 +537,7 @@ class Partitioning:
                     "N-way partitioning after dynamic partitioning on rank(s) " +
                     str(part_ranks))
 
-            self.__check_flatten(part_ranks, all_parts, ranks, orig_ranks)
+            self.__check_flatten(part_ranks, all_parts, ranks)
 
             # If we are flattening, add a flattening node to combine them
             if len(part_ranks) > 1:
@@ -542,7 +577,7 @@ class Partitioning:
             for i, part in enumerate(parts):
                 j = len(parts) - i
                 if Partitioning.__is_static(part):
-                    if part_rank not in orig_ranks:
+                    if part_rank not in self.orig_ranks:
                         raise ValueError(
                             "Shape-based partitioning found on rank " +
                             part_rank +
@@ -595,7 +630,7 @@ class Partitioning:
             Partitioning.__single_part_rank(rank, partitioners)
 
     def __check_flatten(self, part_ranks: Tuple[str, ...], all_parts: Dict[Tuple[str, ...],
-                        List[Tree]], all_ranks: Iterable[str], orig_ranks: Iterable[str]) -> None:
+                        List[Tree]], all_ranks: Iterable[str]) -> None:
         """
         Check all conditions associated with flattening, and raise the
         appropriate errors
@@ -650,14 +685,14 @@ class Partitioning:
                     rank +
                     " because it will also be independently partitioned")
 
-            if rank not in orig_ranks:
+            if rank not in self.orig_ranks:
                 if rank in all_ranks:
                     raise ValueError(
                         "Cannot flatten rank " +
                         rank +
                         " because it is a flattened rank")
 
-                if rank[:-1] not in orig_ranks or rank[-1] != "0":
+                if rank[:-1] not in self.orig_ranks or rank[-1] != "0":
                     raise ValueError(
                         "Cannot flatten rank " +
                         rank +
