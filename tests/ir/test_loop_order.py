@@ -286,6 +286,26 @@ def test_is_ready():
     assert not loop_order.is_ready("N1", 5)
 
 
+def test_is_ready_flattened():
+    loop_order = build_loop_order()
+
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+
+    order = ["K1", "MK01", "N", "MK00"]
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(loop_order.get_ranks(), partitioning)
+
+    assert loop_order.is_ready("MK00", 3)
+    assert loop_order.is_ready("MK01", 1)
+    assert not loop_order.is_ready("K0", 3)
+
+
 def test_is_ready_conv():
     loop_order = build_loop_order_conv()
     partitioning = build_partitioning_conv("")

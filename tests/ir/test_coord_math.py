@@ -175,6 +175,41 @@ def test_prune_partitioned():
     assert coord_math.get_trans("s") == s
 
 
+def test_pruned_flattened():
+    coord_math = CoordMath()
+    tensor = Tensor("A", ["K", "M"])
+    tranks = make_tranks(["k", "m"])
+    coord_math.add(tensor, tranks)
+
+    tensor = Tensor("B", ["K", "N"])
+    tranks = make_tranks(["k", "n"])
+    coord_math.add(tensor, tranks)
+
+    tensor = Tensor("Z", ["M", "N"])
+    tranks = make_tranks(["m", "n"])
+    coord_math.add(tensor, tranks)
+
+    loop_order = ["K1", "MK01", "N", "MK00"]
+    yaml = """
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    parsed = Mapping.from_str(yaml).get_partitioning()["Z"]
+    part = Partitioning(parsed, ["K", "M", "N"], coord_math.get_eqn_exprs())
+
+    coord_math.prune(loop_order, part)
+
+    k, m, n = symbols("k m n")
+
+    assert coord_math.get_trans("k") == k
+    assert coord_math.get_trans("m") == m
+    assert coord_math.get_trans("n") == n
+
+
 def test_eq_true():
     coord_math0 = CoordMath()
     coord_math1 = CoordMath()

@@ -71,6 +71,100 @@ def test_peek_order():
     assert graph.peek_concord() == ("J", results)
 
 
+def test_peek_discord_bad():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    with pytest.raises(ValueError) as excinfo:
+        graph.peek_discord()
+    assert str(
+        excinfo.value) == "Can only perform a discordant traversal inside the loop nest"
+
+
+def test_peek_discord_none():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    for tensor in program.get_tensors():
+        program.get_loop_order().apply(tensor)
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+
+def test_peek_discord_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [J, K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(J, K).(A[k, m] * B[j, k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00, J]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    # Apply the partitioning
+    A = program.get_tensor("A")
+    # TODO: use program methods to set this automatically
+    A.update_ranks(["K1", "MK01", "MK00"])
+
+    B = program.get_tensor("B")
+    program.apply_all_partitioning(B)
+    program.get_loop_order().apply(B)
+
+    Z = program.get_tensor("Z")
+    program.get_loop_order().apply(Z)
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == [(("M",), Z), (("K0",), B)]
+
+
 def test_pop_default():
     yaml = """
     einsum:

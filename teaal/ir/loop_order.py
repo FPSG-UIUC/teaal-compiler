@@ -25,7 +25,7 @@ Intermediate representation of the loop order information
 """
 
 from lark.tree import Tree
-from sympy import Symbol
+from sympy import Basic, Symbol
 from typing import Any, cast, Iterable, List, Optional
 
 from teaal.ir.coord_math import CoordMath
@@ -125,8 +125,12 @@ class LoopOrder:
                  for lrank in self.ranks[:(pos + 1)]
                  if self.__innermost_rank(lrank)]
 
+        # Translate if the rank is not flattened
         root = self.partitioning.get_root_name(rank).lower()
-        math = self.coord_math.get_trans(root)
+        if self.partitioning.is_flattened(rank):
+            math = cast(Basic, Symbol(root))
+        else:
+            math = self.coord_math.get_trans(root)
 
         ready = all(str(ind) in avail for ind in math.atoms(Symbol))
         curr = Symbol(self.partitioning.get_root_name(

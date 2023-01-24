@@ -95,8 +95,7 @@ class Partitioning:
         Get the tensor ranks that may be available with this rank
         """
         avail: Set[str] = set()
-        all_ranks = [node.get_rank() for node in self.graph.nodes if isinstance(node, RankNode)]
-        avail.update(self.__part_to_tensor_rank(rank, all_ranks))
+        avail.add(rank)
 
         frontier = [RankNode(rank)]
         while frontier:
@@ -109,8 +108,9 @@ class Partitioning:
                 parent = preds[0]
             else:
                 pred_ranks = [pred.get_rank() for pred in preds]
-                parent = RankNode(Partitioning.__best_match(node.get_rank(), pred_ranks))
-
+                parent = RankNode(
+                    Partitioning.__best_match(
+                        node.get_rank(), pred_ranks))
 
             if isinstance(parent, FlattenNode):
                 # Ranks involved in flattening do not need to be translated
@@ -118,13 +118,14 @@ class Partitioning:
                 frontier.extend(self.graph.predecessors(parent))
                 continue
 
-            min_child = min(self.graph.successors(parent), key=lambda n: self.graph.nodes[n]["priority"])
+            min_child = min(
+                self.graph.successors(parent),
+                key=lambda n: self.graph.nodes[n]["priority"])
             if min_child == node:
-                avail.update(self.__part_to_tensor_rank(parent.get_rank(), all_ranks))
+                avail.add(parent.get_rank())
                 frontier.append(parent)
 
         return avail
-
 
     def get_dyn_rank(self, rank: str) -> str:
         """

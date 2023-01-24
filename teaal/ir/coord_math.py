@@ -138,8 +138,16 @@ class CoordMath:
         self.trans = {}
 
         # Build the set of symbols available
-        def trans_name(r): return partitioning.get_root_name(r).lower()
-        avail = {Symbol(trans_name(rank)) for rank in loop_order}
+        def trans_names(r):
+            ranks = partitioning.get_available(r)
+            return {Symbol(partitioning.get_root_name(rank).lower())
+                    for rank in ranks}
+
+        names = [trans_names(rank) for rank in loop_order]
+        if names:
+            avail = set.union(*names)
+        else:
+            avail = set()
 
         # Prune unnecessary translations
         for ind, exprs in self.all_exprs.items():

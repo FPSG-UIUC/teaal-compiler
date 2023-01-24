@@ -114,6 +114,13 @@ class Tensor:
             return self.__get_rank()
         return None
 
+    def peek_rest(self) -> List[str]:
+        """
+        Return the list of ranks that have not yet been iterated over for this
+        tensor
+        """
+        return self.ranks[self.iter_ptr:]
+
     def pop(self) -> str:
         """
         Pop off the top rank

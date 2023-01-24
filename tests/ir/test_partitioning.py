@@ -17,8 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)
-                  : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -247,6 +246,7 @@ def test_mixed_partitioning():
     corr = {("K",), ("K3I",), ("K5I",), ("K6I",)}
     assert partitioning.get_all_parts() == corr
 
+
 def test_get_available():
     all_parts = """
                 K: [uniform_shape(4)]
@@ -260,7 +260,9 @@ def test_get_available():
     assert partitioning.get_available("K0") == {"K0", "K"}
     assert partitioning.get_available("MK0") == {"MK0", "M", "K0", "K"}
     assert partitioning.get_available("MK01") == {"MK01"}
-    assert partitioning.get_available("MK00") == {"MK00", "MK0", "M", "K0", "K"}
+    assert partitioning.get_available(
+        "MK00") == {"MK00", "MK0", "M", "K0", "K"}
+
 
 def test_get_available_conv():
     parts = """
@@ -268,9 +270,9 @@ def test_get_available_conv():
     """
     partitioning = build_partitioning_conv(parts)
 
-    assert partitioning.get_available("Q") == {"Q", "W"}
+    assert partitioning.get_available("Q") == {"Q"}
     assert partitioning.get_available("Q1") == {"Q1"}
-    assert partitioning.get_available("Q0") == {"Q0", "W0", "Q1I", "W1I", "Q", "W"}
+    assert partitioning.get_available("Q0") == {"Q0", "Q1I", "Q"}
 
 
 def test_get_dyn_rank_flattening():
