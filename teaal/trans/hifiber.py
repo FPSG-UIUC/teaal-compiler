@@ -168,7 +168,7 @@ class HiFiber:
 
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_tensor(node.get_tensor())
-                code.add(self.header.make_swizzle(tensor))
+                code.add(self.header.make_swizzle(tensor, node.get_type()))
 
             elif isinstance(node, GetRootNode):
                 tensor = self.program.get_tensor(node.get_tensor())

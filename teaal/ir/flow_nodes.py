@@ -345,12 +345,13 @@ class SwizzleNode(Node):
     A Node representing a swizzleRanks call
     """
 
-    def __init__(self, tensor: str, ranks: List[str]) -> None:
+    def __init__(self, tensor: str, ranks: List[str], type_: str) -> None:
         """
         Construct a swizzleRanks node
         """
         self.tensor = tensor
         self.ranks = ranks
+        self.type = type_
 
     def get_ranks(self) -> List[str]:
         """
@@ -364,11 +365,19 @@ class SwizzleNode(Node):
         """
         return self.tensor
 
+    def get_type(self) -> str:
+        """
+        Accessor for the type
+
+        One of: "partitioning" or "loop-order"
+        """
+        return self.type
+
     def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a SwizzleNode
         """
-        return self.tensor, self.ranks
+        return self.tensor, self.ranks, self.type
 
 
 class TensorNode(Node):

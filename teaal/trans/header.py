@@ -70,13 +70,20 @@ class Header:
         constr = EFunc("Tensor", args)
         return SAssign(AVar(tensor.tensor_name()), constr)
 
-    def make_swizzle(self, tensor: Tensor) -> Statement:
+    def make_swizzle(self, tensor: Tensor, type_: str) -> Statement:
         """
         Make call to swizzleRanks() (as necessary)
         """
         # Swizzle for a concordant traversal
         old_name = tensor.tensor_name()
-        self.program.get_loop_order().apply(tensor)
+
+        if type_ == "loop-order":
+            self.program.get_loop_order().apply(tensor)
+        elif type_ == "partitioning":
+            self.program.apply_partition_swizzling(tensor)
+        else:
+            raise ValueError("Unknown swizzling reason: " + type_)
+
         new_name = tensor.tensor_name()
 
         # Emit code to perform the swizzle if necessary

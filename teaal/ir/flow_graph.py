@@ -159,7 +159,7 @@ class FlowGraph:
         # Otherwise, add a CollectingNode
         root = tensor.root_name()
         rank = self.metrics.get_on_chip_rank(tensor)
-        swizzle_node = SwizzleNode(root, tensor.get_ranks())
+        swizzle_node = SwizzleNode(root, tensor.get_ranks(), "loop-order")
         collecting_node = CollectingNode(root, rank)
 
         self.graph.add_edge(swizzle_node, collecting_node)
@@ -345,7 +345,8 @@ class FlowGraph:
         root = tensor.root_name()
 
         tensor_node = TensorNode(root)
-        swizzle_node = SwizzleNode(root, tensor.get_ranks().copy())
+        swizzle_node = SwizzleNode(
+            root, tensor.get_ranks().copy(), "loop-order")
         get_root_node = GetRootNode(root, tensor.get_ranks().copy())
         fiber_node = FiberNode(tensor.fiber_name())
 

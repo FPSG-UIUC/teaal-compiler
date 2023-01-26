@@ -103,8 +103,10 @@ def test_graph():
     corr.add_edge(LoopNode("N"), OtherNode("Body"))
     corr.add_edge(LoopNode("K"), OtherNode("Body"))
     corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
-    corr.add_edge(SwizzleNode("A", ["M", "K"]), GetRootNode("A", ["M", "K"]))
-    corr.add_edge(SwizzleNode("B", ["N", "K"]), GetRootNode("B", ["N", "K"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["M", "K"], "loop-order"), GetRootNode("A", ["M", "K"]))
+    corr.add_edge(SwizzleNode(
+        "B", ["N", "K"], "loop-order"), GetRootNode("B", ["N", "K"]))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -130,8 +132,10 @@ def test_graph_loop_order():
     corr.add_edge(LoopNode("M"), OtherNode("Body"))
     corr.add_edge(LoopNode("N"), OtherNode("Body"))
     corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
-    corr.add_edge(SwizzleNode("A", ["K", "M"]), GetRootNode("A", ["K", "M"]))
-    corr.add_edge(SwizzleNode("B", ["K", "N"]), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["K", "M"], "loop-order"), GetRootNode("A", ["K", "M"]))
+    corr.add_edge(SwizzleNode(
+        "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -170,20 +174,20 @@ def test_graph_static_parts():
         PartNode(
             "A", ('K',)), SwizzleNode(
             "A", [
-                'K2', 'M', 'K1', 'K0']))
+                'K2', 'M', 'K1', 'K0'], "loop-order"))
     corr.add_edge(GetRootNode("A", ['K2', 'M', 'K1', 'K0']), LoopNode("K2"))
     corr.add_edge(PartNode("B", ('K',)), OtherNode("Graphics"))
     corr.add_edge(
         PartNode(
             "B", ('K',)), SwizzleNode(
             "B", [
-                'K2', 'N1', 'K1', 'N0', 'K0']))
+                'K2', 'N1', 'K1', 'N0', 'K0'], "loop-order"))
     corr.add_edge(PartNode("B", ('N',)), OtherNode("Graphics"))
     corr.add_edge(
         PartNode(
             "B", ('N',)), SwizzleNode(
             "B", [
-                'K2', 'N1', 'K1', 'N0', 'K0']))
+                'K2', 'N1', 'K1', 'N0', 'K0'], "loop-order"))
     corr.add_edge(
         GetRootNode(
             "B", [
@@ -191,13 +195,13 @@ def test_graph_static_parts():
     corr.add_edge(
         SwizzleNode(
             "A", [
-                "K2", "M", "K1", "K0"]), GetRootNode(
+                "K2", "M", "K1", "K0"], "loop-order"), GetRootNode(
             "A", [
                 "K2", "M", "K1", "K0"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "K2", "N1", "K1", "N0", "K0"]), GetRootNode(
+                "K2", "N1", "K1", "N0", "K0"], "loop-order"), GetRootNode(
             "B", [
                 "K2", "N1", "K1", "N0", "K0"]))
 
@@ -238,60 +242,86 @@ def test_graph_dyn_parts():
     corr.add_edge(OtherNode("Output"), GetRootNode("Z", ['M', 'N1', 'N0']))
     corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", ['M', 'N1', 'N0']), LoopNode("M"))
-    corr.add_edge(PartNode("A", ('K',)), SwizzleNode("A", ['K2', 'M', 'K1I']))
+    corr.add_edge(
+        PartNode(
+            "A", ('K',)), SwizzleNode(
+            "A", [
+                'K2', 'M', 'K1I'], "loop-order"))
     corr.add_edge(PartNode("A", ('K',)), PartNode("A", ('K1I',)))
-    corr.add_edge(PartNode("A", ('K1I',)), SwizzleNode("A", ['K1', 'K0']))
+    corr.add_edge(
+        PartNode(
+            "A", ('K1I',)), SwizzleNode(
+            "A", [
+                'K1', 'K0'], "loop-order"))
     corr.add_edge(GetRootNode("A", ['K', 'M']), FromFiberNode("A", "K"))
     corr.add_edge(FromFiberNode("A", "K"), PartNode("A", ('K',)))
     corr.add_edge(GetRootNode("A", ['K2', 'M', 'K1I']), LoopNode("K2"))
     corr.add_edge(GetRootNode("A", ['K2', 'M', 'K1I']), PartNode("B", ('K',)))
     corr.add_edge(GetRootNode("A", ['K1', 'K0']), LoopNode("K1"))
     corr.add_edge(GetRootNode("A", ['K1', 'K0']), PartNode("B", ('K1I',)))
-    corr.add_edge(PartNode("B", ('K',)), SwizzleNode("B", ['K2', 'N', 'K1I']))
+    corr.add_edge(
+        PartNode(
+            "B", ('K',)), SwizzleNode(
+            "B", [
+                'K2', 'N', 'K1I'], "loop-order"))
     corr.add_edge(PartNode("B", ('K',)), PartNode("B", ('K1I',)))
     corr.add_edge(
         PartNode(
             "B", ('K1I',)), SwizzleNode(
             "B", [
-                'K1', 'N0', 'K0']))
-    corr.add_edge(PartNode("B", ('N',)), SwizzleNode("B", ['N1', 'K1I', 'N0']))
-    corr.add_edge(PartNode("B", ('K',)), SwizzleNode("B", ['N1', 'K1I', 'N0']))
-    corr.add_edge(PartNode("B", ('N',)), SwizzleNode("B", ['K1', 'N0', 'K0']))
+                'K1', 'N0', 'K0'], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "B", ('N',)), SwizzleNode(
+            "B", [
+                'N1', 'K1I', 'N0'], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "B", ('K',)), SwizzleNode(
+            "B", [
+                'N1', 'K1I', 'N0'], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "B", ('N',)), SwizzleNode(
+            "B", [
+                'K1', 'N0', 'K0'], "loop-order"))
     corr.add_edge(GetRootNode("B", ['K', 'N']), FromFiberNode("B", "K"))
     corr.add_edge(FromFiberNode("B", "K"), PartNode("B", ('K',)))
     corr.add_edge(GetRootNode("B", ['K2', 'N', 'K1I']), LoopNode("K2"))
     corr.add_edge(GetRootNode("B", ['N1', 'K1I', 'N0']), LoopNode("N1"))
     corr.add_edge(GetRootNode("B", ['K1', 'N0', 'K0']), LoopNode("K1"))
-    corr.add_edge(SwizzleNode("A", ["K", "M"]), GetRootNode("A", ["K", "M"]))
-    corr.add_edge(SwizzleNode("B", ["K", "N"]), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["K", "M"], "loop-order"), GetRootNode("A", ["K", "M"]))
+    corr.add_edge(SwizzleNode(
+        "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
     corr.add_edge(
         SwizzleNode(
             "A", [
-                "K2", "M", "K1I"]), GetRootNode(
+                "K2", "M", "K1I"], "loop-order"), GetRootNode(
             "A", [
                 "K2", "M", "K1I"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "K2", "N", "K1I"]), GetRootNode(
+                "K2", "N", "K1I"], "loop-order"), GetRootNode(
             "B", [
                 "K2", "N", "K1I"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "N1", "K1I", "N0"]), GetRootNode(
+                "N1", "K1I", "N0"], "loop-order"), GetRootNode(
             "B", [
                 "N1", "K1I", "N0"]))
     corr.add_edge(
         SwizzleNode(
             "A", [
-                "K1", "K0"]), GetRootNode(
+                "K1", "K0"], "loop-order"), GetRootNode(
             "A", [
                 "K1", "K0"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "K1", "N0", "K0"]), GetRootNode(
+                "K1", "N0", "K0"], "loop-order"), GetRootNode(
             "B", [
                 "K1", "N0", "K0"]))
 
@@ -331,21 +361,41 @@ def test_graph_mixed_parts():
     corr.add_edge(GetRootNode("Z", ["M", "N"]), LoopNode("M"))
     corr.add_edge(PartNode("A", ("K",)), OtherNode("Graphics"))
     corr.add_edge(PartNode("A", ("K",)), PartNode("A", ("K2I",)))
-    corr.add_edge(PartNode("A", ("K",)), SwizzleNode("A", ["K3", "M", "K2I"]))
+    corr.add_edge(
+        PartNode(
+            "A", ("K",)), SwizzleNode(
+            "A", [
+                "K3", "M", "K2I"], "loop-order"))
     corr.add_edge(PartNode("A", ("K2I",)), PartNode("A", ("K1I",)))
-    corr.add_edge(PartNode("A", ("K2I",)), SwizzleNode("A", ["K2", "K1I"]))
-    corr.add_edge(PartNode("A", ("K1I",)), SwizzleNode("A", ["K1", "K0"]))
+    corr.add_edge(
+        PartNode(
+            "A", ("K2I",)), SwizzleNode(
+            "A", [
+                "K2", "K1I"], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "A", ("K1I",)), SwizzleNode(
+            "A", [
+                "K1", "K0"], "loop-order"))
     corr.add_edge(GetRootNode("A", ["K3", "M", "K2I"]), LoopNode("K3"))
     corr.add_edge(PartNode("B", ("K",)), OtherNode("Graphics"))
     corr.add_edge(PartNode("B", ("K",)), PartNode("B", ("K2I",)))
-    corr.add_edge(PartNode("B", ("K",)), SwizzleNode("B", ["K3", "K2I", "N"]))
+    corr.add_edge(
+        PartNode(
+            "B", ("K",)), SwizzleNode(
+            "B", [
+                "K3", "K2I", "N"], "loop-order"))
     corr.add_edge(PartNode("B", ("K2I",)), PartNode("B", ("K1I",)))
     corr.add_edge(
         PartNode(
             "B", ("K2I",)), SwizzleNode(
             "B", [
-                "K2", "K1I", "N"]))
-    corr.add_edge(PartNode("B", ("K1I",)), SwizzleNode("B", ["K1", "N", "K0"]))
+                "K2", "K1I", "N"], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "B", ("K1I",)), SwizzleNode(
+            "B", [
+                "K1", "N", "K0"], "loop-order"))
     corr.add_edge(GetRootNode("B", ["K3", "K2I", "N"]), LoopNode("K3"))
     corr.add_edge(FromFiberNode("B", "K2I"), PartNode("B", ("K2I",)))
     corr.add_edge(GetRootNode("B", ["K2", "K1I", "N"]), LoopNode("K2"))
@@ -360,37 +410,37 @@ def test_graph_mixed_parts():
     corr.add_edge(
         SwizzleNode(
             "A", [
-                "K3", "M", "K2I"]), GetRootNode(
+                "K3", "M", "K2I"], "loop-order"), GetRootNode(
             "A", [
                 "K3", "M", "K2I"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "K3", "K2I", "N"]), GetRootNode(
+                "K3", "K2I", "N"], "loop-order"), GetRootNode(
             "B", [
                 "K3", "K2I", "N"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "K2", "K1I", "N"]), GetRootNode(
+                "K2", "K1I", "N"], "loop-order"), GetRootNode(
             "B", [
                 "K2", "K1I", "N"]))
     corr.add_edge(
         SwizzleNode(
             "A", [
-                "K2", "K1I"]), GetRootNode(
+                "K2", "K1I"], "loop-order"), GetRootNode(
             "A", [
                 "K2", "K1I"]))
     corr.add_edge(
         SwizzleNode(
             "A", [
-                "K1", "K0"]), GetRootNode(
+                "K1", "K0"], "loop-order"), GetRootNode(
             "A", [
                 "K1", "K0"]))
     corr.add_edge(
         SwizzleNode(
             "B", [
-                "K1", "N", "K0"]), GetRootNode(
+                "K1", "N", "K0"], "loop-order"), GetRootNode(
             "B", [
                 "K1", "N", "K0"]))
 
@@ -416,8 +466,22 @@ def test_graph_conv():
     corr.add_edge(GetRootNode("O", ['Q']), LoopNode("Q"))
     corr.add_edge(GetRootNode("I", ['W']), LoopNode("W"))
     corr.add_edge(GetRootNode("F", ['S']), LoopNode("Q"))
-    corr.add_edge(SwizzleNode("I", ["W"]), GetRootNode("I", ["W"]))
-    corr.add_edge(SwizzleNode("F", ["S"]), GetRootNode("F", ["S"]))
+    corr.add_edge(
+        SwizzleNode(
+            "I",
+            ["W"],
+            "loop-order"),
+        GetRootNode(
+            "I",
+            ["W"]))
+    corr.add_edge(
+        SwizzleNode(
+            "F",
+            ["S"],
+            "loop-order"),
+        GetRootNode(
+            "F",
+            ["S"]))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -449,8 +513,16 @@ def test_graph_conv_part():
     corr.add_edge(GetRootNode("O", ["Q2", "Q1", "Q0"]), LoopNode("Q2"))
     corr.add_edge(PartNode("I", ("W",)), OtherNode("Graphics"))
     corr.add_edge(PartNode("I", ("W",)), PartNode("I", ("W1I",)))
-    corr.add_edge(PartNode("I", ("W",)), SwizzleNode("I", ["Q2", "W1I"]))
-    corr.add_edge(PartNode("I", ("W1I",)), SwizzleNode("I", ["Q1", "W0"]))
+    corr.add_edge(
+        PartNode(
+            "I", ("W",)), SwizzleNode(
+            "I", [
+                "Q2", "W1I"], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "I", ("W1I",)), SwizzleNode(
+            "I", [
+                "Q1", "W0"], "loop-order"))
     corr.add_edge(GetRootNode("I", ["Q2", "W1I"]), LoopNode("Q2"))
     corr.add_edge(GetRootNode("F", ["S"]), LoopNode("S"))
     corr.add_edge(FromFiberNode("I", "W1I"), PartNode("I", ("W1I",)))
@@ -462,14 +534,21 @@ def test_graph_conv_part():
     corr.add_edge(
         SwizzleNode(
             "I", [
-                "Q2", "W1I"]), GetRootNode(
+                "Q2", "W1I"], "loop-order"), GetRootNode(
             "I", [
                 "Q2", "W1I"]))
-    corr.add_edge(SwizzleNode("F", ["S"]), GetRootNode("F", ["S"]))
+    corr.add_edge(
+        SwizzleNode(
+            "F",
+            ["S"],
+            "loop-order"),
+        GetRootNode(
+            "F",
+            ["S"]))
     corr.add_edge(
         SwizzleNode(
             "I", [
-                "Q1", "W0"]), GetRootNode(
+                "Q1", "W0"], "loop-order"), GetRootNode(
             "I", [
                 "Q1", "W0"]))
 
@@ -498,11 +577,14 @@ def test_graph_metrics():
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("T", ["M", "K", "N"]), LoopNode("M"))
-    corr.add_edge(SwizzleNode("A", ["M", "K"]), GetRootNode("A", ["M", "K"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["M", "K"], "loop-order"), GetRootNode("A", ["M", "K"]))
     corr.add_edge(GetRootNode("A", ["M", "K"]), LoopNode("M"))
-    corr.add_edge(SwizzleNode("B", ["K", "N"]), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(SwizzleNode(
+        "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
     corr.add_edge(GetRootNode("B", ["K", "N"]), LoopNode("K"))
-    corr.add_edge(SwizzleNode("B", ['K', 'N']), CollectingNode("B", "K"))
+    corr.add_edge(SwizzleNode("B", ['K', 'N'],
+                  "loop-order"), CollectingNode("B", "K"))
     corr.add_edge(CollectingNode("B", "K"), MetricsNode("Start"))
 
     assert nx.is_isomorphic(graph, corr)

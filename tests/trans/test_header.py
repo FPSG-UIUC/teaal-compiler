@@ -1,3 +1,5 @@
+import pytest
+
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
@@ -103,13 +105,37 @@ def test_make_output_conv_shape():
 
     assert header.make_output().gen(0) == hifiber
 
+def test_make_swizzle_bad():
+    header = build_matmul_header("")
+    tensor = Tensor("A", ["K", "M"])
+    with pytest.raises(ValueError) as excinfo:
+        header.make_swizzle(tensor, "foo")
 
-def test_make_swizzle():
+    assert str(
+        excinfo.value) == "Unknown swizzling reason: foo"
+
+
+def test_make_swizzle_loop_order():
     hifiber = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])"
 
     header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
-    assert header.make_swizzle(tensor).gen(depth=0) == hifiber
+    assert header.make_swizzle(tensor, "loop-order").gen(depth=0) == hifiber
+
+def test_make_swizzle_partitioning():
+    hifiber = "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])"
+
+    mapping = """
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+
+    header = build_matmul_header(mapping)
+    tensor = Tensor("A", ["K1", "K0", "M"])
+    assert header.make_swizzle(tensor, "partitioning").gen(depth=0) == hifiber
 
 
 def test_make_tensor_from_fiber():
