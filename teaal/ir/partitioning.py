@@ -471,6 +471,20 @@ class Partitioning:
 
         return tensor_ranks
 
+    def swizzle_for_flattening(self, tensor_ranks: List[str]):
+        """
+        Swizzle the tensor ranks to allow for flattening
+        """
+        new_ranks = tensor_ranks.copy()
+        _, used_parts = self.__used_parts(new_ranks, new_ranks, True)
+        for part in used_parts:
+            if len(part) > 1:
+                for rank in part:
+                    del new_ranks[new_ranks.index(rank)]
+                    new_ranks.append(rank)
+
+        return new_ranks
+
     def __add_or_update_priority(self, rank: str, priority: float) -> None:
         """
         Add the node if it does not exist, or update its priority

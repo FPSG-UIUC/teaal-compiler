@@ -162,6 +162,19 @@ class Program:
             tensor.get_ranks(), part, False, False)
         tensor.update_ranks(new_ranks)
 
+    def apply_partition_swizzling(self, tensor: Tensor) -> None:
+        """
+        Swizzle the ranks of the tensor to prepare for partitioning
+        """
+        # Make sure that the program is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        new_ranks = self.partitioning.swizzle_for_flattening(
+            tensor.get_ranks())
+        tensor.update_ranks(new_ranks)
+
     def get_einsum(self) -> Tree:
         """
         Get the parse tree representation of the einsum

@@ -142,8 +142,10 @@ def test_peek_discord_flatten():
 
     # Apply the partitioning
     A = program.get_tensor("A")
-    # TODO: use program methods to set this automatically
-    A.update_ranks(["K1", "MK01", "MK00"])
+    program.apply_all_partitioning(A)
+    program.apply_partition_swizzling(A)
+    program.apply_all_partitioning(A)
+    program.get_loop_order().apply(A)
 
     B = program.get_tensor("B")
     program.apply_all_partitioning(B)
