@@ -361,14 +361,14 @@ class Partitioning:
         """
         ranks = ranks.copy()
         used_parts: List[Tuple[str, ...]] = []
-        _, new_parts = self.__used_parts(ranks, ranks, allow_swizzle)
+        new_parts = self.__used_parts(ranks, self.all_parts, allow_swizzle)
 
         while new_parts:
             used_parts.extend(new_parts)
             for part in new_parts:
                 self.__update_ranks(part, ranks, False)
 
-            _, new_parts = self.__used_parts(ranks, ranks, allow_swizzle)
+            new_parts = self.__used_parts(ranks, self.all_parts, allow_swizzle)
 
         return used_parts
 
@@ -455,9 +455,13 @@ class Partitioning:
         Partition a tensor across all relevant partitionable ranks
         """
         tensor_ranks = tensor_ranks.copy()
+        allowed_ranks = [rank for rank in partitionable_ranks]
 
-        allowed_ranks, used_parts = self.__used_parts(
-            partitionable_ranks, tensor_ranks, allow_swizzle)
+        allowed_parts = [
+            part for part in self.all_parts if all(
+                rank in allowed_ranks for rank in part)]
+        used_parts = self.__used_parts(
+            tensor_ranks, allowed_parts, allow_swizzle)
         while used_parts:
             for part_ranks in used_parts:
                 self.__update_ranks(part_ranks, tensor_ranks, all_levels)
@@ -466,8 +470,11 @@ class Partitioning:
             if not all_levels:
                 break
 
-            allowed_ranks, used_parts = self.__used_parts(
-                allowed_ranks, tensor_ranks, allow_swizzle)
+            allowed_parts = [
+                part for part in self.all_parts if all(
+                    rank in allowed_ranks for rank in part)]
+            used_parts = self.__used_parts(
+                tensor_ranks, allowed_parts, allow_swizzle)
 
         return tensor_ranks
 
@@ -476,7 +483,7 @@ class Partitioning:
         Swizzle the tensor ranks to allow for flattening
         """
         new_ranks = tensor_ranks.copy()
-        _, used_parts = self.__used_parts(new_ranks, new_ranks, True)
+        used_parts = self.__used_parts(new_ranks, self.all_parts, True)
         for part in used_parts:
             if len(part) > 1:
                 for rank in part:
@@ -768,7 +775,8 @@ class Partitioning:
             tensor_suffix = tensor_rank[len(tensor_root):]
 
             atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
-            if Symbol(part_root) in atoms and part_suffix == tensor_suffix:
+            if (Symbol(part_root) in atoms or part_root ==
+                    tensor_root) and part_suffix == tensor_suffix:
                 matches.append(tensor_rank)
 
         return matches
@@ -853,41 +861,22 @@ class Partitioning:
         for new_rank in new_ranks:
             tensor_ranks.insert(i, new_rank)
 
-    def __used_parts(self, ranks: Iterable[str], tensor_ranks: List[str],
-                     allow_swizzle: bool) -> Tuple[List[str], Iterable[Tuple[str, ...]]]:
+    def __used_parts(self, tensor_ranks: List[str], parts: Iterable[Tuple[str, ...]],
+                     allow_swizzle: bool) -> Iterable[Tuple[str, ...]]:
         """
         Get the partitioned used to partition the given ranks
         """
-        allowed_ranks = []
-        for rank in tensor_ranks:
-            if rank in ranks:
-                allowed_ranks.append(rank)
-
         used_parts = []
-        for part_ranks in self.all_parts:
+        for part_ranks in parts:
             # Check if this partitioning is used
             used = True
             next_ind = None
             new_part_ranks = []
             for part_rank in part_ranks:
-                # Get the tensor rank corresponding to this partitioning rank
-                # And ensure it is a rank we want to partition
-                if self.is_flattened(part_rank):
-                    tensor_rank = part_rank
-                    if tensor_rank not in allowed_ranks:
-                        used = False
-                        break
-
-                else:
-                    tranks = self.__part_to_tensor_rank(
-                        part_rank, allowed_ranks)
-                    opt_trank = Partitioning.__opt_tensor_rank(
-                        part_rank, tranks)
-                    if opt_trank is None:
-                        used = False
-                        break
-
-                    tensor_rank = opt_trank
+                tensor_rank = part_rank
+                if tensor_rank not in tensor_ranks:
+                    used = False
+                    break
 
                 if next_ind is None:
                     next_ind = tensor_ranks.index(tensor_rank) + 1
@@ -902,4 +891,4 @@ class Partitioning:
             if used:
                 used_parts.append(tuple(new_part_ranks))
 
-        return allowed_ranks, used_parts
+        return used_parts
