@@ -10,7 +10,7 @@ from teaal.trans.utils import TransUtils
 
 def assert_partition(tensor, parts, rank, hifiber):
     program, partitioner = build_partitioner(parts)
-    assert partitioner.partition(tensor, rank).gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, (rank,)).gen(depth=0) == hifiber
 
 
 def build_partitioner(parts):
@@ -54,10 +54,29 @@ def build_partitioner_conv(expr, parts):
     return program, partitioner
 
 
+def build_partitioner_copy(parts):
+    yaml = """
+    einsum:
+        declaration:
+            A: [M, N, O, P, Q]
+            Z: [M, N, O, P, Q]
+        expressions:
+            - Z[m, n, o, p, q] = A[m, n, o, p, q]
+    mapping:
+        partitioning:
+            Z:
+        """ + parts
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    partitioner = Partitioner(program, TransUtils())
+    return program, partitioner
+
+
 def test_no_partitioning():
     tensor = Tensor("B", ["K", "N"])
     _, partitioner = build_partitioner("")
-    assert partitioner.partition(tensor, "N").gen(0) == ""
+    assert partitioner.partition(tensor, ("N",)).gen(0) == ""
 
 
 def test_bad_halo():
@@ -69,9 +88,37 @@ def test_bad_halo():
     _, partitioner = build_partitioner_conv(expr, spec)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioner.partition(tensor, "W")
+        partitioner.partition(tensor, ("W",))
 
     assert str(excinfo.value) == "Non-constant halo partitioning rank W"
+
+
+def test_flatten_unswizzled():
+    spec = """
+                (O, N, P): [flatten()]
+    """
+    program, partitioner = build_partitioner_copy(spec)
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioner.partition(program.get_tensor("A"), ("O", "N", "P"))
+
+    assert str(
+        excinfo.value) == "Cannot flatten together ('O', 'N', 'P') on tensor with ranks ['M', 'N', 'O', 'P', 'Q']"
+
+
+def test_flatten():
+    spec = """
+                (N, O, P): [flatten()]
+    """
+    program, partitioner = build_partitioner_copy(spec)
+    hifiber = "tmp0 = A_MNOPQ\n" + \
+        "tmp1 = tmp0.flattenRanks(depth=1, levels=2, style=\"tuple\")\n" + \
+        "A_MNOPQ_flat = tmp1\n" + \
+        "A_MNOPQ_flat.setRankIds(rank_ids=[\"M\", \"NOP\", \"Q\"])"
+
+    assert partitioner.partition(
+        program.get_tensor("A"), ("N", "O", "P")).gen(
+        depth=0) == hifiber
 
 
 def test_nway_shape():
@@ -101,7 +148,7 @@ def test_nway_shape_conv():
         "I_Q2Q1W0.setRankIds(rank_ids=[\"Q2\", \"Q1\", \"W0\"])"
 
     _, partitioner = build_partitioner_conv(expr, spec)
-    assert partitioner.partition(tensor, "W").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
 def test_uniform_occupancy_leader():
@@ -129,7 +176,7 @@ def test_uniform_occupancy_follower():
 
     program, partitioner = build_partitioner(spec)
     program.apply_partitioning(program.get_tensor("A"), ("K",))
-    assert partitioner.partition(tensor, "K").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
 
 def test_uniform_occupancy_multiple():
@@ -146,7 +193,7 @@ def test_uniform_occupancy_multiple():
     program, partitioner = build_partitioner(spec)
     tensor = program.get_tensor("A")
     tensor.from_fiber()
-    assert partitioner.partition(tensor, "K").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
     hifiber = "tmp2 = A_K1IM\n" + \
         "tmp3 = tmp2.splitEqual(3)\n" + \
@@ -155,7 +202,7 @@ def test_uniform_occupancy_multiple():
 
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, "K1I").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K1I",)).gen(depth=0) == hifiber
 
 
 def test_uniform_occupancy_conv():
@@ -170,7 +217,7 @@ def test_uniform_occupancy_conv():
         "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
     _, partitioner = build_partitioner_conv(expr, spec)
-    assert partitioner.partition(tensor, "W").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
 def test_uniform_occupancy_follower_conv():
@@ -186,7 +233,7 @@ def test_uniform_occupancy_follower_conv():
 
     program, partitioner = build_partitioner_conv(expr, spec)
     program.apply_partitioning(program.get_tensor("I"), ("W",))
-    assert partitioner.partition(tensor, "W").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
 def test_uniform_shape():
@@ -215,7 +262,7 @@ def test_uniform_shape_conv():
         "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
     _, partitioner = build_partitioner_conv(expr, spec)
-    assert partitioner.partition(tensor, "W").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
 def test_mixed():
@@ -239,7 +286,7 @@ def test_mixed():
     program, partitioner = build_partitioner(spec)
     tensor = program.get_tensor("A")
     tensor.from_fiber()
-    assert partitioner.partition(tensor, "K").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
     hifiber = "tmp3 = A_K6IM\n" + \
         "tmp4 = tmp3.splitEqual(100)\n" + \
@@ -249,7 +296,7 @@ def test_mixed():
     tensor.pop()
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, "K6I").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K6I",)).gen(depth=0) == hifiber
 
     hifiber = "tmp5 = A_K5IM\n" + \
         "tmp6 = tmp5.splitEqual(50)\n" + \
@@ -259,7 +306,7 @@ def test_mixed():
 
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, "K5I").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K5I",)).gen(depth=0) == hifiber
 
     hifiber = "tmp8 = A_K3IM\n" + \
         "tmp9 = tmp8.splitEqual(6)\n" + \
@@ -271,7 +318,7 @@ def test_mixed():
     tensor.pop()
     tensor.pop()
     tensor.from_fiber()
-    assert partitioner.partition(tensor, "K3I").gen(depth=0) == hifiber
+    assert partitioner.partition(tensor, ("K3I",)).gen(depth=0) == hifiber
 
 
 def assert_unpartition(spec, hifiber):

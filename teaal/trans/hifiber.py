@@ -161,10 +161,10 @@ class HiFiber:
 
             elif isinstance(node, PartNode):
                 tensor = self.program.get_tensor(node.get_tensor())
-                rank = node.get_ranks()[0]
+                ranks = node.get_ranks()
 
                 tensor.from_fiber()
-                code.add(self.partitioner.partition(tensor, rank))
+                code.add(self.partitioner.partition(tensor, ranks))
 
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_tensor(node.get_tensor())

@@ -826,10 +826,10 @@ def test_partition_rank():
     """
     partitioning = build_partitioning_conv(all_parts)
 
-    assert partitioning.partition_rank("S") is None
-    assert partitioning.partition_rank("P") == "P"
-    assert partitioning.partition_rank("W") == "Q"
-    assert partitioning.partition_rank("W6I") == "Q6I"
+    assert partitioning.partition_rank(("S",)) is None
+    assert partitioning.partition_rank(("P",)) == ("P",)
+    assert partitioning.partition_rank(("W",)) == ("Q",)
+    assert partitioning.partition_rank(("W6I",)) == ("Q6I",)
 
 
 def test_partition_rank_flattening():
@@ -838,7 +838,11 @@ def test_partition_rank_flattening():
                 (M, K0): [flatten()]
     """
     partitioning = build_partitioning(all_parts)
-    assert partitioning.partition_rank("MK0") is None
+
+    assert partitioning.partition_rank(("M", "K0")) == ("M", "K0")
+    assert partitioning.partition_rank(("K0", "M")) is None
+
+    assert partitioning.partition_rank(("MK0",)) is None
 
     all_parts = """
                 K: [uniform_shape(4)]
@@ -846,7 +850,7 @@ def test_partition_rank_flattening():
                 MK0: [uniform_occupancy(A.5)]
     """
     partitioning = build_partitioning(all_parts)
-    assert partitioning.partition_rank("MK0") == "MK0"
+    assert partitioning.partition_rank(("MK0",)) == ("MK0",)
 
 
 def test_partition_ranks_all():

@@ -161,6 +161,34 @@ def test_tensor_name():
     assert tensor.tensor_name() == "A_IJK"
 
 
+def test_tensor_name_flat():
+    tensor = Tensor("A", ["M", "N", "O"])
+    assert tensor.tensor_name() == "A_MNO"
+
+    tensor.update_ranks(["MN", "O"])
+    assert tensor.tensor_name() == "A_MNO_flat"
+
+    tensor.swizzle(["MN", "O"])
+    assert tensor.tensor_name() == "A_MNO_flat"
+
+    tensor.swizzle(["O", "MN"])
+    assert tensor.tensor_name() == "A_OMN"
+
+    tensor = Tensor("A", ["M", "N", "O"])
+    tensor.update_ranks(["M", "NO"])
+    tensor.from_fiber()
+    assert tensor.tensor_name() == "A_MNO_flat"
+
+    tensor.pop()
+    tensor.from_fiber()
+    assert tensor.tensor_name() == "A_NO"
+
+    tensor = Tensor("A", ["M", "N", "O"])
+    tensor.update_ranks(["M", "NO"])
+    tensor.reset()
+    assert tensor.tensor_name() == "A_MNO"
+
+
 def test_eq():
     args = ("A", ["I", "J"])
     assert Tensor(*args) == Tensor(*args)

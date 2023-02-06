@@ -171,17 +171,17 @@ class FlowGraph:
         root = tensor.root_name()
 
         int_ranks = part.get_intermediates(tensor, rank)
-        part_rank = part.partition_rank(rank)
+        part_ranks = part.partition_rank((rank,))
         # TODO: Allow flattening
-        if part_rank and (part_rank,) in part.get_dyn_parts():
+        if part_ranks and part_ranks in part.get_dyn_parts():
             int_ranks += [rank]
 
         for src in int_ranks:
             part_node = PartNode(root, (src,))
             dsts = part.partition_names((src,), False)
 
-            part_rank = part.partition_rank(src)
-            assert part_rank is not None
+            part_ranks = part.partition_rank((src,))
+            assert part_ranks is not None
 
             # TODO: allow flattening
             # TODO: use the correct destination rank
@@ -211,9 +211,9 @@ class FlowGraph:
                 continue
 
             rank = rank.upper()
-            part_rank = part.partition_rank(rank)
+            part_ranks = part.partition_rank((rank,))
             # TODO: allow for flattening
-            if part_rank and (part_rank,) in part.get_dyn_parts():
+            if part_ranks and part_ranks in part.get_dyn_parts():
                 self.__connect_dyn_part(tensor, rank)
 
         rank, tensors = iter_graph.peek_concord()

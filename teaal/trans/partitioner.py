@@ -47,74 +47,28 @@ class Partitioner:
         self.program = program
         self.trans_utils = trans_utils
 
-    def partition(self, tensor: Tensor, rank: str) -> Statement:
+    def partition(self, tensor: Tensor, ranks: Tuple[str, ...]) -> Statement:
         """
         Partition the given tensor according to the stored program
         """
         part_ir = self.program.get_partitioning()
-        part_rank = part_ir.partition_rank(rank)
+        part_ranks = part_ir.partition_rank(ranks)
 
         # We will build a block with the partitioning code
         block = SBlock([])
 
-        if part_rank is None:
+        if part_ranks is None:
             return block
-
-        # TODO: allow for flattening
-        partitioning = part_ir.get_tensor_spec(
-            tensor.get_ranks(), {(part_rank,)})
 
         # Rename the variable
         next_tmp = AVar(self.trans_utils.next_tmp())
         old_name = tensor.tensor_name()
         block.add(SAssign(next_tmp, EVar(old_name)))
 
-        # Emit the partitioning code
-        i = tensor.get_ranks().index(rank)
-
-        first = True
-        # TODO: allow for flattening
-        root_name = part_ir.get_root_name(part_rank)
-        for j, part in enumerate(partitioning[(part_rank,)]):
-            if part.data == "nway_shape":
-                # If j != 0, then the rank we are partitioning is already in
-                # the part_rank space
-                if j == 0:
-                    block.add(self.__nway_shape(rank, part_rank, part, i))
-                else:
-                    block.add(self.__nway_shape(part_rank, part_rank, part, i))
-
-            elif part.data == "uniform_occupancy":
-                # The dynamic partitioning must be of the current top rank
-                if not first:
-                    break
-
-                part_num = len(partitioning[(part_rank,)]) - j
-                block.add(
-                    self.__uniform_occupancy(
-                        rank,
-                        part_rank,
-                        root_name +
-                        str(part_num),
-                        tensor,
-                        part))
-
-            elif part.data == "uniform_shape":
-                block.add(self.__uniform_shape(rank, part_rank, part, i + j))
-
-            else:
-                # Note: there is no good way to test this error. Bad
-                # partitioning styles should be caught by the
-                # Partitioning
-                raise ValueError(
-                    "Unknown partitioning style: " +
-                    part.data)  # pragma: no cover
-
-            first = False
-
-            # Finally, update the tensor with this partition
-            # TODO Support flattening
-            self.program.apply_partitioning(tensor, (rank,))
+        if len(ranks) > 1:
+            block.add(self.__apply_flatten(tensor, ranks))
+        else:
+            block.add(self.__apply_split(tensor, ranks[0], part_ranks[0]))
 
         # Rename the tensor
         part_name = AVar(tensor.tensor_name())
@@ -173,6 +127,102 @@ class Partitioner:
         tmp_name_expr = EVar(self.trans_utils.curr_tmp())
         block.add(SAssign(new_name, tmp_name_expr))
         block.add(TransUtils.build_set_rank_ids(tensor))
+
+        return block
+
+    def __apply_flatten(self, tensor: Tensor,
+                        ranks: Tuple[str, ...]) -> Statement:
+        """
+        Apply a flattening (as opposed to a split
+        """
+        part_ir = self.program.get_partitioning()
+
+        # Ensure that the ranks are in the correct order in the tensor
+        i = -1
+        for j, rank in enumerate(ranks):
+            if i == -1:
+                i = tensor.get_ranks().index(rank)
+
+            if tensor.get_ranks()[i + j] != rank:
+                raise ValueError("Cannot flatten together " +
+                                 str(ranks) +
+                                 " on tensor with ranks " +
+                                 str(tensor.get_ranks()))
+
+        # Build arguments
+        args = []
+        args.append(AParam("depth", EInt(i)))
+        args.append(AParam("levels", EInt(len(ranks) - 1)))
+        args.append(AParam("style", EString("tuple")))
+
+        # Build the call
+        curr_tmp = self.trans_utils.curr_tmp()
+        flat_call = EMethod(EVar(curr_tmp), "flattenRanks", args)
+        next_tmp = AVar(self.trans_utils.next_tmp())
+        assign = SAssign(next_tmp, flat_call)
+
+        self.program.apply_partitioning(tensor, ranks)
+        return assign
+
+    def __apply_split(
+            self,
+            tensor: Tensor,
+            rank: str,
+            part_rank: str) -> Statement:
+        """
+        Apply a split (as opposed to a flattening)
+        """
+        part_ir = self.program.get_partitioning()
+        block = SBlock([])
+
+        partitioning = part_ir.get_tensor_spec(
+            tensor.get_ranks(), {(part_rank,)})
+
+        # Emit the partitioning code
+        i = tensor.get_ranks().index(rank)
+
+        first = True
+        root_name = part_ir.get_root_name(part_rank)
+        for j, part in enumerate(partitioning[(part_rank,)]):
+            if part.data == "nway_shape":
+                # If j != 0, then the rank we are partitioning is already in
+                # the part_rank space
+                if j == 0:
+                    block.add(self.__nway_shape(rank, part_rank, part, i))
+                else:
+                    block.add(self.__nway_shape(part_rank, part_rank, part, i))
+
+            elif part.data == "uniform_occupancy":
+                # The dynamic partitioning must be of the current top rank
+                if not first:
+                    break
+
+                part_num = len(partitioning[(part_rank,)]) - j
+                block.add(
+                    self.__uniform_occupancy(
+                        rank,
+                        part_rank,
+                        root_name +
+                        str(part_num),
+                        tensor,
+                        part))
+
+            elif part.data == "uniform_shape":
+                block.add(self.__uniform_shape(rank, part_rank, part, i + j))
+
+            else:
+                # Note: there is no good way to test this error. Bad
+                # partitioning styles should be caught by the
+                # Partitioning
+                raise ValueError(
+                    "Unknown partitioning style: " +
+                    part.data)  # pragma: no cover
+
+            first = False
+
+            # Finally, update the tensor with this partition
+            # TODO Support flattening
+            self.program.apply_partitioning(tensor, (rank,))
 
         return block
 

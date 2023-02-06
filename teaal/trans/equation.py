@@ -429,7 +429,7 @@ class Equation:
         math = self.program.get_coord_math().get_trans(troot)
         sexpr = solve(math - Symbol(troot), Symbol(root))[0]
         for symbol in sexpr.atoms(Symbol):
-            new_rank = partitioning.partition_rank(str(symbol).upper())
+            new_rank = partitioning.partition_rank((str(symbol).upper(),))
             if new_rank:
                 sexpr = sexpr.subs(symbol, str(symbol) + "0")
 

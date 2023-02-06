@@ -430,20 +430,22 @@ class Partitioning:
         names.sort(key=lambda n: priorities[n])
         return names
 
-    def partition_rank(self, rank: str) -> Optional[str]:
+    def partition_rank(
+            self, ranks: Tuple[str, ...]) -> Optional[Tuple[str, ...]]:
         """
         Get the name of the corresponding partitioned rank, should one exist
         """
-        if self.is_flattened(rank):
-            if (rank,) in self.all_parts:
-                return rank
+        if len(ranks) > 1 or self.is_flattened(ranks[0]):
+            if ranks in self.all_parts:
+                return ranks
             return None
 
+        rank = ranks[0]
         part_ranks = self.__tensor_to_part_rank(rank, self.all_parts)
         if not part_ranks:
             return None
 
-        return Partitioning.__single_part_rank(rank, part_ranks)
+        return (Partitioning.__single_part_rank(rank, part_ranks),)
 
     def partition_ranks(
             self,

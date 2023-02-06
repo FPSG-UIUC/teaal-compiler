@@ -50,6 +50,7 @@ class Tensor:
         self.iter_ptr = 0
         self.rank_ptr = 0
         self.is_output = False
+        self.is_flat = False
 
     def fiber_name(self) -> str:
         """
@@ -67,6 +68,9 @@ class Tensor:
         """
         Construct a new Tensor from the current fiber
         """
+        if self.is_flat:
+            self.is_flat = self.rank_ptr == self.iter_ptr
+
         self.rank_ptr = self.iter_ptr
 
     def get_access(self) -> List[str]:
@@ -137,6 +141,7 @@ class Tensor:
         self.rank_ptr = 0
         self.ranks = self.init_ranks.copy()
         self.is_output = False
+        self.is_flat = False
 
     def root_name(self) -> str:
         """
@@ -155,20 +160,28 @@ class Tensor:
         Re-order the ranks of this tensor to match the given rank order
         """
         # TODO: Copy from rank_order to self.ranks
-        active = self.ranks[self.rank_ptr:]
-        self.ranks[self.rank_ptr:] = sorted(active, key=rank_order.index)
+        old_active = self.ranks[self.rank_ptr:]
+        new_active = sorted(old_active, key=rank_order.index)
+        self.ranks[self.rank_ptr:] = new_active
+
+        if self.is_flat:
+            self.is_flat = old_active == new_active
 
     def tensor_name(self) -> str:
         """
         Get the current name of the tensor
         """
-        return self.name + "_" + "".join(self.ranks[self.rank_ptr:])
+        tname = self.name + "_" + "".join(self.ranks[self.rank_ptr:])
+        if self.is_flat:
+            tname += "_flat"
+        return tname
 
     def update_ranks(self, ranks: List[str]) -> None:
         """
         Update the ranks with a new list of ranks
         Note: usually requried for partitioning
         """
+        self.is_flat = len(self.ranks) - self.rank_ptr > len(ranks)
         self.ranks = self.ranks[:self.rank_ptr] + ranks
 
     def __eq__(self, other: object) -> bool:
