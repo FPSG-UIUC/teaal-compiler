@@ -188,6 +188,11 @@ def test_tensor_name_flat():
     tensor.reset()
     assert tensor.tensor_name() == "A_MNO"
 
+    tensor = Tensor("Z", ["M", "N", "O"])
+    tensor.set_is_output(True)
+    tensor.update_ranks(["M", "NO"])
+    assert tensor.tensor_name() == ("Z_MNO")
+
 
 def test_eq():
     args = ("A", ["I", "J"])

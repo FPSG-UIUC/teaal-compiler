@@ -84,18 +84,47 @@ class Partitioner:
         """
         Unpartition the given tensor
         """
+        block = SBlock([])
+        part_ir = self.program.get_partitioning()
+
+        # First, undo swizzling
+        curr_name = tensor.tensor_name()
+
+        # Compute the transformations that the tensor goes through
+        tensor.reset()
+
+        # trans: List[Tuple[Union[str, Tuple[str, ...]], ???] = []
+        # old_ranks = None
+        # new_ranks = tensor.get_ranks()
+        # while old_ranks != new_ranks:
+        #     old_ranks = new_ranks
+        #     swizzled_ranks = part_ir.swizzle_for_flattening(new_ranks)
+        #     if swizzled_ranks != new_ranks:
+        #         trans.append(("swizzle", new_ranks))
+        #     tensor.swizzled_ranks(
+
+        #     valid_parts = part_ir.get_valid_parts(swizzled_ranks, part_ir.get_all_parts(), False)
+        #     for part in valid_parts:
+        #         trans.append((part, ???))
+
+        # To do this, we need to reset, and then re-apply partitioning, to get
+        # the unswizzled name
+        tensor.reset()
+        self.program.apply_all_partitioning(tensor)
+        part_name = tensor.tensor_name()
+
+        # Generate undo swizzle code if necessary
+        if curr_name != part_name:
+            block.add(TransUtils.build_swizzle(tensor, curr_name))
+
         # Get the tensor names
         part_name = tensor.tensor_name()
         tensor.reset()
-
-        # Get the partitioning
-        part_ir = self.program.get_partitioning()
 
         part_ranks = part_ir.get_all_parts()
         partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), part_ranks)
 
         # If there was no partitioning, there is nothing to undo
-        block = SBlock([])
         if not partitioning:
             return block
 
@@ -110,17 +139,9 @@ class Partitioner:
                 continue
 
             # Flatten the rank
-            curr_tmp = self.trans_utils.curr_tmp()
-            next_tmp = AVar(self.trans_utils.next_tmp())
-            arg1 = AParam("depth", EInt(i))
             # TODO: allow for flattening
-            arg2 = AParam("levels", EInt(len(partitioning[(rank,)])))
-            arg3 = AParam("coord_style", EString("absolute"))
-
-            flat_call = EMethod(
-                EVar(curr_tmp), "flattenRanks", [
-                    arg1, arg2, arg3])
-            block.add(SAssign(next_tmp, flat_call))
+            block.add(self.__build_flatten(
+                i, len(partitioning[(rank,)]), "absolute"))
 
         # Switch back to tensor name and rename the rank_ids
         new_name = AVar(tensor.tensor_name())
@@ -149,17 +170,7 @@ class Partitioner:
                                  " on tensor with ranks " +
                                  str(tensor.get_ranks()))
 
-        # Build arguments
-        args = []
-        args.append(AParam("depth", EInt(i)))
-        args.append(AParam("levels", EInt(len(ranks) - 1)))
-        args.append(AParam("style", EString("tuple")))
-
-        # Build the call
-        curr_tmp = self.trans_utils.curr_tmp()
-        flat_call = EMethod(EVar(curr_tmp), "flattenRanks", args)
-        next_tmp = AVar(self.trans_utils.next_tmp())
-        assign = SAssign(next_tmp, flat_call)
+        assign = self.__build_flatten(i, len(ranks) - 1, "tuple")
 
         self.program.apply_partitioning(tensor, ranks)
         return assign
@@ -221,10 +232,29 @@ class Partitioner:
             first = False
 
             # Finally, update the tensor with this partition
-            # TODO Support flattening
             self.program.apply_partitioning(tensor, (rank,))
 
         return block
+
+    def __build_flatten(
+            self,
+            depth: int,
+            levels: int,
+            style: str) -> Statement:
+        """
+        Build a call to the flattenRanks() function
+        """
+        # Build arguments
+        args = []
+        args.append(AParam("depth", EInt(depth)))
+        args.append(AParam("levels", EInt(levels)))
+        args.append(AParam("coord_style", EString(style)))
+
+        # Build the call
+        curr_tmp = self.trans_utils.curr_tmp()
+        flat_call = EMethod(EVar(curr_tmp), "flattenRanks", args)
+        next_tmp = AVar(self.trans_utils.next_tmp())
+        return SAssign(next_tmp, flat_call)
 
     def __build_halo(self, rank: str, part_rank: str) -> Expression:
         """

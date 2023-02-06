@@ -172,7 +172,7 @@ class Tensor:
         Get the current name of the tensor
         """
         tname = self.name + "_" + "".join(self.ranks[self.rank_ptr:])
-        if self.is_flat:
+        if self.is_flat and not self.is_output:
             tname += "_flat"
         return tname
 

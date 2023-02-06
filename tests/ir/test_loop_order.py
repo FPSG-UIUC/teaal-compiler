@@ -142,21 +142,13 @@ def test_apply():
     loop_order.apply(A)
     assert A.get_ranks() == ["K", "M", "N"]
 
-    A.update_ranks(
-        partitioning.partition_ranks(
-            A.get_ranks(),
-            {"K"},
-            False,
-            False))
+    A.update_ranks(partitioning.partition_ranks(
+        A.get_ranks(), {("K",)}, False, False))
     loop_order.apply(A)
     assert A.get_ranks() == ["K2", "M", "K1I", "N"]
 
-    A.update_ranks(
-        partitioning.partition_ranks(
-            A.get_ranks(),
-            {"K1I"},
-            False,
-            False))
+    A.update_ranks(partitioning.partition_ranks(
+        A.get_ranks(), {("K1I",)}, False, False))
     loop_order.apply(A)
     assert A.get_ranks() == order
 
@@ -183,7 +175,7 @@ def test_apply_flatten():
     A.update_ranks(
         partitioning.partition_ranks(
             A.get_ranks(),
-            {"K"},
+            {("K",)},
             False,
             False))
     loop_order.apply(A)
@@ -192,15 +184,14 @@ def test_apply_flatten():
     A.update_ranks(partitioning.swizzle_for_flattening(A.get_ranks()))
     A.update_ranks(
         partitioning.partition_ranks(
-            A.get_ranks(), {
-                "M", "K0"}, False, False))
+            A.get_ranks(), {("M", "K0")}, False, False))
     loop_order.apply(A)
     assert A.get_ranks() == ["K1", "MK0"]
 
     A.update_ranks(
         partitioning.partition_ranks(
             A.get_ranks(),
-            {"MK0"},
+            {("MK0",)},
             False,
             False))
     loop_order.apply(A)

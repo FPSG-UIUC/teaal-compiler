@@ -298,7 +298,7 @@ class FlowGraph:
         # Partition the output
         part = self.program.get_partitioning()
         ranks = part.partition_ranks(
-            tensor.get_ranks(), tensor.get_ranks(), True, True)
+            tensor.get_ranks(), part.get_all_parts(), True, True)
         tensor.update_ranks(ranks)
         self.program.get_loop_order().apply(tensor)
 

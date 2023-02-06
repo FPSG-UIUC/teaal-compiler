@@ -450,31 +450,23 @@ class Partitioning:
     def partition_ranks(
             self,
             tensor_ranks: List[str],
-            partitionable_ranks: Iterable[str],
+            allowed_parts: Iterable[Tuple[str, ...]],
             all_levels: bool,
             allow_swizzle: bool) -> List[str]:
         """
         Partition a tensor across all relevant partitionable ranks
         """
         tensor_ranks = tensor_ranks.copy()
-        allowed_ranks = [rank for rank in partitionable_ranks]
 
-        allowed_parts = [
-            part for part in self.all_parts if all(
-                rank in allowed_ranks for rank in part)]
         used_parts = self.__used_parts(
             tensor_ranks, allowed_parts, allow_swizzle)
         while used_parts:
             for part_ranks in used_parts:
                 self.__update_ranks(part_ranks, tensor_ranks, all_levels)
-                self.__update_ranks(part_ranks, allowed_ranks, all_levels)
 
             if not all_levels:
                 break
 
-            allowed_parts = [
-                part for part in self.all_parts if all(
-                    rank in allowed_ranks for rank in part)]
             used_parts = self.__used_parts(
                 tensor_ranks, allowed_parts, allow_swizzle)
 

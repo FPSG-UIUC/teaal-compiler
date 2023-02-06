@@ -149,7 +149,7 @@ class LoopOrder:
 
         unpartitioned_loop_order = self.__default_loop_order_unpartitioned()
         loop_order = self.partitioning.partition_ranks(
-            unpartitioned_loop_order, unpartitioned_loop_order, True, True)
+            unpartitioned_loop_order, self.partitioning.get_all_parts(), True, True)
         return loop_order
 
     def __default_loop_order_unpartitioned(self) -> List[str]:

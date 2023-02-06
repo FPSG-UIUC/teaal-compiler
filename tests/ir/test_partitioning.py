@@ -17,7 +17,8 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)
+                  : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -861,7 +862,8 @@ def test_partition_ranks_all():
     partitioning = build_partitioning(parts)
 
     ranks = ["M", "N", "K"]
-    new_ranks = partitioning.partition_ranks(ranks, ranks, True, False)
+    new_ranks = partitioning.partition_ranks(
+        ranks, partitioning.get_all_parts(), True, False)
 
     assert new_ranks == ["M1", "M0", "N", "K2", "K1", "K0"]
 
@@ -874,10 +876,12 @@ def test_partition_ranks_dyn():
     ranks = ["M", "N", "K"]
     partitioning = build_partitioning(parts)
 
-    new_ranks = partitioning.partition_ranks(ranks, ranks, False, False)
+    new_ranks = partitioning.partition_ranks(
+        ranks, partitioning.get_all_parts(), False, False)
     assert new_ranks == ["M2", "M1I", "N", "K2", "K1", "K0"]
 
-    new_ranks = partitioning.partition_ranks(new_ranks, {"M1I"}, False, False)
+    new_ranks = partitioning.partition_ranks(
+        new_ranks, {("M1I",)}, False, False)
     assert new_ranks == ["M2", "M1", "M0", "N", "K2", "K1", "K0"]
 
 
@@ -891,23 +895,23 @@ def test_partition_ranks_flattening():
     ranks = ["M", "K", "N"]
 
     new_ranks = partitioning.partition_ranks(
-        ranks, sorted(ranks), False, False)
+        ranks, partitioning.get_all_parts(), False, False)
     assert new_ranks == ["M", "K1", "K0", "N"]
 
     assert partitioning.partition_ranks(
-        new_ranks, sorted(new_ranks), False, False) == new_ranks
+        new_ranks, partitioning.get_all_parts(), False, False) == new_ranks
 
     new_ranks = partitioning.partition_ranks(
-        new_ranks, sorted(new_ranks), False, True)
+        new_ranks, partitioning.get_all_parts(), False, True)
     assert new_ranks == ["K1", "N", "MK0"]
 
     test_ranks = ["K1", "M", "K0", "N"]
     new_ranks = partitioning.partition_ranks(
-        test_ranks, sorted(test_ranks), False, False)
+        test_ranks, partitioning.get_all_parts(), False, False)
     assert new_ranks == ["K1", "MK0", "N"]
 
     new_ranks = partitioning.partition_ranks(
-        new_ranks, sorted(new_ranks), False, False)
+        new_ranks, partitioning.get_all_parts(), False, False)
     assert new_ranks == ["K1", "MK01", "MK00", "N"]
 
 
@@ -921,14 +925,16 @@ def test_partition_ranks_flattening_all():
     ranks = ["K", "M", "N"]
 
     new_ranks = partitioning.partition_ranks(
-        ranks, sorted(ranks), False, False)
+        ranks, partitioning.get_all_parts(), False, False)
     assert new_ranks == ["K1", "K0", "M", "N"]
 
-    new_ranks = partitioning.partition_ranks(ranks, sorted(ranks), True, False)
+    new_ranks = partitioning.partition_ranks(
+        ranks, partitioning.get_all_parts(), True, False)
     assert new_ranks == ["K1", "K0M1", "K0M0", "N"]
 
     ranks = ["M", "K", "N"]
-    new_ranks = partitioning.partition_ranks(ranks, sorted(ranks), True, True)
+    new_ranks = partitioning.partition_ranks(
+        ranks, partitioning.get_all_parts(), True, True)
     assert new_ranks == ["K1", "N", "K0M1", "K0M0"]
 
 
@@ -939,13 +945,14 @@ def test_partition_ranks_conv():
     partitioning = build_partitioning_conv(parts)
     ranks = ["W"]
 
-    new_ranks = partitioning.partition_ranks(ranks, ["W"], True, False)
+    new_ranks = partitioning.partition_ranks(ranks, {("W",)}, True, False)
     assert new_ranks == ["Q2", "Q1", "W0"]
 
-    new_ranks = partitioning.partition_ranks(ranks, ["W"], False, False)
+    new_ranks = partitioning.partition_ranks(ranks, {("W",)}, False, False)
     assert new_ranks == ["Q2", "W1I"]
 
-    new_ranks = partitioning.partition_ranks(new_ranks, ["W1I"], False, False)
+    new_ranks = partitioning.partition_ranks(
+        new_ranks, {("W1I",)}, False, False)
     assert new_ranks == ["Q2", "Q1", "W0"]
 
 

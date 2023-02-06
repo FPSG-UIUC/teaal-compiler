@@ -49,19 +49,6 @@ class Footer:
         footer = SBlock([])
         output = program.get_output()
 
-        # First, undo swizzling
-        curr_name = output.tensor_name()
-
-        # To do this, we need to reset, and then re-apply partitioning, to get
-        # the unswizzled name
-        output.reset()
-        program.apply_all_partitioning(output)
-        part_name = output.tensor_name()
-
-        # Generate undo swizzle code if necessary
-        if curr_name != part_name:
-            footer.add(TransUtils.build_swizzle(output, curr_name))
-
         footer.add(partitioner.unpartition(output))
 
         # After resetting the output tensor, make sure that it still knows that

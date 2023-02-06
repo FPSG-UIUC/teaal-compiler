@@ -112,7 +112,7 @@ def test_flatten():
     """
     program, partitioner = build_partitioner_copy(spec)
     hifiber = "tmp0 = A_MNOPQ\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=1, levels=2, style=\"tuple\")\n" + \
+        "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"tuple\")\n" + \
         "A_MNOPQ_flat = tmp1\n" + \
         "A_MNOPQ_flat.setRankIds(rank_ids=[\"M\", \"NOP\", \"Q\"])"
 
@@ -374,3 +374,24 @@ def test_unpartition_all():
         "Z_MN = tmp2\n" + \
         "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
     assert_unpartition(spec, hifiber)
+
+
+def test_unswizzle_unpartition():
+    spec = """
+                M: [uniform_shape(5)]
+                N: [uniform_shape(6), uniform_shape(3)]
+        loop-order:
+            Z: [M1, N2, K, N1, M0, N0]
+    """
+    program, partitioner = build_partitioner(spec)
+
+    output = program.get_tensor("Z")
+    program.apply_all_partitioning(output)
+    program.get_loop_order().apply(output)
+
+    hifiber = "Z_M1M0N2N1N0 = Z_M1N2N1M0N0.swizzleRanks([\"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
+        "tmp0 = Z_M1M0N2N1N0\n" + \
+        "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "Z_MN = tmp2\n" + \
+        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
