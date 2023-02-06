@@ -70,7 +70,7 @@ class IterationGraph:
 
         return self.loop_order[self.pos], tensors
 
-    def peek_discord(self) -> List[Tuple[Tuple[str, ...], Tensor]]:
+    def peek_discord(self) -> List[Tuple[List[str], Tensor]]:
         """
         Peek at the tensors that need to be accessed discordantly
         """
@@ -89,8 +89,7 @@ class IterationGraph:
             if lower_rank.upper() in self.avail[self.pos - 1]:
                 tensors.append(tensor)
 
-        print(self.pos, self.avail[self.pos - 1], tensors)
-
+        # Collect the information about which ranks need to be popped
         info = []
         for tensor in tensors:
             ranks = []
@@ -100,7 +99,7 @@ class IterationGraph:
                 else:
                     break
 
-            info.append((tuple(ranks), tensor))
+            info.append((ranks, tensor))
 
         return info
 
@@ -118,6 +117,18 @@ class IterationGraph:
         self.pos += 1
 
         return rank, tensors
+
+    def pop_discord(self) -> List[Tuple[List[str], Tensor]]:
+        """
+        Pop the relevant discordant accesses off the graph
+        """
+        info = self.peek_discord()
+
+        for ranks, tensor in info:
+            for _ in range(len(ranks)):
+                tensor.pop()
+
+        return info
 
     def __ready(self, tensor: Tensor) -> bool:
         """

@@ -17,8 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)
-                  : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -675,11 +674,20 @@ def test_get_valid_partitionings():
                 N: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
     """
     partitioning = build_partitioning(all_parts)
+    parts = partitioning.get_all_parts()
 
-    assert set(partitioning.get_valid_parts(["K", "N"], False)) == {
+    assert set(partitioning.get_valid_parts(["K", "N"], parts, False)) == {
         ("K",), ("N",), ("N1I",)}
-    assert set(partitioning.get_valid_parts(["K", "N"], True)) == {
+    assert set(partitioning.get_valid_parts(["K", "N"], parts, True)) == {
         ("K",), ("N",), ("N1I",)}
+
+    parts = partitioning.get_static_parts()
+    assert set(partitioning.get_valid_parts(
+        ["K", "N"], parts, False)) == {("K",)}
+
+    parts = partitioning.get_dyn_parts()
+    assert set(partitioning.get_valid_parts(
+        ["K", "N"], parts, False)) == {("N",), ("N1I",)}
 
 
 def test_get_valid_partitionings_flattening():
@@ -689,9 +697,11 @@ def test_get_valid_partitionings_flattening():
                 MK0: [uniform_occupancy(A.5)]
     """
     partitioning = build_partitioning(all_parts)
+    parts = partitioning.get_all_parts()
 
-    assert set(partitioning.get_valid_parts(["K", "M"], False)) == {("K",)}
-    assert set(partitioning.get_valid_parts(["K", "M"], True)) == {
+    assert set(partitioning.get_valid_parts(
+        ["K", "M"], parts, False)) == {("K",)}
+    assert set(partitioning.get_valid_parts(["K", "M"], parts, True)) == {
         ("K",), ("M", "K0"), ("MK0",)}
 
 
@@ -701,9 +711,10 @@ def test_get_valid_partitionings_conv():
                 Q: [uniform_shape(5)]
     """
     partitioning = build_partitioning_conv(all_parts)
+    parts = partitioning.get_all_parts()
 
-    assert set(partitioning.get_valid_parts(["W"], False)) == {("W",)}
-    assert set(partitioning.get_valid_parts(["W"], True)) == {("W",)}
+    assert set(partitioning.get_valid_parts(["W"], parts, False)) == {("W",)}
+    assert set(partitioning.get_valid_parts(["W"], parts, True)) == {("W",)}
 
 
 def test_is_flattened():

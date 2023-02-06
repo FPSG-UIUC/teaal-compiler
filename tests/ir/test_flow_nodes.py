@@ -29,6 +29,13 @@ def test_from_fiber_node():
     assert FromFiberNode("A", "K").get_rank() == "K"
 
 
+def test_get_payload_node():
+    assert repr(GetPayloadNode("A", ["K"])) == "(GetPayloadNode, A, ['K'])"
+
+    assert GetPayloadNode("A", ["K"]).get_tensor() == "A"
+    assert GetPayloadNode("A", ["K"]).get_ranks() == ["K"]
+
+
 def test_get_root_node():
     assert repr(GetRootNode("A", ["K"])) == "(GetRootNode, A, ['K'])"
 

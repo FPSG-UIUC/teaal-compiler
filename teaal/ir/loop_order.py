@@ -24,6 +24,8 @@ SOFTWARE.
 Intermediate representation of the loop order information
 """
 
+from itertools import chain
+
 from lark.tree import Tree
 from sympy import Basic, Symbol
 from typing import Any, cast, Iterable, List, Optional
@@ -83,14 +85,14 @@ class LoopOrder:
             final_ids.append(self.partitioning.get_final_rank_id(tensor, rank))
 
         # Order the current rank ids based on their final posititon
-        order = self.ranks.copy()
-        for i in range(len(self.ranks)):
-            for j, rank in enumerate(tensor.get_ranks()):
-
-                if self.is_ready(final_ids[j], i):
-                    order[i] = rank
+        expanded: List[List[str]] = [[] for _ in range(len(self.ranks))]
+        for i, rank in enumerate(tensor.get_ranks()):
+            for j in range(len(self.ranks)):
+                if self.is_ready(final_ids[i], j):
+                    expanded[j].append(rank)
                     break
 
+        order = list(chain.from_iterable(expanded))
         tensor.swizzle(cast(List[Optional[str]], order))
 
     def get_ranks(self) -> List[str]:

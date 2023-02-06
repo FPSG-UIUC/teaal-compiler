@@ -164,7 +164,7 @@ def test_peek_discord_flatten():
     assert graph.peek_discord() == []
 
     graph.pop_concord()
-    assert graph.peek_discord() == [(("M",), Z), (("K0",), B)]
+    assert graph.peek_discord() == [(["M"], Z), (["K0"], B)]
 
 
 def test_pop_default():
@@ -314,3 +314,83 @@ def test_peek_pop_coord_math():
     assert graph.pop_concord() == ("Q", [O, F])
 
     assert graph.peek_concord() == (None, [O, I, F])
+
+
+def test_pop_discord_none():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    for tensor in program.get_tensors():
+        program.get_loop_order().apply(tensor)
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+
+def test_pop_discord_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [J, K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(J, K).(A[k, m] * B[j, k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00, J]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    # Apply the partitioning
+    A = program.get_tensor("A")
+    program.apply_all_partitioning(A)
+    program.apply_partition_swizzling(A)
+    program.apply_all_partitioning(A)
+    program.get_loop_order().apply(A)
+
+    B = program.get_tensor("B")
+    program.apply_all_partitioning(B)
+    program.get_loop_order().apply(B)
+
+    Z = program.get_tensor("Z")
+    program.get_loop_order().apply(Z)
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert Z.peek_rest() == ["M"]
+    assert B.peek_rest() == ["K0", "J"]
+    assert graph.pop_discord() == [(["M"], Z), (["K0"], B)]
+    assert Z.peek_rest() == []
+    assert B.peek_rest() == ["J"]

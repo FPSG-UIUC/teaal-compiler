@@ -352,8 +352,8 @@ class Partitioning:
 
         return partitioning
 
-    def get_valid_parts(
-            self, ranks: List[str], allow_swizzle: bool) -> Iterable[Tuple[str, ...]]:
+    def get_valid_parts(self, ranks: List[str], parts: Iterable[Tuple[str, ...]],
+                        allow_swizzle: bool) -> Iterable[Tuple[str, ...]]:
         """
         Get the valid partitionings for a given set of ranks
 
@@ -361,14 +361,14 @@ class Partitioning:
         """
         ranks = ranks.copy()
         used_parts: List[Tuple[str, ...]] = []
-        new_parts = self.__used_parts(ranks, self.all_parts, allow_swizzle)
+        new_parts = self.__used_parts(ranks, parts, allow_swizzle)
 
         while new_parts:
             used_parts.extend(new_parts)
             for part in new_parts:
                 self.__update_ranks(part, ranks, False)
 
-            new_parts = self.__used_parts(ranks, self.all_parts, allow_swizzle)
+            new_parts = self.__used_parts(ranks, parts, allow_swizzle)
 
         return used_parts
 

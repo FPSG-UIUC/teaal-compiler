@@ -150,11 +150,13 @@ class Tensor:
         """
         self.is_output = is_output
 
-    def swizzle(self, loop_order: List[Optional[str]]) -> None:
+    def swizzle(self, rank_order: List[Optional[str]]) -> None:
         """
-        Re-order the ranks of this tensor to match the given loop order
+        Re-order the ranks of this tensor to match the given rank order
         """
-        self.ranks.sort(key=loop_order.index)
+        # TODO: Copy from rank_order to self.ranks
+        active = self.ranks[self.rank_ptr:]
+        self.ranks[self.rank_ptr:] = sorted(active, key=rank_order.index)
 
     def tensor_name(self) -> str:
         """

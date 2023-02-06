@@ -161,6 +161,52 @@ def test_apply():
     assert A.get_ranks() == order
 
 
+def test_apply_flatten():
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    order = ["K1", "MK01", "N", "MK00"]
+
+    loop_order = build_loop_order()
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(order, partitioning)
+
+    A = Tensor("A", ["M", "K"])
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K", "M"]
+
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(),
+            {"K"},
+            False,
+            False))
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K1", "K0", "M"]
+
+    A.update_ranks(partitioning.swizzle_for_flattening(A.get_ranks()))
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(), {
+                "M", "K0"}, False, False))
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K1", "MK0"]
+
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(),
+            {"MK0"},
+            False,
+            False))
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K1", "MK01", "MK00"]
+
+
 def test_apply_conv():
     loop_order = build_loop_order_conv()
     partitioning = build_partitioning_conv("")

@@ -447,6 +447,87 @@ def test_graph_mixed_parts():
     assert nx.is_isomorphic(graph, corr)
 
 
+def test_graph_static_flattening():
+    mapping = """
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+    program = build_program_matmul(mapping)
+    graph = FlowGraph(program, None, []).get_graph()
+
+    corr = nx.DiGraph()
+
+    corr.add_edge(LoopNode("K1"), LoopNode("MK01"))
+    corr.add_edge(LoopNode("K1"), FromFiberNode("A", "MK0"))
+    corr.add_edge(LoopNode("K1"), LoopNode("N"))
+    corr.add_edge(LoopNode("MK01"), LoopNode("N"))
+    corr.add_edge(LoopNode("MK01"), LoopNode("MK00"))
+    corr.add_edge(LoopNode("N"), LoopNode("MK00"))
+    corr.add_edge(LoopNode("N"), GetPayloadNode("Z", ['M']))
+    corr.add_edge(LoopNode("N"), GetPayloadNode("B", ['K0']))
+    corr.add_edge(LoopNode("MK00"), OtherNode("Body"))
+    corr.add_edge(LoopNode("MK00"), GetPayloadNode("Z", ['M']))
+    corr.add_edge(LoopNode("MK00"), GetPayloadNode("B", ['K0']))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("K1"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), GetRootNode("Z", ['N', 'M']))
+    corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
+    corr.add_edge(GetRootNode("Z", ['N', 'M']), LoopNode("N"))
+    corr.add_edge(PartNode("A", ('K',)), OtherNode("Graphics"))
+    corr.add_edge(
+        PartNode(
+            "A", ('K',)), SwizzleNode(
+            "A", [
+                'M', 'K0'], "partitioning"))
+    corr.add_edge(
+        PartNode(
+            "A", ('K',)), SwizzleNode(
+            "A", [
+                'K1', 'MK0'], "loop-order"))
+    corr.add_edge(
+        SwizzleNode(
+            "A", [
+                'M', 'K0'], "partitioning"), PartNode(
+            "A", ('M', 'K0')))
+    corr.add_edge(PartNode("A", ('M', 'K0')), OtherNode("Graphics"))
+    corr.add_edge(PartNode("A", ('M', 'K0')), PartNode("A", ('MK0',)))
+    corr.add_edge(
+        PartNode(
+            "A", ('M', 'K0')), SwizzleNode(
+            "A", [
+                'K1', 'MK0'], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "A", ('MK0',)), SwizzleNode(
+            "A", [
+                'MK01', 'MK00'], "loop-order"))
+    corr.add_edge(SwizzleNode(
+        "A", ['K1', 'MK0'], "loop-order"), GetRootNode("A", ['K1', 'MK0']))
+    corr.add_edge(GetRootNode("A", ['K1', 'MK0']), LoopNode("K1"))
+    corr.add_edge(PartNode("B", ('K',)), OtherNode("Graphics"))
+    corr.add_edge(
+        PartNode(
+            "B", ('K',)), SwizzleNode(
+            "B", [
+                'K1', 'N', 'K0'], "loop-order"))
+    corr.add_edge(SwizzleNode(
+        "B", ['K1', 'N', 'K0'], "loop-order"), GetRootNode("B", ['K1', 'N', 'K0']))
+    corr.add_edge(GetRootNode("B", ['K1', 'N', 'K0']), LoopNode("K1"))
+    corr.add_edge(FromFiberNode("A", "MK0"), PartNode("A", ('MK0',)))
+    corr.add_edge(SwizzleNode(
+        "A", ['MK01', 'MK00'], "loop-order"), GetRootNode("A", ['MK01', 'MK00']))
+    corr.add_edge(GetRootNode("A", ['MK01', 'MK00']), LoopNode("MK01"))
+    corr.add_edge(GetPayloadNode("Z", ['M']), OtherNode("Body"))
+    corr.add_edge(GetPayloadNode("B", ['K0']), OtherNode("Body"))
+
+    assert nx.is_isomorphic(graph, corr)
+
+
 def test_graph_conv():
     spec = """
         loop-order:

@@ -149,6 +149,37 @@ class FromFiberNode(Node):
         return self.tensor, self.rank
 
 
+class GetPayloadNode(Node):
+    """
+    A Node that represents a getPayload(Ref) call
+    """
+
+    def __init__(self, tensor: str, ranks: List[str]) -> None:
+        """
+        Construct a getPayload(Ref) node
+        """
+        self.tensor = tensor
+        self.ranks = ranks
+
+    def get_ranks(self) -> List[str]:
+        """
+        Accessor for the ranks
+        """
+        return self.ranks
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a GetPayloadNode
+        """
+        return self.tensor, self.ranks
+
+
 class GetRootNode(Node):
     """
     A Node representing a getRoot call
