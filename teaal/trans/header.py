@@ -90,7 +90,7 @@ class Header:
         if old_name == new_name:
             return SBlock([])
         else:
-            return TransUtils.build_swizzle(tensor, old_name)
+            return TransUtils.build_swizzle(tensor, old_name, new_name)
 
     @staticmethod
     def make_tensor_from_fiber(tensor: Tensor) -> Statement:

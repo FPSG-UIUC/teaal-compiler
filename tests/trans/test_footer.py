@@ -8,7 +8,7 @@ from teaal.trans.partitioner import Partitioner
 from teaal.trans.utils import TransUtils
 
 
-def assert_make_footer(loop_order, partitioning, display, hifiber):
+def assert_make_footer(loop_order, partitioning, display, hifiber_options):
     yaml = """
     einsum:
         declaration:
@@ -35,21 +35,21 @@ def assert_make_footer(loop_order, partitioning, display, hifiber):
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
-    assert Footer.make_footer(
-        program,
-        graphics,
-        Partitioner(program, TransUtils())).gen(
-        depth=0) == hifiber
+    hifiber = Footer.make_footer(
+        program, graphics, Partitioner(
+            program, TransUtils())).gen(
+        depth=0)
+    assert hifiber in hifiber_options
 
     return program
 
 
 def test_make_footer_default():
-    assert_make_footer("", "", "", "")
+    assert_make_footer("", "", "", [""])
 
 
 def test_output_still_output():
-    program = assert_make_footer("", "", "", "")
+    program = assert_make_footer("", "", "", [""])
     output = program.get_output()
 
     desired = Tensor("Z", ["M", "N"])
@@ -60,8 +60,10 @@ def test_output_still_output():
 
 def test_make_footer_swizzle():
     loop_order = "[K, N, M]"
-    hifiber = "Z_MN = Z_NM.swizzleRanks(rank_ids=[\"M\", \"N\"])"
-    assert_make_footer(loop_order, "", "", hifiber)
+    hifiber = "tmp0 = Z_NM\n" + \
+        "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp1"
+    assert_make_footer(loop_order, "", "", [hifiber])
 
 
 def test_make_footer_partitioned():
@@ -69,12 +71,17 @@ def test_make_footer_partitioned():
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
-    hifiber = "tmp0 = Z_M1M0N2N1N0\n" + \
+    hifiber_option1 = "tmp0 = Z_M1M0N2N1N0\n" + \
+        "tmp1 = tmp0.flattenRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp2"
+    hifiber_option2 = "tmp0 = Z_M1M0N2N1N0\n" + \
         "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-        "Z_MN = tmp2\n" + \
-        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
-    assert_make_footer("", part, "", hifiber)
+        "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp2"
+    assert_make_footer("", part, "", [hifiber_option1, hifiber_option2])
 
 
 def test_make_footer_display():
@@ -84,7 +91,7 @@ def test_make_footer_display():
                 time: [K.pos, M.coord]
     """
     hifiber = "displayCanvas(canvas)"
-    assert_make_footer("", "", display, hifiber)
+    assert_make_footer("", "", display, [hifiber])
 
 
 def test_make_footer_all():
@@ -97,10 +104,10 @@ def test_make_footer_all():
                 space: [N2, N1]
                 time: [K, M, N0]
     """
-    hifiber = "Z_MN2N1N0 = Z_N2N1MN0.swizzleRanks(rank_ids=[\"M\", \"N2\", \"N1\", \"N0\"])\n" + \
-        "tmp0 = Z_MN2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-        "Z_MN = tmp1\n" + \
-        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+    hifiber = "tmp0 = Z_N2N1MN0\n" + \
+        "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N2\", \"N1\", \"N0\"])\n" + \
+        "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp2\n" + \
         "displayCanvas(canvas)"
-    assert_make_footer(loop_order, part, display, hifiber)
+    assert_make_footer(loop_order, part, display, [hifiber])

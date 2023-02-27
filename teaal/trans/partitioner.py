@@ -25,7 +25,7 @@ Translate the partitiong specification
 """
 from lark.tree import Tree
 from sympy import Symbol
-from typing import List, Set
+from typing import cast, List, Optional, Set, Tuple, Union
 
 from teaal.hifiber import *
 from teaal.ir.program import Program
@@ -71,12 +71,12 @@ class Partitioner:
             block.add(self.__apply_split(tensor, ranks[0], part_ranks[0]))
 
         # Rename the tensor
-        part_name = AVar(tensor.tensor_name())
+        part_name = tensor.tensor_name()
         tmp_expr = EVar(self.trans_utils.curr_tmp())
-        block.add(SAssign(part_name, tmp_expr))
+        block.add(SAssign(AVar(part_name), tmp_expr))
 
         # Rename the rank_ids
-        block.add(TransUtils.build_set_rank_ids(tensor))
+        block.add(TransUtils.build_set_rank_ids(tensor, part_name))
 
         return block
 
@@ -89,66 +89,91 @@ class Partitioner:
 
         # First, undo swizzling
         curr_name = tensor.tensor_name()
+        curr_ranks = tensor.get_ranks()
 
         # Compute the transformations that the tensor goes through
         tensor.reset()
+        tensor.set_is_output(True)
 
-        # trans: List[Tuple[Union[str, Tuple[str, ...]], ???] = []
-        # old_ranks = None
-        # new_ranks = tensor.get_ranks()
-        # while old_ranks != new_ranks:
-        #     old_ranks = new_ranks
-        #     swizzled_ranks = part_ir.swizzle_for_flattening(new_ranks)
-        #     if swizzled_ranks != new_ranks:
-        #         trans.append(("swizzle", new_ranks))
-        #     tensor.swizzled_ranks(
+        # Build a list of the transformations that the tensor will go through
+        trans: List[Tuple[Union[str, Tuple[str, ...]], List[str]]] = []
+        old_ranks = None
+        new_ranks = tensor.get_ranks()
+        while old_ranks != new_ranks:
+            old_ranks = new_ranks
+            swizzled_ranks = part_ir.swizzle_for_flattening(new_ranks)
+            if swizzled_ranks != new_ranks:
+                trans.append(("swizzle", new_ranks))
+            tensor.swizzle(swizzled_ranks)
 
-        #     valid_parts = part_ir.get_valid_parts(swizzled_ranks, part_ir.get_all_parts(), False)
-        #     for part in valid_parts:
-        #         trans.append((part, ???))
+            valid_parts = part_ir.get_valid_parts(
+                swizzled_ranks, part_ir.get_all_parts(), False)
+            for part in valid_parts:
+                trans.append((part, tensor.get_ranks()))
+                tensor.update_ranks(
+                    part_ir.partition_ranks(
+                        tensor.get_ranks(), {part}, False, False))
 
-        # To do this, we need to reset, and then re-apply partitioning, to get
-        # the unswizzled name
-        tensor.reset()
-        self.program.apply_all_partitioning(tensor)
-        part_name = tensor.tensor_name()
+            new_ranks = tensor.get_ranks()
 
-        # Generate undo swizzle code if necessary
-        if curr_name != part_name:
-            block.add(TransUtils.build_swizzle(tensor, curr_name))
+        # Undo the loop-order swizzle
+        if curr_ranks != new_ranks:
+            trans.append(("swizzle", new_ranks))
 
-        # Get the tensor names
-        part_name = tensor.tensor_name()
-        tensor.reset()
-
-        part_ranks = part_ir.get_all_parts()
-        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), part_ranks)
-
-        # If there was no partitioning, there is nothing to undo
-        if not partitioning:
+        # Return if there is nothing to do
+        if not trans:
             return block
 
-        # Switch to name tmp
-        next_tmp = AVar(self.trans_utils.next_tmp())
-        block.add(SAssign(next_tmp, EVar(part_name)))
+        # Start the temporary
+        next_tmp = self.trans_utils.next_tmp()
+        block.add(SAssign(AVar(next_tmp), EVar(curr_name)))
 
-        # For each rank
-        for i, rank in enumerate(tensor.get_ranks()):
-            # TODO allow for flattened ranks
-            if (rank,) not in partitioning.keys():
-                continue
+        rename_ranks = False
+        for info, ranks in reversed(trans):
+            curr_tmp = next_tmp
 
-            # Flatten the rank
-            # TODO: allow for flattening
-            block.add(self.__build_flatten(
-                i, len(partitioning[(rank,)]), "absolute"))
+            if isinstance(info, tuple):
+                # Undo split with flatten
+                if len(info) == 1:
+                    block.add(
+                        self.__build_flatten(
+                            ranks.index(
+                                info[0]), len(
+                                part_ir.get_part_spec(info)), "absolute"))
+                    next_tmp = self.trans_utils.curr_tmp()
 
-        # Switch back to tensor name and rename the rank_ids
-        new_name = AVar(tensor.tensor_name())
-        tmp_name_expr = EVar(self.trans_utils.curr_tmp())
-        block.add(SAssign(new_name, tmp_name_expr))
-        block.add(TransUtils.build_set_rank_ids(tensor))
+                # Otherwise unflatten
+                else:
+                    next_tmp = self.trans_utils.next_tmp()
 
+                    # Build arguments
+                    args = []
+                    args.append(AParam("depth", EInt(ranks.index(info[0]))))
+                    args.append(AParam("levels", EInt(len(info) - 1)))
+
+                    # Build the call
+                    call = EMethod(EVar(curr_tmp), "unflattenRanks", args)
+                    block.add(SAssign(AVar(next_tmp), call))
+
+                tensor.update_ranks(ranks)
+                rename_ranks = True
+
+            # Otherwise, we have a swizzle
+            else:
+                # First ensure the ranks have the correct name
+                next_tmp = self.trans_utils.next_tmp()
+                if rename_ranks:
+                    block.add(TransUtils.build_set_rank_ids(tensor, curr_tmp))
+                    rename_ranks = False
+
+                tensor.swizzle(cast(List[Optional[str]], ranks))
+                block.add(TransUtils.build_swizzle(tensor, curr_tmp, next_tmp))
+
+        if rename_ranks:
+            block.add(TransUtils.build_set_rank_ids(tensor, next_tmp))
+
+        # Copy the tensor back
+        block.add(SAssign(AVar(tensor.tensor_name()), EVar(next_tmp)))
         return block
 
     def __apply_flatten(self, tensor: Tensor,
@@ -186,15 +211,14 @@ class Partitioner:
         part_ir = self.program.get_partitioning()
         block = SBlock([])
 
-        partitioning = part_ir.get_tensor_spec(
-            tensor.get_ranks(), {(part_rank,)})
+        partitioning = part_ir.get_part_spec((part_rank,))
 
         # Emit the partitioning code
         i = tensor.get_ranks().index(rank)
 
         first = True
         root_name = part_ir.get_root_name(part_rank)
-        for j, part in enumerate(partitioning[(part_rank,)]):
+        for j, part in enumerate(partitioning):
             if part.data == "nway_shape":
                 # If j != 0, then the rank we are partitioning is already in
                 # the part_rank space
@@ -208,7 +232,7 @@ class Partitioner:
                 if not first:
                     break
 
-                part_num = len(partitioning[(part_rank,)]) - j
+                part_num = len(partitioning) - j
                 block.add(
                     self.__uniform_occupancy(
                         rank,

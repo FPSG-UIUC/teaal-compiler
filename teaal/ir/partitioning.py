@@ -291,73 +291,45 @@ class Partitioning:
 
         return None
 
-    def get_tensor_spec(self, tensor_ranks: Iterable[str],
-                        part_ranks: Iterable[Tuple[str, ...]]) -> Dict[Tuple[str, ...], List[Tree]]:
+    def get_part_spec(self, part: Tuple[str, ...]) -> List[Tree]:
         """
-        Get the partitioning for a specific tensor's ranks
+        Get the partitioning specification for this partitioning for this tensor
         """
-        partitioning: Dict[Tuple[str, ...], List[Tree]] = {}
-        used_pranks = []
-        # Separate out the used partitioning ranks
-        for pranks in part_ranks:
-            tranks: List[str] = []
-            used = False
-            for prank in pranks:
-                opt_tranks = self.__part_to_tensor_rank(prank, tensor_ranks)
-                trank = Partitioning.__opt_tensor_rank(prank, opt_tranks)
+        spec: List[Tree] = []
+        # If this is a splitting of a single rank into multiple
+        if len(part) == 1:
+            parent = RankNode(part[0])
+            succs = [node for node in self.graph.successors(parent)]
 
-                if trank:
-                    tranks.extend(trank)
-                    used = True
-                else:
-                    used = False
+            while succs:
+                # Stop if we reach a FlattenNode (this should be covered
+                # separately)
+                if isinstance(succs[0], FlattenNode):
                     break
 
-            if used:
-                used_pranks.append(pranks)
+                # Note that the last and second to last partition will have the
+                # same part, so we do not need to add it twice
+                succs.sort(
+                    key=lambda n: self.graph.nodes[n]["priority"],
+                    reverse=True)
+                for succ in succs[:-1]:
+                    spec.append(self.graph.edges[(parent, succ)]["part"])
 
-        # Get the specification for each partitioning
-        for pranks in used_pranks:
-            partitioning[pranks] = []
-
-            # If this is a splitting of a single rank into multiple
-            if len(pranks) == 1:
-                parent = RankNode(pranks[0])
+                parent = succs[-1]
                 succs = [node for node in self.graph.successors(parent)]
 
-                while succs:
-                    # Stop if we reach a FlattenNode (this should be covered
-                    # separately)
-                    if isinstance(succs[0], FlattenNode):
-                        break
+        # Otherwise, this is a flattening of many into one
+        else:
+            flat_node = FlattenNode(part)
+            rank_node = RankNode("".join(part))
+            spec.append(self.graph.edges[(flat_node, rank_node)]["part"])
 
-                    # Note that the last and second to last partition will have the
-                    # same part, so we do not need to add it twice
-                    succs.sort(
-                        key=lambda n: self.graph.nodes[n]["priority"],
-                        reverse=True)
-                    for succ in succs[:-1]:
-                        partitioning[pranks].append(
-                            self.graph.edges[(parent, succ)]["part"])
-
-                    parent = succs[-1]
-                    succs = [node for node in self.graph.successors(parent)]
-
-            # Otherwise, this is a flattening of many into one
-            else:
-                flat_node = FlattenNode(pranks)
-                rank_node = RankNode("".join(pranks))
-                partitioning[pranks].append(
-                    self.graph.edges[(flat_node, rank_node)]["part"])
-
-        return partitioning
+        return spec
 
     def get_valid_parts(self, ranks: List[str], parts: Iterable[Tuple[str, ...]],
                         allow_swizzle: bool) -> Iterable[Tuple[str, ...]]:
         """
         Get the valid partitionings for a given set of ranks
-
-        TODO: There may be an opportunity to combine get_valid_parts and get_tensor_spec
         """
         ranks = ranks.copy()
         used_parts: List[Tuple[str, ...]] = []
@@ -791,25 +763,6 @@ class Partitioning:
                 ", ".join(part_ranks))
 
         return part_ranks[0]
-
-    @staticmethod
-    def __opt_tensor_rank(
-            part_rank: str,
-            tensor_ranks: List[str]) -> Optional[str]:
-        """
-        Get a single tensor rank from the list should there be one
-        Raises an error if the part_rank maps to more than one tensor rank
-        """
-        if len(tensor_ranks) > 1:
-            raise ValueError(
-                "Partitioning rank " +
-                part_rank +
-                " maps to tensor ranks " +
-                str(tensor_ranks))
-
-        if tensor_ranks:
-            return tensor_ranks[0]
-        return None
 
     def __tensor_to_part_rank(
             self,

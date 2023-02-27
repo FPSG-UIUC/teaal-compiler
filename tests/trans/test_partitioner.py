@@ -321,7 +321,7 @@ def test_mixed():
     assert partitioner.partition(tensor, ("K3I",)).gen(depth=0) == hifiber
 
 
-def assert_unpartition(spec, hifiber):
+def assert_unpartition(spec, hifiber_options):
     yaml = """
     einsum:
         declaration:
@@ -341,7 +341,8 @@ def assert_unpartition(spec, hifiber):
         program.apply_all_partitioning(tensor)
 
     partitioner = Partitioner(program, TransUtils())
-    assert partitioner.unpartition(program.get_output()).gen(0) == hifiber
+    hifiber = partitioner.unpartition(program.get_output()).gen(0)
+    assert hifiber in hifiber_options
 
 
 def test_unpartition_none():
@@ -349,7 +350,7 @@ def test_unpartition_none():
                 K: [uniform_shape(5)]
     """
     hifiber = ""
-    assert_unpartition(spec, hifiber)
+    assert_unpartition(spec, [hifiber])
 
 
 def test_unpartition_one():
@@ -358,9 +359,9 @@ def test_unpartition_one():
     """
     hifiber = "tmp0 = Z_MN2N1N0\n" + \
         "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-        "Z_MN = tmp1\n" + \
-        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
-    assert_unpartition(spec, hifiber)
+        "tmp1.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp1"
+    assert_unpartition(spec, [hifiber])
 
 
 def test_unpartition_all():
@@ -368,12 +369,54 @@ def test_unpartition_all():
                 M: [uniform_shape(5)]
                 N: [uniform_shape(6), uniform_shape(3)]
     """
-    hifiber = "tmp0 = Z_M1M0N2N1N0\n" + \
+    hifiber_option1 = "tmp0 = Z_M1M0N2N1N0\n" + \
+        "tmp1 = tmp0.flattenRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp2"
+    hifiber_option2 = "tmp0 = Z_M1M0N2N1N0\n" + \
         "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-        "Z_MN = tmp2\n" + \
-        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
-    assert_unpartition(spec, hifiber)
+        "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp2"
+    assert_unpartition(spec, [hifiber_option1, hifiber_option2])
+
+
+def test_unpartition_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            Z: [M, N]
+            A: [M, N]
+        expressions:
+            - Z[m, n] = A[m, n]
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_shape(10)]
+                (N, M0): [flatten()]
+                NM0: [uniform_occupancy(A.5)]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    part_ir = program.get_partitioning()
+    output = program.get_output()
+    new_ranks = part_ir.partition_ranks(
+        output.get_ranks(), part_ir.get_all_parts(), True, True)
+    output.update_ranks(new_ranks)
+
+    partitioner = Partitioner(program, TransUtils())
+    hifiber = partitioner.unpartition(output).gen(0)
+    corr = "tmp0 = Z_M1NM01NM00\n" + \
+        "tmp1 = tmp0.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.unflattenRanks(depth=1, levels=1)\n" + \
+        "tmp2.setRankIds(rank_ids=[\"M1\", \"N\", \"M0\"])\n" + \
+        "tmp3 = tmp2.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
+        "tmp4 = tmp3.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp4.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp4"
+    assert hifiber == corr
 
 
 def test_unswizzle_unpartition():

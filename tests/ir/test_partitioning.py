@@ -17,8 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)
-                  : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -568,104 +567,32 @@ def test_get_step():
     assert partitioning.get_step("K") is None
 
 
-def test_get_tensor_spec():
+def test_get_part_spec():
     all_parts = """
                 K: [uniform_shape(4)]
-                M: [uniform_occupancy(A.6)]
-                N: [uniform_shape(2), nway_shape(7)]
-    """
-    partitioning = build_partitioning(all_parts)
-
-    used_parts = """
-                K: [uniform_shape(4)]
-                M: [uniform_occupancy(A.6)]
-    """
-    used = build_part_dict(used_parts)
-
-    tensor_ranks = ["J", "K", "M", "N"]
-
-    assert partitioning.get_tensor_spec(tensor_ranks, {("K",), ("M",)}) == used
-
-
-def test_get_tensor_spec_multiple_dyn():
-    all_parts = """
                 M: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                N: [uniform_shape(2), nway_shape(7)]
+                (N0, K0): [flatten()]
+                N0K0: [uniform_occupancy(B.10)]
     """
     partitioning = build_partitioning(all_parts)
+    part_dict = build_part_dict(all_parts)
 
-    used_parts = """
-                M1I: [uniform_occupancy(A.3)]
-    """
-    used = build_part_dict(used_parts)
-
-    tensor_ranks = ["J", "K", "M1I", "N"]
-
-    assert partitioning.get_tensor_spec(tensor_ranks, {("M1I",)}) == used
+    assert partitioning.get_part_spec(("J",)) == []
+    assert partitioning.get_part_spec(("K",)) == part_dict[("K",)]
+    assert partitioning.get_part_spec(("M1I",)) == part_dict[("M",)][1:]
+    assert partitioning.get_part_spec(("N0", "K0")) == part_dict[("N0", "K0")]
+    assert partitioning.get_part_spec(("N0K0",)) == part_dict[("N0K0",)]
 
 
-def test_get_tensor_spec_flattening():
-    all_parts = """
-                K: [uniform_shape(4)]
-                (M, K0): [flatten()]
-                MK0: [uniform_occupancy(A.5)]
-    """
-    partitioning = build_partitioning(all_parts)
-
-    tensor_ranks = ["M", "K"]
-    part_ranks = {("K",), ("M", "K0"), ("MK0",)}
-
-    used_parts = """
-                K: [uniform_shape(4)]
-    """
-    used = build_part_dict(used_parts)
-    assert partitioning.get_tensor_spec(tensor_ranks, part_ranks) == used
-
-    tensor_ranks = ["M", "K1", "K0"]
-    used_parts = """
-                (M, K0): [flatten()]
-    """
-    used = build_part_dict(used_parts)
-    assert partitioning.get_tensor_spec(tensor_ranks, part_ranks) == used
-
-    tensor_ranks = ["K1", "MK0"]
-
-    used_parts = """
-                MK0: [uniform_occupancy(A.5)]
-    """
-    used = build_part_dict(used_parts)
-    assert partitioning.get_tensor_spec(tensor_ranks, part_ranks) == used
-
-
-def test_get_tensor_spec_conv():
+def test_get_part_spec_conv():
     all_parts = """
                 P: [uniform_shape(4)]
                 Q: [uniform_shape(5)]
     """
     partitioning = build_partitioning_conv(all_parts)
-
-    used_parts = """
-                Q: [uniform_shape(5)]
-    """
-    used = build_part_dict(used_parts)
-
-    tensor_ranks = ["W"]
-
-    assert partitioning.get_tensor_spec(tensor_ranks, {("P",), ("Q",)}) == used
-
-
-def test_tensor_spec_bad_conv():
-    all_parts = """
-                P: [uniform_shape(4)]
-                Q: [uniform_shape(5)]
-    """
-    partitioning = build_partitioning_conv(all_parts)
-    tensor_ranks = ["W", "Q"]
-
-    with pytest.raises(ValueError) as excinfo:
-        partitioning.get_tensor_spec(tensor_ranks, {("Q",)})
-
-    assert str(
-        excinfo.value) == "Partitioning rank Q maps to tensor ranks ['W', 'Q']"
+    part_dict = build_part_dict(all_parts)
+    assert partitioning.get_part_spec(("W",)) == part_dict[("Q",)]
 
 
 def test_get_valid_partitionings():
