@@ -208,6 +208,10 @@ class HiFiber:
                         node.get_tensor(),
                         node.get_rank()))
 
+            elif isinstance(node, GetPayloadNode):
+                tensor = self.program.get_tensor(node.get_tensor())
+                code.add(Header.make_get_payload(tensor, node.get_ranks()))
+
             else:
                 raise ValueError(
                     "Unknown node: " +

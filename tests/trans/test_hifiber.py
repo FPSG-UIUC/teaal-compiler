@@ -279,6 +279,65 @@ def test_hifiber_conv():
     assert str(HiFiber(einsum, mapping)) == hifiber
 
 
+def test_hifiber_static_flattening():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"], shape=[N, M])\n" + \
+        "tmp0 = A_KM\n" + \
+        "tmp1 = tmp0.splitUniform(4, depth=0)\n" + \
+        "A_K1K0M = tmp1\n" + \
+        "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
+        "tmp2 = B_KN\n" + \
+        "tmp3 = tmp2.splitUniform(4, depth=0)\n" + \
+        "B_K1K0N = tmp3\n" + \
+        "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
+        "z_n = Z_NM.getRoot()\n" + \
+        "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])\n" + \
+        "B_K1NK0 = B_K1K0N.swizzleRanks(rank_ids=[\"K1\", \"N\", \"K0\"])\n" + \
+        "tmp4 = A_K1MK0\n" + \
+        "tmp5 = tmp4.flattenRanks(depth=1, levels=1, coord_style=\"tuple\")\n" + \
+        "A_K1MK0_flat = tmp5\n" + \
+        "A_K1MK0_flat.setRankIds(rank_ids=[\"K1\", \"MK0\"])\n" + \
+        "b_k1 = B_K1NK0.getRoot()\n" + \
+        "a_k1 = A_K1MK0_flat.getRoot()\n" + \
+        "for k1, (a_mk0, b_n) in a_k1 & b_k1:\n" + \
+        "    A_MK0 = Tensor.fromFiber(rank_ids=[\"MK0\"], fiber=a_mk0)\n" + \
+        "    tmp6 = A_MK0\n" + \
+        "    tmp7 = tmp6.splitEqual(5)\n" + \
+        "    A_MK01MK00 = tmp7\n" + \
+        "    A_MK01MK00.setRankIds(rank_ids=[\"MK01\", \"MK00\"])\n" + \
+        "    a_mk01 = A_MK01MK00.getRoot()\n" + \
+        "    for mk01, a_mk00 in a_mk01:\n" + \
+        "        for n, (z_m, b_k0) in z_n << b_n:\n" + \
+        "            for mk00, a_val in a_mk00:\n" + \
+        "                z_ref = z_m.getPayloadRef((m,))\n" + \
+        "                b_val = b_k0.getPayload((k0,))\n" + \
+        "                z_ref += a_val * b_val\n" + \
+        "tmp8 = Z_NM\n" + \
+        "tmp9 = tmp8.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp9"
+
+    assert str(HiFiber(einsum, mapping)) == hifiber
+
+
 def test_hifiber_hardware():
     fname = "tests/integration/gamma.yaml"
     einsum = Einsum.from_file(fname)

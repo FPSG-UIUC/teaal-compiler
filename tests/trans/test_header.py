@@ -59,6 +59,21 @@ def build_matmul_header(mapping):
     return build_header(exprs, mapping)
 
 
+def test_make_get_payload():
+    hifiber = "a_val = a_m.getPayload((m, k))"
+
+    tensor = Tensor("A", ["M", "K"])
+    assert Header.make_get_payload(tensor, ["M", "K"]).gen(0) == hifiber
+
+
+def test_make_get_payload_output():
+    hifiber = "z_n = z_m.getPayloadRef((m,))"
+
+    tensor = Tensor("Z", ["M", "N"])
+    tensor.set_is_output(True)
+    assert Header.make_get_payload(tensor, ["M"]).gen(0) == hifiber
+
+
 def test_make_get_root():
     hifiber = "a_m = A_MK.getRoot()"
 
@@ -89,6 +104,22 @@ def test_make_output_shape():
     hifiber = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], shape=[M, N])"
 
     header = build_header(exprs, "")
+    assert header.make_output().gen(depth=0) == hifiber
+
+
+def test_make_output_shape_input_flattening():
+    mapping = """
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+
+    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"], shape=[N, M])"
+    header = build_matmul_header(mapping)
     assert header.make_output().gen(depth=0) == hifiber
 
 

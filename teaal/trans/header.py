@@ -25,7 +25,7 @@ Translate the header above the HiFiber loop nest
 """
 
 from sympy import Symbol
-from typing import Set
+from typing import Iterable, Set
 
 from teaal.hifiber import *
 from teaal.ir.program import Program
@@ -47,6 +47,24 @@ class Header:
         """
         self.program = program
         self.partitioner = partitioner
+
+    @staticmethod
+    def make_get_payload(tensor: Tensor, ranks: Iterable[str]) -> Statement:
+        """
+        Make a call to getPayload() or getPayloadRef()
+        """
+        if tensor.get_is_output():
+            func = "getPayloadRef"
+        else:
+            func = "getPayload"
+
+        rank_tuple = ETuple([EVar(rank.lower()) for rank in ranks])
+        call = EMethod(EVar(tensor.fiber_name()), func, [AJust(rank_tuple)])
+
+        for _ in ranks:
+            tensor.pop()
+
+        return SAssign(AVar(tensor.fiber_name()), call)
 
     @staticmethod
     def make_get_root(tensor: Tensor) -> Statement:
@@ -123,7 +141,7 @@ class Header:
 
         final_pos = {}
         for rank in ranks:
-            final_pos[rank] = order.index(rank)
+            final_pos[rank] = order.index(part.get_final_rank_id(output, rank))
 
         for tensor in self.program.get_tensors():
             # Skip the output

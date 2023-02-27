@@ -107,10 +107,13 @@ class CoordMath:
         """
         Get expressions corresponding to the different ways to represent a
         a given coordinate
-
-        TODO: currently only used for testing
         """
-        return self.all_exprs[Symbol(ind)]
+        sym = Symbol(ind)
+        if sym in self.all_exprs:
+            return self.all_exprs[sym]
+        # If the symbol is not here (e.g. because of flattening) there is no
+        # translation
+        return [sym]
 
     def get_eqn_exprs(self) -> Dict[Symbol, Basic]:
         """
