@@ -285,13 +285,19 @@ class Equation:
             raise ValueError("Something is wrong...")  # pragma: no cover
 
         # Add the rank variable
-        rank_var = rank.lower()
-        payload = PTuple([PVar(rank_var), payload])
+        iter_ranks = self.program.get_loop_order().get_iter_ranks(rank)
+        rank_payload: Payload
+        if len(iter_ranks) == 1:
+            rank_payload = PVar(iter_ranks[0].lower())
+        else:
+            rank_payload = PTuple([PVar(iter_rank.lower())
+                                  for iter_rank in iter_ranks])
+        payload = PTuple([rank_payload, payload])
 
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         if self.__need_enumerate(rank):
-            payload = PTuple([PVar(rank_var + "_pos"), payload])
+            payload = PTuple([PVar(rank.lower() + "_pos"), payload])
 
         return payload
 

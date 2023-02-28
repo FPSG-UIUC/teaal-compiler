@@ -28,7 +28,7 @@ from itertools import chain
 
 from lark.tree import Tree
 from sympy import Basic, Symbol
-from typing import Any, cast, Iterable, List, Optional
+from typing import Any, cast, Iterable, List, Optional, Tuple
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
@@ -94,6 +94,26 @@ class LoopOrder:
 
         order = list(chain.from_iterable(expanded))
         tensor.swizzle(cast(List[Optional[str]], order))
+
+    def get_iter_ranks(self, rank: str) -> Tuple[str, ...]:
+        """
+        Get the ranks that this rank should expand into when iterating over
+        this rank; used to unpack flattened ranks
+        """
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add()")
+
+        # If it is not flattened, nothing to unpack
+        if not self.partitioning.is_flattened(rank):
+            return (rank,)
+
+        # If it is not the innermost rank, nothing to unpack
+        if not self.__innermost_rank(rank):
+            return (rank,)
+
+        # Otherwise, unpack the flattened rank
+        return self.partitioning.unpack(rank)
 
     def get_ranks(self) -> List[str]:
         """

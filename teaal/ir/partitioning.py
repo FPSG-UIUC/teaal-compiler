@@ -458,6 +458,20 @@ class Partitioning:
 
         return new_ranks
 
+    def unpack(self, rank: str) -> Tuple[str, ...]:
+        """
+        Unpack a flattened rank
+        """
+        if not self.is_flattened(rank):
+            raise ValueError("Nothing to unpack for rank " + rank)
+
+        node = RankNode(rank)
+        preds = list(self.graph.predecessors(node))
+        while len(preds) == 1:
+            preds = list(self.graph.predecessors(preds[0]))
+
+        return tuple(node.get_rank() for node in preds)
+
     def __add_or_update_priority(self, rank: str, priority: float) -> None:
         """
         Add the node if it does not exist, or update its priority

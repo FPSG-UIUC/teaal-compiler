@@ -17,7 +17,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -894,6 +894,23 @@ def test_swizzle_for_flattening():
     assert partitioning.swizzle_for_flattening(["K", "M"]) == ["K", "M"]
     assert partitioning.swizzle_for_flattening(["K1", "K0", "J", "M", "N"]) == [
         "K1", "J", "N", "M", "K0"]
+
+
+def test_unpack():
+    all_parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert partitioning.unpack("MK00") == ("M", "K0")
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioning.unpack("N")
+
+    assert str(
+        excinfo.value) == "Nothing to unpack for rank N"
 
 
 def test_skip_empty_partitioning():

@@ -133,6 +133,40 @@ def make_display(style, opt):
     return IterationGraph(program), Equation(program)
 
 
+def make_flattened():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    part_ir = program.get_partitioning()
+    for tensor in program.get_tensors():
+        pranks = part_ir.partition_ranks(
+            tensor.get_ranks(), part_ir.get_all_parts(), True, True)
+        tensor.update_ranks(pranks)
+        program.get_loop_order().apply(tensor)
+
+    return IterationGraph(program), Equation(program)
+
+
 def make_conv(expr, loop_order):
     yaml = """
     einsum:
@@ -525,6 +559,27 @@ def test_make_payload_output_only():
     iter_expr = "i, a_ref"
 
     assert eqn.make_payload(rank, tensors).gen(False) == iter_expr
+
+
+def test_make_payload_flattened():
+    graph, eqn = make_flattened()
+
+    assert eqn.make_payload(
+        *
+        graph.pop_concord()).gen(
+        parens=False) == "k1, (a_mk01, b_n)"
+    assert eqn.make_payload(
+        *
+        graph.pop_concord()).gen(
+        parens=False) == "mk01, a_mk00"
+    assert eqn.make_payload(
+        *
+        graph.pop_concord()).gen(
+        parens=False) == "n, (z_m, b_k0)"
+    assert eqn.make_payload(
+        *
+        graph.pop_concord()).gen(
+        parens=False) == "(m, k0), a_val"
 
 
 def test_make_payload_conv_enum():

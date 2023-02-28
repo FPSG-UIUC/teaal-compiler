@@ -220,6 +220,37 @@ def test_apply_conv():
     assert Z.get_ranks() == ["Q"]
 
 
+def test_get_iter_ranks_unconfigured():
+    loop_order = build_loop_order()
+
+    with pytest.raises(ValueError) as excinfo:
+        loop_order.get_iter_ranks("N")
+
+    assert str(
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
+
+
+def test_get_iter_ranks():
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    order = ["K1", "MK01", "N", "MK00"]
+
+    loop_order = build_loop_order()
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(order, partitioning)
+
+    assert loop_order.get_iter_ranks("K1") == ("K1",)
+    assert loop_order.get_iter_ranks("MK01") == ("MK01",)
+    assert loop_order.get_iter_ranks("N") == ("N",)
+    assert loop_order.get_iter_ranks("MK00") == ("M", "K0")
+
+
 def test_get_ranks_unconfigured():
     loop_order = build_loop_order()
 
