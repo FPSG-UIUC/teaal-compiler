@@ -328,8 +328,8 @@ def test_hifiber_static_flattening():
         "    for mk01, a_mk00 in a_mk01:\n" + \
         "        for n, (z_m, b_k0) in z_n << b_n:\n" + \
         "            for (m, k0), a_val in a_mk00:\n" + \
-        "                z_ref = z_m.getPayloadRef((m,))\n" + \
-        "                b_val = b_k0.getPayload((k0,))\n" + \
+        "                z_ref = z_m.getPayloadRef(m)\n" + \
+        "                b_val = b_k0.getPayload(k0)\n" + \
         "                z_ref += a_val * b_val\n" + \
         "tmp8 = Z_NM\n" + \
         "tmp9 = tmp8.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \

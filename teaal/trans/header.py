@@ -58,8 +58,8 @@ class Header:
         else:
             func = "getPayload"
 
-        rank_tuple = ETuple([EVar(rank.lower()) for rank in ranks])
-        call = EMethod(EVar(tensor.fiber_name()), func, [AJust(rank_tuple)])
+        rank_arg = [AJust(EVar(rank.lower())) for rank in ranks]
+        call = EMethod(EVar(tensor.fiber_name()), func, rank_arg)
 
         for _ in ranks:
             tensor.pop()

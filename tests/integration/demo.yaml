@@ -1,9 +1,15 @@
 einsum:
     declaration:
-        Z: [M]
+        A: [K, M]
+        B: [K, N]
+        Y: [M, N]
     expressions:
-    - Z[m] = a
+        - Y[m, n] = sum(K).(A[k, m] * B[k, n])
 mapping:
     partitioning:
-        Z:
-            M: [uniform_shape(10), uniform_shape(5)]
+        Y:
+            K: [uniform_shape(4)]
+            (M, K0): [flatten()]
+            MK0: [uniform_occupancy(A.5)]
+    loop-order:
+        Y: [K1, MK01, N, MK00]

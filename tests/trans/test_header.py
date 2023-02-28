@@ -60,14 +60,14 @@ def build_matmul_header(mapping):
 
 
 def test_make_get_payload():
-    hifiber = "a_val = a_m.getPayload((m, k))"
+    hifiber = "a_val = a_m.getPayload(m, k)"
 
     tensor = Tensor("A", ["M", "K"])
     assert Header.make_get_payload(tensor, ["M", "K"]).gen(0) == hifiber
 
 
 def test_make_get_payload_output():
-    hifiber = "z_n = z_m.getPayloadRef((m,))"
+    hifiber = "z_n = z_m.getPayloadRef(m)"
 
     tensor = Tensor("Z", ["M", "N"])
     tensor.set_is_output(True)
