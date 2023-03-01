@@ -178,31 +178,21 @@ class Partitioning:
 
         return node.get_rank()
 
-    def get_intermediates(self, tensor: Tensor, rank: str) -> List[str]:
+    def get_intermediates(self, rank: str) -> List[str]:
         """
-        Get the names of all intermediate ranks (e.g., K2I)
+        Get the names of all intermediate split ranks (e.g., K2I)
         """
         intermediates: List[str] = []
         node = None
         succ = list(self.graph.successors(RankNode(rank)))
         while succ:
-            if isinstance(node, RankNode):
+            if node and isinstance(succ[0], RankNode):
                 intermediates.append(node.get_rank())
 
             if isinstance(succ[0], FlattenNode):
-                assert len(succ) == 1
-                node = succ[0]
+                break
 
-                # Stop if not all flattened ranks are included in the tensor
-                for rank in node.get_ranks():
-                    if self.get_root_name(rank) not in tensor.get_init_ranks():
-                        # Note that the rank feeding to this FlattenNode is not
-                        # an intermediate
-                        return intermediates[:-1]
-
-            else:
-                node = min(succ, key=lambda n: self.graph.nodes[n]["priority"])
-
+            node = min(succ, key=lambda n: self.graph.nodes[n]["priority"])
             succ = list(self.graph.successors(node))
 
         return intermediates

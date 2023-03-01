@@ -413,11 +413,7 @@ def test_get_intermediates():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.get_intermediates(
-        Tensor(
-            "A", [
-                "K", "M"]), "K") == [
-        "K6I", "K5I", "K3I"]
+    assert partitioning.get_intermediates("K") == ["K6I", "K5I", "K3I"]
 
 
 def test_get_intermediates_flattening():
@@ -428,14 +424,8 @@ def test_get_intermediates_flattening():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.get_intermediates(
-        Tensor(
-            "A", [
-                "K", "M"]), "K") == [
-        "K1I", "K0", "MK0"]
-    assert partitioning.get_intermediates(
-        Tensor("B", ["K", "N"]), "K") == ["K1I"]
-    assert partitioning.get_intermediates(Tensor("Z", ["M", "N"]), "M") == []
+    assert partitioning.get_intermediates("K") == ["K1I"]
+    assert partitioning.get_intermediates("M") == []
 
 
 def test_get_intermediates_conv():
@@ -452,8 +442,7 @@ def test_get_intermediates_conv():
     """
     partitioning = build_partitioning_conv(all_parts)
 
-    assert partitioning.get_intermediates(Tensor("I", ["W"]), "W") == [
-        "W6I", "W5I", "W3I"]
+    assert partitioning.get_intermediates("W") == ["W6I", "W5I", "W3I"]
 
 
 def test_get_leader():

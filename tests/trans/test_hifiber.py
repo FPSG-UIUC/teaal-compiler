@@ -337,6 +337,77 @@ def test_hifiber_static_flattening():
 
     assert str(HiFiber(einsum, mapping)) == hifiber
 
+def test_hifiber_dyn_flattening():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_shape(6)]
+                K: [uniform_occupancy(A.4)]
+                (M0, K0): [flatten()]
+                M0K0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [M1, K1, M0K01, N, M0K00]
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"], shape=[M1, N, M0])\n" + \
+        "tmp0 = A_KM\n" + \
+        "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
+        "A_KM1M0 = tmp1\n" + \
+        "A_KM1M0.setRankIds(rank_ids=[\"K\", \"M1\", \"M0\"])\n" + \
+        "z_m1 = Z_M1NM0.getRoot()\n" + \
+        "A_M1KM0 = A_KM1M0.swizzleRanks(rank_ids=[\"M1\", \"K\", \"M0\"])\n" + \
+        "b_k = B_KN.getRoot()\n" + \
+        "a_m1 = A_M1KM0.getRoot()\n" + \
+        "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k)\n" + \
+        "for m1, (z_n, a_k) in z_m1 << a_m1:\n" + \
+        "    A_KM0 = Tensor.fromFiber(rank_ids=[\"K\", \"M0\"], fiber=a_k)\n" + \
+        "    tmp2 = A_KM0\n" + \
+        "    tmp3 = tmp2.splitEqual(4)\n" + \
+        "    A_K1K0M0 = tmp3\n" + \
+        "    A_K1K0M0.setRankIds(rank_ids=[\"K1\", \"K0\", \"M0\"])\n" + \
+        "    A_K1M0K0 = A_K1K0M0.swizzleRanks(rank_ids=[\"K1\", \"M0\", \"K0\"])\n" + \
+        "    tmp4 = A_K1M0K0\n" + \
+        "    tmp5 = tmp4.flattenRanks(depth=1, levels=1, coord_style=\"tuple\")\n" + \
+        "    A_K1M0K0_flat = tmp5\n" + \
+        "    A_K1M0K0_flat.setRankIds(rank_ids=[\"K1\", \"M0K0\"])\n" + \
+        "    a_k1 = A_K1M0K0_flat.getRoot()\n" + \
+        "    tmp6 = B_KN\n" + \
+        "    tmp7 = tmp6.splitNonUniform(a_k1)\n" + \
+        "    B_K1K0N = tmp7\n" + \
+        "    B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
+        "    B_K1NK0 = B_K1K0N.swizzleRanks(rank_ids=[\"K1\", \"N\", \"K0\"])\n" + \
+        "    b_k1 = B_K1NK0.getRoot()\n" + \
+        "    for k1, (a_m0k0, b_n) in a_k1 & b_k1:\n" + \
+        "        A_M0K0 = Tensor.fromFiber(rank_ids=[\"M0K0\"], fiber=a_m0k0)\n" + \
+        "        tmp8 = A_M0K0\n" + \
+        "        tmp9 = tmp8.splitEqual(5)\n" + \
+        "        A_M0K01M0K00 = tmp9\n" + \
+        "        A_M0K01M0K00.setRankIds(rank_ids=[\"M0K01\", \"M0K00\"])\n" + \
+        "        a_m0k01 = A_M0K01M0K00.getRoot()\n" + \
+        "        for m0k01, a_m0k00 in a_m0k01:\n" + \
+        "            for n, (z_m0, b_k0) in z_n << b_n:\n" + \
+        "                for (m0, k0), a_val in a_m0k00:\n" + \
+        "                    z_ref = z_m0.getPayloadRef(m0)\n" + \
+        "                    b_val = b_k0.getPayload(k0)\n" + \
+        "                    z_ref += a_val * b_val\n" + \
+        "tmp10 = Z_M1NM0\n" + \
+        "tmp11 = tmp10.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
+        "tmp12 = tmp11.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp12.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp12"
+
+    assert str(HiFiber(einsum, mapping)) == hifiber
+
 
 def test_hifiber_hardware():
     fname = "tests/integration/gamma.yaml"
