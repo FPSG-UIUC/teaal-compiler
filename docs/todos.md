@@ -2,7 +2,7 @@
 
 ## Priority: 1
 
-[ ] Support flattening
+[x] Support flattening
 [ ] Allow for variable-named partition sizes
 [ ] Correctly flatten together output after occupancy-space partitioning
 [ ] Support the new architecture/binding specification
