@@ -400,14 +400,10 @@ def test_unpartition_flatten():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    part_ir = program.get_partitioning()
-    output = program.get_output()
-    new_ranks = part_ir.partition_ranks(
-        output.get_ranks(), part_ir.get_all_parts(), True, True)
-    output.update_ranks(new_ranks)
+    program.apply_all_partitioning(program.get_output())
 
     partitioner = Partitioner(program, TransUtils())
-    hifiber = partitioner.unpartition(output).gen(0)
+    hifiber = partitioner.unpartition(program.get_output()).gen(0)
     corr = "tmp0 = Z_M1NM01NM00\n" + \
         "tmp1 = tmp0.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2 = tmp1.unflattenRanks(depth=1, levels=1)\n" + \

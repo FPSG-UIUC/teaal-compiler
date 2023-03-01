@@ -152,9 +152,7 @@ def make_matmul(mapping):
 
     part_ir = program.get_partitioning()
     for tensor in program.get_tensors():
-        pranks = part_ir.partition_ranks(
-            tensor.get_ranks(), part_ir.get_all_parts(), True, True)
-        tensor.update_ranks(pranks)
+        program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
     return IterationGraph(program), Equation(program)

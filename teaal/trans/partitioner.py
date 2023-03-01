@@ -110,9 +110,7 @@ class Partitioner:
                 swizzled_ranks, part_ir.get_all_parts(), False)
             for part in valid_parts:
                 trans.append((part, tensor.get_ranks()))
-                tensor.update_ranks(
-                    part_ir.partition_ranks(
-                        tensor.get_ranks(), {part}, False, False))
+                self.program.apply_partitioning(tensor, part)
 
             new_ranks = tensor.get_ranks()
 

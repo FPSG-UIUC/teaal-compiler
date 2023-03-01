@@ -144,7 +144,7 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         new_ranks = self.partitioning.partition_ranks(
-            tensor.get_ranks(), self.partitioning.get_all_parts(), True, False)
+            tensor.get_ranks(), self.partitioning.get_all_parts(), True, True)
         tensor.update_ranks(new_ranks)
 
     def apply_partitioning(self, tensor: Tensor,

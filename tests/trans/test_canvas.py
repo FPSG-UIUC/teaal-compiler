@@ -262,9 +262,7 @@ def test_add_activity_flatten():
     part_ir = program.get_partitioning()
 
     for tensor in program.get_tensors():
-        tranks = part_ir.partition_ranks(
-            tensor.get_ranks(), part_ir.get_all_parts(), True, True)
-        tensor.update_ranks(tranks)
+        program.apply_all_partitioning(tensor)
 
     canvas = Canvas(program)
     canvas.create_canvas()

@@ -315,9 +315,7 @@ class FlowGraph:
 
         # Partition the output
         part = self.program.get_partitioning()
-        ranks = part.partition_ranks(
-            tensor.get_ranks(), part.get_all_parts(), True, True)
-        tensor.update_ranks(ranks)
+        self.program.apply_all_partitioning(tensor)
         self.program.get_loop_order().apply(tensor)
 
         # Get the root
