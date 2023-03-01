@@ -160,7 +160,8 @@ class FlowGraph:
         self.graph.add_edge(swizzle_node, collecting_node)
         self.graph.add_edge(collecting_node, MetricsNode("Start"))
 
-    def __build_dyn_part(self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
+    def __build_dyn_part(
+            self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Build a dynamic partitioning
         """
@@ -173,7 +174,8 @@ class FlowGraph:
             src_ranks = [partitioning]
 
             # Swizzle for flattening
-            swizzle_node = SwizzleNode(root, list(partitioning), "partitioning")
+            swizzle_node = SwizzleNode(
+                root, list(partitioning), "partitioning")
 
             for rank in partitioning:
                 self.graph.add_edge(RankNode(root, rank), swizzle_node)
@@ -183,7 +185,8 @@ class FlowGraph:
 
         else:
             rank = partitioning[0]
-            src_ranks = [cast(Tuple[str, ...], (rank,))] + [(inter,) for inter in part.get_intermediates(rank)]
+            src_ranks = [cast(Tuple[str, ...], (rank,))] + [(inter,)
+                                                            for inter in part.get_intermediates(rank)]
 
         # Connect them to the relevant destination ranks
         for srcs in src_ranks:
@@ -214,7 +217,8 @@ class FlowGraph:
             for dst in dsts:
                 self.graph.add_edge(part_node, RankNode(root, dst))
 
-    def __build_fiber_nodes(self, iter_graph: IterationGraph, flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
+    def __build_fiber_nodes(self, iter_graph: IterationGraph,
+                            flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Build the FiberNodes between loops
         """
@@ -325,7 +329,8 @@ class FlowGraph:
         self.graph.add_edge(TensorNode(root), get_root_node)
         self.graph.add_edge(get_root_node, FiberNode(tensor.fiber_name()))
 
-    def __build_partition_swizzling(self, tensor: Tensor, flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
+    def __build_partition_swizzling(
+            self, tensor: Tensor, flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Build the partitioning for a particular tensor
         """
@@ -422,7 +427,8 @@ class FlowGraph:
         for rank in tensor.get_ranks():
             self.graph.add_edge(RankNode(root, rank), swizzle_node)
 
-    def __connect_dyn_part(self, tensor: Tensor, rank: str, flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
+    def __connect_dyn_part(self, tensor: Tensor, rank: str,
+                           flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Connect the dynamic partitioning node to the relevant fiber nodes
         """
@@ -435,7 +441,8 @@ class FlowGraph:
         # Apply all available flattening
         i = 0
         while i < len(flatten_info[root]):
-            if not all(flat_rank in tensor.get_ranks() for flat_rank in flatten_info[root][i]):
+            if not all(flat_rank in tensor.get_ranks()
+                       for flat_rank in flatten_info[root][i]):
                 i += 1
                 continue
 

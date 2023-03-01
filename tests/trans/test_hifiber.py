@@ -337,6 +337,7 @@ def test_hifiber_static_flattening():
 
     assert str(HiFiber(einsum, mapping)) == hifiber
 
+
 def test_hifiber_dyn_flattening():
     yaml = """
     einsum:
