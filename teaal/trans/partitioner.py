@@ -166,7 +166,7 @@ class Partitioner:
                     block.add(TransUtils.build_set_rank_ids(tensor, curr_tmp))
                     rename_ranks = False
 
-                tensor.swizzle(cast(List[Optional[str]], ranks))
+                tensor.swizzle(ranks)
                 block.add(TransUtils.build_swizzle(tensor, curr_tmp, next_tmp))
 
         if rename_ranks:

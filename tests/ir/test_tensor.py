@@ -138,9 +138,19 @@ def test_set_is_output():
     assert tensor.fiber_name() == "a_ref"
 
 
+def test_swizzle_extra_ranks():
+    tensor = Tensor("A", ["I", "J"])
+
+    with pytest.raises(ValueError) as excinfo:
+        tensor.swizzle(["J", "I", "K"])
+
+    assert str(
+        excinfo.value) == "['J', 'I', 'K'] is not a permutation of old rank order ['I', 'J']"
+
+
 def test_swizzle():
     tensor = Tensor("A", ["I", "J"])
-    tensor.swizzle(["J", "K", "I"])
+    tensor.swizzle(["J", "I"])
 
     assert tensor.pop() == "j"
     assert tensor.pop() == "i"

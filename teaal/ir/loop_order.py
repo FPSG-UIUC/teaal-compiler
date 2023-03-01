@@ -93,7 +93,7 @@ class LoopOrder:
                     break
 
         order = list(chain.from_iterable(expanded))
-        tensor.swizzle(cast(List[Optional[str]], order))
+        tensor.swizzle(order)
 
     def get_iter_ranks(self, rank: str) -> Tuple[str, ...]:
         """

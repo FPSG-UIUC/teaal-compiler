@@ -24,6 +24,8 @@ SOFTWARE.
 Representation of a tensor as it moves through the iteration graph
 """
 
+from collections import Counter
+
 from lark.tree import Tree
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -155,17 +157,24 @@ class Tensor:
         """
         self.is_output = is_output
 
-    def swizzle(self, rank_order: List[Optional[str]]) -> None:
+    def swizzle(self, rank_order: List[str]) -> None:
         """
         Re-order the ranks of this tensor to match the given rank order
         """
-        # TODO: Copy from rank_order to self.ranks
         old_active = self.ranks[self.rank_ptr:]
-        new_active = sorted(old_active, key=rank_order.index)
-        self.ranks[self.rank_ptr:] = new_active
+
+        # Ensure that the new rank order is just a permutation of the old rank
+        # order
+        if Counter(old_active) != Counter(rank_order):
+            raise ValueError(
+                str(rank_order) +
+                " is not a permutation of old rank order " +
+                str(old_active))
+
+        self.ranks[self.rank_ptr:] = rank_order
 
         if self.is_flat:
-            self.is_flat = old_active == new_active
+            self.is_flat = old_active == rank_order
 
     def tensor_name(self) -> str:
         """
