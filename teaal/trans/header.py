@@ -149,10 +149,8 @@ class Header:
                 continue
 
             # Mark all ranks in the input tensor available
-            tranks = []
-            # TODO: support flattening
-            for rank in tensor.get_init_ranks():
-                tranks.extend(part.partition_names((rank,), True))
+            tranks = part.partition_ranks(
+                tensor.get_ranks(), part.get_all_parts(), True, True)
 
             for trank in tranks:
                 for i, rank in enumerate(ranks):

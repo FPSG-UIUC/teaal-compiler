@@ -107,19 +107,19 @@ def test_make_output_shape():
     assert header.make_output().gen(depth=0) == hifiber
 
 
-def test_make_output_shape_input_flattening():
+def test_make_output_no_shape_flattening():
+    exprs = """
+            - Z[m, n] = C[m, n]
+    """
+
     mapping = """
         partitioning:
             Z:
-                K: [uniform_shape(4)]
-                (M, K0): [flatten()]
-                MK0: [uniform_occupancy(A.5)]
-        loop-order:
-            Z: [K1, MK01, N, MK00]
+                (M, N): [flatten()]
     """
 
-    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"], shape=[N, M])"
-    header = build_matmul_header(mapping)
+    hifiber = "Z_MN = Tensor(rank_ids=[\"MN\"])"
+    header = build_header(exprs, mapping)
     assert header.make_output().gen(depth=0) == hifiber
 
 

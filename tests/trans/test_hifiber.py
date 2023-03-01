@@ -300,7 +300,7 @@ def test_hifiber_static_flattening():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"], shape=[N, M])\n" + \
+    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
         "tmp0 = A_KM\n" + \
         "tmp1 = tmp0.splitUniform(4, depth=0)\n" + \
         "A_K1K0M = tmp1\n" + \
@@ -360,7 +360,7 @@ def test_hifiber_dyn_flattening():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"], shape=[M1, N, M0])\n" + \
+    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])\n" + \
         "tmp0 = A_KM\n" + \
         "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
         "A_KM1M0 = tmp1\n" + \
