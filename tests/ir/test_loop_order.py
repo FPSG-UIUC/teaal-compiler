@@ -142,13 +142,60 @@ def test_apply():
     loop_order.apply(A)
     assert A.get_ranks() == ["K", "M", "N"]
 
-    A.update_ranks(partitioning.partition_tensor(A, {"K"}, False))
+    A.update_ranks(partitioning.partition_ranks(
+        A.get_ranks(), {("K",)}, False, False))
     loop_order.apply(A)
     assert A.get_ranks() == ["K2", "M", "K1I", "N"]
 
-    A.update_ranks(partitioning.partition_tensor(A, {"K1I"}, False))
+    A.update_ranks(partitioning.partition_ranks(
+        A.get_ranks(), {("K1I",)}, False, False))
     loop_order.apply(A)
     assert A.get_ranks() == order
+
+
+def test_apply_flatten():
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    order = ["K1", "MK01", "N", "MK00"]
+
+    loop_order = build_loop_order()
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(order, partitioning)
+
+    A = Tensor("A", ["M", "K"])
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K", "M"]
+
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(),
+            {("K",)},
+            False,
+            False))
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K1", "K0", "M"]
+
+    A.update_ranks(partitioning.swizzle_for_flattening(A.get_ranks()))
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(), {("M", "K0")}, False, False))
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K1", "MK0"]
+
+    A.update_ranks(
+        partitioning.partition_ranks(
+            A.get_ranks(),
+            {("MK0",)},
+            False,
+            False))
+    loop_order.apply(A)
+    assert A.get_ranks() == ["K1", "MK01", "MK00"]
 
 
 def test_apply_conv():
@@ -171,6 +218,37 @@ def test_apply_conv():
     Z = Tensor("Z", ["Q"])
     loop_order.apply(Z)
     assert Z.get_ranks() == ["Q"]
+
+
+def test_get_iter_ranks_unconfigured():
+    loop_order = build_loop_order()
+
+    with pytest.raises(ValueError) as excinfo:
+        loop_order.get_iter_ranks("N")
+
+    assert str(
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
+
+
+def test_get_iter_ranks():
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    order = ["K1", "MK01", "N", "MK00"]
+
+    loop_order = build_loop_order()
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(order, partitioning)
+
+    assert loop_order.get_iter_ranks("K1") == ("K1",)
+    assert loop_order.get_iter_ranks("MK01") == ("MK01",)
+    assert loop_order.get_iter_ranks("N") == ("N",)
+    assert loop_order.get_iter_ranks("MK00") == ("M", "K0")
 
 
 def test_get_ranks_unconfigured():
@@ -206,6 +284,21 @@ def test_default_loop_order_after_partitioning():
 
     assert loop_order.get_ranks() == [
         "M2", "M1", "M0", "N2", "N1", "N0", "K1", "K0"]
+
+
+def test_default_loop_order_flattening():
+    loop_order = build_loop_order()
+
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+    loop_order.add(None, coord_math, partitioning)
+
+    assert loop_order.get_ranks() == ["N", "K1", "MK01", "MK00"]
 
 
 def test_default_loop_order_conv():
@@ -259,6 +352,26 @@ def test_is_ready():
     assert loop_order.is_ready("K0", 5)
     assert not loop_order.is_ready("M0", 5)
     assert not loop_order.is_ready("N1", 5)
+
+
+def test_is_ready_flattened():
+    loop_order = build_loop_order()
+
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    partitioning = build_partitioning(parts)
+    coord_math = build_coord_math()
+
+    order = ["K1", "MK01", "N", "MK00"]
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(loop_order.get_ranks(), partitioning)
+
+    assert loop_order.is_ready("MK00", 3)
+    assert loop_order.is_ready("MK01", 1)
+    assert not loop_order.is_ready("K0", 3)
 
 
 def test_is_ready_conv():

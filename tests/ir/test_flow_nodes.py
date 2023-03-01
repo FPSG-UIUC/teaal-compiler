@@ -1,15 +1,4 @@
-from teaal.ir.nodes import *
-
-
-def test_node():
-    assert Node() == Node()
-    assert Node() != ""
-
-    set_ = set()
-    set_.add(Node())
-
-    assert Node() in set_
-    assert "" not in set_
+from teaal.ir.flow_nodes import *
 
 
 def test_collecting_node():
@@ -38,6 +27,13 @@ def test_from_fiber_node():
 
     assert FromFiberNode("A", "K").get_tensor() == "A"
     assert FromFiberNode("A", "K").get_rank() == "K"
+
+
+def test_get_payload_node():
+    assert repr(GetPayloadNode("A", ["K"])) == "(GetPayloadNode, A, ['K'])"
+
+    assert GetPayloadNode("A", ["K"]).get_tensor() == "A"
+    assert GetPayloadNode("A", ["K"]).get_ranks() == ["K"]
 
 
 def test_get_root_node():
@@ -86,10 +82,12 @@ def test_rank_node():
 
 
 def test_swizzle_root_node():
-    assert repr(SwizzleNode("A", ["K"])) == "(SwizzleNode, A, ['K'])"
+    assert repr(SwizzleNode("A", ["K"], "loop-order")
+                ) == "(SwizzleNode, A, ['K'], loop-order)"
 
-    assert SwizzleNode("A", ["K"]).get_tensor() == "A"
-    assert SwizzleNode("A", ["K"]).get_ranks() == ["K"]
+    assert SwizzleNode("A", ["K"], "loop-order").get_tensor() == "A"
+    assert SwizzleNode("A", ["K"], "loop-order").get_ranks() == ["K"]
+    assert SwizzleNode("A", ["K"], "loop-order").get_type() == "loop-order"
 
 
 def test_tensor_node():

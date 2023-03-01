@@ -48,9 +48,20 @@ class IterationGraph:
         loop_order = self.program.get_loop_order().get_ranks()
         self.loop_order = cast(List[Optional[str]], loop_order.copy()) + [None]
 
-    def peek(self) -> Tuple[Optional[str], List[Tensor]]:
+        # Get the set of ranks available at this point in the loop order
+        rank_avail = []
+        for rank in loop_order:
+            rank_avail.append(
+                self.program.get_partitioning().get_available(rank))
+
+        # Get the set of ranks available up to (and including) this point in
+        # the loop order
+        self.avail = [set.union(*rank_avail[:i + 1])
+                      for i in range(len(rank_avail))]
+
+    def peek_concord(self) -> Tuple[Optional[str], List[Tensor]]:
         """
-        Peek at the next iteration
+        Peek at the next loop iteration
         """
         tensors = []
         for tensor in self.program.get_tensors():
@@ -59,11 +70,44 @@ class IterationGraph:
 
         return self.loop_order[self.pos], tensors
 
-    def pop(self) -> Tuple[Optional[str], List[Tensor]]:
+    def peek_discord(self) -> List[Tuple[List[str], Tensor]]:
         """
-        Pop the next iteration off the graph
+        Peek at the tensors that need to be accessed discordantly
         """
-        rank, tensors = self.peek()
+        if self.pos < 1:
+            raise ValueError(
+                "Can only perform a discordant traversal inside the loop nest")
+
+        tensors = []
+        # For now, the only reason something would need to be accessed
+        # discordantly is if it was not included in flattening
+        for tensor in self.program.get_tensors():
+            lower_rank = tensor.peek()
+            if lower_rank is None:
+                continue
+
+            if lower_rank.upper() in self.avail[self.pos - 1]:
+                tensors.append(tensor)
+
+        # Collect the information about which ranks need to be popped
+        info = []
+        for tensor in tensors:
+            ranks = []
+            for rank in tensor.peek_rest():
+                if rank in self.avail[self.pos - 1]:
+                    ranks.append(rank)
+                else:
+                    break
+
+            info.append((ranks, tensor))
+
+        return info
+
+    def pop_concord(self) -> Tuple[Optional[str], List[Tensor]]:
+        """
+        Pop the next loop iteration off the graph
+        """
+        rank, tensors = self.peek_concord()
 
         # Update each of the tensors
         for tensor in tensors:
@@ -73,6 +117,18 @@ class IterationGraph:
         self.pos += 1
 
         return rank, tensors
+
+    def pop_discord(self) -> List[Tuple[List[str], Tensor]]:
+        """
+        Pop the relevant discordant accesses off the graph
+        """
+        info = self.peek_discord()
+
+        for ranks, tensor in info:
+            for _ in range(len(ranks)):
+                tensor.pop()
+
+        return info
 
     def __ready(self, tensor: Tensor) -> bool:
         """

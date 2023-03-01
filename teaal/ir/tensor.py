@@ -24,6 +24,8 @@ SOFTWARE.
 Representation of a tensor as it moves through the iteration graph
 """
 
+from collections import Counter
+
 from lark.tree import Tree
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -50,6 +52,7 @@ class Tensor:
         self.iter_ptr = 0
         self.rank_ptr = 0
         self.is_output = False
+        self.is_flat = False
 
     def fiber_name(self) -> str:
         """
@@ -67,6 +70,9 @@ class Tensor:
         """
         Construct a new Tensor from the current fiber
         """
+        if self.is_flat:
+            self.is_flat = self.rank_ptr == self.iter_ptr
+
         self.rank_ptr = self.iter_ptr
 
     def get_access(self) -> List[str]:
@@ -114,6 +120,13 @@ class Tensor:
             return self.__get_rank()
         return None
 
+    def peek_rest(self) -> List[str]:
+        """
+        Return the list of ranks that have not yet been iterated over for this
+        tensor
+        """
+        return self.ranks[self.iter_ptr:]
+
     def pop(self) -> str:
         """
         Pop off the top rank
@@ -130,6 +143,7 @@ class Tensor:
         self.rank_ptr = 0
         self.ranks = self.init_ranks.copy()
         self.is_output = False
+        self.is_flat = False
 
     def root_name(self) -> str:
         """
@@ -143,23 +157,40 @@ class Tensor:
         """
         self.is_output = is_output
 
-    def swizzle(self, loop_order: List[Optional[str]]) -> None:
+    def swizzle(self, rank_order: List[str]) -> None:
         """
-        Re-order the ranks of this tensor to match the given loop order
+        Re-order the ranks of this tensor to match the given rank order
         """
-        self.ranks.sort(key=loop_order.index)
+        old_active = self.ranks[self.rank_ptr:]
+
+        # Ensure that the new rank order is just a permutation of the old rank
+        # order
+        if Counter(old_active) != Counter(rank_order):
+            raise ValueError(
+                str(rank_order) +
+                " is not a permutation of old rank order " +
+                str(old_active))
+
+        self.ranks[self.rank_ptr:] = rank_order
+
+        if self.is_flat:
+            self.is_flat = old_active == rank_order
 
     def tensor_name(self) -> str:
         """
         Get the current name of the tensor
         """
-        return self.name + "_" + "".join(self.ranks[self.rank_ptr:])
+        tname = self.name + "_" + "".join(self.ranks[self.rank_ptr:])
+        if self.is_flat and not self.is_output:
+            tname += "_flat"
+        return tname
 
     def update_ranks(self, ranks: List[str]) -> None:
         """
         Update the ranks with a new list of ranks
         Note: usually requried for partitioning
         """
+        self.is_flat = len(self.ranks) - self.rank_ptr > len(ranks)
         self.ranks = self.ranks[:self.rank_ptr] + ranks
 
     def __eq__(self, other: object) -> bool:

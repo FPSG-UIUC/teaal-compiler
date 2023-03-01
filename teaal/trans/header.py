@@ -25,7 +25,7 @@ Translate the header above the HiFiber loop nest
 """
 
 from sympy import Symbol
-from typing import Set
+from typing import Iterable, Set
 
 from teaal.hifiber import *
 from teaal.ir.program import Program
@@ -49,6 +49,24 @@ class Header:
         self.partitioner = partitioner
 
     @staticmethod
+    def make_get_payload(tensor: Tensor, ranks: Iterable[str]) -> Statement:
+        """
+        Make a call to getPayload() or getPayloadRef()
+        """
+        if tensor.get_is_output():
+            func = "getPayloadRef"
+        else:
+            func = "getPayload"
+
+        rank_arg = [AJust(EVar(rank.lower())) for rank in ranks]
+        call = EMethod(EVar(tensor.fiber_name()), func, rank_arg)
+
+        for _ in ranks:
+            tensor.pop()
+
+        return SAssign(AVar(tensor.fiber_name()), call)
+
+    @staticmethod
     def make_get_root(tensor: Tensor) -> Statement:
         """
         Make a call to getRoot()
@@ -70,20 +88,27 @@ class Header:
         constr = EFunc("Tensor", args)
         return SAssign(AVar(tensor.tensor_name()), constr)
 
-    def make_swizzle(self, tensor: Tensor) -> Statement:
+    def make_swizzle(self, tensor: Tensor, type_: str) -> Statement:
         """
         Make call to swizzleRanks() (as necessary)
         """
         # Swizzle for a concordant traversal
         old_name = tensor.tensor_name()
-        self.program.get_loop_order().apply(tensor)
+
+        if type_ == "loop-order":
+            self.program.get_loop_order().apply(tensor)
+        elif type_ == "partitioning":
+            self.program.apply_partition_swizzling(tensor)
+        else:
+            raise ValueError("Unknown swizzling reason: " + type_)
+
         new_name = tensor.tensor_name()
 
         # Emit code to perform the swizzle if necessary
         if old_name == new_name:
             return SBlock([])
         else:
-            return TransUtils.build_swizzle(tensor, old_name)
+            return TransUtils.build_swizzle(tensor, old_name, new_name)
 
     @staticmethod
     def make_tensor_from_fiber(tensor: Tensor) -> Statement:
@@ -110,16 +135,13 @@ class Header:
         loop_order = self.program.get_loop_order()
         order = loop_order.get_ranks()
 
-        ranks = output.get_init_ranks()
+        # ranks = output.get_init_ranks()
+        ranks = output.get_ranks()
         avail = [False for _ in ranks]
 
         final_pos = {}
         for rank in ranks:
-            final_rank = rank
-            if rank in part.get_all_parts().keys():
-                final_rank += "0"
-
-            final_pos[rank] = order.index(final_rank)
+            final_pos[rank] = order.index(part.get_final_rank_id(output, rank))
 
         for tensor in self.program.get_tensors():
             # Skip the output
@@ -127,10 +149,13 @@ class Header:
                 continue
 
             # Mark all ranks in the input tensor available
-            for trank in tensor.get_init_ranks():
-                for rank in ranks:
+            tranks = part.partition_ranks(
+                tensor.get_ranks(), part.get_all_parts(), True, True)
+
+            for trank in tranks:
+                for i, rank in enumerate(ranks):
                     if loop_order.is_ready(trank, final_pos[rank]):
-                        avail[ranks.index(rank)] = True
+                        avail[i] = True
 
         # If at least one rank is not available, we need an explicit shape
         if not all(avail):

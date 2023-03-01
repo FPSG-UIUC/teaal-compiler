@@ -220,32 +220,29 @@ class Equation:
         part = self.program.get_partitioning()
         root = part.get_root_name(rank)
 
-        # Get the number of the partition; e.g., K2 -> 2
-        part_num: Optional[int]
-        if rank == root:
-            part_num = None
-        else:
-            part_num = int(rank[len(root):])
+        # We cannot iterate over output-only flattened ranks
+        if part.is_flattened(rank):
+            raise ValueError(
+                "Illegal dataflow: cannot iterate over output-only flattened rank " + rank)
 
         # If this is the top partition, we start at 0 and end at the root
         start: Expression
         end: Expression
-        if part_num is None or part_num == len(part.get_all_parts()[root]):
+        offset = part.get_offset(rank)
+        if offset:
+            start = EVar(offset.lower())
+            end = EBinOp(start, OAdd(), EVar(rank))
+        else:
             start = EInt(0)
             end = EVar(root)
 
-        # Otherwise, start at the coordinate of the partition above
-        else:
-            start = EVar(root.lower() + str(part_num + 1))
-            end = EBinOp(start, OAdd(), EVar(rank))
-
         # If this is the bottom partition of this rank, the step is 1
         step: Expression
-        if part_num is None or part_num == 0:
-            step = EInt(1)
-        # Otherwise, the step is the size of the partitions below it
+        opt_step = part.get_step(rank)
+        if opt_step:
+            step = EVar(opt_step)
         else:
-            step = EVar(root + str(part_num - 1))
+            step = EInt(1)
 
         out_name = self.program.get_output().fiber_name()
         args = [AJust(start), AJust(end), AJust(step)]
@@ -292,13 +289,19 @@ class Equation:
             raise ValueError("Something is wrong...")  # pragma: no cover
 
         # Add the rank variable
-        rank_var = rank.lower()
-        payload = PTuple([PVar(rank_var), payload])
+        iter_ranks = self.program.get_loop_order().get_iter_ranks(rank)
+        rank_payload: Payload
+        if len(iter_ranks) == 1:
+            rank_payload = PVar(iter_ranks[0].lower())
+        else:
+            rank_payload = PTuple([PVar(iter_rank.lower())
+                                  for iter_rank in iter_ranks])
+        payload = PTuple([rank_payload, payload])
 
         # If the spacetime style is occupancy, we also need to enumerate the
         # iterations
         if self.__need_enumerate(rank):
-            payload = PTuple([PVar(rank_var + "_pos"), payload])
+            payload = PTuple([PVar(rank.lower() + "_pos"), payload])
 
         return payload
 
@@ -435,11 +438,10 @@ class Equation:
         # relevant)
         math = self.program.get_coord_math().get_trans(troot)
         sexpr = solve(math - Symbol(troot), Symbol(root))[0]
-        partitioned = partitioning.get_all_parts().keys()
-
         for symbol in sexpr.atoms(Symbol):
-            if partitioning.partition_rank(str(symbol).upper()) in partitioned:
-                sexpr = sexpr.subs(symbol, Symbol(str(symbol) + "0"))
+            new_rank = partitioning.partition_rank((str(symbol).upper(),))
+            if new_rank:
+                sexpr = sexpr.subs(symbol, str(symbol) + "0")
 
         # Build the interval
         if rank == root:

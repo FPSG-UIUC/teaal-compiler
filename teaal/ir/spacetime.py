@@ -42,6 +42,7 @@ class SpaceTime:
         """
         Build the spacetime object
         """
+        self.partitioning = partitioning
         self.styles = {}
 
         # Check the type of the space argument
@@ -78,12 +79,6 @@ class SpaceTime:
             self.time.append(rank)
             self.styles[rank] = tree.data
 
-        # Find the offset rank id associated with the partitioned ranks
-        self.offsets = {}
-        for rank, parts in partitioning.get_all_parts().items():
-            for i in range(len(parts)):
-                self.offsets[rank + str(i)] = rank + str(i + 1)
-
         # Store slip if it is specified
         self.slip = False
         if "opt" in yaml.keys():
@@ -111,9 +106,7 @@ class SpaceTime:
 
         Used to convert from absolute coordinates to relative coordinates
         """
-        if rank in self.offsets:
-            return self.offsets[rank]
-        return None
+        return self.partitioning.get_offset(rank)
 
     def get_slip(self) -> bool:
         """

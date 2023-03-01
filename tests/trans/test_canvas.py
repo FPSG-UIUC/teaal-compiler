@@ -139,7 +139,7 @@ def test_create_canvas_partitioned():
     static_parts = program.get_partitioning().get_static_parts()
     for tensor in program.get_tensors():
         for rank in static_parts:
-            program.apply_partitioning(tensor, rank)
+            program.apply_partitioning(tensor, (rank[0],))
         program.get_loop_order().apply(tensor)
 
     canvas = Canvas(program)
@@ -229,12 +229,45 @@ def test_add_activity_dyn_part():
     program = create_dyn_partitioned()
     program.add_einsum(0)
     program.apply_all_partitioning(program.get_output())
-    program.apply_partitioning(program.get_tensor("A"), "M")
+    program.apply_partitioning(program.get_tensor("A"), ("M",))
 
     canvas = Canvas(program)
     canvas.create_canvas()
 
     hifiber = "canvas.addActivity((k, m2, m0), (k, n), (m2, m1, m0, n), spacetime=((), (m2_pos, k_pos, m1_pos, m0_pos, n_pos)))"
+    assert canvas.add_activity().gen(0) == hifiber
+
+
+def test_add_activity_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            A: [M, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = A[m, n]
+    mapping:
+        partitioning:
+            Z:
+                (M, N): [flatten()]
+        loop-order:
+            Z: [MN]
+        spacetime:
+            Z:
+                space: []
+                time: [MN]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    part_ir = program.get_partitioning()
+
+    for tensor in program.get_tensors():
+        program.apply_all_partitioning(tensor)
+
+    canvas = Canvas(program)
+    canvas.create_canvas()
+
+    hifiber = "canvas.addActivity(((m, n),), ((m, n),), spacetime=((), (mn_pos,)))"
     assert canvas.add_activity().gen(0) == hifiber
 
 

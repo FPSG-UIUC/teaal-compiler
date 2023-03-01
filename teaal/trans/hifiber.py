@@ -28,10 +28,11 @@ from typing import cast, List, Optional
 
 from teaal.hifiber import *
 from teaal.ir.flow_graph import FlowGraph
+from teaal.ir.flow_nodes import *
 from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
-from teaal.ir.nodes import *
+from teaal.ir.node import Node
 from teaal.ir.program import Program
 from teaal.parse import *
 from teaal.trans.collector import Collector
@@ -120,9 +121,9 @@ class HiFiber:
 
             elif isinstance(node, LoopNode):
                 # Generate the for loop
-                rank, tensors = self.graph.peek()
+                rank, tensors = self.graph.peek_concord()
                 expr = self.eqn.make_iter_expr(cast(str, rank), tensors)
-                _, tensors = self.graph.pop()
+                _, tensors = self.graph.pop_concord()
                 payload = self.eqn.make_payload(cast(str, rank), tensors)
 
                 # Recurse for the for loop body
@@ -160,14 +161,14 @@ class HiFiber:
 
             elif isinstance(node, PartNode):
                 tensor = self.program.get_tensor(node.get_tensor())
-                rank = node.get_ranks()[0]
+                ranks = node.get_ranks()
 
                 tensor.from_fiber()
-                code.add(self.partitioner.partition(tensor, rank))
+                code.add(self.partitioner.partition(tensor, ranks))
 
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_tensor(node.get_tensor())
-                code.add(self.header.make_swizzle(tensor))
+                code.add(self.header.make_swizzle(tensor, node.get_type()))
 
             elif isinstance(node, GetRootNode):
                 tensor = self.program.get_tensor(node.get_tensor())
@@ -206,6 +207,10 @@ class HiFiber:
                     self.collector.set_collecting(
                         node.get_tensor(),
                         node.get_rank()))
+
+            elif isinstance(node, GetPayloadNode):
+                tensor = self.program.get_tensor(node.get_tensor())
+                code.add(Header.make_get_payload(tensor, node.get_ranks()))
 
             else:
                 raise ValueError(

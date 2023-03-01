@@ -27,7 +27,8 @@ def test_build_rank_ids():
 def test_build_set_rank_ids():
     tensor = Tensor("A", ["I", "J"])
     hifiber = "A_IJ.setRankIds(rank_ids=[\"I\", \"J\"])"
-    assert TransUtils.build_set_rank_ids(tensor).gen(0) == hifiber
+    assert TransUtils.build_set_rank_ids(
+        tensor, tensor.tensor_name()).gen(0) == hifiber
 
 
 def test_build_shape():
@@ -38,7 +39,7 @@ def test_build_shape():
 def test_build_swizzle():
     new = Tensor("A", ["J", "I"])
     hifiber = "A_JI = A_IJ.swizzleRanks(rank_ids=[\"J\", \"I\"])"
-    assert TransUtils.build_swizzle(new, "A_IJ").gen(0) == hifiber
+    assert TransUtils.build_swizzle(new, "A_IJ", "A_JI").gen(0) == hifiber
 
 
 def test_next_tmp():

@@ -133,6 +133,31 @@ def make_display(style, opt):
     return IterationGraph(program), Equation(program)
 
 
+def make_matmul(mapping):
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+    """ + mapping
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    part_ir = program.get_partitioning()
+    for tensor in program.get_tensors():
+        program.apply_all_partitioning(tensor)
+        program.get_loop_order().apply(tensor)
+
+    return IterationGraph(program), Equation(program)
+
+
 def make_conv(expr, loop_order):
     yaml = """
     einsum:
@@ -261,7 +286,7 @@ def test_make_iter_expr_no_tensors():
 def test_make_iter_expr():
     graph, eqn = make_basic()
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "b_i & (c_i & d_i)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -270,7 +295,7 @@ def test_make_iter_expr():
 def test_make_iter_expr_output():
     graph, eqn = make_output()
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "a_i << (b_i & (c_i & d_i))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -279,7 +304,7 @@ def test_make_iter_expr_output():
 def test_make_iter_expr_mult_terms():
     graph, eqn = make_mult_terms()
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "a_i << ((b_i & c_i) | ((d_i & e_i) | f_i))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -288,7 +313,7 @@ def test_make_iter_expr_mult_terms():
 def test_make_iter_expr_dot():
     graph, eqn = make_dot()
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "z_m << (a_m & c_m)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -297,7 +322,7 @@ def test_make_iter_expr_dot():
 def test_make_iter_display_coord():
     graph, eqn = make_display("coord", "")
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "b_i & (c_i & d_i)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -306,7 +331,7 @@ def test_make_iter_display_coord():
 def test_make_iter_expr_display_pos():
     graph, eqn = make_display("pos", "")
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "enumerate(b_i & (c_i & d_i))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -315,10 +340,27 @@ def test_make_iter_expr_display_pos():
 def test_make_iter_expr_display_slip():
     graph, eqn = make_display("pos", "slip")
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "b_i & (c_i & d_i)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
+def test_flattened_output_only_bad():
+    mapping = """
+        partitioning:
+            Z:
+                (M, N): [flatten()]
+        loop-order:
+            Z: [MN, K]
+    """
+    graph, eqn = make_matmul(mapping)
+
+    with pytest.raises(ValueError) as excinfo:
+        eqn.make_iter_expr(*graph.peek_concord())
+
+    assert str(
+        excinfo.value) == "Illegal dataflow: cannot iterate over output-only flattened rank MN"
 
 
 def test_make_iter_expr_output_only():
@@ -326,7 +368,7 @@ def test_make_iter_expr_output_only():
     graph = IterationGraph(program)
     eqn = Equation(program)
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "a_i.iterRangeShapeRef(0, I, 1)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -344,7 +386,7 @@ def test_make_iter_expr_output_only_display():
     graph = IterationGraph(program)
     eqn = Equation(program)
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "enumerate(a_i.iterRangeShapeRef(0, I, 1))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -361,17 +403,17 @@ def test_make_iter_expr_output_only_partition():
     graph = IterationGraph(program)
     eqn = Equation(program)
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "a_i2.iterRangeShapeRef(0, I, I1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
-    graph.pop()
-    rank, tensors = graph.peek()
+    graph.pop_concord()
+    rank, tensors = graph.peek_concord()
     iter_expr = "a_i1.iterRangeShapeRef(i2, i2 + I1, I0)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
-    graph.pop()
-    rank, tensors = graph.peek()
+    graph.pop_concord()
+    rank, tensors = graph.peek_concord()
     iter_expr = "a_i0.iterRangeShapeRef(i1, i1 + I0, 1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
@@ -379,15 +421,15 @@ def test_make_iter_expr_output_only_partition():
 def test_make_iter_expr_conv():
     expr = "O[p, q] = sum(S).(I[p + q + s] * F[s])"
     graph, eqn = make_conv(expr, "[P, S, Q]")
-    graph.pop()
+    graph.pop_concord()
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "f_s"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
-    graph.pop()
-    rank, tensors = graph.peek()
+    graph.pop_concord()
+    rank, tensors = graph.peek_concord()
     iter_expr = "o_q << i_w.project(trans_fn=lambda w: w + -1 * p + -1 * s, interval=(0, Q))"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -396,15 +438,15 @@ def test_make_iter_expr_conv():
 def test_make_iter_expr_conv_frac():
     expr = "O[p, q] = sum(S).(I[2 * q + s] * F[s])"
     graph, eqn = make_conv(expr, "[P, S, Q]")
-    graph.pop()
+    graph.pop_concord()
 
-    rank, tensors = graph.peek()
+    rank, tensors = graph.peek_concord()
     iter_expr = "f_s"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
-    graph.pop()
-    rank, tensors = graph.peek()
+    graph.pop_concord()
+    rank, tensors = graph.peek_concord()
     iter_expr = "o_q << i_w.project(trans_fn=lambda w: 1 / 2 * w + -1 / 2 * s, interval=(0, Q)).prune(trans_fn=lambda i, c, p: c % 1 == 0)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
@@ -413,11 +455,11 @@ def test_make_iter_expr_conv_frac():
 def test_make_iter_expr_conv_project_output():
     expr = "O[p, q] = sum(S).(I[p + q + s] * F[s])"
     graph, eqn = make_conv(expr, "[P, S, W]")
-    graph.pop()
-    graph.pop()
+    graph.pop_concord()
+    graph.pop_concord()
 
     with pytest.raises(ValueError) as excinfo:
-        eqn.make_iter_expr(*graph.peek())
+        eqn.make_iter_expr(*graph.peek_concord())
 
     assert str(
         excinfo.value) == "Cannot project into the output tensor. Replace W with Q in the loop order"
@@ -428,20 +470,20 @@ def test_make_iter_expr_conv_enum():
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
     hifiber = "enumerate(o_q1 << i_q1)"
 
-    assert eqn.make_iter_expr(*graph.peek()).gen() == hifiber
+    assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 
 
-def test_make_iter_expr_conv_enum():
+def test_make_iter_expr_conv_part():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     graph, eqn = make_conv_part(expr, "[Q1, P, W0, Q0]")
 
-    graph.pop()
-    graph.pop()
-    graph.pop()
+    graph.pop_concord()
+    graph.pop_concord()
+    graph.pop_concord()
 
     hifiber = "o_q0 << f_s.project(trans_fn=lambda s: w0 + -1 * s, interval=(q0_start, q0_end))"
 
-    assert eqn.make_iter_expr(*graph.peek()).gen() == hifiber
+    assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 
 
 def test_make_payload_no_tensors():
@@ -456,7 +498,7 @@ def test_make_payload_no_tensors():
 def test_make_payload():
     graph, eqn = make_basic()
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "i, (b_val, (c_val, d_val))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -465,7 +507,7 @@ def test_make_payload():
 def test_make_payload_output():
     graph, eqn = make_output()
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "i, (a_ref, (b_val, (c_val, d_val)))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -474,7 +516,7 @@ def test_make_payload_output():
 def test_make_payload_mult_terms():
     graph, eqn = make_mult_terms()
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "i, (a_ref, (_, (b_val, c_val), (_, (d_val, e_val), f_val)))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -483,7 +525,7 @@ def test_make_payload_mult_terms():
 def test_make_payload_dot():
     graph, eqn = make_dot()
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "m, (z_ref, (a_val, c_val))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -492,7 +534,7 @@ def test_make_payload_dot():
 def test_make_payload_display_coord():
     graph, eqn = make_display("coord", "")
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "i, (b_val, (c_val, d_val))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -501,7 +543,7 @@ def test_make_payload_display_coord():
 def test_make_payload_display_pos():
     graph, eqn = make_display("pos", "")
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "i_pos, (i, (b_val, (c_val, d_val)))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -510,7 +552,7 @@ def test_make_payload_display_pos():
 def test_make_payload_display_slip():
     graph, eqn = make_display("pos", "slip")
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     payload = "i, (b_val, (c_val, d_val))"
 
     assert eqn.make_payload(rank, tensors).gen(False) == payload
@@ -521,10 +563,32 @@ def test_make_payload_output_only():
     graph = IterationGraph(program)
     eqn = Equation(program)
 
-    rank, tensors = graph.pop()
+    rank, tensors = graph.pop_concord()
     iter_expr = "i, a_ref"
 
     assert eqn.make_payload(rank, tensors).gen(False) == iter_expr
+
+
+def test_make_payload_flattened():
+    mapping = """
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+    graph, eqn = make_matmul(mapping)
+
+    assert eqn.make_payload(
+        *graph.pop_concord()).gen(parens=False) == "k1, (a_mk01, b_n)"
+    assert eqn.make_payload(
+        *graph.pop_concord()).gen(parens=False) == "mk01, a_mk00"
+    assert eqn.make_payload(
+        * graph.pop_concord()).gen(parens=False) == "n, (z_m, b_k0)"
+    assert eqn.make_payload(
+        * graph.pop_concord()).gen(parens=False) == "(m, k0), a_val"
 
 
 def test_make_payload_conv_enum():
@@ -532,7 +596,7 @@ def test_make_payload_conv_enum():
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
     hifiber = "q1_pos, (q1, (o_p, i_w0))"
 
-    assert eqn.make_payload(*graph.pop()).gen(parens=False) == hifiber
+    assert eqn.make_payload(*graph.pop_concord()).gen(parens=False) == hifiber
 
 
 def test_make_update():
@@ -564,10 +628,10 @@ def test_make_update_dot():
 def test_iter_fiber_not_fiber():
     expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
     graph, eqn = make_conv(expr, "[P, W, Q]")
-    graph.pop()
-    graph.pop()
-    graph.pop()
-    _, tensors = graph.peek()
+    graph.pop_concord()
+    graph.pop_concord()
+    graph.pop_concord()
+    _, tensors = graph.peek_concord()
 
     with pytest.raises(ValueError) as excinfo:
         eqn._Equation__iter_fiber(None, tensors[0])

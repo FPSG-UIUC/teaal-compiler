@@ -41,7 +41,7 @@ def test_translate_specified():
     einsum = Einsum.from_file("tests/integration/test_input.yaml")
     mapping = Mapping.from_file("tests/integration/test_input.yaml")
 
-    hifiber = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+    hifiber_option1 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
         "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
         "canvas = createCanvas(A_KM, B_KN, T1_NM)\n" + \
         "t1_n = T1_NM.getRoot()\n" + \
@@ -52,28 +52,30 @@ def test_translate_specified():
         "        for m, (t1_ref, a_val) in t1_m << a_m:\n" + \
         "            t1_ref += a_val * b_val\n" + \
         "            canvas.addActivity((k, m), (k, n), (n, m), spacetime=((n_pos,), (k_pos, m)))\n" + \
-        "T1_MN = T1_NM.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+        "tmp0 = T1_NM\n" + \
+        "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+        "T1_MN = tmp1\n" + \
         "displayCanvas(canvas)\n" + \
         "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
-        "tmp0 = T1_MN\n" + \
-        "tmp1 = tmp0.splitUniform(4, depth=0)\n" + \
-        "tmp2 = tmp1.splitUniform(2, depth=1)\n" + \
-        "T1_M2M1M0N = tmp2\n" + \
-        "T1_M2M1M0N.setRankIds(rank_ids=[\"M2\", \"M1\", \"M0\", \"N\"])\n" + \
-        "tmp3 = T1_M2M1M0N\n" + \
-        "tmp4 = tmp3.splitUniform(6, depth=3)\n" + \
-        "tmp5 = tmp4.splitUniform(3, depth=4)\n" + \
-        "T1_M2M1M0N2N1N0 = tmp5\n" + \
+        "tmp2 = T1_MN\n" + \
+        "tmp3 = tmp2.splitUniform(6, depth=1)\n" + \
+        "tmp4 = tmp3.splitUniform(3, depth=2)\n" + \
+        "T1_MN2N1N0 = tmp4\n" + \
+        "T1_MN2N1N0.setRankIds(rank_ids=[\"M\", \"N2\", \"N1\", \"N0\"])\n" + \
+        "tmp5 = T1_MN2N1N0\n" + \
+        "tmp6 = tmp5.splitUniform(4, depth=0)\n" + \
+        "tmp7 = tmp6.splitUniform(2, depth=1)\n" + \
+        "T1_M2M1M0N2N1N0 = tmp7\n" + \
         "T1_M2M1M0N2N1N0.setRankIds(rank_ids=[\"M2\", \"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
-        "tmp6 = C_NM\n" + \
-        "tmp7 = tmp6.splitUniform(6, depth=0)\n" + \
-        "tmp8 = tmp7.splitUniform(3, depth=1)\n" + \
-        "C_N2N1N0M = tmp8\n" + \
+        "tmp8 = C_NM\n" + \
+        "tmp9 = tmp8.splitUniform(6, depth=0)\n" + \
+        "tmp10 = tmp9.splitUniform(3, depth=1)\n" + \
+        "C_N2N1N0M = tmp10\n" + \
         "C_N2N1N0M.setRankIds(rank_ids=[\"N2\", \"N1\", \"N0\", \"M\"])\n" + \
-        "tmp9 = C_N2N1N0M\n" + \
-        "tmp10 = tmp9.splitUniform(4, depth=3)\n" + \
-        "tmp11 = tmp10.splitUniform(2, depth=4)\n" + \
-        "C_N2N1N0M2M1M0 = tmp11\n" + \
+        "tmp11 = C_N2N1N0M\n" + \
+        "tmp12 = tmp11.splitUniform(4, depth=3)\n" + \
+        "tmp13 = tmp12.splitUniform(2, depth=4)\n" + \
+        "C_N2N1N0M2M1M0 = tmp13\n" + \
         "C_N2N1N0M2M1M0.setRankIds(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
         "z_m2 = Z_M2N2M1N1M0N0.getRoot()\n" + \
         "T1_M2N2M1N1M0N0 = T1_M2M1M0N2N1N0.swizzleRanks(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
@@ -87,14 +89,71 @@ def test_translate_specified():
         "                for m0, (z_n0, (_, t1_n0, c_n0)) in z_m0 << (t1_m0 | c_m0):\n" + \
         "                    for n0, (z_ref, (_, t1_val, c_val)) in z_n0 << (t1_n0 | c_n0):\n" + \
         "                        z_ref += t1_val + c_val\n" + \
-        "Z_N2N1N0M2M1M0 = Z_M2N2M1N1M0N0.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
-        "tmp12 = Z_N2N1N0M2M1M0\n" + \
-        "tmp13 = tmp12.flattenRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
-        "tmp14 = tmp13.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-        "Z_NM = tmp14\n" + \
-        "Z_NM.setRankIds(rank_ids=[\"N\", \"M\"])"
+        "tmp14 = Z_M2N2M1N1M0N0\n" + \
+        "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
+        "tmp16 = tmp15.flattenRanks(depth=3, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp17 = tmp16.flattenRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
+        "Z_NM = tmp17"
 
-    assert str(HiFiber(einsum, mapping)) == hifiber
+    hifiber_option2 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+        "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
+        "canvas = createCanvas(A_KM, B_KN, T1_NM)\n" + \
+        "t1_n = T1_NM.getRoot()\n" + \
+        "a_k = A_KM.getRoot()\n" + \
+        "b_k = B_KN.getRoot()\n" + \
+        "for k_pos, (k, (a_m, b_n)) in enumerate(a_k & b_k):\n" + \
+        "    for n_pos, (n, (t1_m, b_val)) in enumerate(t1_n << b_n):\n" + \
+        "        for m, (t1_ref, a_val) in t1_m << a_m:\n" + \
+        "            t1_ref += a_val * b_val\n" + \
+        "            canvas.addActivity((k, m), (k, n), (n, m), spacetime=((n_pos,), (k_pos, m)))\n" + \
+        "tmp0 = T1_NM\n" + \
+        "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+        "T1_MN = tmp1\n" + \
+        "displayCanvas(canvas)\n" + \
+        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "tmp2 = T1_MN\n" + \
+        "tmp3 = tmp2.splitUniform(4, depth=0)\n" + \
+        "tmp4 = tmp3.splitUniform(2, depth=1)\n" + \
+        "T1_M2M1M0N = tmp4\n" + \
+        "T1_M2M1M0N.setRankIds(rank_ids=[\"M2\", \"M1\", \"M0\", \"N\"])\n" + \
+        "tmp5 = T1_M2M1M0N\n" + \
+        "tmp6 = tmp5.splitUniform(6, depth=3)\n" + \
+        "tmp7 = tmp6.splitUniform(3, depth=4)\n" + \
+        "T1_M2M1M0N2N1N0 = tmp7\n" + \
+        "T1_M2M1M0N2N1N0.setRankIds(rank_ids=[\"M2\", \"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
+        "tmp8 = C_NM\n" + \
+        "tmp9 = tmp8.splitUniform(4, depth=1)\n" + \
+        "tmp10 = tmp9.splitUniform(2, depth=2)\n" + \
+        "C_NM2M1M0 = tmp10\n" + \
+        "C_NM2M1M0.setRankIds(rank_ids=[\"N\", \"M2\", \"M1\", \"M0\"])\n" + \
+        "tmp11 = C_NM2M1M0\n" + \
+        "tmp12 = tmp11.splitUniform(6, depth=0)\n" + \
+        "tmp13 = tmp12.splitUniform(3, depth=1)\n" + \
+        "C_N2N1N0M2M1M0 = tmp13\n" + \
+        "C_N2N1N0M2M1M0.setRankIds(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
+        "z_m2 = Z_M2N2M1N1M0N0.getRoot()\n" + \
+        "T1_M2N2M1N1M0N0 = T1_M2M1M0N2N1N0.swizzleRanks(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "C_M2N2M1N1M0N0 = C_N2N1N0M2M1M0.swizzleRanks(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "t1_m2 = T1_M2N2M1N1M0N0.getRoot()\n" + \
+        "c_m2 = C_M2N2M1N1M0N0.getRoot()\n" + \
+        "for m2, (z_n2, (_, t1_n2, c_n2)) in z_m2 << (t1_m2 | c_m2):\n" + \
+        "    for n2, (z_m1, (_, t1_m1, c_m1)) in z_n2 << (t1_n2 | c_n2):\n" + \
+        "        for m1, (z_n1, (_, t1_n1, c_n1)) in z_m1 << (t1_m1 | c_m1):\n" + \
+        "            for n1, (z_m0, (_, t1_m0, c_m0)) in z_n1 << (t1_n1 | c_n1):\n" + \
+        "                for m0, (z_n0, (_, t1_n0, c_n0)) in z_m0 << (t1_m0 | c_m0):\n" + \
+        "                    for n0, (z_ref, (_, t1_val, c_val)) in z_n0 << (t1_n0 | c_n0):\n" + \
+        "                        z_ref += t1_val + c_val\n" + \
+        "tmp14 = Z_M2N2M1N1M0N0\n" + \
+        "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
+        "tmp16 = tmp15.flattenRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp17 = tmp16.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
+        "Z_NM = tmp17"
+
+    result = str(HiFiber(einsum, mapping))
+    print(result)
+    assert result in [hifiber_option1, hifiber_option2]
 
 
 def test_hifiber_dyn_part():
@@ -165,8 +224,8 @@ def test_hifiber_dyn_part():
         "                        z_ref += a_val * b_val\n" + \
         "tmp10 = Z_MN1N0\n" + \
         "tmp11 = tmp10.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
-        "Z_MN = tmp11\n" + \
-        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
+        "tmp11.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp11"
 
     assert str(HiFiber(einsum, mapping)) == hifiber
 
@@ -214,8 +273,139 @@ def test_hifiber_conv():
         "            o_ref += i_val * f_val\n" + \
         "tmp2 = O_Q1Q0\n" + \
         "tmp3 = tmp2.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-        "O_Q = tmp3\n" + \
-        "O_Q.setRankIds(rank_ids=[\"Q\"])"
+        "tmp3.setRankIds(rank_ids=[\"Q\"])\n" + \
+        "O_Q = tmp3"
+
+    assert str(HiFiber(einsum, mapping)) == hifiber
+
+
+def test_hifiber_static_flattening():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+        "tmp0 = A_KM\n" + \
+        "tmp1 = tmp0.splitUniform(4, depth=0)\n" + \
+        "A_K1K0M = tmp1\n" + \
+        "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])\n" + \
+        "tmp2 = B_KN\n" + \
+        "tmp3 = tmp2.splitUniform(4, depth=0)\n" + \
+        "B_K1K0N = tmp3\n" + \
+        "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
+        "z_n = Z_NM.getRoot()\n" + \
+        "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])\n" + \
+        "B_K1NK0 = B_K1K0N.swizzleRanks(rank_ids=[\"K1\", \"N\", \"K0\"])\n" + \
+        "tmp4 = A_K1MK0\n" + \
+        "tmp5 = tmp4.flattenRanks(depth=1, levels=1, coord_style=\"tuple\")\n" + \
+        "A_K1MK0_flat = tmp5\n" + \
+        "A_K1MK0_flat.setRankIds(rank_ids=[\"K1\", \"MK0\"])\n" + \
+        "b_k1 = B_K1NK0.getRoot()\n" + \
+        "a_k1 = A_K1MK0_flat.getRoot()\n" + \
+        "for k1, (a_mk0, b_n) in a_k1 & b_k1:\n" + \
+        "    A_MK0 = Tensor.fromFiber(rank_ids=[\"MK0\"], fiber=a_mk0)\n" + \
+        "    tmp6 = A_MK0\n" + \
+        "    tmp7 = tmp6.splitEqual(5)\n" + \
+        "    A_MK01MK00 = tmp7\n" + \
+        "    A_MK01MK00.setRankIds(rank_ids=[\"MK01\", \"MK00\"])\n" + \
+        "    a_mk01 = A_MK01MK00.getRoot()\n" + \
+        "    for mk01, a_mk00 in a_mk01:\n" + \
+        "        for n, (z_m, b_k0) in z_n << b_n:\n" + \
+        "            for (m, k0), a_val in a_mk00:\n" + \
+        "                z_ref = z_m.getPayloadRef(m)\n" + \
+        "                b_val = b_k0.getPayload(k0)\n" + \
+        "                z_ref += a_val * b_val\n" + \
+        "tmp8 = Z_NM\n" + \
+        "tmp9 = tmp8.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp9"
+
+    assert str(HiFiber(einsum, mapping)) == hifiber
+
+
+def test_hifiber_dyn_flattening():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_shape(6)]
+                K: [uniform_occupancy(A.4)]
+                (M0, K0): [flatten()]
+                M0K0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [M1, K1, M0K01, N, M0K00]
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])\n" + \
+        "tmp0 = A_KM\n" + \
+        "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
+        "A_KM1M0 = tmp1\n" + \
+        "A_KM1M0.setRankIds(rank_ids=[\"K\", \"M1\", \"M0\"])\n" + \
+        "z_m1 = Z_M1NM0.getRoot()\n" + \
+        "A_M1KM0 = A_KM1M0.swizzleRanks(rank_ids=[\"M1\", \"K\", \"M0\"])\n" + \
+        "b_k = B_KN.getRoot()\n" + \
+        "a_m1 = A_M1KM0.getRoot()\n" + \
+        "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k)\n" + \
+        "for m1, (z_n, a_k) in z_m1 << a_m1:\n" + \
+        "    A_KM0 = Tensor.fromFiber(rank_ids=[\"K\", \"M0\"], fiber=a_k)\n" + \
+        "    tmp2 = A_KM0\n" + \
+        "    tmp3 = tmp2.splitEqual(4)\n" + \
+        "    A_K1K0M0 = tmp3\n" + \
+        "    A_K1K0M0.setRankIds(rank_ids=[\"K1\", \"K0\", \"M0\"])\n" + \
+        "    A_K1M0K0 = A_K1K0M0.swizzleRanks(rank_ids=[\"K1\", \"M0\", \"K0\"])\n" + \
+        "    tmp4 = A_K1M0K0\n" + \
+        "    tmp5 = tmp4.flattenRanks(depth=1, levels=1, coord_style=\"tuple\")\n" + \
+        "    A_K1M0K0_flat = tmp5\n" + \
+        "    A_K1M0K0_flat.setRankIds(rank_ids=[\"K1\", \"M0K0\"])\n" + \
+        "    a_k1 = A_K1M0K0_flat.getRoot()\n" + \
+        "    tmp6 = B_KN\n" + \
+        "    tmp7 = tmp6.splitNonUniform(a_k1)\n" + \
+        "    B_K1K0N = tmp7\n" + \
+        "    B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])\n" + \
+        "    B_K1NK0 = B_K1K0N.swizzleRanks(rank_ids=[\"K1\", \"N\", \"K0\"])\n" + \
+        "    b_k1 = B_K1NK0.getRoot()\n" + \
+        "    for k1, (a_m0k0, b_n) in a_k1 & b_k1:\n" + \
+        "        A_M0K0 = Tensor.fromFiber(rank_ids=[\"M0K0\"], fiber=a_m0k0)\n" + \
+        "        tmp8 = A_M0K0\n" + \
+        "        tmp9 = tmp8.splitEqual(5)\n" + \
+        "        A_M0K01M0K00 = tmp9\n" + \
+        "        A_M0K01M0K00.setRankIds(rank_ids=[\"M0K01\", \"M0K00\"])\n" + \
+        "        a_m0k01 = A_M0K01M0K00.getRoot()\n" + \
+        "        for m0k01, a_m0k00 in a_m0k01:\n" + \
+        "            for n, (z_m0, b_k0) in z_n << b_n:\n" + \
+        "                for (m0, k0), a_val in a_m0k00:\n" + \
+        "                    z_ref = z_m0.getPayloadRef(m0)\n" + \
+        "                    b_val = b_k0.getPayload(k0)\n" + \
+        "                    z_ref += a_val * b_val\n" + \
+        "tmp10 = Z_M1NM0\n" + \
+        "tmp11 = tmp10.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
+        "tmp12 = tmp11.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp12.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp12"
 
     assert str(HiFiber(einsum, mapping)) == hifiber
 

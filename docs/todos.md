@@ -1,33 +1,34 @@
 # To-Dos
 
-## Bug Fixes
+## Priority: 1
 
-## Minor Changes
+[x] Support flattening
+[ ] Allow for variable-named partition sizes
+[ ] Correctly flatten together output after occupancy-space partitioning
+[ ] Support the new architecture/binding specification
 
-- [ ] Add tests to make sure that `get_all_parts` is used in the correct locations (vs `get_static_parts` and `get_dyn_parts`)
-- [ ] Add public interface to top-level `teaal` import
-- [ ] Clean up tests
-    - Which example tests actually test something unique?
-    - All tests should use the [tensor naming conventions](./tensor_naming.md)
-    - Delete all unused tests except for cnn and conv2d
-- [ ] Introduce .coord in spacetime notebook before .pos/default
-- [ ] Allow variable names for partition sizes
+## Priority: 2
 
-## Major Changes
+[ ] Remove the `sum(...).(...)` from the specification
+[ ] Correctly manage Einsums with both multiplication and addition
+[ ] Report which Einsums are fused together
+[ ] Disallow partitioning on tensors with expressions as indices
 
-- [ ] Add occupancy-based partitioning
-    - [x] Add single-level occupancy-based partitioning
-    - [ ] Add multi-level occupancy-based partitioning
-    - [ ] Add n-way occupancy-based partitioning
-    - [ ] Allow flattening
-- [ ] Allow dynamic partitioning in the coordinate space
-- [ ] Switch to comma-separated partitioning fields
-- [ ] Update Tensor.fromFiber to copy if it already has an owning rank
-- [ ] Add display specification to specify displaying tensors (which ones) or canvas
-- [ ] Allow `uniform_occupancy`-split tensors to be merged with `flattenRanks`
+## Priority: 3
 
-## Planning
+[ ] Support index expressions that are a single integer
+[ ] Support multi-cast/broadcast
 
-- [ ] How should we specify multiple levels of occupancy-based partitioning
+## Priority: 4+
 
-## Other
+[ ] Correctly support partitioning on tensors with expressions as indices
+[ ] Add a way to generate `displayTensor()` calls
+[ ] Allow the formatted arrays for all fibers of a rank to be flattened together
+[ ] On-chip memory traffic modeling
+[ ] Additional swizzling algorithms (e.g. SpArch)
+[ ] More control over Einsum pipelining
+
+## Future Meeting Agendas
+
+[ ] Discuss how trace generation works
+[ ] Discuss Joel's Isosceles paper

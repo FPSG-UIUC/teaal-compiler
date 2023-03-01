@@ -156,7 +156,7 @@ def test_apply_partitioning_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.apply_partitioning(Tensor("A", ["K", "M"]), "K")
+        program.apply_partitioning(Tensor("A", ["K", "M"]), ("K",))
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
@@ -188,9 +188,45 @@ def test_all_ranks():
 def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensor("A"), "M")
+    program.apply_partitioning(program.get_tensor("A"), ("M",))
 
     assert program.get_tensor("A") == Tensor("A", ["K", "M2", "M1", "M0"])
+
+
+def test_apply_partition_swizzling_unconfigured():
+    program = create_default()
+
+    with pytest.raises(ValueError) as excinfo:
+        program.apply_partition_swizzling(Tensor("A", ["K", "M"]))
+    assert str(
+        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
+
+
+def test_apply_partition_swizzling():
+    yaml = """
+    einsum:
+        declaration:
+            Z: [M, N]
+            A: [J, K, M, N]
+        expressions:
+            - Z[m, n] = sum(J, K).(A[j, k, m, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    A = program.get_tensor("A")
+    program.apply_partition_swizzling(A)
+    assert A.get_ranks() == ["J", "K", "M", "N"]
+
+    program.apply_partitioning(A, ("K",))
+    program.apply_partition_swizzling(A)
+    assert A.get_ranks() == ["J", "K1", "N", "M", "K0"]
 
 
 def test_get_einsum_unconfigured():

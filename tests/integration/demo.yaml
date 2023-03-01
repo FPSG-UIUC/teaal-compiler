@@ -1,9 +1,16 @@
 einsum:
     declaration:
-        Z: [M]
+        A: [M, N]
+        Z: [M, N, O]
     expressions:
-    - Z[m] = a
+        - Z[m, n, o] = A[m, n]
 mapping:
     partitioning:
         Z:
-            M: [uniform_shape(10), uniform_shape(5)]
+            (M, N): [flatten()]
+    loop-order:
+        Z: [O, MN]
+    spacetime:
+        Z:
+            space: [O]
+            time: [MN]

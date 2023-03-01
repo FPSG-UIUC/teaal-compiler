@@ -1,3 +1,5 @@
+import pytest
+
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
@@ -57,6 +59,21 @@ def build_matmul_header(mapping):
     return build_header(exprs, mapping)
 
 
+def test_make_get_payload():
+    hifiber = "a_val = a_m.getPayload(m, k)"
+
+    tensor = Tensor("A", ["M", "K"])
+    assert Header.make_get_payload(tensor, ["M", "K"]).gen(0) == hifiber
+
+
+def test_make_get_payload_output():
+    hifiber = "z_n = z_m.getPayloadRef(m)"
+
+    tensor = Tensor("Z", ["M", "N"])
+    tensor.set_is_output(True)
+    assert Header.make_get_payload(tensor, ["M"]).gen(0) == hifiber
+
+
 def test_make_get_root():
     hifiber = "a_m = A_MK.getRoot()"
 
@@ -90,6 +107,22 @@ def test_make_output_shape():
     assert header.make_output().gen(depth=0) == hifiber
 
 
+def test_make_output_no_shape_flattening():
+    exprs = """
+            - Z[m, n] = C[m, n]
+    """
+
+    mapping = """
+        partitioning:
+            Z:
+                (M, N): [flatten()]
+    """
+
+    hifiber = "Z_MN = Tensor(rank_ids=[\"MN\"])"
+    header = build_header(exprs, mapping)
+    assert header.make_output().gen(depth=0) == hifiber
+
+
 def test_make_output_conv_no_shape():
     hifiber = "O_Q = Tensor(rank_ids=[\"Q\"])"
     header = build_header_conv("[S, Q]")
@@ -104,12 +137,38 @@ def test_make_output_conv_shape():
     assert header.make_output().gen(0) == hifiber
 
 
-def test_make_swizzle():
+def test_make_swizzle_bad():
+    header = build_matmul_header("")
+    tensor = Tensor("A", ["K", "M"])
+    with pytest.raises(ValueError) as excinfo:
+        header.make_swizzle(tensor, "foo")
+
+    assert str(
+        excinfo.value) == "Unknown swizzling reason: foo"
+
+
+def test_make_swizzle_loop_order():
     hifiber = "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])"
 
     header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
-    assert header.make_swizzle(tensor).gen(depth=0) == hifiber
+    assert header.make_swizzle(tensor, "loop-order").gen(depth=0) == hifiber
+
+
+def test_make_swizzle_partitioning():
+    hifiber = "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])"
+
+    mapping = """
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+
+    header = build_matmul_header(mapping)
+    tensor = Tensor("A", ["K1", "K0", "M"])
+    assert header.make_swizzle(tensor, "partitioning").gen(depth=0) == hifiber
 
 
 def test_make_tensor_from_fiber():

@@ -27,40 +27,7 @@ Representations of all of the nodes in the FlowGraph
 import abc
 from typing import Any, Iterable, List, Tuple
 
-
-class Node(metaclass=abc.ABCMeta):
-    """
-    FlowGraph node interface
-    """
-
-    def __eq__(self, other: object) -> bool:
-        """
-        The == operator for nodes
-
-        """
-        if isinstance(other, type(self)):
-            return self.__key() == other.__key()
-        return False
-
-    def __hash__(self) -> int:
-        """
-        Hash the node (needed to insert it into the graph)
-        """
-        return hash(repr(self))
-
-    def __key(self) -> Iterable[Any]:
-        """
-        A tuple of all fields of a node
-        """
-        return ()
-
-    def __repr__(self) -> str:
-        """
-        A string representation of the node for hashing
-        """
-        strs = [key if isinstance(key, str) else repr(key)
-                for key in self.__key()]
-        return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
+from teaal.ir.node import Node
 
 
 class CollectingNode(Node):
@@ -180,6 +147,37 @@ class FromFiberNode(Node):
         Iterable of fields of a FromFiberNode
         """
         return self.tensor, self.rank
+
+
+class GetPayloadNode(Node):
+    """
+    A Node that represents a getPayload(Ref) call
+    """
+
+    def __init__(self, tensor: str, ranks: List[str]) -> None:
+        """
+        Construct a getPayload(Ref) node
+        """
+        self.tensor = tensor
+        self.ranks = ranks
+
+    def get_ranks(self) -> List[str]:
+        """
+        Accessor for the ranks
+        """
+        return self.ranks
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a GetPayloadNode
+        """
+        return self.tensor, self.ranks
 
 
 class GetRootNode(Node):
@@ -316,14 +314,14 @@ class PartNode(Node):
     A Node representing a partitioning function
     """
 
-    def __init__(self, tensor: str, ranks: Tuple[str]) -> None:
+    def __init__(self, tensor: str, ranks: Tuple[str, ...]) -> None:
         """
         Build a partitioning node for a given tensor and ranks
         """
         self.tensor = tensor
         self.ranks = ranks
 
-    def get_ranks(self) -> Tuple[str]:
+    def get_ranks(self) -> Tuple[str, ...]:
         """
         Accessor for the ranks
         """
@@ -378,12 +376,13 @@ class SwizzleNode(Node):
     A Node representing a swizzleRanks call
     """
 
-    def __init__(self, tensor: str, ranks: List[str]) -> None:
+    def __init__(self, tensor: str, ranks: List[str], type_: str) -> None:
         """
         Construct a swizzleRanks node
         """
         self.tensor = tensor
         self.ranks = ranks
+        self.type = type_
 
     def get_ranks(self) -> List[str]:
         """
@@ -397,11 +396,19 @@ class SwizzleNode(Node):
         """
         return self.tensor
 
+    def get_type(self) -> str:
+        """
+        Accessor for the type
+
+        One of: "partitioning" or "loop-order"
+        """
+        return self.type
+
     def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a SwizzleNode
         """
-        return self.tensor, self.ranks
+        return self.tensor, self.ranks, self.type
 
 
 class TensorNode(Node):

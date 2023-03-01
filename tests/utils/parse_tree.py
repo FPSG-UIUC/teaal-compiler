@@ -43,6 +43,14 @@ def make_sranks(ranks):
     return Tree("sranks", [make_name(i) for i in ranks])
 
 
+def make_prank(rank):
+    return Tree("rank", [Token("NAME", rank)])
+
+
+def make_pranks(ranks):
+    return Tree("ranks", [Token("NAME", rank) for rank in ranks])
+
+
 def make_sum(ranks, expr):
     return Tree("sum", [make_sranks(ranks), expr])
 

@@ -24,9 +24,11 @@ SOFTWARE.
 Intermediate representation of the loop order information
 """
 
+from itertools import chain
+
 from lark.tree import Tree
-from sympy import Symbol
-from typing import Any, cast, Iterable, List, Optional
+from sympy import Basic, Symbol
+from typing import Any, cast, Iterable, List, Optional, Tuple
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
@@ -80,18 +82,38 @@ class LoopOrder:
         # Get the names of the final rank ids for the tensor
         final_ids = []
         for rank in tensor.get_ranks():
-            final_ids.append(self.partitioning.get_final_rank_id(rank))
+            final_ids.append(self.partitioning.get_final_rank_id(tensor, rank))
 
         # Order the current rank ids based on their final posititon
-        order = self.ranks.copy()
-        for i in range(len(self.ranks)):
-            for j, rank in enumerate(tensor.get_ranks()):
-
-                if self.is_ready(final_ids[j], i):
-                    order[i] = rank
+        expanded: List[List[str]] = [[] for _ in range(len(self.ranks))]
+        for i, rank in enumerate(tensor.get_ranks()):
+            for j in range(len(self.ranks)):
+                if self.is_ready(final_ids[i], j):
+                    expanded[j].append(rank)
                     break
 
-        tensor.swizzle(cast(List[Optional[str]], order))
+        order = list(chain.from_iterable(expanded))
+        tensor.swizzle(order)
+
+    def get_iter_ranks(self, rank: str) -> Tuple[str, ...]:
+        """
+        Get the ranks that this rank should expand into when iterating over
+        this rank; used to unpack flattened ranks
+        """
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add()")
+
+        # If it is not flattened, nothing to unpack
+        if not self.partitioning.is_flattened(rank):
+            return (rank,)
+
+        # If it is not the innermost rank, nothing to unpack
+        if not self.__innermost_rank(rank):
+            return (rank,)
+
+        # Otherwise, unpack the flattened rank
+        return self.partitioning.unpack(rank)
 
     def get_ranks(self) -> List[str]:
         """
@@ -125,8 +147,12 @@ class LoopOrder:
                  for lrank in self.ranks[:(pos + 1)]
                  if self.__innermost_rank(lrank)]
 
+        # Translate if the rank is not flattened
         root = self.partitioning.get_root_name(rank).lower()
-        math = self.coord_math.get_trans(root)
+        if self.partitioning.is_flattened(rank):
+            math = cast(Basic, Symbol(root))
+        else:
+            math = self.coord_math.get_trans(root)
 
         ready = all(str(ind) in avail for ind in math.atoms(Symbol))
         curr = Symbol(self.partitioning.get_root_name(
@@ -141,22 +167,9 @@ class LoopOrder:
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
-        loop_order = self.__default_loop_order_unpartitioned()
-
-        for rank, parts in self.partitioning.get_all_parts().items():
-            # Skip intermediate ranks
-            if rank not in loop_order:
-                continue
-
-            # Remove the old rank
-            i = loop_order.index(rank)
-            loop_order.pop(i)
-
-            # Insert the new ranks
-            new_ranks = self.partitioning.partition_names(rank, True)
-            for new_rank in new_ranks:
-                loop_order.insert(i, new_rank)
-
+        unpartitioned_loop_order = self.__default_loop_order_unpartitioned()
+        loop_order = self.partitioning.partition_ranks(
+            unpartitioned_loop_order, self.partitioning.get_all_parts(), True, True)
         return loop_order
 
     def __default_loop_order_unpartitioned(self) -> List[str]:

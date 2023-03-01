@@ -25,7 +25,7 @@ Translate the partitiong specification
 """
 from lark.tree import Tree
 from sympy import Symbol
-from typing import List, Set
+from typing import cast, List, Optional, Set, Tuple, Union
 
 from teaal.hifiber import *
 from teaal.ir.program import Program
@@ -47,31 +47,176 @@ class Partitioner:
         self.program = program
         self.trans_utils = trans_utils
 
-    def partition(self, tensor: Tensor, rank: str) -> Statement:
+    def partition(self, tensor: Tensor, ranks: Tuple[str, ...]) -> Statement:
         """
         Partition the given tensor according to the stored program
         """
         part_ir = self.program.get_partitioning()
-        part_rank = part_ir.partition_rank(rank)
+        part_ranks = part_ir.partition_rank(ranks)
 
         # We will build a block with the partitioning code
         block = SBlock([])
 
-        if part_rank is None:
+        if part_ranks is None:
             return block
-
-        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), {part_rank})
 
         # Rename the variable
         next_tmp = AVar(self.trans_utils.next_tmp())
         old_name = tensor.tensor_name()
         block.add(SAssign(next_tmp, EVar(old_name)))
 
+        if len(ranks) > 1:
+            block.add(self.__apply_flatten(tensor, ranks))
+        else:
+            block.add(self.__apply_split(tensor, ranks[0], part_ranks[0]))
+
+        # Rename the tensor
+        part_name = tensor.tensor_name()
+        tmp_expr = EVar(self.trans_utils.curr_tmp())
+        block.add(SAssign(AVar(part_name), tmp_expr))
+
+        # Rename the rank_ids
+        block.add(TransUtils.build_set_rank_ids(tensor, part_name))
+
+        return block
+
+    def unpartition(self, tensor: Tensor) -> Statement:
+        """
+        Unpartition the given tensor
+        """
+        block = SBlock([])
+        part_ir = self.program.get_partitioning()
+
+        # First, undo swizzling
+        curr_name = tensor.tensor_name()
+        curr_ranks = tensor.get_ranks()
+
+        # Compute the transformations that the tensor goes through
+        tensor.reset()
+        tensor.set_is_output(True)
+
+        # Build a list of the transformations that the tensor will go through
+        trans: List[Tuple[Union[str, Tuple[str, ...]], List[str]]] = []
+        old_ranks = None
+        new_ranks = tensor.get_ranks()
+        while old_ranks != new_ranks:
+            old_ranks = new_ranks
+            swizzled_ranks = part_ir.swizzle_for_flattening(new_ranks)
+            if swizzled_ranks != new_ranks:
+                trans.append(("swizzle", new_ranks))
+            tensor.swizzle(swizzled_ranks)
+
+            valid_parts = part_ir.get_valid_parts(
+                swizzled_ranks, part_ir.get_all_parts(), False)
+            for part in valid_parts:
+                trans.append((part, tensor.get_ranks()))
+                self.program.apply_partitioning(tensor, part)
+
+            new_ranks = tensor.get_ranks()
+
+        # Undo the loop-order swizzle
+        if curr_ranks != new_ranks:
+            trans.append(("swizzle", new_ranks))
+
+        # Return if there is nothing to do
+        if not trans:
+            return block
+
+        # Start the temporary
+        next_tmp = self.trans_utils.next_tmp()
+        block.add(SAssign(AVar(next_tmp), EVar(curr_name)))
+
+        rename_ranks = False
+        for info, ranks in reversed(trans):
+            curr_tmp = next_tmp
+
+            if isinstance(info, tuple):
+                # Undo split with flatten
+                if len(info) == 1:
+                    block.add(
+                        self.__build_flatten(
+                            ranks.index(
+                                info[0]), len(
+                                part_ir.get_part_spec(info)), "absolute"))
+                    next_tmp = self.trans_utils.curr_tmp()
+
+                # Otherwise unflatten
+                else:
+                    next_tmp = self.trans_utils.next_tmp()
+
+                    # Build arguments
+                    args = []
+                    args.append(AParam("depth", EInt(ranks.index(info[0]))))
+                    args.append(AParam("levels", EInt(len(info) - 1)))
+
+                    # Build the call
+                    call = EMethod(EVar(curr_tmp), "unflattenRanks", args)
+                    block.add(SAssign(AVar(next_tmp), call))
+
+                tensor.update_ranks(ranks)
+                rename_ranks = True
+
+            # Otherwise, we have a swizzle
+            else:
+                # First ensure the ranks have the correct name
+                next_tmp = self.trans_utils.next_tmp()
+                if rename_ranks:
+                    block.add(TransUtils.build_set_rank_ids(tensor, curr_tmp))
+                    rename_ranks = False
+
+                tensor.swizzle(ranks)
+                block.add(TransUtils.build_swizzle(tensor, curr_tmp, next_tmp))
+
+        if rename_ranks:
+            block.add(TransUtils.build_set_rank_ids(tensor, next_tmp))
+
+        # Copy the tensor back
+        block.add(SAssign(AVar(tensor.tensor_name()), EVar(next_tmp)))
+        return block
+
+    def __apply_flatten(self, tensor: Tensor,
+                        ranks: Tuple[str, ...]) -> Statement:
+        """
+        Apply a flattening (as opposed to a split
+        """
+        part_ir = self.program.get_partitioning()
+
+        # Ensure that the ranks are in the correct order in the tensor
+        i = -1
+        for j, rank in enumerate(ranks):
+            if i == -1:
+                i = tensor.get_ranks().index(rank)
+
+            if tensor.get_ranks()[i + j] != rank:
+                raise ValueError("Cannot flatten together " +
+                                 str(ranks) +
+                                 " on tensor with ranks " +
+                                 str(tensor.get_ranks()))
+
+        assign = self.__build_flatten(i, len(ranks) - 1, "tuple")
+
+        self.program.apply_partitioning(tensor, ranks)
+        return assign
+
+    def __apply_split(
+            self,
+            tensor: Tensor,
+            rank: str,
+            part_rank: str) -> Statement:
+        """
+        Apply a split (as opposed to a flattening)
+        """
+        part_ir = self.program.get_partitioning()
+        block = SBlock([])
+
+        partitioning = part_ir.get_part_spec((part_rank,))
+
         # Emit the partitioning code
         i = tensor.get_ranks().index(rank)
 
         first = True
-        for j, part in enumerate(partitioning[part_rank]):
+        root_name = part_ir.get_root_name(part_rank)
+        for j, part in enumerate(partitioning):
             if part.data == "nway_shape":
                 # If j != 0, then the rank we are partitioning is already in
                 # the part_rank space
@@ -85,9 +230,15 @@ class Partitioner:
                 if not first:
                     break
 
+                part_num = len(partitioning) - j
                 block.add(
                     self.__uniform_occupancy(
-                        rank, part_rank, tensor, part))
+                        rank,
+                        part_rank,
+                        root_name +
+                        str(part_num),
+                        tensor,
+                        part))
 
             elif part.data == "uniform_shape":
                 block.add(self.__uniform_shape(rank, part_rank, part, i + j))
@@ -103,64 +254,29 @@ class Partitioner:
             first = False
 
             # Finally, update the tensor with this partition
-            self.program.apply_partitioning(tensor, rank)
-
-        # Rename the tensor
-        part_name = AVar(tensor.tensor_name())
-        tmp_expr = EVar(self.trans_utils.curr_tmp())
-        block.add(SAssign(part_name, tmp_expr))
-
-        # Rename the rank_ids
-        block.add(TransUtils.build_set_rank_ids(tensor))
+            self.program.apply_partitioning(tensor, (rank,))
 
         return block
 
-    def unpartition(self, tensor: Tensor) -> Statement:
+    def __build_flatten(
+            self,
+            depth: int,
+            levels: int,
+            style: str) -> Statement:
         """
-        Unpartition the given tensor
+        Build a call to the flattenRanks() function
         """
-        # Get the tensor names
-        part_name = tensor.tensor_name()
-        tensor.reset()
+        # Build arguments
+        args = []
+        args.append(AParam("depth", EInt(depth)))
+        args.append(AParam("levels", EInt(levels)))
+        args.append(AParam("coord_style", EString(style)))
 
-        # Get the partitioning
-        part_ir = self.program.get_partitioning()
-        ranks = set(part_ir.get_all_parts().keys())
-        partitioning = part_ir.get_tensor_spec(tensor.get_ranks(), ranks)
-
-        # If there was no partitioning, there is nothing to undo
-        block = SBlock([])
-        if not partitioning:
-            return block
-
-        # Switch to name tmp
+        # Build the call
+        curr_tmp = self.trans_utils.curr_tmp()
+        flat_call = EMethod(EVar(curr_tmp), "flattenRanks", args)
         next_tmp = AVar(self.trans_utils.next_tmp())
-        block.add(SAssign(next_tmp, EVar(part_name)))
-
-        # For each rank
-        for i, rank in enumerate(tensor.get_ranks()):
-            if rank not in partitioning.keys():
-                continue
-
-            # Flatten the rank
-            curr_tmp = self.trans_utils.curr_tmp()
-            next_tmp = AVar(self.trans_utils.next_tmp())
-            arg1 = AParam("depth", EInt(i))
-            arg2 = AParam("levels", EInt(len(partitioning[rank])))
-            arg3 = AParam("coord_style", EString("absolute"))
-
-            flat_call = EMethod(
-                EVar(curr_tmp), "flattenRanks", [
-                    arg1, arg2, arg3])
-            block.add(SAssign(next_tmp, flat_call))
-
-        # Switch back to tensor name and rename the rank_ids
-        new_name = AVar(tensor.tensor_name())
-        tmp_name_expr = EVar(self.trans_utils.curr_tmp())
-        block.add(SAssign(new_name, tmp_name_expr))
-        block.add(TransUtils.build_set_rank_ids(tensor))
-
-        return block
+        return SAssign(next_tmp, flat_call)
 
     def __build_halo(self, rank: str, part_rank: str) -> Expression:
         """
@@ -268,19 +384,20 @@ class Partitioner:
     def __uniform_occupancy(
             self,
             rank: str,
-            part_rank: str,
+            src_rank: str,
+            dst_rank: str,
             tensor: Tensor,
             part: Tree) -> Statement:
         """
         Partition with a uniform occupancy
         """
-        leader = self.program.get_partitioning().get_leader(part)
+        leader = self.program.get_partitioning().get_leader(src_rank, dst_rank)
         size = ParseUtils.find_int(part, "size")
 
         if tensor.root_name() == leader:
-            return self.__split_equal(rank, part_rank, size)
+            return self.__split_equal(rank, src_rank, size)
         else:
-            return self.__split_follower(rank, part_rank, leader)
+            return self.__split_follower(rank, src_rank, leader)
 
     def __uniform_shape(
             self,

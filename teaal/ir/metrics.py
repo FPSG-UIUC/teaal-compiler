@@ -205,9 +205,14 @@ class Metrics:
                 name = tensor.root_name()
 
                 # First apply all static partitioning
-                for rank in part.get_static_parts().keys():
+                for ranks in part.get_static_parts():
+                    # TODO: allow flattening
+                    if len(ranks) > 1:
+                        raise ValueError("Cannot deal with this yet")
+                    rank = ranks[0]
                     if rank in tensor.get_ranks():
-                        self.program.apply_partitioning(tensor, rank)
+                        # TODO Support flattening
+                        self.program.apply_partitioning(tensor, (rank,))
 
                 check_tensor(tensor)
 
@@ -217,7 +222,7 @@ class Metrics:
                 #     if opt_rank.upper() in part.get_dyn_parts().keys():
                 #         tensor.from_fiber()
                 #         self.program.apply_partitioning(
-                #             tensor, opt_rank.upper())
+                #             tensor, (opt_rank.upper(),))
 
                 #         check_tensor(tensor)
 
@@ -286,7 +291,7 @@ class Metrics:
         is a legal configuration
         """
         # Check that there is no dynamic partitioning
-        if self.program.get_partitioning().get_dyn_parts() != {}:
+        if self.program.get_partitioning().get_dyn_parts() != set():
             raise NotImplementedError
 
         # Check that there are at most three tensors (no danger of multiple

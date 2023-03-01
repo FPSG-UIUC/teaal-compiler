@@ -26,11 +26,12 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-from typing import cast, Dict, List, Optional
+from typing import cast, Dict, List, Optional, Tuple
 
+from teaal.ir.flow_nodes import *
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
-from teaal.ir.nodes import *
+from teaal.ir.node import Node
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 
@@ -97,29 +98,19 @@ class FlowGraph:
 
         # Add Swizzle, GetRoot and FiberNodes for each tensor
         part = self.program.get_partitioning()
+        flatten_info: Dict[str, List[Tuple[str, ...]]] = {}
         for tensor in self.program.get_tensors():
             if tensor.get_is_output():
                 continue
 
             root = tensor.root_name()
 
-            # Add the partitioning
+            # Add the static partitioning
             init_ranks = tensor.get_ranks()
             for rank in init_ranks:
                 self.graph.add_edge(TensorNode(root), RankNode(root, rank))
 
-                # Add the static partitioning
-                part_rank = part.partition_rank(rank)
-                if part_rank in part.get_static_parts():
-                    self.__build_static_part(tensor, rank)
-
-                    in_rank = part.partition_names(rank, False)[0]
-                    if in_rank != part.get_final_rank_id(in_rank):
-                        self.__build_dyn_part(tensor, rank)
-
-                # Add the dynamic partitioning
-                if part_rank in part.get_dyn_parts():
-                    self.__build_dyn_part(tensor, rank)
+            self.__build_partition_swizzling(tensor, flatten_info)
 
             # Get the root fiber
             self.__build_swizzle_root_fiber(tensor)
@@ -128,10 +119,9 @@ class FlowGraph:
         for tensor in self.program.get_tensors():
             self.__build_collecting(tensor)
 
-        # Connect all Fibers with the appropriate loop nodes
         iter_graph = IterationGraph(self.program)
-        while iter_graph.peek()[0] is not None:
-            self.__build_fiber_nodes(iter_graph)
+        while iter_graph.peek_concord()[0] is not None:
+            self.__build_fiber_nodes(iter_graph, flatten_info)
 
         for tensor in self.program.get_tensors():
             # The last FiberNode is needed for the body
@@ -164,51 +154,71 @@ class FlowGraph:
         # Otherwise, add a CollectingNode
         root = tensor.root_name()
         rank = self.metrics.get_on_chip_rank(tensor)
-        swizzle_node = SwizzleNode(root, tensor.get_ranks())
+        swizzle_node = SwizzleNode(root, tensor.get_ranks(), "loop-order")
         collecting_node = CollectingNode(root, rank)
 
         self.graph.add_edge(swizzle_node, collecting_node)
         self.graph.add_edge(collecting_node, MetricsNode("Start"))
 
-    def __build_dyn_part(self, tensor: Tensor, rank: str) -> None:
+    def __build_dyn_part(
+            self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Build a dynamic partitioning
         """
         part = self.program.get_partitioning()
         root = tensor.root_name()
 
-        int_ranks = part.get_intermediates(rank)
-        part_rank = part.partition_rank(rank)
-        if part_rank and part_rank in part.get_dyn_parts().keys():
-            int_ranks += [rank]
+        # Get the partitioning source ranks (including intermediates)
+        src_ranks: List[Tuple[str, ...]]
+        if len(partitioning) > 1:
+            src_ranks = [partitioning]
 
-        for src in int_ranks:
-            part_node = PartNode(root, (src,))
-            dsts = part.partition_names(src, False)
+            # Swizzle for flattening
+            swizzle_node = SwizzleNode(
+                root, list(partitioning), "partitioning")
 
-            part_rank = part.partition_rank(src)
-            # Very hard to test, since this means there is a problem with
-            # part.get_intermediates()
-            if part_rank is None:
-                raise ValueError(
-                    "Unknown intermediate: " +
-                    src)  # pragma: no cover
+            for rank in partitioning:
+                self.graph.add_edge(RankNode(root, rank), swizzle_node)
 
-            leader = part.get_leader(part.get_dyn_parts()[part_rank][0])
+            # Add to flattening info
+            flatten_info[root].append(partitioning)
 
-            # Add the edge from the source rank and fiber to the
-            # PartNode
-            self.graph.add_edge(RankNode(root, src), part_node)
-            if root != leader:
-                lead_name = leader.lower() + "_" + dsts[1].lower()
-                self.graph.add_edge(
-                    FiberNode(lead_name), part_node)
+        else:
+            rank = partitioning[0]
+            src_ranks = [cast(Tuple[str, ...], (rank,))] + [(inter,)
+                                                            for inter in part.get_intermediates(rank)]
+
+        # Connect them to the relevant destination ranks
+        for srcs in src_ranks:
+            part_node = PartNode(root, srcs)
+            dsts = part.partition_names(srcs, False)
+
+            part_ranks = part.partition_rank(srcs)
+            assert part_ranks is not None
+
+            # Add the edge from the source ranks to the PartNode
+            for src in srcs:
+                self.graph.add_edge(RankNode(root, src), part_node)
+
+            # Connect the swizzle node
+            if len(srcs) > 1:
+                self.graph.add_edge(swizzle_node, part_node)
+
+            # Leader is only relevant for a split
+            else:
+                leader = part.get_leader(src, dsts[-1])
+
+                if root != leader:
+                    lead_name = leader.lower() + "_" + dsts[1].lower()
+                    self.graph.add_edge(
+                        FiberNode(lead_name), part_node)
 
             # Add the destination RankNodes
             for dst in dsts:
                 self.graph.add_edge(part_node, RankNode(root, dst))
 
-    def __build_fiber_nodes(self, iter_graph: IterationGraph) -> None:
+    def __build_fiber_nodes(self, iter_graph: IterationGraph,
+                            flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Build the FiberNodes between loops
         """
@@ -220,11 +230,11 @@ class FlowGraph:
                 continue
 
             rank = rank.upper()
-            part_rank = part.partition_rank(rank)
-            if part_rank and part_rank in part.get_dyn_parts():
-                self.__connect_dyn_part(tensor, rank)
+            part_ranks = part.partition_rank((rank,))
+            if part_ranks and part_ranks in part.get_dyn_parts():
+                self.__connect_dyn_part(tensor, rank, flatten_info)
 
-        rank, tensors = iter_graph.peek()
+        rank, tensors = iter_graph.peek_concord()
 
         if rank is None:
             raise ValueError("No loop node to connect")
@@ -243,14 +253,32 @@ class FlowGraph:
         # bounds)
         if any(tensor.peek() != rank.lower() for tensor in tensors) and \
                 part.get_root_name(rank) != rank:
-            self.__build_project_interval(rank, tensors)
+            self.__build_project_interval(rank)
 
-        _, tensors = iter_graph.pop()
+        _, tensors = iter_graph.pop_concord()
 
         # Connect the new fiber to the LoopNode
         for tensor in tensors:
             new_fnode = FiberNode(tensor.fiber_name())
             self.graph.add_edge(LoopNode(rank), new_fnode)
+
+        # Add the discordant accesses
+        for ranks, tensor in iter_graph.peek_discord():
+            get_payload_node = GetPayloadNode(tensor.root_name(), ranks)
+            self.graph.add_edge(
+                FiberNode(
+                    tensor.fiber_name()),
+                get_payload_node)
+
+            for rank in ranks:
+                loop_rank = part.get_final_rank_id(tensor, rank)
+                self.graph.add_edge(LoopNode(loop_rank), get_payload_node)
+
+        for ranks, tensor in iter_graph.pop_discord():
+            get_payload_node = GetPayloadNode(tensor.root_name(), ranks)
+            self.graph.add_edge(
+                get_payload_node, FiberNode(
+                    tensor.fiber_name()))
 
     def __build_loop_nest(self) -> None:
         """
@@ -284,7 +312,13 @@ class FlowGraph:
         Build all of the output-specific edges
         """
         tensor = self.program.get_output()
+
+        # Partition the output
+        part = self.program.get_partitioning()
         self.program.apply_all_partitioning(tensor)
+        self.program.get_loop_order().apply(tensor)
+
+        # Get the root
         root = tensor.root_name()
         get_root_node = GetRootNode(root, tensor.get_ranks())
 
@@ -293,16 +327,36 @@ class FlowGraph:
         self.graph.add_edge(TensorNode(root), get_root_node)
         self.graph.add_edge(get_root_node, FiberNode(tensor.fiber_name()))
 
+    def __build_partition_swizzling(
+            self, tensor: Tensor, flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
+        """
+        Build the partitioning for a particular tensor
+        """
+        part = self.program.get_partitioning()
+        flatten_info[tensor.root_name()] = []
+
+        # First, apply the static partitioning
+        static_parts = part.get_valid_parts(
+            tensor.get_ranks(), part.get_static_parts(), True)
+        for partitioning in static_parts:
+            self.__build_static_part(tensor, partitioning)
+
+        # Now, apply the dynamic partitioning
+        dyn_parts = part.get_valid_parts(
+            tensor.get_ranks(), part.get_dyn_parts(), True)
+        for partitioning in dyn_parts:
+            self.__build_dyn_part(tensor, partitioning, flatten_info)
+
     def __build_project_interval(
             self,
-            rank: str,
-            tensors: List[Tensor]) -> None:
+            rank: str) -> None:
         """
         Build the EagerInputNode and IntervalNode if the projection is over a
         partitioned rank
         """
         part = self.program.get_partitioning()
-        part_names = part.partition_names(part.get_root_name(rank), True)
+        # Flattening does not matter because we cannot flatten index math ranks
+        part_names = part.partition_names((part.get_root_name(rank),), True)
         rank0 = part_names[0]
         rank1 = part_names[1]
 
@@ -317,24 +371,37 @@ class FlowGraph:
         self.graph.add_edge(eager_input_node, IntervalNode(rank0))
         self.graph.add_edge(IntervalNode(rank0), LoopNode(rank0))
 
-    def __build_static_part(self, tensor: Tensor, rank: str) -> None:
+    def __build_static_part(self, tensor: Tensor,
+                            partitioning: Tuple[str, ...]) -> None:
         """
         Build a static partitioning
         """
         part = self.program.get_partitioning()
         root = tensor.root_name()
-        part_node = PartNode(root, (rank,))
+        part_node = PartNode(root, partitioning)
 
-        # Add the edge from the source rank to the partitioning
-        self.graph.add_edge(RankNode(root, rank), part_node)
+        # Put a swizzle node if this is flattening
+        if len(partitioning) > 1:
+            swizzle_node = SwizzleNode(
+                root, list(partitioning), "partitioning")
+
+            for rank in partitioning:
+                self.graph.add_edge(RankNode(root, rank), swizzle_node)
+            self.program.apply_partition_swizzling(tensor)
+
+            self.graph.add_edge(swizzle_node, part_node)
+
+        # Otherwise, add the edge from the source rank to the partitioning
+        else:
+            self.graph.add_edge(RankNode(root, partitioning[0]), part_node)
 
         # Add edges to for all resulting ranks
-        for res in part.partition_names(rank, False):
+        for res in part.partition_names(partitioning, False):
             self.graph.add_edge(part_node, RankNode(root, res))
 
         # We must do graphics after any static partitioning
         self.graph.add_edge(part_node, OtherNode("Graphics"))
-        self.program.apply_partitioning(tensor, rank)
+        self.program.apply_partitioning(tensor, partitioning)
 
     def __build_swizzle_root_fiber(self, tensor: Tensor) -> None:
         """
@@ -344,7 +411,8 @@ class FlowGraph:
         root = tensor.root_name()
 
         tensor_node = TensorNode(root)
-        swizzle_node = SwizzleNode(root, tensor.get_ranks().copy())
+        swizzle_node = SwizzleNode(
+            root, tensor.get_ranks().copy(), "loop-order")
         get_root_node = GetRootNode(root, tensor.get_ranks().copy())
         fiber_node = FiberNode(tensor.fiber_name())
 
@@ -357,7 +425,8 @@ class FlowGraph:
         for rank in tensor.get_ranks():
             self.graph.add_edge(RankNode(root, rank), swizzle_node)
 
-    def __connect_dyn_part(self, tensor: Tensor, rank: str) -> None:
+    def __connect_dyn_part(self, tensor: Tensor, rank: str,
+                           flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
         """
         Connect the dynamic partitioning node to the relevant fiber nodes
         """
@@ -365,7 +434,23 @@ class FlowGraph:
         root = tensor.root_name()
 
         tensor.from_fiber()
-        self.program.apply_partitioning(tensor, rank)
+        self.program.apply_partitioning(tensor, (rank,))
+
+        # Apply all available flattening
+        i = 0
+        while i < len(flatten_info[root]):
+            if not all(flat_rank in tensor.get_ranks()
+                       for flat_rank in flatten_info[root][i]):
+                i += 1
+                continue
+
+            flatten = flatten_info[root].pop(i)
+            self.program.apply_partition_swizzling(tensor)
+            self.program.apply_partitioning(tensor, flatten)
+
+            # Start searching from the beginning
+            i = 0
+
         self.program.get_loop_order().apply(tensor)
 
         part_node = PartNode(root, (rank,))
@@ -402,6 +487,7 @@ class FlowGraph:
         Sort all nodes so that the generated code obeys all dependencies
         """
         # Get a topological sort
+
         self.sorted = list(nx.topological_sort(self.graph))
 
     def __hoist(self) -> None:

@@ -27,7 +27,7 @@ Representation of einsum metadata and the specification
 from collections import Counter
 
 from lark.tree import Tree
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.loop_order import LoopOrder
@@ -143,11 +143,12 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        new_ranks = self.partitioning.partition_tensor(
-            tensor, tensor.get_ranks(), True)
+        new_ranks = self.partitioning.partition_ranks(
+            tensor.get_ranks(), self.partitioning.get_all_parts(), True, True)
         tensor.update_ranks(new_ranks)
 
-    def apply_partitioning(self, tensor: Tensor, rank: str) -> None:
+    def apply_partitioning(self, tensor: Tensor,
+                           part: Tuple[str, ...]) -> None:
         """
         Partition the tensor according to the partitioning given in
         add_einsum() for the given rank
@@ -158,7 +159,21 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
-        new_ranks = self.partitioning.partition_tensor(tensor, [rank], False)
+        new_ranks = self.partitioning.partition_ranks(
+            tensor.get_ranks(), {part}, False, False)
+        tensor.update_ranks(new_ranks)
+
+    def apply_partition_swizzling(self, tensor: Tensor) -> None:
+        """
+        Swizzle the ranks of the tensor to prepare for partitioning
+        """
+        # Make sure that the program is configured
+        if self.partitioning is None:
+            raise ValueError(
+                "Unconfigured program. Make sure to first call add_einsum()")
+
+        new_ranks = self.partitioning.swizzle_for_flattening(
+            tensor.get_ranks())
         tensor.update_ranks(new_ranks)
 
     def get_einsum(self) -> Tree:

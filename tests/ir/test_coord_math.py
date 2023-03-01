@@ -107,6 +107,19 @@ def test_add_times():
     assert coord_math.get_all_exprs("q") == [q, w / 2]
 
 
+def test_get_all_exprs():
+    coord_math = CoordMath()
+    tranks = Tree("tranks", [make_iplus(["m"]), make_iplus(["k"])])
+    tensor = Tensor("A", ["M", "K"])
+    coord_math.add(tensor, tranks)
+
+    m, k, mk = symbols("m k mk")
+
+    assert coord_math.get_all_exprs("m") == [m]
+    assert coord_math.get_all_exprs("k") == [k]
+    assert coord_math.get_all_exprs("mk") == [mk]
+
+
 def test_get_eqn_exprs():
     coord_math = CoordMath()
     tensor = Tensor("I", ["W"])
@@ -173,6 +186,41 @@ def test_prune_partitioned():
     assert coord_math.get_trans("w") == q + s
     assert coord_math.get_trans("q") == q
     assert coord_math.get_trans("s") == s
+
+
+def test_pruned_flattened():
+    coord_math = CoordMath()
+    tensor = Tensor("A", ["K", "M"])
+    tranks = make_tranks(["k", "m"])
+    coord_math.add(tensor, tranks)
+
+    tensor = Tensor("B", ["K", "N"])
+    tranks = make_tranks(["k", "n"])
+    coord_math.add(tensor, tranks)
+
+    tensor = Tensor("Z", ["M", "N"])
+    tranks = make_tranks(["m", "n"])
+    coord_math.add(tensor, tranks)
+
+    loop_order = ["K1", "MK01", "N", "MK00"]
+    yaml = """
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+    """
+    parsed = Mapping.from_str(yaml).get_partitioning()["Z"]
+    part = Partitioning(parsed, ["K", "M", "N"], coord_math.get_eqn_exprs())
+
+    coord_math.prune(loop_order, part)
+
+    k, m, n = symbols("k m n")
+
+    assert coord_math.get_trans("k") == k
+    assert coord_math.get_trans("m") == m
+    assert coord_math.get_trans("n") == n
 
 
 def test_eq_true():

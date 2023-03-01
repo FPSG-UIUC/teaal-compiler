@@ -91,6 +91,14 @@ def test_peek_empty():
     assert tensor.peek() is None
 
 
+def test_peek_rest():
+    tensor = Tensor("A", ["K1", "M", "K0"])
+    assert tensor.peek_rest() == ["K1", "M", "K0"]
+
+    tensor.pop()
+    assert tensor.peek_rest() == ["M", "K0"]
+
+
 def test_pop():
     tensor = Tensor("A", ["I", "J"])
     assert tensor.pop() == "i"
@@ -130,9 +138,19 @@ def test_set_is_output():
     assert tensor.fiber_name() == "a_ref"
 
 
+def test_swizzle_extra_ranks():
+    tensor = Tensor("A", ["I", "J"])
+
+    with pytest.raises(ValueError) as excinfo:
+        tensor.swizzle(["J", "I", "K"])
+
+    assert str(
+        excinfo.value) == "['J', 'I', 'K'] is not a permutation of old rank order ['I', 'J']"
+
+
 def test_swizzle():
     tensor = Tensor("A", ["I", "J"])
-    tensor.swizzle(["J", "K", "I"])
+    tensor.swizzle(["J", "I"])
 
     assert tensor.pop() == "j"
     assert tensor.pop() == "i"
@@ -151,6 +169,39 @@ def test_update_ranks():
 def test_tensor_name():
     tensor = Tensor("A", ["I", "J", "K"])
     assert tensor.tensor_name() == "A_IJK"
+
+
+def test_tensor_name_flat():
+    tensor = Tensor("A", ["M", "N", "O"])
+    assert tensor.tensor_name() == "A_MNO"
+
+    tensor.update_ranks(["MN", "O"])
+    assert tensor.tensor_name() == "A_MNO_flat"
+
+    tensor.swizzle(["MN", "O"])
+    assert tensor.tensor_name() == "A_MNO_flat"
+
+    tensor.swizzle(["O", "MN"])
+    assert tensor.tensor_name() == "A_OMN"
+
+    tensor = Tensor("A", ["M", "N", "O"])
+    tensor.update_ranks(["M", "NO"])
+    tensor.from_fiber()
+    assert tensor.tensor_name() == "A_MNO_flat"
+
+    tensor.pop()
+    tensor.from_fiber()
+    assert tensor.tensor_name() == "A_NO"
+
+    tensor = Tensor("A", ["M", "N", "O"])
+    tensor.update_ranks(["M", "NO"])
+    tensor.reset()
+    assert tensor.tensor_name() == "A_MNO"
+
+    tensor = Tensor("Z", ["M", "N", "O"])
+    tensor.set_is_output(True)
+    tensor.update_ranks(["M", "NO"])
+    assert tensor.tensor_name() == ("Z_MNO")
 
 
 def test_eq():

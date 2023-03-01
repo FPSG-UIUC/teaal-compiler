@@ -74,12 +74,12 @@ class TransUtils:
         return AParam("rank_ids", EList(ranks))
 
     @staticmethod
-    def build_set_rank_ids(tensor: Tensor) -> Statement:
+    def build_set_rank_ids(tensor: Tensor, name: str) -> Statement:
         """
         Build the setRankIds() function
         """
         arg = TransUtils.build_rank_ids(tensor)
-        set_call = EMethod(EVar(tensor.tensor_name()), "setRankIds", [arg])
+        set_call = EMethod(EVar(name), "setRankIds", [arg])
         return SExpr(set_call)
 
     @staticmethod
@@ -91,13 +91,16 @@ class TransUtils:
         return AParam("shape", EList(ranks))
 
     @staticmethod
-    def build_swizzle(tensor: Tensor, old_name: str) -> Statement:
+    def build_swizzle(
+            tensor: Tensor,
+            old_name: str,
+            new_name: str) -> Statement:
         """
         Build the swizzleRanks() function
         """
         arg = TransUtils.build_rank_ids(tensor)
         swizzle_call = EMethod(EVar(old_name), "swizzleRanks", [arg])
-        new_name_assn = AVar(tensor.tensor_name())
+        new_name_assn = AVar(new_name)
         return SAssign(new_name_assn, swizzle_call)
 
     def curr_tmp(self) -> str:

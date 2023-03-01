@@ -21,41 +21,43 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Translate the footer below the loop nest
+Representation of a graph node
 """
 
-from teaal.hifiber import *
-from teaal.ir.program import Program
-from teaal.trans.graphics import Graphics
-from teaal.trans.partitioner import Partitioner
-from teaal.trans.utils import TransUtils
+import abc
+from typing import Any, Iterable
 
 
-class Footer:
+class Node(metaclass=abc.ABCMeta):
     """
-    Generate the HiFiber code for the footer below the loop nest
+    Graph node interface
     """
 
-    @staticmethod
-    def make_footer(
-            program: Program,
-            graphics: Graphics,
-            partitioner: Partitioner) -> Statement:
+    def __eq__(self, other: object) -> bool:
         """
-        Create the footer for the given einsum
+        The == operator for nodes
 
-        The footer must return the output tensor to its desired shape
         """
-        footer = SBlock([])
-        output = program.get_output()
+        if isinstance(other, type(self)):
+            return self.__key() == other.__key()
+        return False
 
-        footer.add(partitioner.unpartition(output))
+    def __hash__(self) -> int:
+        """
+        Hash the node (needed to insert it into the graph)
+        """
+        return hash(repr(self))
 
-        # After resetting the output tensor, make sure that it still knows that
-        # it is the output
-        output.set_is_output(True)
+    def __key(self) -> Iterable[Any]:
+        """
+        A tuple of all fields of a node
+        """
+        return ()
 
-        # Display the graphics if necessary
-        footer.add(graphics.make_footer())
-
-        return footer
+    def __repr__(self) -> str:
+        """
+        A string representation of the node for hashing
+        """
+        strs = [key if isinstance(key, str) else repr(key)
+                for key in self.__key()]
+        return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"

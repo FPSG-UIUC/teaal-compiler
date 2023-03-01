@@ -22,7 +22,7 @@ def test_peek_rank0():
     tensor = Tensor("A", [])
     tensor.set_is_output(True)
 
-    assert graph.peek() == (None, [tensor])
+    assert graph.peek_concord() == (None, [tensor])
 
 
 def test_peek_default():
@@ -42,7 +42,7 @@ def test_peek_default():
     results = [Tensor("A", ["I", "J"]), Tensor("B", ["I", "K"])]
     results[0].set_is_output(True)
 
-    assert graph.peek() == ("I", results)
+    assert graph.peek_concord() == ("I", results)
 
 
 def test_peek_order():
@@ -68,7 +68,103 @@ def test_peek_order():
     results = [Tensor("A", ["J", "I"]), Tensor("C", ["J", "K"])]
     results[0].set_is_output(True)
 
-    assert graph.peek() == ("J", results)
+    assert graph.peek_concord() == ("J", results)
+
+
+def test_peek_discord_bad():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    with pytest.raises(ValueError) as excinfo:
+        graph.peek_discord()
+    assert str(
+        excinfo.value) == "Can only perform a discordant traversal inside the loop nest"
+
+
+def test_peek_discord_none():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    for tensor in program.get_tensors():
+        program.get_loop_order().apply(tensor)
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+
+def test_peek_discord_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [J, K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(J, K).(A[k, m] * B[j, k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00, J]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    # Apply the partitioning
+    A = program.get_tensor("A")
+    program.apply_all_partitioning(A)
+    program.apply_partition_swizzling(A)
+    program.apply_all_partitioning(A)
+    program.get_loop_order().apply(A)
+
+    B = program.get_tensor("B")
+    program.apply_all_partitioning(B)
+    program.get_loop_order().apply(B)
+
+    Z = program.get_tensor("Z")
+    program.get_loop_order().apply(Z)
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == []
+
+    graph.pop_concord()
+    assert graph.peek_discord() == [(["M"], Z), (["K0"], B)]
 
 
 def test_pop_default():
@@ -92,17 +188,17 @@ def test_pop_default():
 
     A.pop()
     B.pop()
-    assert graph.pop() == ("I", [A, B])
+    assert graph.pop_concord() == ("I", [A, B])
 
     A.pop()
     C.pop()
-    assert graph.pop() == ("J", [A, C])
+    assert graph.pop_concord() == ("J", [A, C])
 
     B.pop()
     C.pop()
-    assert graph.pop() == ("K", [B, C])
+    assert graph.pop_concord() == ("K", [B, C])
 
-    assert graph.peek() == (None, [A, B, C])
+    assert graph.peek_concord() == (None, [A, B, C])
 
 
 def test_pop_order():
@@ -132,17 +228,17 @@ def test_pop_order():
 
     A.pop()
     C.pop()
-    assert graph.pop() == ("J", [A, C])
+    assert graph.pop_concord() == ("J", [A, C])
 
     B.pop()
     C.pop()
-    assert graph.pop() == ("K", [B, C])
+    assert graph.pop_concord() == ("K", [B, C])
 
     A.pop()
     B.pop()
-    assert graph.pop() == ("I", [A, B])
+    assert graph.pop_concord() == ("I", [A, B])
 
-    assert graph.peek() == (None, [A, B, C])
+    assert graph.peek_concord() == (None, [A, B, C])
 
 
 def test_pop_occupancy_partitioning():
@@ -177,10 +273,10 @@ def test_pop_occupancy_partitioning():
     # Apply the partitioning to the A tensor
     A = program.get_tensor("A")
     A.from_fiber()
-    program.apply_partitioning(A, "M")
+    program.apply_partitioning(A, ("M",))
 
     # Make sure that there are no errors on pop
-    assert graph.pop()[0] == "M1"
+    assert graph.pop_concord()[0] == "M1"
 
 
 def test_peek_pop_coord_math():
@@ -206,15 +302,95 @@ def test_peek_pop_coord_math():
     O = Tensor("O", ["Q"])
     O.set_is_output(True)
 
-    assert graph.peek() == ("W", [I])
+    assert graph.peek_concord() == ("W", [I])
 
     I.pop()
-    assert graph.pop() == ("W", [I])
+    assert graph.pop_concord() == ("W", [I])
 
-    assert graph.peek() == ("Q", [O, F])
+    assert graph.peek_concord() == ("Q", [O, F])
 
     F.pop()
     O.pop()
-    assert graph.pop() == ("Q", [O, F])
+    assert graph.pop_concord() == ("Q", [O, F])
 
-    assert graph.peek() == (None, [O, I, F])
+    assert graph.peek_concord() == (None, [O, I, F])
+
+
+def test_pop_discord_none():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    for tensor in program.get_tensors():
+        program.get_loop_order().apply(tensor)
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+
+def test_pop_discord_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            A: [K, M]
+            B: [J, K, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = sum(J, K).(A[k, m] * B[j, k, n])
+    mapping:
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00, J]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    graph = IterationGraph(program)
+
+    # Apply the partitioning
+    A = program.get_tensor("A")
+    program.apply_all_partitioning(A)
+    program.apply_partition_swizzling(A)
+    program.apply_all_partitioning(A)
+    program.get_loop_order().apply(A)
+
+    B = program.get_tensor("B")
+    program.apply_all_partitioning(B)
+    program.get_loop_order().apply(B)
+
+    Z = program.get_tensor("Z")
+    program.get_loop_order().apply(Z)
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert graph.pop_discord() == []
+
+    graph.pop_concord()
+    assert Z.peek_rest() == ["M"]
+    assert B.peek_rest() == ["K0", "J"]
+    assert graph.pop_discord() == [(["M"], Z), (["K0"], B)]
+    assert Z.peek_rest() == []
+    assert B.peek_rest() == ["J"]
