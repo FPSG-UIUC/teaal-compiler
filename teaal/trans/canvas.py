@@ -155,9 +155,9 @@ class Canvas:
 
         # If this rank is the result of flattening, then build the access
         # as a tuple of the constituent ranks
-        # TODO: allow for flattening
         if part_ir.is_flattened(rank.upper()):
-            raise NotImplementedError
+            flat_ranks = self.program.get_loop_order().get_iter_ranks(rank.upper())
+            return ETuple([EVar(frank.lower()) for frank in flat_ranks])
 
         # Otherwise, this is the innermost rank; so translate
         sexpr = self.program.get_coord_math().get_trans(root.lower())

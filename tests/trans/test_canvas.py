@@ -238,6 +238,41 @@ def test_add_activity_dyn_part():
     assert canvas.add_activity().gen(0) == hifiber
 
 
+def test_add_activity_flatten():
+    yaml = """
+    einsum:
+        declaration:
+            A: [M, N]
+            Z: [M, N]
+        expressions:
+            - Z[m, n] = A[m, n]
+    mapping:
+        partitioning:
+            Z:
+                (M, N): [flatten()]
+        loop-order:
+            Z: [MN]
+        spacetime:
+            Z:
+                space: []
+                time: [MN]
+    """
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+    part_ir = program.get_partitioning()
+
+    for tensor in program.get_tensors():
+        tranks = part_ir.partition_ranks(
+            tensor.get_ranks(), part_ir.get_all_parts(), True, True)
+        tensor.update_ranks(tranks)
+
+    canvas = Canvas(program)
+    canvas.create_canvas()
+
+    hifiber = "canvas.addActivity(((m, n),), ((m, n),), spacetime=((), (mn_pos,)))"
+    assert canvas.add_activity().gen(0) == hifiber
+
+
 def test_add_activity_conv():
     program = create_conv()
     program.add_einsum(0)
