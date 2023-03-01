@@ -220,6 +220,11 @@ class Equation:
         part = self.program.get_partitioning()
         root = part.get_root_name(rank)
 
+        # We cannot iterate over output-only flattened ranks
+        if part.is_flattened(rank):
+            raise ValueError(
+                "Illegal dataflow: cannot iterate over output-only flattened rank " + rank)
+
         # If this is the top partition, we start at 0 and end at the root
         start: Expression
         end: Expression
@@ -231,7 +236,6 @@ class Equation:
             start = EInt(0)
             end = EVar(root)
 
-        # TODO: deal with flattening
         # If this is the bottom partition of this rank, the step is 1
         step: Expression
         opt_step = part.get_step(rank)

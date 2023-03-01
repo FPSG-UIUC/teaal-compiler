@@ -357,7 +357,7 @@ class FlowGraph:
         partitioned rank
         """
         part = self.program.get_partitioning()
-        # TODO: think about flattening (actually I don't think it matters here)
+        # Flattening does not matter because we cannot flatten index math ranks
         part_names = part.partition_names((part.get_root_name(rank),), True)
         rank0 = part_names[0]
         rank1 = part_names[1]

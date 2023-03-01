@@ -133,7 +133,7 @@ def make_display(style, opt):
     return IterationGraph(program), Equation(program)
 
 
-def make_flattened():
+def make_matmul(mapping):
     yaml = """
     einsum:
         declaration:
@@ -143,14 +143,7 @@ def make_flattened():
         expressions:
             - Z[m, n] = sum(K).(A[k, m] * B[k, n])
     mapping:
-        partitioning:
-            Z:
-                K: [uniform_shape(4)]
-                (M, K0): [flatten()]
-                MK0: [uniform_occupancy(A.5)]
-        loop-order:
-            Z: [K1, MK01, N, MK00]
-    """
+    """ + mapping
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
@@ -353,6 +346,23 @@ def test_make_iter_expr_display_slip():
     iter_expr = "b_i & (c_i & d_i)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
+
+def test_flattened_output_only_bad():
+    mapping = """
+        partitioning:
+            Z:
+                (M, N): [flatten()]
+        loop-order:
+            Z: [MN, K]
+    """
+    graph, eqn = make_matmul(mapping)
+
+    with pytest.raises(ValueError) as excinfo:
+        eqn.make_iter_expr(*graph.peek_concord())
+
+    assert str(
+        excinfo.value) == "Illegal dataflow: cannot iterate over output-only flattened rank MN"
 
 
 def test_make_iter_expr_output_only():
@@ -562,24 +572,25 @@ def test_make_payload_output_only():
 
 
 def test_make_payload_flattened():
-    graph, eqn = make_flattened()
+    mapping = """
+        partitioning:
+            Z:
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5)]
+        loop-order:
+            Z: [K1, MK01, N, MK00]
+    """
+    graph, eqn = make_matmul(mapping)
 
     assert eqn.make_payload(
-        *
-        graph.pop_concord()).gen(
-        parens=False) == "k1, (a_mk01, b_n)"
+        *graph.pop_concord()).gen(parens=False) == "k1, (a_mk01, b_n)"
     assert eqn.make_payload(
-        *
-        graph.pop_concord()).gen(
-        parens=False) == "mk01, a_mk00"
+        *graph.pop_concord()).gen(parens=False) == "mk01, a_mk00"
     assert eqn.make_payload(
-        *
-        graph.pop_concord()).gen(
-        parens=False) == "n, (z_m, b_k0)"
+        * graph.pop_concord()).gen(parens=False) == "n, (z_m, b_k0)"
     assert eqn.make_payload(
-        *
-        graph.pop_concord()).gen(
-        parens=False) == "(m, k0), a_val"
+        * graph.pop_concord()).gen(parens=False) == "(m, k0), a_val"
 
 
 def test_make_payload_conv_enum():
