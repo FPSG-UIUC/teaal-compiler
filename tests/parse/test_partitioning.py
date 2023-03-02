@@ -12,7 +12,7 @@ def test_flatten():
 
 
 def test_nway_shape():
-    tree = Tree("nway_shape", [Token("NUMBER", 7)])
+    tree = Tree("nway_shape", [Tree("int_sz", [Token("NUMBER", 7)])])
     assert PartitioningParser.parse_partitioning("nway_shape(7)") == tree
 
 
@@ -28,12 +28,17 @@ def test_ranks():
 
 def test_uniform_occupancy():
     leader = Tree("leader", [Token("NAME", "A")])
-    size = Tree("size", [Token("NUMBER", 6)])
+    size = Tree("int_sz", [Token("NUMBER", 6)])
     tree = Tree("uniform_occupancy", [leader, size])
     assert PartitioningParser.parse_partitioning(
         "uniform_occupancy(A.6)") == tree
 
 
 def test_uniform_shape():
-    tree = Tree("uniform_shape", [Token("NUMBER", 5)])
+    tree = Tree("uniform_shape", [Tree("int_sz", [Token("NUMBER", 5)])])
     assert PartitioningParser.parse_partitioning("uniform_shape(5)") == tree
+
+def test_uniform_shape_name_shape():
+    tree = Tree("uniform_shape", [Tree("str_sz", [Token("NAME", "M0")])])
+    assert PartitioningParser.parse_partitioning("uniform_shape(M0)") == tree
+

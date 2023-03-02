@@ -33,14 +33,15 @@ class PartitioningParser:
     Lexing and parsing for partitioning mapping information
     """
     partitioning_grammar = """
-        ?start: "nway_shape(" NUMBER ")" -> nway_shape
+        ?start: "nway_shape(" size ")" -> nway_shape
               | "uniform_occupancy(" leader "." size ")" -> uniform_occupancy
-              | "uniform_shape(" NUMBER ")" -> uniform_shape
+              | "uniform_shape(" size ")" -> uniform_shape
               | "flatten(" ")" -> flatten
 
         ?leader: NAME -> leader
 
-        ?size: NUMBER -> size
+        ?size: NUMBER -> int_sz
+             | NAME -> str_sz
 
         %import common.CNAME -> NAME
         %import common.NUMBER -> NUMBER

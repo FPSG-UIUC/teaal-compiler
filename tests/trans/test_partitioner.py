@@ -120,7 +120,6 @@ def test_flatten():
         program.get_tensor("A"), ("N", "O", "P")).gen(
         depth=0) == hifiber
 
-
 def test_nway_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """
@@ -129,6 +128,21 @@ def test_nway_shape():
     hifiber = "tmp0 = B_KN\n" + \
         "tmp1 = tmp0.splitUniform((N - 1) // 6 + 1, depth=1)\n" + \
         "tmp2 = tmp1.splitUniform((N - 1) // 3 + 1, depth=1)\n" + \
+        "B_KN2N1N0 = tmp2\n" + \
+        "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
+
+    assert_partition(tensor, spec, "N", hifiber)
+
+
+
+def test_nway_shape_var():
+    tensor = Tensor("B", ["K", "N"])
+    spec = """
+                N: [nway_shape(N1), nway_shape(N0)]
+    """
+    hifiber = "tmp0 = B_KN\n" + \
+        "tmp1 = tmp0.splitUniform((N - 1) // N1 + 1, depth=1)\n" + \
+        "tmp2 = tmp1.splitUniform((N - 1) // N0 + 1, depth=1)\n" + \
         "B_KN2N1N0 = tmp2\n" + \
         "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
@@ -163,6 +177,18 @@ def test_uniform_occupancy_leader():
 
     assert_partition(tensor, spec, "K", hifiber)
 
+
+def test_uniform_occupancy_leader_var():
+    tensor = Tensor("A", ["K", "M"])
+    spec = """
+                K: [uniform_occupancy(A.K0)]
+    """
+    hifiber = "tmp0 = A_KM\n" + \
+        "tmp1 = tmp0.splitEqual(K0)\n" + \
+        "A_K1K0M = tmp1\n" + \
+        "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
+
+    assert_partition(tensor, spec, "K", hifiber)
 
 def test_uniform_occupancy_follower():
     tensor = Tensor("B", ["K", "N"])
@@ -249,6 +275,18 @@ def test_uniform_shape():
 
     assert_partition(tensor, spec, "N", hifiber)
 
+def test_uniform_shape_var():
+    tensor = Tensor("B", ["K", "N"])
+    spec = """
+                N: [uniform_shape(N1), uniform_shape(N0)]
+    """
+    hifiber = "tmp0 = B_KN\n" + \
+        "tmp1 = tmp0.splitUniform(N1, depth=1)\n" + \
+        "tmp2 = tmp1.splitUniform(N0, depth=2)\n" + \
+        "B_KN2N1N0 = tmp2\n" + \
+        "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
+
+    assert_partition(tensor, spec, "N", hifiber)
 
 def test_uniform_shape_conv():
     tensor = Tensor("I", ["W"])

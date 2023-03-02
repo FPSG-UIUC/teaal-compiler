@@ -1,16 +1,26 @@
 einsum:
-    declaration:
-        A: [M, N]
-        Z: [M, N, O]
-    expressions:
-        - Z[m, n, o] = A[m, n]
+  declaration:
+    A: [K, M]
+    B: [K, N]
+    Y: [M, N]
+  expressions:
+    - Y[m,n] = sum(K).(A[k,m] * B[k,n])
 mapping:
-    partitioning:
-        Z:
-            (M, N): [flatten()]
-    loop-order:
-        Z: [O, MN]
-    spacetime:
-        Z:
-            space: [O]
-            time: [MN]
+  rank-order:
+    A: [K, M]
+    B: [K, N]
+    Y: [M, N]
+  partitioning:
+    Y:
+      K:
+        - uniform_shape(K1)
+        - uniform_shape(K0)
+      M:
+        - uniform_shape(M1)
+        - uniform_shape(M0)
+      N:
+        - uniform_shape(N1)
+        - uniform_shape(N0)
+  loop-order:
+    Y: [N2, K2, M2, M1,
+        N1, K1, M0, N0, K0]

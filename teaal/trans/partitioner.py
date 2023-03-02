@@ -314,21 +314,25 @@ class Partitioner:
         Partition into the given number of partitions in coordinate space
         """
         # Build the step
-        parts = ParseUtils.next_int(part)
+        parts: Expression
+        if list(part.find_data("int_sz")):
+            parts = EInt(ParseUtils.find_int(part, "int_sz"))
+        else:
+            parts = EVar(ParseUtils.find_str(part, "str_sz"))
 
         # Ceiling divide: (rank - 1) // parts + 1
         parens = EParens(EBinOp(EVar(part_rank), OSub(), EInt(1)))
-        fdiv = EBinOp(parens, OFDiv(), EInt(parts))
+        fdiv = EBinOp(parens, OFDiv(), parts)
         step = EBinOp(fdiv, OAdd(), EInt(1))
 
         # Build the splitUniform
         return self.__split_uniform(rank, part_rank, step, depth)
 
-    def __split_equal(self, rank: str, part_rank: str, size: int) -> Statement:
+    def __split_equal(self, rank: str, part_rank: str, size: Expression) -> Statement:
         """
         Build call to splitEqual
         """
-        args: List[Argument] = [AJust(EInt(size))]
+        args: List[Argument] = [AJust(size)]
         if rank != part_rank:
             args.append(AParam("halo", self.__build_halo(rank, part_rank)))
 
@@ -392,7 +396,11 @@ class Partitioner:
         Partition with a uniform occupancy
         """
         leader = self.program.get_partitioning().get_leader(src_rank, dst_rank)
-        size = ParseUtils.find_int(part, "size")
+        size: Expression
+        if list(part.find_data("int_sz")):
+            size = EInt(ParseUtils.find_int(part, "int_sz"))
+        else:
+            size = EVar(ParseUtils.find_str(part, "str_sz"))
 
         if tensor.root_name() == leader:
             return self.__split_equal(rank, src_rank, size)
@@ -409,7 +417,11 @@ class Partitioner:
         Partition with a uniform shape
         """
         # Build the step
-        step = ParseUtils.next_int(part)
+        step: Expression
+        if list(part.find_data("int_sz")):
+            step = EInt(ParseUtils.find_int(part, "int_sz"))
+        else:
+            step = EVar(ParseUtils.find_str(part, "str_sz"))
 
         # Build the splitUniform()
-        return self.__split_uniform(rank, part_rank, EInt(step), depth)
+        return self.__split_uniform(rank, part_rank, step, depth)
