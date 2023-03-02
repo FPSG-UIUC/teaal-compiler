@@ -120,6 +120,7 @@ def test_flatten():
         program.get_tensor("A"), ("N", "O", "P")).gen(
         depth=0) == hifiber
 
+
 def test_nway_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """
@@ -132,7 +133,6 @@ def test_nway_shape():
         "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, spec, "N", hifiber)
-
 
 
 def test_nway_shape_var():
@@ -189,6 +189,7 @@ def test_uniform_occupancy_leader_var():
         "A_K1K0M.setRankIds(rank_ids=[\"K1\", \"K0\", \"M\"])"
 
     assert_partition(tensor, spec, "K", hifiber)
+
 
 def test_uniform_occupancy_follower():
     tensor = Tensor("B", ["K", "N"])
@@ -275,6 +276,7 @@ def test_uniform_shape():
 
     assert_partition(tensor, spec, "N", hifiber)
 
+
 def test_uniform_shape_var():
     tensor = Tensor("B", ["K", "N"])
     spec = """
@@ -287,6 +289,7 @@ def test_uniform_shape_var():
         "B_KN2N1N0.setRankIds(rank_ids=[\"K\", \"N2\", \"N1\", \"N0\"])"
 
     assert_partition(tensor, spec, "N", hifiber)
+
 
 def test_uniform_shape_conv():
     tensor = Tensor("I", ["W"])

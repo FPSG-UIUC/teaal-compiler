@@ -38,7 +38,7 @@ def test_uniform_shape():
     tree = Tree("uniform_shape", [Tree("int_sz", [Token("NUMBER", 5)])])
     assert PartitioningParser.parse_partitioning("uniform_shape(5)") == tree
 
+
 def test_uniform_shape_name_shape():
     tree = Tree("uniform_shape", [Tree("str_sz", [Token("NAME", "M0")])])
     assert PartitioningParser.parse_partitioning("uniform_shape(M0)") == tree
-

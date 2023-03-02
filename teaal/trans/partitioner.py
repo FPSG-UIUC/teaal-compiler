@@ -328,7 +328,8 @@ class Partitioner:
         # Build the splitUniform
         return self.__split_uniform(rank, part_rank, step, depth)
 
-    def __split_equal(self, rank: str, part_rank: str, size: Expression) -> Statement:
+    def __split_equal(self, rank: str, part_rank: str,
+                      size: Expression) -> Statement:
         """
         Build call to splitEqual
         """

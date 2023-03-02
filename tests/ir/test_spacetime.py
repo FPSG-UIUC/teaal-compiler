@@ -5,7 +5,6 @@ from teaal.ir.partitioning import Partitioning
 from teaal.ir.spacetime import SpaceTime
 from teaal.parse.mapping import Mapping
 from teaal.parse.spacetime import SpaceTimeParser
-from tests.utils.parse_tree import make_uniform_shape
 
 
 def create_yaml(space, time, opt=None):

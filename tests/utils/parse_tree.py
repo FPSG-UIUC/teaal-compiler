@@ -72,7 +72,7 @@ def make_tranks(ranks):
 
 
 def make_uniform_shape(shapes):
-    return [Tree("uniform_shape", [make_num(shape)])
+    return [Tree("uniform_shape", [Tree("int_sz", [make_num(shape)])])
             for shape in shapes]
 
 
