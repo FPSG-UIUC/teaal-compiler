@@ -2,8 +2,8 @@ from lark.lexer import Token
 from lark.tree import Tree
 
 
-def make_dot(tensors, rank):
-    return Tree("dot", tensors + [make_num(rank)])
+def make_take(tensors, rank):
+    return Tree("take", tensors + [make_num(rank)])
 
 
 def make_einsum(lhs, rhs):

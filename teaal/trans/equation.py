@@ -74,12 +74,12 @@ class Equation:
                 self.in_update[-1].append(True)
 
         # Find all factors intersected together
-        for i, dot in enumerate(einsum.find_data("dot")):
+        for i, take in enumerate(einsum.find_data("take")):
             self.terms.append(cast(List[str], []))
             self.vars.append([])
             self.in_update.append(cast(List[bool], []))
 
-            for child in dot.children:
+            for child in take.children:
                 if isinstance(child, Tree):
                     if child.data == "var":
                         self.vars[-1].append(ParseUtils.next_str(child))

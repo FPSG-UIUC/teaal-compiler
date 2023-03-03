@@ -46,11 +46,11 @@ def test_times():
     assert EquationParser.parse("A[] = a * b") == tree
 
 
-def test_dot():
+def test_take():
     tree = make_einsum(make_output("T1", ["k", "m", "n"]), Tree("plus", [
-                       make_dot([make_tensor("A", ["k", "m"]),
+                       make_take([make_tensor("A", ["k", "m"]),
                                  make_tensor("B", ["k", "n"])], 1)]))
-    assert EquationParser.parse("T1[k, m, n] = dot(A[k, m], B[k, n], 1)")
+    assert EquationParser.parse("T1[k, m, n] = take(A[k, m], B[k, n], 1)")
 
 
 def test_ind_plus():

@@ -6,6 +6,7 @@
 [x] Allow for variable-named partition sizes
 [x] Correctly flatten together output after occupancy-space partitioning
 [ ] Support the new architecture/binding specification
+[ ] Transition from using dot() to take()
 
 ## Priority: 2
 

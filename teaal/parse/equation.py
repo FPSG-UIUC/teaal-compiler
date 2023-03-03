@@ -34,7 +34,7 @@ class EquationParser:
         ?tensor: NAME "[" tranks "]"
 
         ?term: (factor "*")* factor -> times
-               | "dot(" (factor ",")* factor "," NUMBER ")" -> dot
+               | "take(" (factor ",")* factor "," NUMBER ")" -> take
 
         ?tranks: [iexpr ("," iexpr)*] -> tranks
 

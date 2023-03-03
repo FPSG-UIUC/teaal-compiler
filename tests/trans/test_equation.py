@@ -68,7 +68,7 @@ def make_mult_terms():
     return IterationGraph(program), Equation(program)
 
 
-def make_dot():
+def make_take():
     yaml = """
     einsum:
         declaration:
@@ -76,7 +76,7 @@ def make_dot():
             C: [M]
             Z: [M]
         expressions:
-            - Z[m] = dot(A[m], b, C[m], 1)
+            - Z[m] = take(A[m], b, C[m], 1)
     """
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -310,8 +310,8 @@ def test_make_iter_expr_mult_terms():
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
-def test_make_iter_expr_dot():
-    graph, eqn = make_dot()
+def test_make_iter_expr_take():
+    graph, eqn = make_take()
 
     rank, tensors = graph.peek_concord()
     iter_expr = "z_m << (a_m & c_m)"
@@ -522,8 +522,8 @@ def test_make_payload_mult_terms():
     assert eqn.make_payload(rank, tensors).gen(False) == payload
 
 
-def test_make_payload_dot():
-    graph, eqn = make_dot()
+def test_make_payload_take():
+    graph, eqn = make_take()
 
     rank, tensors = graph.pop_concord()
     payload = "m, (z_ref, (a_val, c_val))"
@@ -619,8 +619,8 @@ def test_make_update_mult_terms():
     assert eqn.make_update().gen(depth=0) == stmt
 
 
-def test_make_update_dot():
-    _, eqn = make_dot()
+def test_make_update_take():
+    _, eqn = make_take()
     stmt = "z_ref += b"
     assert eqn.make_update().gen(depth=0) == stmt
 

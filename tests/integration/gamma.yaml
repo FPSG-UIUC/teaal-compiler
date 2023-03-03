@@ -6,7 +6,7 @@ einsum:
     Z: [M, N]
 
   expressions:
-    - T[k,m,n] = dot(A[k,m], B[k,n], 1)
+    - T[k,m,n] = take(A[k,m], B[k,n], 1)
     - Z[m,n] = sum(K).(T[k,m,n]*A[k,m])
 
 mapping:
