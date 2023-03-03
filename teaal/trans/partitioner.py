@@ -135,7 +135,7 @@ class Partitioner:
                 if len(info) == 1:
                     block.add(
                         self.__build_flatten(
-                            ranks.index(
+                            "merge", ranks.index(
                                 info[0]), len(
                                 part_ir.get_part_spec(info)), "absolute"))
                     next_tmp = self.trans_utils.curr_tmp()
@@ -177,7 +177,7 @@ class Partitioner:
     def __apply_flatten(self, tensor: Tensor,
                         ranks: Tuple[str, ...]) -> Statement:
         """
-        Apply a flattening (as opposed to a split
+        Apply a flattening (as opposed to a split)
         """
         part_ir = self.program.get_partitioning()
 
@@ -193,7 +193,7 @@ class Partitioner:
                                  " on tensor with ranks " +
                                  str(tensor.get_ranks()))
 
-        assign = self.__build_flatten(i, len(ranks) - 1, "tuple")
+        assign = self.__build_flatten("flatten", i, len(ranks) - 1, "tuple")
 
         self.program.apply_partitioning(tensor, ranks)
         return assign
@@ -260,11 +260,14 @@ class Partitioner:
 
     def __build_flatten(
             self,
+            type_: str,
             depth: int,
             levels: int,
             style: str) -> Statement:
         """
         Build a call to the flattenRanks() function
+
+        type_ should be either "flatten" (for flattenRanks) or "merge" (for mergeRanks)
         """
         # Build arguments
         args = []
@@ -274,7 +277,7 @@ class Partitioner:
 
         # Build the call
         curr_tmp = self.trans_utils.curr_tmp()
-        flat_call = EMethod(EVar(curr_tmp), "flattenRanks", args)
+        flat_call = EMethod(EVar(curr_tmp), type_ + "Ranks", args)
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, flat_call)
 

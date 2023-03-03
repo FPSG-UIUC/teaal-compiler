@@ -399,7 +399,7 @@ def test_unpartition_one():
                 N: [uniform_shape(6), uniform_shape(3)]
     """
     hifiber = "tmp0 = Z_MN2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
         "tmp1.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp1"
     assert_unpartition(spec, [hifiber])
@@ -411,13 +411,13 @@ def test_unpartition_all():
                 N: [uniform_shape(6), uniform_shape(3)]
     """
     hifiber_option1 = "tmp0 = Z_M1M0N2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
-        "tmp2 = tmp1.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp2"
     hifiber_option2 = "tmp0 = Z_M1M0N2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-        "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
         "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp2"
     assert_unpartition(spec, [hifiber_option1, hifiber_option2])
@@ -446,11 +446,11 @@ def test_unpartition_flatten():
     partitioner = Partitioner(program, TransUtils())
     hifiber = partitioner.unpartition(program.get_output()).gen(0)
     corr = "tmp0 = Z_M1NM01NM00\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2 = tmp1.unflattenRanks(depth=1, levels=1)\n" + \
         "tmp2.setRankIds(rank_ids=[\"M1\", \"N\", \"M0\"])\n" + \
         "tmp3 = tmp2.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
-        "tmp4 = tmp3.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp4 = tmp3.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp4.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp4"
     assert hifiber == corr
@@ -469,9 +469,19 @@ def test_unswizzle_unpartition():
     program.apply_all_partitioning(output)
     program.get_loop_order().apply(output)
 
-    hifiber = "Z_M1M0N2N1N0 = Z_M1N2N1M0N0.swizzleRanks([\"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
-        "tmp0 = Z_M1M0N2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-        "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
-        "Z_MN = tmp2\n" + \
-        "Z_MN.setRankIds(rank_ids=[\"M\", \"N\"])"
+    hifiber_option1 = "tmp0 = Z_M1N2N1M0N0\n" + \
+        "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp3 = tmp2.mergeRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp3.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp3"
+
+    hifiber_option2 = "tmp0 = Z_M1N2N1M0N0\n" + \
+        "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N2\", \"N1\", \"N0\"])\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp3 = tmp2.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp3.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp3"
+
+    assert partitioner.unpartition(program.get_output()).gen(0) in [
+        hifiber_option1, hifiber_option2]

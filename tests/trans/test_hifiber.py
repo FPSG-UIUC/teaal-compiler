@@ -91,8 +91,8 @@ def test_translate_specified():
         "                        z_ref += t1_val + c_val\n" + \
         "tmp14 = Z_M2N2M1N1M0N0\n" + \
         "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
-        "tmp16 = tmp15.flattenRanks(depth=3, levels=2, coord_style=\"absolute\")\n" + \
-        "tmp17 = tmp16.flattenRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp16 = tmp15.mergeRanks(depth=3, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp17 = tmp16.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
         "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
         "Z_NM = tmp17"
 
@@ -146,8 +146,8 @@ def test_translate_specified():
         "                        z_ref += t1_val + c_val\n" + \
         "tmp14 = Z_M2N2M1N1M0N0\n" + \
         "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
-        "tmp16 = tmp15.flattenRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
-        "tmp17 = tmp16.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp16 = tmp15.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp17 = tmp16.mergeRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
         "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
         "Z_NM = tmp17"
 
@@ -223,7 +223,7 @@ def test_hifiber_dyn_part():
         "                    for k0, (a_val, b_val) in a_k0 & b_k0:\n" + \
         "                        z_ref += a_val * b_val\n" + \
         "tmp10 = Z_MN1N0\n" + \
-        "tmp11 = tmp10.flattenRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp11 = tmp10.mergeRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
         "tmp11.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp11"
 
@@ -272,7 +272,7 @@ def test_hifiber_conv():
         "        for q0, (o_ref, f_val) in o_q0 << f_s.project(trans_fn=lambda s: w0 + -1 * s, interval=(q0_start, q0_end)):\n" + \
         "            o_ref += i_val * f_val\n" + \
         "tmp2 = O_Q1Q0\n" + \
-        "tmp3 = tmp2.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp3 = tmp2.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp3.setRankIds(rank_ids=[\"Q\"])\n" + \
         "O_Q = tmp3"
 
@@ -403,7 +403,7 @@ def test_hifiber_dyn_flattening():
         "                    z_ref += a_val * b_val\n" + \
         "tmp10 = Z_M1NM0\n" + \
         "tmp11 = tmp10.swizzleRanks(rank_ids=[\"M1\", \"M0\", \"N\"])\n" + \
-        "tmp12 = tmp11.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp12 = tmp11.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp12.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp12"
 

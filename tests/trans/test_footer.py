@@ -72,13 +72,13 @@ def test_make_footer_partitioned():
                 N: [uniform_shape(6), uniform_shape(3)]
     """
     hifiber_option1 = "tmp0 = Z_M1M0N2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
-        "tmp2 = tmp1.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=2, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp2"
     hifiber_option2 = "tmp0 = Z_M1M0N2N1N0\n" + \
-        "tmp1 = tmp0.flattenRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
-        "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=0, levels=1, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
         "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp2"
     assert_make_footer("", part, "", [hifiber_option1, hifiber_option2])
@@ -106,7 +106,7 @@ def test_make_footer_all():
     """
     hifiber = "tmp0 = Z_N2N1MN0\n" + \
         "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N2\", \"N1\", \"N0\"])\n" + \
-        "tmp2 = tmp1.flattenRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp2 = tmp1.mergeRanks(depth=1, levels=2, coord_style=\"absolute\")\n" + \
         "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp2\n" + \
         "displayCanvas(canvas)"
