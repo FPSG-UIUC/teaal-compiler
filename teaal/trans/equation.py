@@ -47,7 +47,8 @@ class Equation:
         Construct a new Equation
         """
         self.program = program
-        einsum = self.program.get_einsum()
+        # TODO: Fix this so that it does not use private data
+        einsum = self.program.get_equation().equation
 
         # First find all terms (terminals multiplied or otherwise intersected
         # together)

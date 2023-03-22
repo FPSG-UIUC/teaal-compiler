@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Representation of einsum metadata and the specification
+Top-level TeAAL program representation
 """
 
 from collections import Counter
@@ -30,6 +30,7 @@ from lark.tree import Tree
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.coord_math import CoordMath
+from teaal.ir.equation import Equation
 from teaal.ir.loop_order import LoopOrder
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.spacetime import SpaceTime
@@ -41,7 +42,7 @@ from teaal.parse.utils import ParseUtils
 
 class Program:
     """
-    Store tensor metadata and configure the metadata for specific einsums
+    Top-level TeAAL program representation
     """
 
     def __init__(self, einsum: Einsum, mapping: Mapping) -> None:
@@ -71,7 +72,7 @@ class Program:
             self.tensors[tensor.root_name()] = tensor
 
         self.einsum_ind: Optional[int] = None
-        self.equation: Optional[Tree] = None
+        self.equation: Optional[Equation] = None
         self.es_tensors: List[Tensor] = []
         self.coord_math: Optional[CoordMath] = None
         self.loop_order: Optional[LoopOrder] = None
@@ -83,24 +84,25 @@ class Program:
         Configure the program for the i'th Einsum
         """
         self.einsum_ind = i
-        self.equation = self.einsum.get_expressions()[i]
+        self.equation = Equation(
+            self.einsum.get_expressions()[i],
+            self.tensors)
         self.coord_math = CoordMath()
 
         # Build the list of tensors, starting with the output tensor
         self.es_tensors = []
-        output_tree = next(self.equation.find_data("output"))
-        output = self.__get_tensor(output_tree)
-        output.set_is_output(True)
+        output, output_tree = self.equation.get_output()
         self.es_tensors.append(output)
         self.__add_ranks(output, output_tree)
 
         # Add the rest of the tensors
-        for tensor_tree in self.equation.find_data("tensor"):
-            self.es_tensors.append(self.__get_tensor(tensor_tree))
-            self.__add_ranks(self.es_tensors[-1], tensor_tree)
+        for tensor, tree in self.equation.get_tensors():
+            self.es_tensors.append(tensor)
+            self.__add_ranks(tensor, tree)
 
         # Create the loop_order object
-        self.loop_order = LoopOrder(self.equation, output)
+        # TODO: remove call to private variable
+        self.loop_order = LoopOrder(self.equation.equation, output)
 
         # Store the partitioning information
         partitioning = self.mapping.get_partitioning()
@@ -176,7 +178,7 @@ class Program:
             tensor.get_ranks())
         tensor.update_ranks(new_ranks)
 
-    def get_einsum(self) -> Tree:
+    def get_equation(self) -> Equation:
         """
         Get the parse tree representation of the einsum
         """
@@ -305,16 +307,6 @@ class Program:
 
         ranks = next(tensor_tree.find_data("ranks"))
         self.coord_math.add(self.decl_tensors[tensor.root_name()], ranks)
-
-    def __get_tensor(self, tensor: Tree) -> Tensor:
-        """
-        Given a parse tree, get the appropriate tensor
-        """
-        name = ParseUtils.next_str(tensor)
-        if name not in self.tensors.keys():
-            raise ValueError("Undeclared tensor: " + name)
-
-        return self.tensors[name]
 
     def __all_ranks(self) -> Set[str]:
         """

@@ -3,6 +3,7 @@ import pytest
 from sympy import symbols
 
 from teaal.ir.coord_math import CoordMath
+from teaal.ir.equation import Equation
 from teaal.ir.loop_order import LoopOrder
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.program import Program
@@ -229,21 +230,25 @@ def test_apply_partition_swizzling():
     assert A.get_ranks() == ["J", "K1", "N", "M", "K0"]
 
 
-def test_get_einsum_unconfigured():
+def test_get_equation_unconfigured():
     program = create_default()
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_einsum()
+        program.get_equation()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_get_einsum():
+def test_get_equation():
     program = create_default()
     program.add_einsum(0)
 
-    equation = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
-    assert program.get_einsum() == equation
+    tensors = {"Z": Tensor("Z", ["M", "N"]), "A": Tensor("A", ["K", "M"]),
+               "B": Tensor("B", ["K", "N"]), "C": Tensor("C", ["M", "N"])}
+    tensors["Z"].set_is_output(True)
+    equation = Equation(EquationParser.parse(
+        "Z[m, n] = A[k, m] * B[k, n]"), tensors)
+    assert program.get_equation() == equation
 
 
 def test_get_einsum_ind_unconfigured():
@@ -255,7 +260,7 @@ def test_get_einsum_ind_unconfigured():
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
 
-def test_get_einsum():
+def test_get_einsum_ind():
     program = create_default()
     program.add_einsum(0)
 
@@ -472,7 +477,7 @@ def test_reset():
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
     with pytest.raises(ValueError) as excinfo:
-        program.get_einsum()
+        program.get_equation()
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
