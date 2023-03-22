@@ -23,21 +23,9 @@ def test_tensor_rank1():
     assert EquationParser.parse("A[i] = b") == tree
 
 
-def test_sum_factor():
-    sum_ = make_sum(["K", "L"], make_tensor("B", ["k", "l"]))
-    tree = make_einsum(make_output("A", []), sum_)
-    assert EquationParser.parse("A[] = sum(K, L).B[k, l]") == tree
-
-
 def test_plus():
     tree = make_einsum(make_output("A", []), make_plus(["a", "b"]))
     assert EquationParser.parse("A[] = a + b") == tree
-
-
-def test_sum_expr():
-    sum_ = Tree("sum", [make_sranks(["K", "L"]), make_plus(["a", "b"])])
-    tree = make_einsum(make_output("A", []), sum_)
-    assert EquationParser.parse("A[] = sum(K, L).(a + b)") == tree
 
 
 def test_times():
@@ -54,12 +42,12 @@ def test_take():
 
 
 def test_ind_plus():
-    tree = make_einsum(make_output("Z", ["m"]), make_tensor_tranks(
-        "A", Tree("tranks", [make_iplus(["m", "s"])])))
+    tree = make_einsum(make_output("Z", ["m"]), make_tensor_ranks(
+        "A", Tree("ranks", [make_iplus(["m", "s"])])))
     assert EquationParser.parse("Z[m] = A[m + s]")
 
 
 def test_ind_times():
-    tree = make_einsum(make_output("Z", ["m"]), make_tensor_tranks(
-        "A", Tree("tranks", [make_itimes(["2", "m"])])))
+    tree = make_einsum(make_output("Z", ["m"]), make_tensor_ranks(
+        "A", Tree("ranks", [make_itimes(["2", "m"])])))
     assert EquationParser.parse("Z[m] = A[2 * m]")

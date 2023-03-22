@@ -18,7 +18,7 @@ def make_basic():
             C: [I]
             D: [I]
         expressions:
-            - "A[] = sum(I).(B[i] * C[i] * D[i])"
+            - "A[] = B[i] * C[i] * D[i]"
     """
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -118,7 +118,7 @@ def make_display(style, opt):
             C: [I]
             D: [I]
         expressions:
-            - "A[] = sum(I).(B[i] * C[i] * D[i])"
+            - "A[] = B[i] * C[i] * D[i]"
     mapping:
         spacetime:
             A:
@@ -141,7 +141,7 @@ def make_matmul(mapping):
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
     """ + mapping
     einsum = Einsum.from_str(yaml)
@@ -230,7 +230,7 @@ def test_tensor_in_out():
 
 
 def test_eager_inputs_one_fiber():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
     hifiber = "inputs_q1 = i_q1"
 
@@ -238,7 +238,7 @@ def test_eager_inputs_one_fiber():
 
 
 def test_eager_inputs_multiple_fibers():
-    expr = "O[p, q] = sum(S).(I[q + s] * J[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * J[q + s] * F[s]"
     mapping = """[Q1, P, S, Q]
         partitioning:
             O:
@@ -251,7 +251,7 @@ def test_eager_inputs_multiple_fibers():
 
 
 def test_make_interval_bad_rank():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
     with pytest.raises(ValueError) as excinfo:
         eqn.make_interval("S")
@@ -260,7 +260,7 @@ def test_make_interval_bad_rank():
 
 
 def test_make_interval():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
 
     hifiber = "if q1_pos == 0:\n" + \
@@ -419,7 +419,7 @@ def test_make_iter_expr_output_only_partition():
 
 
 def test_make_iter_expr_conv():
-    expr = "O[p, q] = sum(S).(I[p + q + s] * F[s])"
+    expr = "O[p, q] = I[p + q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, S, Q]")
     graph.pop_concord()
 
@@ -436,7 +436,7 @@ def test_make_iter_expr_conv():
 
 
 def test_make_iter_expr_conv_frac():
-    expr = "O[p, q] = sum(S).(I[2 * q + s] * F[s])"
+    expr = "O[p, q] = I[2 * q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, S, Q]")
     graph.pop_concord()
 
@@ -453,7 +453,7 @@ def test_make_iter_expr_conv_frac():
 
 
 def test_make_iter_expr_conv_project_output():
-    expr = "O[p, q] = sum(S).(I[p + q + s] * F[s])"
+    expr = "O[p, q] = I[p + q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, S, W]")
     graph.pop_concord()
     graph.pop_concord()
@@ -466,7 +466,7 @@ def test_make_iter_expr_conv_project_output():
 
 
 def test_make_iter_expr_conv_enum():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
     hifiber = "enumerate(o_q1 << i_q1)"
 
@@ -474,7 +474,7 @@ def test_make_iter_expr_conv_enum():
 
 
 def test_make_iter_expr_conv_part():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     graph, eqn = make_conv_part(expr, "[Q1, P, W0, Q0]")
 
     graph.pop_concord()
@@ -592,7 +592,7 @@ def test_make_payload_flattened():
 
 
 def test_make_payload_conv_enum():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
     hifiber = "q1_pos, (q1, (o_p, i_w0))"
 
@@ -626,7 +626,7 @@ def test_make_update_take():
 
 
 def test_iter_fiber_not_fiber():
-    expr = "O[p, q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[p, q] = I[q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, W, Q]")
     graph.pop_concord()
     graph.pop_concord()

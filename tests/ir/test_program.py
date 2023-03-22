@@ -24,7 +24,7 @@ def create_default():
             B: [K, N]
             C: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -37,7 +37,7 @@ def create_loop_ordered():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         loop-order:
             Z: [K, N, M]
@@ -53,7 +53,7 @@ def create_partitioned():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
@@ -71,7 +71,7 @@ def create_rank_ordered():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         rank-order:
             Z: [N, M]
@@ -88,7 +88,7 @@ def create_displayed(time):
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         spacetime:
             Z:
@@ -105,7 +105,7 @@ def create_conv():
             I: [W]
             O: [Q]
         expressions:
-            - O[q] = sum(S).(I[q + s] * F[s])
+            - O[q] = I[q + s] * F[s]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -174,10 +174,10 @@ def test_all_ranks():
     yaml = """
     einsum:
         declaration:
-            Z: []
+            Z: [K]
             A: [J]
         expressions:
-            - Z[] = sum(K).(A[2 * k])
+            - Z[k] = A[2 * k]
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
@@ -209,7 +209,7 @@ def test_apply_partition_swizzling():
             Z: [M, N]
             A: [J, K, M, N]
         expressions:
-            - Z[m, n] = sum(J, K).(A[j, k, m, n])
+            - Z[m, n] = A[j, k, m, n]
     mapping:
         partitioning:
             Z:
@@ -242,7 +242,7 @@ def test_get_einsum():
     program = create_default()
     program.add_einsum(0)
 
-    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+    equation = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
     assert program.get_einsum() == equation
 
 
@@ -296,10 +296,10 @@ def test_get_coord_math_conv():
 
     # Add the tensors
     coord_math = CoordMath()
-    coord_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
+    coord_math.add(Tensor("O", ["Q"]), make_ranks(["q"]))
     coord_math.add(Tensor("I", ["W"]), Tree(
-        "tranks", [make_iplus(["q", "s"])]))
-    coord_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
+        "ranks", [make_iplus(["q", "s"])]))
+    coord_math.add(Tensor("F", ["S"]), make_ranks(["s"]))
     coord_math.prune(
         program.get_loop_order().get_ranks(),
         program.get_partitioning())
@@ -329,7 +329,7 @@ def test_get_loop_order_unconfigured():
 def test_get_loop_order():
     program = create_loop_ordered()
     program.add_einsum(0)
-    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+    equation = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
 
     loop_order = LoopOrder(equation, program.get_output())
     ranks = ["K", "N", "M"]

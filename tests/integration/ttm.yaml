@@ -4,4 +4,4 @@ einsum:
         B: [K, O]
         Z: [M, N, O]
     expressions:
-        - Z[m, n, o] = sum(K).(A[m, n, k] * B[k, o])
+        - Z[m, n, o] = A[m, n, k] * B[k, o]

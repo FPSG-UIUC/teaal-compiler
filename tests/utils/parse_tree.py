@@ -32,15 +32,11 @@ def make_nway_shape(shapes):
 
 
 def make_output(name, ranks):
-    return Tree("output", [make_name(name), make_tranks(ranks)])
+    return Tree("output", [make_name(name), make_ranks(ranks)])
 
 
 def make_plus(vars_):
     return Tree("plus", [make_times([var]) for var in vars_])
-
-
-def make_sranks(ranks):
-    return Tree("sranks", [make_name(i) for i in ranks])
 
 
 def make_prank(rank):
@@ -51,24 +47,20 @@ def make_pranks(ranks):
     return Tree("ranks", [Token("NAME", rank) for rank in ranks])
 
 
-def make_sum(ranks, expr):
-    return Tree("sum", [make_sranks(ranks), expr])
-
-
 def make_tensor(name, ranks):
-    return make_tensor_tranks(name, make_tranks(ranks))
+    return make_tensor_ranks(name, make_ranks(ranks))
 
 
-def make_tensor_tranks(name, tranks):
-    return Tree("tensor", [make_name(name), tranks])
+def make_tensor_ranks(name, ranks):
+    return Tree("tensor", [make_name(name), ranks])
 
 
 def make_times(vars_):
     return Tree("times", [make_var(var) for var in vars_])
 
 
-def make_tranks(ranks):
-    return Tree("tranks", [make_iplus([i]) for i in ranks])
+def make_ranks(ranks):
+    return Tree("ranks", [make_iplus([i]) for i in ranks])
 
 
 def make_uniform_shape(shapes):

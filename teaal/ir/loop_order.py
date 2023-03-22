@@ -33,6 +33,7 @@ from typing import Any, cast, Iterable, List, Optional, Tuple
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
+from teaal.parse.utils import ParseUtils
 
 
 class LoopOrder:
@@ -176,13 +177,46 @@ class LoopOrder:
         """
         Get the names of the ranks before partitioning
         """
-        ranks = self.output.get_ranks().copy()
+        term_iter = chain(
+            self.equation.find_data("times"),
+            self.equation.find_data("take"))
 
-        for sum_ in self.equation.find_data("sum"):
-            ranks += list(next(sum_.find_data("sranks")
-                               ).scan_values(lambda _: True))
+        # TODO: move this so that it runs always
+        # Do some error checking
+        term_ranks = LoopOrder.__get_term_ranks(next(term_iter))
+        for term in term_iter:
+            check_ranks = LoopOrder.__get_term_ranks(term)
+
+            if check_ranks != term_ranks:
+                raise ValueError(
+                    "Malformed einsum: ensure all terms iterate over all ranks")
+
+        # Build a list of unpartitioned ranks
+        ranks = self.output.get_ranks().copy()
+        for rank in term_ranks:
+            if rank not in ranks:
+                ranks.append(rank)
 
         return ranks
+
+    @staticmethod
+    def __get_term_ranks(term: Tree) -> List[str]:
+        """
+        Get the ranks in a term
+        """
+        term_ranks = list()
+        for ranks in term.find_data("ranks"):
+            for ijust in term.find_data("ijust"):
+                rank = ParseUtils.next_str(ijust).upper()
+                if rank not in term_ranks:
+                    term_ranks.append(rank)
+
+            for itimes in term.find_data("itimes"):
+                rank = str(itimes.children[1]).upper()
+                if rank not in term_ranks:
+                    term_ranks.append(rank)
+
+        return term_ranks
 
     def __eq__(self, other: object) -> bool:
         """

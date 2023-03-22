@@ -12,7 +12,6 @@ class EquationParser:
     """
     grammar = """
         ?start: output "=" expr -> einsum
-              | output "=" sum -> einsum
 
         ?expr: (term "+")* term -> plus
 
@@ -24,19 +23,14 @@ class EquationParser:
         ?iterm: NAME -> ijust
               | NUMBER "*" NAME -> itimes
 
-        ?output: NAME "[" tranks "]"
+        ?output: NAME "[" ranks "]"
 
-        ?sum: "sum(" sranks ")." factor
-            | "sum(" sranks ").(" expr ")"
-
-        ?sranks: [NAME ("," NAME)*] -> sranks
-
-        ?tensor: NAME "[" tranks "]"
+        ?tensor: NAME "[" ranks "]"
 
         ?term: (factor "*")* factor -> times
                | "take(" (factor ",")* factor "," NUMBER ")" -> take
 
-        ?tranks: [iexpr ("," iexpr)*] -> tranks
+        ?ranks: [iexpr ("," iexpr)*] -> ranks
 
         %import common.CNAME -> NAME
         %import common.NUMBER -> NUMBER

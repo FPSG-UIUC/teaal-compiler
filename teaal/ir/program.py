@@ -92,12 +92,12 @@ class Program:
         output = self.__get_tensor(output_tree)
         output.set_is_output(True)
         self.es_tensors.append(output)
-        self.__add_tranks(output, output_tree)
+        self.__add_ranks(output, output_tree)
 
         # Add the rest of the tensors
         for tensor_tree in self.equation.find_data("tensor"):
             self.es_tensors.append(self.__get_tensor(tensor_tree))
-            self.__add_tranks(self.es_tensors[-1], tensor_tree)
+            self.__add_ranks(self.es_tensors[-1], tensor_tree)
 
         # Create the loop_order object
         self.loop_order = LoopOrder(self.equation, output)
@@ -294,17 +294,17 @@ class Program:
         self.partitioning = None
         self.spacetime = None
 
-    def __add_tranks(self, tensor: Tensor, tensor_tree: Tree) -> None:
+    def __add_ranks(self, tensor: Tensor, tensor_tree: Tree) -> None:
         """
-        Add the tranks of a tensor to the coord math
+        Add the ranks of a tensor to the coord math
         """
         # Note: this should always be called through add_einsum(), so we should
         # never encounter this problem
         if self.coord_math is None:
             raise ValueError("Something is wrong...")  # pragma: no cover
 
-        tranks = next(tensor_tree.find_data("tranks"))
-        self.coord_math.add(self.decl_tensors[tensor.root_name()], tranks)
+        ranks = next(tensor_tree.find_data("ranks"))
+        self.coord_math.add(self.decl_tensors[tensor.root_name()], ranks)
 
     def __get_tensor(self, tensor: Tree) -> Tensor:
         """
@@ -324,12 +324,9 @@ class Program:
             raise ValueError(
                 "Unconfigured program. Make sure to first call add_einsum()")
 
+        # Get all ranks
         ranks = set()
         for tensor in self.es_tensors:
             ranks.update(tensor.get_ranks())
-
-        for sranks in self.equation.find_data("sranks"):
-            for rank in sranks.children:
-                ranks.add(str(rank))
 
         return ranks

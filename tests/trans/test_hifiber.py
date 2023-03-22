@@ -164,7 +164,7 @@ def test_hifiber_dyn_part():
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
@@ -238,7 +238,7 @@ def test_hifiber_conv():
             I: [W]
             O: [Q]
         expressions:
-            - O[q] = sum(S).(I[q + s] * F[s])
+            - O[q] = I[q + s] * F[s]
     mapping:
         partitioning:
             O:
@@ -287,7 +287,7 @@ def test_hifiber_static_flattening():
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
@@ -346,7 +346,7 @@ def test_hifiber_dyn_flattening():
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:

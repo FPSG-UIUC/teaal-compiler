@@ -4,4 +4,4 @@ einsum:
         B: [K]
         Z: []
     expressions:
-        - Z[] = sum(K).(A[k] * B[k])
+        - Z[] = A[k] * B[k]

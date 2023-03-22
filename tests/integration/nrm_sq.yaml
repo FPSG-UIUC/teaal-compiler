@@ -7,4 +7,4 @@ einsum:
         T: [A, B, I, J]
     expressions:
         - T[a, b, i, j] = V[a, b, i, j]
-        - Q[] = sum(A, B, I, J).(V[a, b, i, j] * T[a, b, i, j])
+        - Q[] = V[a, b, i, j] * T[a, b, i, j]

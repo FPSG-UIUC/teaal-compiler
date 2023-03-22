@@ -12,7 +12,7 @@ from tests.utils.parse_tree import *
 
 
 def build_loop_order():
-    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+    equation = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
 
     output = Tensor("Z", ["M", "N"])
     output.set_is_output(True)
@@ -21,7 +21,7 @@ def build_loop_order():
 
 
 def build_loop_order_conv():
-    equation = EquationParser.parse("O[q] = sum(S).(I[q + s] * F[s])")
+    equation = EquationParser.parse("O[q] = I[q + s] * F[s]")
 
     output = Tensor("O", ["Q"])
     output.set_is_output(True)
@@ -60,9 +60,9 @@ def build_partitioning_conv(parts):
 def build_coord_math():
     coord_math = CoordMath()
 
-    coord_math.add(Tensor("A", ["K", "M"]), make_tranks(["k", "m"]))
-    coord_math.add(Tensor("B", ["K", "N"]), make_tranks(["k", "n"]))
-    coord_math.add(Tensor("Z", ["M", "N"]), make_tranks(["m", "n"]))
+    coord_math.add(Tensor("A", ["K", "M"]), make_ranks(["k", "m"]))
+    coord_math.add(Tensor("B", ["K", "N"]), make_ranks(["k", "n"]))
+    coord_math.add(Tensor("Z", ["M", "N"]), make_ranks(["m", "n"]))
 
     return coord_math
 
@@ -71,9 +71,9 @@ def build_coord_math_conv():
     coord_math = CoordMath()
 
     coord_math.add(Tensor("I", ["W"]), Tree(
-        "tranks", [make_iplus(["q", "s"])]))
-    coord_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
-    coord_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
+        "ranks", [make_iplus(["q", "s"])]))
+    coord_math.add(Tensor("F", ["S"]), make_ranks(["s"]))
+    coord_math.add(Tensor("O", ["Q"]), make_ranks(["q"]))
 
     return coord_math
 

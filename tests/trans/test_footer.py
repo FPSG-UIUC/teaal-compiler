@@ -16,7 +16,7 @@ def assert_make_footer(loop_order, partitioning, display, hifiber_options):
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:

@@ -21,7 +21,7 @@ def build_partitioner(parts):
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
@@ -81,7 +81,7 @@ def test_no_partitioning():
 
 def test_bad_halo():
     tensor = Tensor("I", ["W"])
-    expr = "O[q] = sum(S).(I[2 * q + s] * F[s])"
+    expr = "O[q] = I[2 * q + s] * F[s]"
     spec = """
                 Q: [uniform_shape(6)]
     """
@@ -151,7 +151,7 @@ def test_nway_shape_var():
 
 def test_nway_shape_conv():
     tensor = Tensor("I", ["W"])
-    expr = "O[q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[q] = I[q + s] * F[s]"
     spec = """
                 Q: [nway_shape(6), nway_shape(3)]
     """
@@ -234,7 +234,7 @@ def test_uniform_occupancy_multiple():
 
 def test_uniform_occupancy_conv():
     tensor = Tensor("I", ["W"])
-    expr = "O[q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[q] = I[q + s] * F[s]"
     spec = """
                 Q: [uniform_occupancy(I.6)]
     """
@@ -249,7 +249,7 @@ def test_uniform_occupancy_conv():
 
 def test_uniform_occupancy_follower_conv():
     tensor = Tensor("J", ["W"])
-    expr = "O[q] = sum(S).(I[q + s] * J[q + s] * F[s])"
+    expr = "O[q] = I[q + s] * J[q + s] * F[s]"
     spec = """
                 Q: [uniform_occupancy(I.6)]
     """
@@ -293,7 +293,7 @@ def test_uniform_shape_var():
 
 def test_uniform_shape_conv():
     tensor = Tensor("I", ["W"])
-    expr = "O[q] = sum(S).(I[q + s] * F[s])"
+    expr = "O[q] = I[q + s] * F[s]"
     spec = """
                 Q: [uniform_shape(6)]
     """
@@ -370,7 +370,7 @@ def assert_unpartition(spec, hifiber_options):
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
