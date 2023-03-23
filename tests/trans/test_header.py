@@ -39,7 +39,7 @@ def build_header_conv(loop_order):
             I: [W]
             O: [Q]
         expressions:
-            - O[q] = sum(S).(I[q + s] * F[s])
+            - O[q] = I[q + s] * F[s]
     mapping:
         loop-order:
             O: """ + loop_order
@@ -54,7 +54,7 @@ def build_header_conv(loop_order):
 
 def build_matmul_header(mapping):
     exprs = """
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     """
     return build_header(exprs, mapping)
 
@@ -98,7 +98,7 @@ def test_make_output():
 
 def test_make_output_shape():
     exprs = """
-            - Z[m, n] = sum(K).(A[k, m])
+            - Z[m, n] = A[k, m]
     """
 
     hifiber = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], shape=[M, N])"

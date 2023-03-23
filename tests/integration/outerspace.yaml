@@ -6,7 +6,7 @@ einsum:
     Z: [M, N]
   expressions:
     - T[k, m, n] = A[k, m] * B[k, n]
-    - Z[m, n] = sum(K).(T[k, m, n])
+    - Z[m, n] = T[k, m, n]
 
 mapping:
   rank-order:

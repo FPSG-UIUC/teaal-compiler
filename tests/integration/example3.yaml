@@ -4,7 +4,7 @@ einsum:
         B: [I, J, K]
         D: []
     expressions:
-        - D[] = sum(I, J, K).(A[i, j, k] * B[i, j, k])
+        - D[] = A[i, j, k] * B[i, j, k]
 mapping:
     rank-order:
         B: [J, K, I]

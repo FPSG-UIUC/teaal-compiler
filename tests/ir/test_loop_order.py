@@ -3,6 +3,7 @@ import pytest
 from sympy import symbols
 
 from teaal.ir.coord_math import CoordMath
+from teaal.ir.equation import Equation
 from teaal.ir.loop_order import LoopOrder
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
@@ -12,21 +13,21 @@ from tests.utils.parse_tree import *
 
 
 def build_loop_order():
-    equation = EquationParser.parse("Z[m, n] = sum(K).(A[k, m] * B[k, n])")
+    einsum = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
+    tensors = {"Z": Tensor("Z", ["M", "N"]), "A": Tensor("A", ["K", "M"]),
+               "B": Tensor("B", ["K", "N"])}
+    equation = Equation(einsum, tensors)
 
-    output = Tensor("Z", ["M", "N"])
-    output.set_is_output(True)
-
-    return LoopOrder(equation, output)
+    return LoopOrder(equation)
 
 
 def build_loop_order_conv():
-    equation = EquationParser.parse("O[q] = sum(S).(I[q + s] * F[s])")
+    einsum = EquationParser.parse("O[q] = I[q + s] * F[s]")
+    tensors = {"O": Tensor("O", ["Q"]), "I": Tensor("I", ["W"]),
+               "F": Tensor("F", ["S"])}
+    equation = Equation(einsum, tensors)
 
-    output = Tensor("O", ["Q"])
-    output.set_is_output(True)
-
-    return LoopOrder(equation, output)
+    return LoopOrder(equation)
 
 
 def build_partitioning(parts):
@@ -60,9 +61,9 @@ def build_partitioning_conv(parts):
 def build_coord_math():
     coord_math = CoordMath()
 
-    coord_math.add(Tensor("A", ["K", "M"]), make_tranks(["k", "m"]))
-    coord_math.add(Tensor("B", ["K", "N"]), make_tranks(["k", "n"]))
-    coord_math.add(Tensor("Z", ["M", "N"]), make_tranks(["m", "n"]))
+    coord_math.add(Tensor("A", ["K", "M"]), make_ranks(["k", "m"]))
+    coord_math.add(Tensor("B", ["K", "N"]), make_ranks(["k", "n"]))
+    coord_math.add(Tensor("Z", ["M", "N"]), make_ranks(["m", "n"]))
 
     return coord_math
 
@@ -71,9 +72,9 @@ def build_coord_math_conv():
     coord_math = CoordMath()
 
     coord_math.add(Tensor("I", ["W"]), Tree(
-        "tranks", [make_iplus(["q", "s"])]))
-    coord_math.add(Tensor("F", ["S"]), make_tranks(["s"]))
-    coord_math.add(Tensor("O", ["Q"]), make_tranks(["q"]))
+        "ranks", [make_iplus(["q", "s"])]))
+    coord_math.add(Tensor("F", ["S"]), make_ranks(["s"]))
+    coord_math.add(Tensor("O", ["Q"]), make_ranks(["q"]))
 
     return coord_math
 

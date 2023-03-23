@@ -31,8 +31,10 @@ from sympy import Basic, Symbol
 from typing import Any, cast, Iterable, List, Optional, Tuple
 
 from teaal.ir.coord_math import CoordMath
+from teaal.ir.equation import Equation
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
+from teaal.parse.utils import ParseUtils
 
 
 class LoopOrder:
@@ -40,13 +42,12 @@ class LoopOrder:
     An abstract representation of the loop order information
     """
 
-    def __init__(self, equation: Tree, output: Tensor) -> None:
+    def __init__(self, equation: Equation) -> None:
         """
         Create a new LoopOrder object
         """
         # Save the equation and output
         self.equation = equation
-        self.output = output
 
         # Make placeholders for the loop order, coord math, and partitioning
         self.ranks: Optional[List[str]] = None
@@ -167,22 +168,10 @@ class LoopOrder:
         if self.partitioning is None:
             raise ValueError("Must configure partitioning before loop order")
 
-        unpartitioned_loop_order = self.__default_loop_order_unpartitioned()
+        unpartitioned_loop_order = self.equation.get_einsum_ranks()
         loop_order = self.partitioning.partition_ranks(
             unpartitioned_loop_order, self.partitioning.get_all_parts(), True, True)
         return loop_order
-
-    def __default_loop_order_unpartitioned(self) -> List[str]:
-        """
-        Get the names of the ranks before partitioning
-        """
-        ranks = self.output.get_ranks().copy()
-
-        for sum_ in self.equation.find_data("sum"):
-            ranks += list(next(sum_.find_data("sranks")
-                               ).scan_values(lambda _: True))
-
-        return ranks
 
     def __eq__(self, other: object) -> bool:
         """
@@ -199,7 +188,7 @@ class LoopOrder:
         """
         Get the fields of the LoopOrder
         """
-        return self.equation, self.output, self.ranks, self.partitioning
+        return self.equation, self.ranks, self.partitioning
 
     def __innermost_rank(self, rank: str) -> bool:
         """

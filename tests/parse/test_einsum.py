@@ -23,7 +23,7 @@ def test_eq():
 def test_expressions():
     mapping = Einsum.from_file("tests/integration/test_input.yaml")
 
-    T1 = EquationParser.parse("T1[m, n] = sum(K).(A[k, m] * B[k, n])")
+    T1 = EquationParser.parse("T1[m, n] = A[k, m] * B[k, n]")
     Z = EquationParser.parse("Z[m, n] = T1[m, n] + C[m, n]")
 
     assert mapping.get_expressions() == [T1, Z]
@@ -39,7 +39,7 @@ def test_from():
             T1: [M, N]
             Z: [M, N]
         expressions:
-            - T1[m, n] = sum(K).(A[k, m] * B[k, n])
+            - T1[m, n] = A[k, m] * B[k, n]
             - Z[m, n] = T1[m, n] + C[m, n]
     """
     from_file = Einsum.from_file("tests/integration/test_input.yaml")

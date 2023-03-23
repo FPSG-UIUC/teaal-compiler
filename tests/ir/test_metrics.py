@@ -283,7 +283,7 @@ def test_get_merger_components_part_merge():
         A: [K, M]
         Z: [M]
       expressions:
-        - Z[m] = sum(K).A[k, m]
+        - Z[m] = A[k, m]
 
     mapping:
       rank-order:

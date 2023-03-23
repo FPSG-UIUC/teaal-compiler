@@ -14,7 +14,7 @@ def create_default():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     """
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
@@ -27,7 +27,7 @@ def create_spacetime():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         loop-order:
             Z: [K, M, N]
@@ -47,7 +47,7 @@ def create_partitioned(style):
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
@@ -69,7 +69,7 @@ def create_dyn_partitioned():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         partitioning:
             Z:
@@ -90,7 +90,7 @@ def create_slip():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         loop-order:
             Z: [K, M, N]
@@ -111,7 +111,7 @@ def create_conv():
             I: [W]
             O: [Q]
         expressions:
-            - O[q] = sum(S).(I[q + s] * F[s])
+            - O[q] = I[q + s] * F[s]
     mapping:
         loop-order:
             O: [W, Q]

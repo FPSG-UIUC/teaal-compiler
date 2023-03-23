@@ -136,7 +136,7 @@ def test_dump_leader_follower_bad_rank():
         B: [K]
         Z: [M]
       expressions:
-        - Z[m] = sum(K).(A[k, m] * B[m])
+        - Z[m] = A[k, m] * B[m]
 
     architecture:
       subtree:
@@ -167,7 +167,7 @@ def test_dump_leader_follower():
         B: [K]
         Z: [M]
       expressions:
-        - Z[m] = sum(K).(A[k, m] * B[m])
+        - Z[m] = A[k, m] * B[m]
 
     architecture:
       subtree:
@@ -206,7 +206,7 @@ def test_dump_skip_ahead():
         B: [K]
         Z: [M]
       expressions:
-        - Z[m] = sum(K).(A[k, m] * B[m])
+        - Z[m] = A[k, m] * B[m]
 
     architecture:
       subtree:
@@ -244,7 +244,7 @@ def test_dump_skip_ahead():
 #         C: [K, M]
 #         Z: [M]
 #       expressions:
-#         - Z[m] = sum(K).(A[k, m] * B[m] * C[k, m])
+#         - Z[m] = A[k, m] * B[m] * C[k, m]
 #
 #     architecture:
 #       subtree:

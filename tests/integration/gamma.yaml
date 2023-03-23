@@ -7,7 +7,7 @@ einsum:
 
   expressions:
     - T[k,m,n] = take(A[k,m], B[k,n], 1)
-    - Z[m,n] = sum(K).(T[k,m,n]*A[k,m])
+    - Z[m,n] = T[k,m,n] * A[k,m]
 
 mapping:
   rank-order:

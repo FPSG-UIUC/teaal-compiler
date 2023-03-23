@@ -49,11 +49,11 @@ class CoordMath:
         self.eqn_exprs: Dict[Symbol, Basic] = {}
         self.trans: Optional[Dict[Symbol, Basic]] = None
 
-    def add(self, tensor: Tensor, tranks: Tree) -> None:
+    def add(self, tensor: Tensor, ranks: Tree) -> None:
         """
         Add the information for a given set of ranks
         """
-        for rank, expr in zip(tensor.get_ranks(), tranks.children):
+        for rank, expr in zip(tensor.get_ranks(), ranks.children):
             if not isinstance(expr, Tree):
                 raise ValueError("Unknown coord tree: " + repr(expr))
 

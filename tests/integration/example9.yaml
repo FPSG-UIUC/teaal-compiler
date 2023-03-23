@@ -6,8 +6,8 @@ einsum:
         D: [I]
         T1: [I, J]
     expressions:
-        - T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])
-        - D[i] = sum(J).(C[i, j] + T1[i, j])
+        - T1[i, j] = A[i, j, l] * B[k, l]
+        - D[i] = C[i, j] + T1[i, j]
 mapping:
     rank-order:
         A: [J, L, I]

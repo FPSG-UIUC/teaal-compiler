@@ -29,7 +29,7 @@ def build_program_matmul(mapping):
             B: [K, N]
             Z: [M, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
     """ + mapping
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
@@ -46,7 +46,7 @@ def build_program_conv(mapping):
             I: [W]
             O: [Q]
         expressions:
-            - O[q] = sum(S).(I[q + s] * F[s])
+            - O[q] = I[q + s] * F[s]
     mapping:
     """ + mapping
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))

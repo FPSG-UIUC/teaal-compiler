@@ -4,4 +4,4 @@ einsum:
         F: [U, C, R, S]
         O: [Z, U, X, Y]
     expression:
-        - O[z, u, x, y] = sum(C, R, S).(I[z, c, g * x + r, g * y + s] * F[u, c, r, s])
+        - O[z, u, x, y] = I[z, c, g * x + r, g * y + s] * F[u, c, r, s]

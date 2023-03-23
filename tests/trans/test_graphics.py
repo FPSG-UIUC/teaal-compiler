@@ -12,7 +12,7 @@ def create_default():
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
@@ -27,7 +27,7 @@ def create_spacetime(opt):
             A: [K, M]
             B: [K, N]
         expressions:
-            - Z[m, n] = sum(K).(A[k, m] * B[k, n])
+            - Z[m, n] = A[k, m] * B[k, n]
     mapping:
         loop-order:
             Z: [K, M, N]

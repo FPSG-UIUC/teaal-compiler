@@ -3,7 +3,7 @@ from teaal.parse.yaml import YamlParser
 
 def test_parse_file():
     out = YamlParser.parse_file("tests/integration/example9.yaml")
-    assert out["einsum"]["expressions"][0] == "T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])"
+    assert out["einsum"]["expressions"][0] == "T1[i, j] = A[i, j, l] * B[k, l]"
 
 
 def test_parse_file_mapping():
@@ -21,17 +21,17 @@ def test_parse_str():
             D: [I]
             T1: [I, J]
         expressions:
-            - T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])
-            - D[i] = sum(J).(C[i, j] + T1[i, j])
+            - T1[i, j] = A[i, j, l] * B[k, l]
+            - D[i] = C[i, j] + T1[i, j]
     mapping:
         rank-order:
             A: [J, L, I]
             B: [L, K]
         partitions:
             D:
-                J: [uniformShape(6), uniformShape(4)]
+                J: [uniform_shape(6), uniform_shape(4)]
         loop-order:
             T1: [J, I, L, K]
     """
     out = YamlParser.parse_str(yaml)
-    assert out["einsum"]["expressions"][0] == "T1[i, j] = sum(K, L).(A[i, j, l] * B[k, l])"
+    assert out["einsum"]["expressions"][0] == "T1[i, j] = A[i, j, l] * B[k, l]"

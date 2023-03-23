@@ -6,12 +6,12 @@
 [x] Allow for variable-named partition sizes
 [x] Correctly flatten together output after occupancy-space partitioning
 [ ] Support the new architecture/binding specification
-[ ] Transition from using dot() to take()
+[x] Transition from using dot() to take()
 
 ## Priority: 2
 
-[ ] Remove the `sum(...).(...)` from the specification
-[ ] Correctly manage Einsums with both multiplication and addition
+[x] Remove the `sum(...).(...)` from the specification
+[x] Correctly manage Einsums with both multiplication and addition
 [ ] Report which Einsums are fused together
 [ ] Disallow partitioning on tensors with expressions as indices
 
