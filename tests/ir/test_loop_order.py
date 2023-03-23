@@ -3,6 +3,7 @@ import pytest
 from sympy import symbols
 
 from teaal.ir.coord_math import CoordMath
+from teaal.ir.equation import Equation
 from teaal.ir.loop_order import LoopOrder
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
@@ -12,21 +13,21 @@ from tests.utils.parse_tree import *
 
 
 def build_loop_order():
-    equation = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
+    einsum = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
+    tensors = {"Z": Tensor("Z", ["M", "N"]), "A": Tensor("A", ["K", "M"]),
+               "B": Tensor("B", ["K", "N"])}
+    equation = Equation(einsum, tensors)
 
-    output = Tensor("Z", ["M", "N"])
-    output.set_is_output(True)
-
-    return LoopOrder(equation, output)
+    return LoopOrder(equation)
 
 
 def build_loop_order_conv():
-    equation = EquationParser.parse("O[q] = I[q + s] * F[s]")
+    einsum = EquationParser.parse("O[q] = I[q + s] * F[s]")
+    tensors = {"O": Tensor("O", ["Q"]), "I": Tensor("I", ["W"]),
+               "F": Tensor("F", ["S"])}
+    equation = Equation(einsum, tensors)
 
-    output = Tensor("O", ["Q"])
-    output.set_is_output(True)
-
-    return LoopOrder(equation, output)
+    return LoopOrder(equation)
 
 
 def build_partitioning(parts):

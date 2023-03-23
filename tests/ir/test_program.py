@@ -111,22 +111,6 @@ def create_conv():
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
-def test_add_einsum_missing_decl():
-    yaml = """
-    einsum:
-        declaration:
-            A: []
-            B: []
-        expressions:
-            - A[] = B[] + C[]
-    """
-    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
-
-    with pytest.raises(ValueError) as excinfo:
-        program.add_einsum(0)
-    assert str(excinfo.value) == "Undeclared tensor: C"
-
-
 def test_apply_all_partitioning_unconfigured():
     program = create_default()
 
@@ -334,9 +318,10 @@ def test_get_loop_order_unconfigured():
 def test_get_loop_order():
     program = create_loop_ordered()
     program.add_einsum(0)
-    equation = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
+    einsum = EquationParser.parse("Z[m, n] = A[k, m] * B[k, n]")
+    equation = Equation(einsum, program.tensors)
 
-    loop_order = LoopOrder(equation, program.get_output())
+    loop_order = LoopOrder(equation)
     ranks = ["K", "N", "M"]
     eqn_exprs = program.get_coord_math().get_eqn_exprs()
     loop_order.add(

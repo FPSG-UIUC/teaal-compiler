@@ -90,19 +90,17 @@ class Program:
         self.coord_math = CoordMath()
 
         # Build the list of tensors, starting with the output tensor
-        self.es_tensors = []
-        output, output_tree = self.equation.get_output()
-        self.es_tensors.append(output)
-        self.__add_ranks(output, output_tree)
+        self.es_tensors = self.equation.get_tensors()
 
         # Add the rest of the tensors
-        for tensor, tree in self.equation.get_tensors():
-            self.es_tensors.append(tensor)
+        for tensor, tree in zip(
+                self.equation.get_tensors(), self.equation.get_trees()):
             self.__add_ranks(tensor, tree)
 
+        output = self.equation.get_output()
+
         # Create the loop_order object
-        # TODO: remove call to private variable
-        self.loop_order = LoopOrder(self.equation.equation, output)
+        self.loop_order = LoopOrder(self.equation)
 
         # Store the partitioning information
         partitioning = self.mapping.get_partitioning()
