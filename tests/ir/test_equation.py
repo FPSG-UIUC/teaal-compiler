@@ -59,6 +59,36 @@ def test_get_output():
     assert tensor == corr_tensor
 
 
+def test_get_tensor_bad():
+    equation = create_equation(0)
+
+    with pytest.raises(ValueError) as excinfo:
+        equation.get_tensor("D")
+    assert str(excinfo.value) == "Unknown tensor D"
+
+
+def test_get_tensor_unused():
+    equation = create_equation(0)
+
+    with pytest.raises(ValueError) as excinfo:
+        equation.get_tensor("C")
+    assert str(excinfo.value) == "Tensor C not used in this Einsum"
+
+
+def test_get_tensor():
+    equation = create_equation(0)
+
+    corr_tensors = []
+    corr_tensors.append(Tensor("T", ["M", "N"]))
+    corr_tensors[0].set_is_output(True)
+    corr_tensors.append(Tensor("A", ["K", "M"]))
+    corr_tensors.append(Tensor("B", ["K", "N"]))
+
+    assert equation.get_tensor("T") == corr_tensors[0]
+    assert equation.get_tensor("A") == corr_tensors[1]
+    assert equation.get_tensor("B") == corr_tensors[2]
+
+
 def test_get_tensors():
     equation = create_equation(0)
     tensors = equation.get_tensors()

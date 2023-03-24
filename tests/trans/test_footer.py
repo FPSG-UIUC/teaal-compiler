@@ -50,7 +50,7 @@ def test_make_footer_default():
 
 def test_output_still_output():
     program = assert_make_footer("", "", "", [""])
-    output = program.get_output()
+    output = program.get_equation().get_output()
 
     desired = Tensor("Z", ["M", "N"])
     desired.set_is_output(True)

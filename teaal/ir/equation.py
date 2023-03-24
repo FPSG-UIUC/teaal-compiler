@@ -43,14 +43,30 @@ class Equation:
         """
         self.equation = equation
         self.tensors = tensors
-        self.__compute_einsum_ranks()
-        self.__compute_tensors_trees()
+        self.__build_einsum_ranks()
+        self.__build_tensors_trees()
+        self.__build_active_tensors()
 
     def get_output(self) -> Tensor:
         """
         Get the output tensor
         """
         return self.es_tensors[0]
+
+    def get_tensor(self, root_name: str) -> Tensor:
+        """
+        Get the tensor specified by this name
+        """
+        if root_name not in self.tensors.keys():
+            raise ValueError("Unknown tensor " + root_name)
+
+        if not self.active[root_name]:
+            raise ValueError(
+                "Tensor " +
+                root_name +
+                " not used in this Einsum")
+
+        return self.tensors[root_name]
 
     def get_tensors(self) -> List[Tensor]:
         """
@@ -70,7 +86,19 @@ class Equation:
         """
         return self.einsum_ranks
 
-    def __compute_einsum_ranks(self) -> None:
+    def __build_active_tensors(self) -> None:
+        """
+        Build a dictionary denoting which tensors are active
+        """
+        self.active = {}
+        for tensor in self.es_tensors:
+            self.active[tensor.root_name()] = True
+
+        for root in self.tensors.keys():
+            if root not in self.active.keys():
+                self.active[root] = False
+
+    def __build_einsum_ranks(self) -> None:
         """
         Compute the ranks used by the Einsum
 
@@ -99,7 +127,7 @@ class Equation:
             if rank not in self.einsum_ranks:
                 self.einsum_ranks.append(rank)
 
-    def __compute_tensors_trees(self) -> None:
+    def __build_tensors_trees(self) -> None:
         """
         Find the tensors used in this Einsum and their corresponding parse trees
         """

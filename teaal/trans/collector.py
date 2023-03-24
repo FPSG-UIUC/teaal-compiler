@@ -54,7 +54,7 @@ class Collector:
         if self.program.get_einsum_ind() == 0:
             block.add(SAssign(AVar("metrics"), EDict({})))
 
-        einsum = EString(self.program.get_output().root_name())
+        einsum = EString(self.program.get_equation().get_output().root_name())
         block.add(SAssign(AAccess(EVar("metrics"), einsum), EDict({})))
 
         # Add the memory traffic information
@@ -95,7 +95,7 @@ class Collector:
         """
         Collect the statistics about a tensor
         """
-        tensor = self.program.get_tensor(tensor_name)
+        tensor = self.program.get_equation().get_tensor(tensor_name)
         args = [AJust(EString(rank)), AJust(EBool(True))]
         call = EMethod(EVar(tensor.tensor_name()), "setCollecting", args)
 
@@ -115,7 +115,7 @@ class Collector:
         """
         Get the compute metrics for this hardware
         """
-        einsum = self.program.get_output().root_name()
+        einsum = self.program.get_equation().get_output().root_name()
         metrics = EAccess(EVar("metrics"), EString(einsum))
         block = SBlock([])
 
@@ -185,7 +185,7 @@ class Collector:
         block = SBlock([])
 
         # Dictionary accesses
-        einsum = EString(self.program.get_output().root_name())
+        einsum = EString(self.program.get_equation().get_output().root_name())
         metrics = EAccess(EVar("metrics"), einsum)
         fp_access = (metrics, EString(tensor.root_name() + " footprint"))
         tf_access = (metrics, EString(tensor.root_name() + " traffic"))
@@ -270,7 +270,7 @@ class Collector:
         """
         Get the merge metrics for this component
         """
-        einsum = self.program.get_output().root_name()
+        einsum = self.program.get_equation().get_output().root_name()
         metrics = EAccess(EVar("metrics"), EString(einsum))
 
         name = EVar(binding["tensor"] + "_" + "".join(binding["init_ranks"]))

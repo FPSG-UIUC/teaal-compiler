@@ -228,8 +228,8 @@ def test_add_activity_slip():
 def test_add_activity_dyn_part():
     program = create_dyn_partitioned()
     program.add_einsum(0)
-    program.apply_all_partitioning(program.get_output())
-    program.apply_partitioning(program.get_tensor("A"), ("M",))
+    program.apply_all_partitioning(program.get_equation().get_output())
+    program.apply_partitioning(program.get_equation().get_tensor("A"), ("M",))
 
     canvas = Canvas(program)
     canvas.create_canvas()

@@ -79,7 +79,7 @@ class Header:
         """
         Given an output tensor, generate the constructor
         """
-        tensor = self.program.get_output()
+        tensor = self.program.get_equation().get_output()
         self.program.apply_all_partitioning(tensor)
         self.program.get_loop_order().apply(tensor)
 
@@ -130,7 +130,7 @@ class Header:
         Add the shape argument to a tensor if necessary (i.e. no input tensor
         has at least one rank of the output)
         """
-        output = self.program.get_output()
+        output = self.program.get_equation().get_output()
         part = self.program.get_partitioning()
         loop_order = self.program.get_loop_order()
         order = loop_order.get_ranks()

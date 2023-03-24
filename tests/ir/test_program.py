@@ -123,17 +123,17 @@ def test_apply_all_partitioning_unconfigured():
 def test_apply_all_partitioning_default():
     program = create_default()
     program.add_einsum(0)
-    program.apply_all_partitioning(program.get_tensor("A"))
+    program.apply_all_partitioning(program.get_equation().get_tensor("A"))
 
-    assert program.get_tensor("A") == Tensor("A", ["K", "M"])
+    assert program.get_equation().get_tensor("A") == Tensor("A", ["K", "M"])
 
 
 def test_apply_all_partitioning_mapped():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_all_partitioning(program.get_tensor("A"))
+    program.apply_all_partitioning(program.get_equation().get_tensor("A"))
 
-    assert program.get_tensor("A") == Tensor(
+    assert program.get_equation().get_tensor("A") == Tensor(
         "A", ["K1", "K0", "M2", "M1", "M0"])
 
 
@@ -173,9 +173,10 @@ def test_all_ranks():
 def test_apply_partitioning():
     program = create_partitioned()
     program.add_einsum(0)
-    program.apply_partitioning(program.get_tensor("A"), ("M",))
+    program.apply_partitioning(program.get_equation().get_tensor("A"), ("M",))
 
-    assert program.get_tensor("A") == Tensor("A", ["K", "M2", "M1", "M0"])
+    assert program.get_equation().get_tensor(
+        "A") == Tensor("A", ["K", "M2", "M1", "M0"])
 
 
 def test_apply_partition_swizzling_unconfigured():
@@ -205,7 +206,7 @@ def test_apply_partition_swizzling():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    A = program.get_tensor("A")
+    A = program.get_equation().get_tensor("A")
     program.apply_partition_swizzling(A)
     assert A.get_ranks() == ["J", "K", "M", "N"]
 
@@ -249,25 +250,6 @@ def test_get_einsum_ind():
     program.add_einsum(0)
 
     assert program.get_einsum_ind() == 0
-
-
-def test_get_output_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_output()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_output():
-    program = create_default()
-    program.add_einsum(0)
-
-    result = Tensor("Z", ["M", "N"])
-    result.set_is_output(True)
-
-    assert program.get_output() == result
 
 
 def test_get_coord_math_unconfigured():
@@ -382,36 +364,8 @@ def test_get_spacetime_specified():
     spacetime = SpaceTime(
         yaml, Partitioning(
             {}, [
-                "M", "N", "K"], eqn_exprs), program.get_output().root_name())
+                "M", "N", "K"], eqn_exprs), program.get_equation().get_output().root_name())
     assert program.get_spacetime() == spacetime
-
-
-def test_get_tensor_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_tensor("Z")
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_tensor():
-    program = create_default()
-    program.add_einsum(0)
-
-    Z = Tensor("Z", ["M", "N"])
-    Z.set_is_output(True)
-
-    assert program.get_tensor("Z") == Z
-
-
-def test_get_tensor_missing_tensor():
-    program = create_default()
-    program.add_einsum(0)
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_tensor("C")
-    assert str(excinfo.value) == "Unknown tensor C"
 
 
 def test_get_tensors_unconfigured():

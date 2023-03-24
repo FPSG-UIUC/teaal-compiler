@@ -2,6 +2,13 @@ einsum:
     declaration:
         A: [K, M]
         B: [K, N]
-        T: [K, M, N]
+        Z: [M, N]
     expressions:
-        - T[k, m, n] = A[k, m] * B[k, n]
+        - Z[m, n] = A[k, m] * B[k, n]
+mapping:
+    rank-order:
+        A: [M, K]
+        B: [K, N]
+        Z: [M, N]
+    loop-order:
+        Z: [M, K, N]

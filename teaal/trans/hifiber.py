@@ -116,7 +116,7 @@ class HiFiber:
         while i < len(nodes):
             node = nodes[i]
             if isinstance(node, FromFiberNode):
-                tensor = self.program.get_tensor(node.get_tensor())
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(Header.make_tensor_from_fiber(tensor))
 
             elif isinstance(node, LoopNode):
@@ -160,18 +160,18 @@ class HiFiber:
                         repr(node))  # pragma: no cover
 
             elif isinstance(node, PartNode):
-                tensor = self.program.get_tensor(node.get_tensor())
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 ranks = node.get_ranks()
 
                 tensor.from_fiber()
                 code.add(self.partitioner.partition(tensor, ranks))
 
             elif isinstance(node, SwizzleNode):
-                tensor = self.program.get_tensor(node.get_tensor())
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(self.header.make_swizzle(tensor, node.get_type()))
 
             elif isinstance(node, GetRootNode):
-                tensor = self.program.get_tensor(node.get_tensor())
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(Header.make_get_root(tensor))
 
             elif isinstance(node, EagerInputNode):
@@ -209,7 +209,7 @@ class HiFiber:
                         node.get_rank()))
 
             elif isinstance(node, GetPayloadNode):
-                tensor = self.program.get_tensor(node.get_tensor())
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(Header.make_get_payload(tensor, node.get_ranks()))
 
             else:

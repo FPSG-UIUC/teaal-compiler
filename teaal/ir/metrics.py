@@ -77,7 +77,7 @@ class Metrics:
         """
         Get all relevant compute components for this Einsum
         """
-        einsum = self.program.get_output().root_name()
+        einsum = self.program.get_equation().get_output().root_name()
         return self.hardware.get_compute_components(einsum)
 
     def get_format(self, tensor: Tensor) -> dict:
@@ -134,7 +134,7 @@ class Metrics:
         Build the set of tensors stored in DRAM
         """
         self.dram_tensors = set()
-        einsum = self.program.get_output().root_name()
+        einsum = self.program.get_equation().get_output().root_name()
 
         # For each tensor
         for tensor in self.program.get_tensors():
@@ -238,7 +238,7 @@ class Metrics:
         """
         self.on_chip_rank = {}
         self.on_chip_buffer = {}
-        einsum = self.program.get_output().root_name()
+        einsum = self.program.get_equation().get_output().root_name()
 
         # For each tensor
         for tensor in self.program.get_tensors():
@@ -269,10 +269,10 @@ class Metrics:
         Build a set of DRAM -> on chip stationary tensors
         """
         self.stationary = set()
-        einsum = self.program.get_output().root_name()
+        einsum = self.program.get_equation().get_output().root_name()
 
         for name, (mem_rank, on_chip_rank) in self.on_chip_rank.items():
-            tensor = self.program.get_tensor(name)
+            tensor = self.program.get_equation().get_tensor(name)
 
             if mem_rank != "root":
                 raise NotImplementedError

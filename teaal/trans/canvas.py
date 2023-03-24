@@ -95,9 +95,9 @@ class Canvas:
         # specifically, we want the output tensor to be at the end
         self.tensors = []
         for tensor in self.program.get_tensors():
-            if tensor != self.program.get_output():
+            if tensor != self.program.get_equation().get_output():
                 self.tensors.append(deepcopy(tensor))
-        self.tensors.append(self.program.get_output())
+        self.tensors.append(self.program.get_equation().get_output())
 
         # Build the args
         args = [AJust(EVar(tensor.tensor_name())) for tensor in self.tensors]

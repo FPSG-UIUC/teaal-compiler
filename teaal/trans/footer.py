@@ -47,7 +47,7 @@ class Footer:
         The footer must return the output tensor to its desired shape
         """
         footer = SBlock([])
-        output = program.get_output()
+        output = program.get_equation().get_output()
 
         footer.add(partitioner.unpartition(output))
 

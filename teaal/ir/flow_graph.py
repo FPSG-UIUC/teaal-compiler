@@ -311,7 +311,7 @@ class FlowGraph:
         """
         Build all of the output-specific edges
         """
-        tensor = self.program.get_output()
+        tensor = self.program.get_equation().get_output()
 
         # Partition the output
         part = self.program.get_partitioning()

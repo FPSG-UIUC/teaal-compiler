@@ -354,7 +354,8 @@ class Partitioner:
         """
         Build a call to splitNonUniform
         """
-        fiber = EVar(self.program.get_tensor(leader).fiber_name())
+        fiber = EVar(
+            self.program.get_equation().get_tensor(leader).fiber_name())
         args: List[Argument] = [AJust(fiber)]
         if rank != part_rank:
             args.append(AParam("halo", self.__build_halo(rank, part_rank)))

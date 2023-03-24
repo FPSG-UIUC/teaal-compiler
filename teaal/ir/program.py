@@ -220,17 +220,6 @@ class Program:
 
         return self.loop_order
 
-    def get_output(self) -> Tensor:
-        """
-        Get the output tensor used for this kernel
-        """
-        # Make sure that the program is configured
-        if self.loop_order is None:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        return self.es_tensors[0]
-
     def get_partitioning(self) -> Partitioning:
         """
         Get the partitioning information for the current Einsum
@@ -254,21 +243,6 @@ class Program:
                 "Unconfigured program. Make sure to first call add_einsum()")
 
         return self.spacetime
-
-    def get_tensor(self, root_name: str) -> Tensor:
-        """
-        Get a tensor currently being used from its root name
-        """
-        # Make sure that the program is configured
-        if not self.es_tensors:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        for tensor in self.es_tensors:
-            if tensor.root_name() == root_name:
-                return tensor
-
-        raise ValueError("Unknown tensor " + root_name)
 
     def get_tensors(self) -> List[Tensor]:
         """

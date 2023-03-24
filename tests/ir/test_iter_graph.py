@@ -141,17 +141,17 @@ def test_peek_discord_flatten():
     graph = IterationGraph(program)
 
     # Apply the partitioning
-    A = program.get_tensor("A")
+    A = program.get_equation().get_tensor("A")
     program.apply_all_partitioning(A)
     program.apply_partition_swizzling(A)
     program.apply_all_partitioning(A)
     program.get_loop_order().apply(A)
 
-    B = program.get_tensor("B")
+    B = program.get_equation().get_tensor("B")
     program.apply_all_partitioning(B)
     program.get_loop_order().apply(B)
 
-    Z = program.get_tensor("Z")
+    Z = program.get_equation().get_tensor("Z")
     program.get_loop_order().apply(Z)
 
     graph.pop_concord()
@@ -266,12 +266,12 @@ def test_pop_occupancy_partitioning():
     graph = IterationGraph(program)
 
     # First apply all partitioning/loop order to the output tensor
-    output = program.get_output()
+    output = program.get_equation().get_output()
     program.apply_all_partitioning(output)
     program.get_loop_order().apply(output)
 
     # Apply the partitioning to the A tensor
-    A = program.get_tensor("A")
+    A = program.get_equation().get_tensor("A")
     A.from_fiber()
     program.apply_partitioning(A, ("M",))
 
@@ -366,17 +366,17 @@ def test_pop_discord_flatten():
     graph = IterationGraph(program)
 
     # Apply the partitioning
-    A = program.get_tensor("A")
+    A = program.get_equation().get_tensor("A")
     program.apply_all_partitioning(A)
     program.apply_partition_swizzling(A)
     program.apply_all_partitioning(A)
     program.get_loop_order().apply(A)
 
-    B = program.get_tensor("B")
+    B = program.get_equation().get_tensor("B")
     program.apply_all_partitioning(B)
     program.get_loop_order().apply(B)
 
-    Z = program.get_tensor("Z")
+    Z = program.get_equation().get_tensor("Z")
     program.get_loop_order().apply(Z)
 
     graph.pop_concord()

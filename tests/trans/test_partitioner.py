@@ -100,7 +100,8 @@ def test_flatten_unswizzled():
     program, partitioner = build_partitioner_copy(spec)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioner.partition(program.get_tensor("A"), ("O", "N", "P"))
+        partitioner.partition(
+            program.get_equation().get_tensor("A"), ("O", "N", "P"))
 
     assert str(
         excinfo.value) == "Cannot flatten together ('O', 'N', 'P') on tensor with ranks ['M', 'N', 'O', 'P', 'Q']"
@@ -117,7 +118,7 @@ def test_flatten():
         "A_MNOPQ_flat.setRankIds(rank_ids=[\"M\", \"NOP\", \"Q\"])"
 
     assert partitioner.partition(
-        program.get_tensor("A"), ("N", "O", "P")).gen(
+        program.get_equation().get_tensor("A"), ("N", "O", "P")).gen(
         depth=0) == hifiber
 
 
@@ -202,7 +203,7 @@ def test_uniform_occupancy_follower():
         "B_K1K0N.setRankIds(rank_ids=[\"K1\", \"K0\", \"N\"])"
 
     program, partitioner = build_partitioner(spec)
-    program.apply_partitioning(program.get_tensor("A"), ("K",))
+    program.apply_partitioning(program.get_equation().get_tensor("A"), ("K",))
     assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
 
@@ -218,7 +219,7 @@ def test_uniform_occupancy_multiple():
         "A_K2K1IM.setRankIds(rank_ids=[\"K2\", \"K1I\", \"M\"])"
 
     program, partitioner = build_partitioner(spec)
-    tensor = program.get_tensor("A")
+    tensor = program.get_equation().get_tensor("A")
     tensor.from_fiber()
     assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
@@ -259,7 +260,7 @@ def test_uniform_occupancy_follower_conv():
         "J_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
     program, partitioner = build_partitioner_conv(expr, spec)
-    program.apply_partitioning(program.get_tensor("I"), ("W",))
+    program.apply_partitioning(program.get_equation().get_tensor("I"), ("W",))
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
@@ -325,7 +326,7 @@ def test_mixed():
         "A_K8K7K6IM.setRankIds(rank_ids=[\"K8\", \"K7\", \"K6I\", \"M\"])"
 
     program, partitioner = build_partitioner(spec)
-    tensor = program.get_tensor("A")
+    tensor = program.get_equation().get_tensor("A")
     tensor.from_fiber()
     assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
@@ -382,7 +383,8 @@ def assert_unpartition(spec, hifiber_options):
         program.apply_all_partitioning(tensor)
 
     partitioner = Partitioner(program, TransUtils())
-    hifiber = partitioner.unpartition(program.get_output()).gen(0)
+    hifiber = partitioner.unpartition(
+        program.get_equation().get_output()).gen(0)
     assert hifiber in hifiber_options
 
 
@@ -441,10 +443,11 @@ def test_unpartition_flatten():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    program.apply_all_partitioning(program.get_output())
+    program.apply_all_partitioning(program.get_equation().get_output())
 
     partitioner = Partitioner(program, TransUtils())
-    hifiber = partitioner.unpartition(program.get_output()).gen(0)
+    hifiber = partitioner.unpartition(
+        program.get_equation().get_output()).gen(0)
     corr = "tmp0 = Z_M1NM01NM00\n" + \
         "tmp1 = tmp0.mergeRanks(depth=1, levels=1, coord_style=\"absolute\")\n" + \
         "tmp2 = tmp1.unflattenRanks(depth=1, levels=1)\n" + \
@@ -465,7 +468,7 @@ def test_unswizzle_unpartition():
     """
     program, partitioner = build_partitioner(spec)
 
-    output = program.get_tensor("Z")
+    output = program.get_equation().get_tensor("Z")
     program.apply_all_partitioning(output)
     program.get_loop_order().apply(output)
 
@@ -483,5 +486,6 @@ def test_unswizzle_unpartition():
         "tmp3.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp3"
 
-    assert partitioner.unpartition(program.get_output()).gen(0) in [
+    assert partitioner.unpartition(
+        program.get_equation().get_output()).gen(0) in [
         hifiber_option1, hifiber_option2]

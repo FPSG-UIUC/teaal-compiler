@@ -127,7 +127,8 @@ class Equation:
         """
         Given a rank to make eager inputs out of and a list of tensors, combine them
         """
-        tensors = [self.program.get_tensor(input_) for input_ in inputs]
+        tensors = [self.program.get_equation().get_tensor(input_)
+                   for input_ in inputs]
         iter_expr = self.__make_input_iter_expr(rank, tensors)
 
         # If there is only one fiber, its already eager
@@ -245,7 +246,7 @@ class Equation:
         else:
             step = EInt(1)
 
-        out_name = self.program.get_output().fiber_name()
+        out_name = self.program.get_equation().get_output().fiber_name()
         args = [AJust(start), AJust(end), AJust(step)]
 
         return EMethod(EVar(out_name), "iterRangeShapeRef", args)
