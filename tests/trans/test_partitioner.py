@@ -379,7 +379,7 @@ def assert_unpartition(spec, hifiber_options):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
 
     partitioner = Partitioner(program, TransUtils())

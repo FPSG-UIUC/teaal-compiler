@@ -61,7 +61,7 @@ def test_peek_order():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.get_loop_order().apply(tensor)
     graph = IterationGraph(program)
 
@@ -105,7 +105,7 @@ def test_peek_discord_none():
     program.add_einsum(0)
     graph = IterationGraph(program)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.get_loop_order().apply(tensor)
 
     graph.pop_concord()
@@ -217,7 +217,7 @@ def test_pop_order():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.get_loop_order().apply(tensor)
     graph = IterationGraph(program)
 
@@ -261,7 +261,7 @@ def test_pop_occupancy_partitioning():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.get_loop_order().apply(tensor)
     graph = IterationGraph(program)
 
@@ -330,7 +330,7 @@ def test_pop_discord_none():
     program.add_einsum(0)
     graph = IterationGraph(program)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.get_loop_order().apply(tensor)
 
     graph.pop_concord()

@@ -64,7 +64,7 @@ class IterationGraph:
         Peek at the next loop iteration
         """
         tensors = []
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             if self.__ready(tensor):
                 tensors.append(tensor)
 
@@ -81,7 +81,7 @@ class IterationGraph:
         tensors = []
         # For now, the only reason something would need to be accessed
         # discordantly is if it was not included in flattening
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             lower_rank = tensor.peek()
             if lower_rank is None:
                 continue

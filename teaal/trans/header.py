@@ -143,7 +143,7 @@ class Header:
         for rank in ranks:
             final_pos[rank] = order.index(part.get_final_rank_id(output, rank))
 
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             # Skip the output
             if tensor.get_is_output():
                 continue

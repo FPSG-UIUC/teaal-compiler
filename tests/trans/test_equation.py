@@ -102,7 +102,7 @@ def make_other(einsum, mapping):
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
@@ -151,7 +151,7 @@ def make_matmul(mapping):
     program.add_einsum(0)
 
     part_ir = program.get_partitioning()
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
@@ -177,7 +177,7 @@ def make_conv(expr, loop_order):
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
@@ -206,7 +206,7 @@ def make_conv_part(expr, loop_order):
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 

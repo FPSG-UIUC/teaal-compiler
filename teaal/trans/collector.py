@@ -58,7 +58,7 @@ class Collector:
         block.add(SAssign(AAccess(EVar("metrics"), einsum), EDict({})))
 
         # Add the memory traffic information
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             # First revert the output to its loop nest form
             if tensor.get_is_output():
                 tensor.reset()
@@ -162,7 +162,7 @@ class Collector:
         Get the index of the leader
         """
         i = 0
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             if tensor.get_is_output():
                 continue
 

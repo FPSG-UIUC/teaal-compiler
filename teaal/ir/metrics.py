@@ -55,7 +55,7 @@ class Metrics:
         self.__check_configuration()
 
         # Get the final form of all tensors
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             self.program.apply_all_partitioning(tensor)
             self.program.get_loop_order().apply(tensor)
 
@@ -65,7 +65,7 @@ class Metrics:
         self.__build_stationary()
 
         # Reset all tensors
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             is_output = tensor.get_is_output()
             tensor.reset()
             tensor.set_is_output(is_output)
@@ -137,7 +137,7 @@ class Metrics:
         einsum = self.program.get_equation().get_output().root_name()
 
         # For each tensor
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             path = self.hardware.get_traffic_path(einsum, tensor.root_name())
 
             if not path or not isinstance(path[0], DRAMComponent):
@@ -183,7 +183,7 @@ class Metrics:
             if (name, init, final) in easy_access.keys():
                 self.mergers.append(easy_access[(name, init, final)])
 
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             # If it is the output, we swizzle on the way out
             is_output = tensor.get_is_output()
             if is_output:
@@ -241,7 +241,7 @@ class Metrics:
         einsum = self.program.get_equation().get_output().root_name()
 
         # For each tensor
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             # We don't care about tensors not in DRAM
             if not self.in_dram(tensor):
                 continue
@@ -296,5 +296,5 @@ class Metrics:
 
         # Check that there are at most three tensors (no danger of multiple
         # intersections per rank)
-        if len(self.program.get_tensors()) > 3:
+        if len(self.program.get_equation().get_tensors()) > 3:
             raise NotImplementedError

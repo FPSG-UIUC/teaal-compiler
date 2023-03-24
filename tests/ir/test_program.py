@@ -368,44 +368,11 @@ def test_get_spacetime_specified():
     assert program.get_spacetime() == spacetime
 
 
-def test_get_tensors_unconfigured():
-    program = create_default()
-
-    with pytest.raises(ValueError) as excinfo:
-        program.get_tensors()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
-
-def test_get_tensors():
-    program = create_default()
-    program.add_einsum(0)
-
-    Z = Tensor("Z", ["M", "N"])
-    Z.set_is_output(True)
-    A = Tensor("A", ["K", "M"])
-    B = Tensor("B", ["K", "N"])
-
-    assert program.get_tensors() == [Z, A, B]
-
-
-def test_get_tensors_ordered():
-    program = create_rank_ordered()
-    program.add_einsum(0)
-
-    Z = Tensor("Z", ["N", "M"])
-    Z.set_is_output(True)
-    A = Tensor("A", ["M", "K"])
-    B = Tensor("B", ["K", "N"])
-
-    assert program.get_tensors() == [Z, A, B]
-
-
 def test_reset():
     program = create_rank_ordered()
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.get_loop_order().apply(tensor)
 
     program.reset()
@@ -425,11 +392,6 @@ def test_reset():
     assert str(
         excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
 
-    with pytest.raises(ValueError) as excinfo:
-        program.get_tensors()
-    assert str(
-        excinfo.value) == "Unconfigured program. Make sure to first call add_einsum()"
-
     program.add_einsum(0)
 
     Z = Tensor("Z", ["N", "M"])
@@ -437,4 +399,4 @@ def test_reset():
     A = Tensor("A", ["M", "K"])
     B = Tensor("B", ["K", "N"])
 
-    assert program.get_tensors() == [Z, A, B]
+    assert program.get_equation().get_tensors() == [Z, A, B]

@@ -244,17 +244,6 @@ class Program:
 
         return self.spacetime
 
-    def get_tensors(self) -> List[Tensor]:
-        """
-        Get the tensors used in an einsum
-        """
-        # Make sure that the program is configured
-        if not self.es_tensors:
-            raise ValueError(
-                "Unconfigured program. Make sure to first call add_einsum()")
-
-        return self.es_tensors
-
     def reset(self) -> None:
         """
         Unconfigure the program and corresponding tensors
@@ -290,7 +279,7 @@ class Program:
 
         # Get all ranks
         ranks = set()
-        for tensor in self.es_tensors:
+        for tensor in self.equation.get_tensors():
             ranks.update(tensor.get_ranks())
 
         return ranks

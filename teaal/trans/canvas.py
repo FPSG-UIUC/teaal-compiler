@@ -94,7 +94,7 @@ class Canvas:
         # Create a list of tensors in the order they should be displayed,
         # specifically, we want the output tensor to be at the end
         self.tensors = []
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             if tensor != self.program.get_equation().get_output():
                 self.tensors.append(deepcopy(tensor))
         self.tensors.append(self.program.get_equation().get_output())

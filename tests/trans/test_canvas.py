@@ -137,7 +137,7 @@ def test_create_canvas_partitioned():
     program.add_einsum(0)
 
     static_parts = program.get_partitioning().get_static_parts()
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         for rank in static_parts:
             program.apply_partitioning(tensor, (rank[0],))
         program.get_loop_order().apply(tensor)
@@ -188,7 +188,7 @@ def test_add_activity_partitioned_coord():
     program = create_partitioned("coord")
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
@@ -203,7 +203,7 @@ def test_add_activity_partitioned_pos():
     program = create_partitioned("pos")
     program.add_einsum(0)
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
@@ -261,7 +261,7 @@ def test_add_activity_flatten():
     program.add_einsum(0)
     part_ir = program.get_partitioning()
 
-    for tensor in program.get_tensors():
+    for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
 
     canvas = Canvas(program)

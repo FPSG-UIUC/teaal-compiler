@@ -99,7 +99,7 @@ class FlowGraph:
         # Add Swizzle, GetRoot and FiberNodes for each tensor
         part = self.program.get_partitioning()
         flatten_info: Dict[str, List[Tuple[str, ...]]] = {}
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             if tensor.get_is_output():
                 continue
 
@@ -116,21 +116,21 @@ class FlowGraph:
             self.__build_swizzle_root_fiber(tensor)
 
         # Add CollectingNodes
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             self.__build_collecting(tensor)
 
         iter_graph = IterationGraph(self.program)
         while iter_graph.peek_concord()[0] is not None:
             self.__build_fiber_nodes(iter_graph, flatten_info)
 
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             # The last FiberNode is needed for the body
             self.graph.add_edge(
                 FiberNode(tensor.fiber_name()),
                 OtherNode("Body"))
 
         # Reset all tensors
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             is_output = tensor.get_is_output()
             tensor.reset()
             tensor.set_is_output(is_output)
@@ -224,7 +224,7 @@ class FlowGraph:
         """
         # If this is a dynamically partitioned rank, add the relevant nodes
         part = self.program.get_partitioning()
-        for tensor in self.program.get_tensors():
+        for tensor in self.program.get_equation().get_tensors():
             rank = tensor.peek()
             if rank is None:
                 continue
