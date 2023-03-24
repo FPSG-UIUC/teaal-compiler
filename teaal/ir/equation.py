@@ -23,8 +23,10 @@ SOFTWARE.
 
 Representation of the Einsum equation
 """
+from collections import Counter
 from itertools import chain
 
+from lark.lexer import Token
 from lark.tree import Tree
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -46,6 +48,19 @@ class Equation:
         self.__build_einsum_ranks()
         self.__build_tensors_trees()
         self.__build_active_tensors()
+        self.__build_computation()
+
+    def get_factor_order(self) -> Dict[str, Tuple[int, int]]:
+        """
+        Get a mapping from factors to their location in the factor order
+        """
+        return self.factor_order
+
+    def get_in_update(self) -> List[List[bool]]:
+        """
+        Get the information about which values are actually used in the update
+        """
+        return self.in_update
 
     def get_output(self) -> Tensor:
         """
@@ -74,6 +89,18 @@ class Equation:
         """
         return self.es_tensors
 
+    def get_term_tensors(self) -> List[List[str]]:
+        """
+        Get a list of tensors organized by the term they are in
+        """
+        return self.term_tensors
+
+    def get_term_vars(self) -> List[List[str]]:
+        """
+        Get a list of vars organized by the term they are in
+        """
+        return self.term_vars
+
     def get_trees(self) -> List[Tree]:
         """
         Get the parse trees corresponding to the list of tensors
@@ -90,13 +117,78 @@ class Equation:
         """
         Build a dictionary denoting which tensors are active
         """
-        self.active = {}
+        self.active: Dict[str, bool] = {}
         for tensor in self.es_tensors:
+            if tensor.root_name() in self.active.keys():
+                raise ValueError("Repeated tensor: " + tensor.root_name())
             self.active[tensor.root_name()] = True
 
         for root in self.tensors.keys():
             if root not in self.active.keys():
                 self.active[root] = False
+
+    def __build_computation(self) -> None:
+        """
+        Build the information about the computation
+        """
+        # First find all terms (terminals multiplied or otherwise intersected
+        # together)
+        self.term_tensors: List[List[str]] = []
+        self.term_vars: List[List[str]] = []
+
+        self.factor_order: Dict[str, Tuple[int, int]] = {}
+        self.in_update: List[List[bool]] = []
+        for i, term in enumerate(self.equation.find_data("times")):
+            self.term_tensors.append([])
+            self.term_vars.append([])
+            self.in_update.append([])
+
+            for var in term.find_data("var"):
+                self.term_vars[-1].append(ParseUtils.next_str(var))
+                self.factor_order[self.term_vars[-1][-1]
+                                  ] = (i, len(self.in_update[-1]))
+                self.in_update[-1].append(True)
+
+            for tensor in term.find_data("tensor"):
+                self.term_tensors[-1].append(ParseUtils.next_str(tensor))
+                self.factor_order[self.term_tensors[-1][-1]
+                                  ] = (i, len(self.in_update[-1]))
+                self.in_update[-1].append(True)
+
+        # Find all factors intersected together
+        for i, take in enumerate(self.equation.find_data("take")):
+            self.term_tensors.append([])
+            self.term_vars.append([])
+            self.in_update.append([])
+
+            for child in take.children:
+                if isinstance(child, Tree):
+                    if child.data == "var":
+                        self.term_vars[-1].append(ParseUtils.next_str(child))
+                        self.factor_order[self.term_vars[-1][-1]] = (
+                            len(self.term_tensors) - 1, len(self.in_update[-1]))
+                        self.in_update[-1].append(False)
+
+                    elif child.data == "tensor":
+                        self.term_tensors[-1].append(
+                            ParseUtils.next_str(child))
+                        self.factor_order[self.term_tensors[-1][-1]] = (
+                            len(self.term_tensors) - 1, len(self.in_update[-1]))
+                        self.in_update[-1].append(False)
+
+                    else:
+                        # Note: there is no way to test this error, bad
+                        # factors should be caught by the parser
+                        raise ValueError(
+                            "Unknown factor")  # pragma: no cover
+
+                elif isinstance(child, Token):
+                    self.in_update[-1][int(child.value)] = True
+
+                else:
+                    # Note: there is no way to test this error, bad
+                    # factors should be caught by the parser
+                    raise ValueError("Unknown factor")  # pragma: no cover
 
     def __build_einsum_ranks(self) -> None:
         """
@@ -115,7 +207,7 @@ class Equation:
         for term in term_iter:
             check_ranks = Equation.__get_term_ranks(term)
 
-            if check_ranks != term_ranks:
+            if Counter(check_ranks) != Counter(term_ranks):
                 raise ValueError(
                     "Malformed einsum: ensure all terms iterate over all ranks")
 

@@ -1,14 +1,19 @@
 einsum:
     declaration:
-        A: [K, M]
-        B: [K, N]
-        Z: [M, N]
+        G: [D, S]
+        # Note that V0, V1, and A are all the same; they are the vector of vertex propoerties
+        V0: [D]
+        V1: [S]
+        # Output vectors for each of the three phases
+        R: [D]
+        A:  [D]
     expressions:
-        - Z[m, n] = A[k, m] * B[k, n]
+        # Process Edge
+        - R[d] = V0[d] * G[d, s] * V1[s]
+        # Apply
+        - A[d] = R[d] + V0[d]
 mapping:
     rank-order:
-        A: [M, K]
-        B: [K, N]
-        Z: [M, N]
+        G: [S, D]
     loop-order:
-        Z: [M, K, N]
+        R: [S, D]

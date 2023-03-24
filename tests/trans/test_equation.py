@@ -213,22 +213,6 @@ def make_conv_part(expr, loop_order):
     return IterationGraph(program), Equation(program)
 
 
-def test_mult_tensor_uses():
-    program = make_other("A[i] = B[i] * B[i]", "")
-    with pytest.raises(ValueError) as excinfo:
-        Equation(program)
-
-    assert str(excinfo.value) == "B appears multiple times in the einsum"
-
-
-def test_tensor_in_out():
-    program = make_other("A[i] = A[i] * B[i]", "")
-    with pytest.raises(ValueError) as excinfo:
-        Equation(program)
-
-    assert str(excinfo.value) == "A appears multiple times in the einsum"
-
-
 def test_eager_inputs_one_fiber():
     expr = "O[p, q] = I[q + s] * F[s]"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")

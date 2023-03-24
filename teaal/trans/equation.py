@@ -24,8 +24,6 @@ SOFTWARE.
 Translation for how tensors and variables are combined
 """
 
-from lark.lexer import Token
-from lark.tree import Tree
 from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
@@ -47,81 +45,6 @@ class Equation:
         Construct a new Equation
         """
         self.program = program
-        # TODO: Fix this so that it does not use private data
-        einsum = self.program.get_equation().equation
-
-        # First find all terms (terminals multiplied or otherwise intersected
-        # together)
-        self.terms: List[List[str]] = []
-        self.vars: List[List[str]] = []
-
-        self.factor_order: Dict[str, Tuple[int, int]] = {}
-        self.in_update: List[List[bool]] = []
-        for i, term in enumerate(einsum.find_data("times")):
-            self.terms.append(cast(List[str], []))
-            self.vars.append([])
-            self.in_update.append(cast(List[bool], []))
-
-            for var in term.find_data("var"):
-                self.vars[-1].append(ParseUtils.next_str(var))
-                self.factor_order[self.vars[-1][-1]
-                                  ] = (i, len(self.in_update[-1]))
-                self.in_update[-1].append(True)
-
-            for tensor in term.find_data("tensor"):
-                self.terms[-1].append(ParseUtils.next_str(tensor))
-                self.factor_order[self.terms[-1][-1]
-                                  ] = (i, len(self.in_update[-1]))
-                self.in_update[-1].append(True)
-
-        # Find all factors intersected together
-        for i, take in enumerate(einsum.find_data("take")):
-            self.terms.append(cast(List[str], []))
-            self.vars.append([])
-            self.in_update.append(cast(List[bool], []))
-
-            for child in take.children:
-                if isinstance(child, Tree):
-                    if child.data == "var":
-                        self.vars[-1].append(ParseUtils.next_str(child))
-                        self.factor_order[self.vars[-1][-1]
-                                          ] = (i, len(self.in_update[-1]))
-                        self.in_update[-1].append(False)
-
-                    elif child.data == "tensor":
-                        self.terms[-1].append(ParseUtils.next_str(child))
-                        self.factor_order[self.terms[-1][-1]
-                                          ] = (i, len(self.in_update[-1]))
-                        self.in_update[-1].append(False)
-
-                    else:
-                        # Note: there is no way to test this error, bad
-                        # factors should be caught by the parser
-                        raise ValueError(
-                            "Unknown factor")  # pragma: no cover
-
-                elif isinstance(child, Token):
-                    self.in_update[-1][int(child.value)] = True
-
-                else:
-                    # Note: there is no way to test this error, bad
-                    # factors should be caught by the parser
-                    raise ValueError("Unknown factor")  # pragma: no cover
-
-        # Now create the reverse dictionary of factors to term #
-        self.term_dict: Dict[str, int] = {}
-        for i, factors in enumerate(self.terms):
-            for factor in factors:
-                if factor in self.term_dict.keys():
-                    raise ValueError(
-                        factor + " appears multiple times in the einsum")
-                self.term_dict[factor] = i
-
-        # Finally, get the name of the output
-        self.output = ParseUtils.find_str(einsum, "output")
-        if self.output in self.term_dict.keys():
-            raise ValueError(self.output +
-                             " appears multiple times in the einsum")
 
     def make_eager_inputs(self, rank: str, inputs: List[str]) -> Statement:
         """
@@ -313,10 +236,10 @@ class Equation:
         """
         # Combine the factors within a term
         products = []
-        for i, term in enumerate(self.terms):
-            factors = [var for var in self.vars[i] if self.__in_update(var)] + \
-                [tensor.lower() + "_val" for tensor in term
-                    if self.__in_update(tensor)]
+        for i, term in enumerate(
+                self.program.get_equation().get_term_tensors()):
+            factors = [var for var in self.program.get_equation().get_term_vars()[i] if self.__in_update(
+                var)] + [tensor.lower() + "_val" for tensor in term if self.__in_update(tensor)]
 
             product: Expression = EVar(factors[0])
             for factor in factors[1:]:
@@ -329,7 +252,7 @@ class Equation:
             sum_ = EBinOp(sum_, OAdd(), product)
 
         # Create the final statement
-        out_name = self.output.lower() + "_ref"
+        out_name = self.program.get_equation().get_output().root_name().lower() + "_ref"
         return SIAssign(AVar(out_name), OAdd(), sum_)
 
     @staticmethod
@@ -401,10 +324,9 @@ class Equation:
         """
         Get the output tensor if it exists
         """
-        output_tensor = [
-            tensor for tensor in tensors if tensor.root_name() == self.output]
-        if output_tensor:
-            return output_tensor[0]
+        output = self.program.get_equation().get_output()
+        if output in tensors:
+            return output
         else:
             return None
 
@@ -412,8 +334,8 @@ class Equation:
         """
         Returns true if the factor should be included in the update
         """
-        i, j = self.factor_order[factor]
-        return self.in_update[i][j]
+        i, j = self.program.get_equation().get_factor_order()[factor]
+        return self.program.get_equation().get_in_update()[i][j]
 
     def __iter_fiber(self, rank: str, tensor: Tensor) -> Expression:
         """
@@ -497,12 +419,14 @@ class Equation:
         Separate a list of tensors according to which term they belong to
         """
         # Separate the tensors
-        terms: List[List[Tensor]] = [[] for _ in self.terms]
+        terms: List[List[Tensor]] = [[]
+                                     for _ in self.program.get_equation().get_term_tensors()]
         for tensor in tensors:
             if tensor.get_is_output():
                 continue
 
-            terms[self.term_dict[tensor.root_name()]].append(tensor)
+            terms[self.program.get_equation().get_factor_order()[
+                tensor.root_name()][0]].append(tensor)
 
         # Remove any empty lists
         return [term for term in terms if term]
