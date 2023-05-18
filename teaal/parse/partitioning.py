@@ -37,6 +37,7 @@ class PartitioningParser:
               | "uniform_occupancy(" leader "." size ")" -> uniform_occupancy
               | "uniform_shape(" size ")" -> uniform_shape
               | "flatten(" ")" -> flatten
+              | "follow(" leader ")" -> follow
 
         ?leader: NAME -> leader
 

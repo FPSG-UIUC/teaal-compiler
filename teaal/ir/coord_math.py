@@ -29,9 +29,8 @@ from functools import reduce
 from lark.lexer import Token
 from lark.tree import Tree
 from sympy import Basic, solve, Symbol
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
-from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
 
@@ -134,23 +133,13 @@ class CoordMath:
 
         return self.trans[ind]
 
-    def prune(self, loop_order: List[str], partitioning: Partitioning) -> None:
+    def prune(self, avail_roots: Set[str]) -> None:
         """
         Prune out all coord translations not available with this loop order
         """
         self.trans = {}
 
-        # Build the set of symbols available
-        def trans_names(r):
-            ranks = partitioning.get_available(r)
-            return {Symbol(partitioning.get_root_name(rank).lower())
-                    for rank in ranks}
-
-        names = [trans_names(rank) for rank in loop_order]
-        if names:
-            avail = set.union(*names)
-        else:
-            avail = set()
+        avail = set(Symbol(root.lower()) for root in avail_roots)
 
         # Prune unnecessary translations
         for ind, exprs in self.all_exprs.items():

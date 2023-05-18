@@ -17,6 +17,7 @@ def parse_partitioning():
         partitioning:
             O:
                 Q: [uniform_shape(10)]
+                W: [follow(Q)]
     """
     return Mapping.from_str(yaml).get_partitioning()["O"]
 
@@ -147,11 +148,8 @@ def test_prune():
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
 
-    loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"], coord_math.get_eqn_exprs())
-
     coord_math.add(tensor, ranks)
-    coord_math.prune(loop_order, part)
+    coord_math.prune({"Q", "W"})
 
     q, s, w = symbols("q s w")
 
@@ -174,12 +172,7 @@ def test_prune_partitioned():
     ranks = make_ranks(["s"])
     coord_math.add(tensor, ranks)
 
-    loop_order = ["Q1", "S", "Q0"]
-    part = Partitioning(
-        parse_partitioning(), [
-            "Q", "S", "W"], coord_math.get_eqn_exprs())
-
-    coord_math.prune(loop_order, part)
+    coord_math.prune({"Q", "S"})
 
     q, s, w = symbols("q s w")
 
@@ -188,56 +181,17 @@ def test_prune_partitioned():
     assert coord_math.get_trans("s") == s
 
 
-def test_pruned_flattened():
-    coord_math = CoordMath()
-    tensor = Tensor("A", ["K", "M"])
-    ranks = make_ranks(["k", "m"])
-    coord_math.add(tensor, ranks)
-
-    tensor = Tensor("B", ["K", "N"])
-    ranks = make_ranks(["k", "n"])
-    coord_math.add(tensor, ranks)
-
-    tensor = Tensor("Z", ["M", "N"])
-    ranks = make_ranks(["m", "n"])
-    coord_math.add(tensor, ranks)
-
-    loop_order = ["K1", "MK01", "N", "MK00"]
-    yaml = """
-    mapping:
-        partitioning:
-            Z:
-                K: [uniform_shape(4)]
-                (M, K0): [flatten()]
-                MK0: [uniform_occupancy(A.5)]
-    """
-    parsed = Mapping.from_str(yaml).get_partitioning()["Z"]
-    part = Partitioning(parsed, ["K", "M", "N"], coord_math.get_eqn_exprs())
-
-    coord_math.prune(loop_order, part)
-
-    k, m, n = symbols("k m n")
-
-    assert coord_math.get_trans("k") == k
-    assert coord_math.get_trans("m") == m
-    assert coord_math.get_trans("n") == n
-
-
 def test_eq_true():
     coord_math0 = CoordMath()
     coord_math1 = CoordMath()
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
 
-    loop_order = ["W", "Q"]
-    part0 = Partitioning({}, ["Q", "S", "W"], coord_math0.get_eqn_exprs())
-    part1 = Partitioning({}, ["Q", "S", "W"], coord_math1.get_eqn_exprs())
-
     coord_math0.add(tensor, ranks)
-    coord_math0.prune(loop_order, part0)
+    coord_math0.prune({"W", "Q"})
 
     coord_math1.add(tensor, ranks)
-    coord_math1.prune(loop_order, part1)
+    coord_math1.prune({"W", "Q"})
 
     assert coord_math0 == coord_math1
 
@@ -248,11 +202,9 @@ def test_eq_false():
 
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
-    loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"], coord_math0.get_eqn_exprs())
 
     coord_math0.add(tensor, ranks)
-    coord_math0.prune(loop_order, part)
+    coord_math0.prune({"W", "Q"})
 
     coord_math1.add(tensor, ranks)
 

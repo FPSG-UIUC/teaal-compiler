@@ -1,9 +1,11 @@
 import pytest
 from sympy import symbols
 
+from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
 from teaal.parse.mapping import Mapping
+from tests.utils.parse_tree import *
 
 
 def parse_partitioning(parts):
@@ -23,19 +25,24 @@ def build_part_dict(parts):
 def build_partitioning(parts):
     dict_ = parse_partitioning(parts)["Z"]
 
-    j, k, m, n = symbols("j k m n")
-    eqn_exprs = {j: j, k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
-    return Partitioning(dict_, ["J", "M", "N", "K"], eqn_exprs)
+    return Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
 
 def build_partitioning_conv(parts):
     dict_ = parse_partitioning(parts)["Z"]
 
-    p, q, s, w = symbols("p q s w")
-    eqn_exprs = {p: p, q: q, s: s, w: q + s}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["P", "Q", "S", "W"])
+    ranks = make_ranks(["p", "q", "s"])
+    ranks.children.append(make_iplus(["q", "s"]))
+    coord_math.add(tensor, ranks)
 
-    return Partitioning(dict_, ["P", "Q", "S", "W"], eqn_exprs)
+    return Partitioning(dict_, ["P", "Q", "S", "W"], coord_math)
 
 
 def test_nway_after_dyn():
@@ -44,11 +51,13 @@ def test_nway_after_dyn():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "N-way partitioning after dynamic partitioning on rank(s) ('M',)"
@@ -60,11 +69,13 @@ def test_check_flatten_single_rank_ops():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "Operations ['nway_shape', 'uniform_shape'] can only be applied to one rank; not ('M', 'K')"
@@ -76,11 +87,13 @@ def test_check_flatten_alone():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "flatten() combined with other operators on rank(s) ('M', 'K')"
@@ -92,11 +105,13 @@ def test_check_flatten_multiple_ranks():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "flatten() must combine at least two ranks; only ('K',) specified"
@@ -108,11 +123,14 @@ def test_check_flatten_index_math():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    b, q, s, w = symbols("b q s w")
-    eqn_exprs = {b: b, q: q, s: s, w: q + s}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["P", "Q", "S", "W"])
+    ranks = make_ranks(["p", "q", "s"])
+    ranks.children.append(make_iplus(["q", "s"]))
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["B", "Q", "S", "W"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["P", "Q", "S", "W"], coord_math)
 
     assert str(
         excinfo.value) == "Cannot flatten rank Q because it is used in index math"
@@ -125,11 +143,13 @@ def test_check_flatten_multiple_partitionings():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "Cannot flatten rank K because it will also be independently partitioned"
@@ -142,11 +162,13 @@ def test_check_flatten_flattened_rank():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "Cannot flatten rank KN because it is a flattened rank"
@@ -159,11 +181,13 @@ def test_check_flatten_not_bottom_rank():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "Cannot flatten rank K1 because it will have multiple partitionings"
@@ -177,34 +201,16 @@ def test_only_occupancy_after_flattening():
     """
     dict_ = parse_partitioning(all_parts)["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
 
     with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["M", "N", "K"], eqn_exprs)
+        partitioning = Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
     assert str(
         excinfo.value) == "Shape-based partitioning found on rank MK0 after flattening"
-
-
-def test_multiple_partitionings_on_same_rank():
-    all_parts = """
-                Q: [uniform_shape(4)]
-                S: [uniform_occupancy(A.6)]
-    """
-    dict_ = parse_partitioning(all_parts)["Z"]
-
-    q, s, w = symbols("q s w")
-    eqn_exprs = {q: q, s: s, w: q + s}
-
-    with pytest.raises(ValueError) as excinfo:
-        partitioning = Partitioning(dict_, ["Q", "S", "W"], eqn_exprs)
-
-    assert str(
-        excinfo.value) == "Cannot partition W with multiple specifications. " + \
-        "Partitioning specified by S, Q" or \
-        str(excinfo.value) == "Cannot partition W with multiple specifications. " + \
-        "Partitioning specified by Q, S"
 
 
 def test_get_all_partitioning():
@@ -304,6 +310,7 @@ def test_get_dyn_rank():
 def test_get_dyn_rank_conv():
     all_parts = """
                 Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
 
@@ -389,6 +396,7 @@ def test_final_rank_id_flattening():
 def test_get_final_rank_id_conv():
     all_parts = """
                 Q: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
 
@@ -439,6 +447,7 @@ def test_get_intermediates_conv():
                     - uniform_occupancy(A.6)
                     - uniform_shape(4)
                     - uniform_shape(2)
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
 
@@ -490,6 +499,7 @@ def test_get_root_name():
 def test_get_root_name_conv():
     parts = """
                 Q: [uniform_shape(20), uniform_occupancy(I.5)]
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(parts)
 
@@ -578,6 +588,7 @@ def test_get_part_spec_conv():
     all_parts = """
                 P: [uniform_shape(4)]
                 Q: [uniform_shape(5)]
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
     part_dict = build_part_dict(all_parts)
@@ -626,6 +637,7 @@ def test_get_valid_partitionings_conv():
     all_parts = """
                 P: [uniform_shape(4)]
                 Q: [uniform_shape(5)]
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
     parts = partitioning.get_all_parts()
@@ -718,14 +730,14 @@ def test_partition_names_conv():
                     - uniform_occupancy(A.6)
                     - uniform_shape(4)
                     - uniform_shape(2)
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
     all_head = ["Q" + str(i + 1) for i in range(8)]
 
     assert partitioning.partition_names(("W",), True) == ["W0"] + all_head
     assert partitioning.partition_names(("W",), False) == ["W6I", "Q7", "Q8"]
-    assert partitioning.partition_names(("W3I",), False) == [
-        "W0"] + all_head[:3]
+    assert partitioning.partition_names(("W3I",), False) == ["W0"] + all_head[:3]
 
 
 def test_partition_rank():
@@ -740,6 +752,7 @@ def test_partition_rank():
                     - uniform_occupancy(A.6)
                     - uniform_shape(4)
                     - uniform_shape(2)
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
 
@@ -857,6 +870,7 @@ def test_partition_ranks_flattening_all():
 def test_partition_ranks_conv():
     parts = """
                 Q: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+                W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(parts)
     ranks = ["W"]

@@ -29,6 +29,7 @@ import networkx as nx  # type: ignore
 from sympy import Basic, Symbol
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+from teaal.ir.coord_math import CoordMath
 from teaal.ir.part_nodes import *
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -42,12 +43,12 @@ class Partitioning:
     def __init__(self,
                  partitioning: Dict[Tree, List[Tree]],
                  ranks: Iterable[str],
-                 eqn_exprs: Dict[Symbol, Basic]) -> None:
+                 coord_math: CoordMath) -> None:
         """
         Create a new representation of the partitioning information
         """
         self.orig_ranks = ranks
-        self.eqn_exprs = eqn_exprs
+        self.eqn_exprs = coord_math.get_eqn_exprs()
 
         self.__build_part_graph(partitioning)
 
@@ -138,8 +139,9 @@ class Partitioning:
             raise ValueError(
                 "Should never be used for flattened ranks, used on rank " + rank)
 
-        if self.__tensor_to_part_rank(rank, self.dyn_parts):
+        if RankNode(rank + "0") in self.graph.nodes:
             return rank + "0"
+
         return rank
 
     def get_dyn_parts(self) -> Set[Tuple[str, ...]]:
@@ -403,11 +405,12 @@ class Partitioning:
             return None
 
         rank = ranks[0]
-        part_ranks = self.__tensor_to_part_rank(rank, self.all_parts)
-        if not part_ranks:
-            return None
+        root = self.get_root_name(rank)
 
-        return (Partitioning.__single_part_rank(rank, part_ranks),)
+        if root in self.part_rank.keys():
+            return (self.part_rank[root] + rank[len(root):],)
+
+        return None
 
     def partition_ranks(
             self,
@@ -516,14 +519,17 @@ class Partitioning:
                     self.__add_or_update_priority(rank, float("inf"))
 
         # Add the partitioning
-        parted_by: Dict[str, List[str]] = {}
         roots: Dict[str, List[str]] = {}
         edge: Tuple[PartitioningNode, PartitioningNode]
-        all_parts = {
-            tuple(
-                str(child) for child in ranks_tree.children): parts for ranks_tree,
-            parts in partitioning.items()}
+        all_parts = {tuple(str(child) for child in ranks_tree.children): parts
+            for ranks_tree, parts in partitioning.items()}
+
+        self.part_rank = {}
         for part_ranks, parts in all_parts.items():
+            # If there is nothing to partition, move on
+            if not parts:
+                continue
+
             if Partitioning.__nway_after_dyn(parts):
                 raise ValueError(
                     "N-way partitioning after dynamic partitioning on rank(s) " +
@@ -547,79 +553,73 @@ class Partitioning:
                         *edge, part=parts[0], part_ranks=part_ranks)
 
                 ranks.add(flattened_rank)
+                # TODO: Remove
                 self.eqn_exprs[Symbol(flattened_rank.lower())] = Symbol(
                     flattened_rank.lower())
 
                 continue
 
-            # Find the number of specifications used to partition each rank
-            # Should be just 1
-            part_rank = part_ranks[0]
-            if part_rank not in roots.keys():
-                roots[part_rank] = self.__part_to_tensor_rank(part_rank, ranks)
-
-            for root in roots[part_rank]:
-                if root not in parted_by:
-                    parted_by[root] = []
-                parted_by[root].append(part_rank)
-
             # Otherwise, divide the rank
-            sources = [RankNode(root_name) for root_name in roots[part_rank]]
+            source_name = part_ranks[0]
+            source_node = RankNode(source_name)
+
+            # If this is a follower rank, then replace the partitioning
+            if parts[0].data == "follow":
+                leader = ParseUtils.next_str(parts[0])
+                parts = all_parts[(leader,)]
+
+            else:
+                leader = source_name
+            self.part_rank[source_name] = leader
+
             # Add edges
             for i, part in enumerate(parts):
                 j = len(parts) - i
                 if Partitioning.__is_static(part):
-                    if part_rank not in self.orig_ranks:
+                    if leader not in self.orig_ranks:
                         raise ValueError(
                             "Shape-based partitioning found on rank " +
-                            part_rank +
+                            source_name +
                             " after flattening")
 
-                    rank = part_rank + str(j)
+                    rank = leader + str(j)
                     self.__add_or_update_priority(rank, j)
 
-                    for source in sources:
-                        edge = (source, RankNode(rank))
-                        self.graph.add_edge(
-                            *edge, part=part, part_ranks=part_ranks)
+                    edge = (source_node, RankNode(rank))
+                    # TODO: Do we need this part_ranks?
+                    self.graph.add_edge(*edge, part=part, part_ranks=part_ranks)
 
                     continue
 
                 # Else dynamic partitioning
-                for k in range(len(sources)):
-                    # If this is not the first partition, we need an
-                    # explicit intermediate
-                    if i > 0:
-                        int_rank = roots[part_rank][k] + str(j) + "I"
-                        self.__add_or_update_priority(int_rank, j)
 
-                        edge = (sources[k], RankNode(int_rank))
-                        self.graph.add_edge(
-                            *edge, part=parts[i - 1], part_ranks=part_ranks)
+                # If this is not the first partition, we need an
+                # explicit intermediate
+                if i > 0:
+                    int_rank = source_name + str(j) + "I"
+                    self.__add_or_update_priority(int_rank, j)
 
-                        sources[k] = RankNode(int_rank)
-
-                    rank = part_rank + str(j)
-                    self.__add_or_update_priority(rank, j)
-
-                    edge = (sources[k], RankNode(rank))
+                    edge = (source_node, RankNode(int_rank))
                     self.graph.add_edge(
-                        *edge, part=part, part_ranks=part_ranks)
+                        *edge, part=parts[i - 1], part_ranks=part_ranks)
+
+                    source_node = RankNode(int_rank)
+
+                rank = leader + str(j)
+                self.__add_or_update_priority(rank, j)
+
+                edge = (source_node, RankNode(rank))
+                self.graph.add_edge(
+                    *edge, part=part, part_ranks=part_ranks)
 
             # Add the bottom rank if needed
-            if len(parts) > 0:
-                for root_name, source in zip(roots[part_rank], sources):
-                    rank = root_name + str(0)
-                    self.__add_or_update_priority(rank, 0)
+            if parts:
+                rank = source_name + str(0)
+                self.__add_or_update_priority(rank, 0)
 
-                    edge = (source, RankNode(rank))
-                    self.graph.add_edge(
-                        *edge, part=parts[-1], part_ranks=part_ranks)
-
-        # Ensure that each rank is only partitioned with one set of
-        # partitioning information
-        for rank, partitioners in parted_by.items():
-            Partitioning.__single_part_rank(rank, partitioners)
+                edge = (source_node, RankNode(rank))
+                self.graph.add_edge(
+                    *edge, part=parts[-1], part_ranks=part_ranks)
 
     def __check_flatten(self, part_ranks: Tuple[str, ...], all_parts: Dict[Tuple[str, ...],
                         List[Tree]], all_ranks: Iterable[str]) -> None:
@@ -815,7 +815,7 @@ class Partitioning:
     def __used_parts(self, tensor_ranks: List[str], parts: Iterable[Tuple[str, ...]],
                      allow_swizzle: bool) -> Iterable[Tuple[str, ...]]:
         """
-        Get the partitioned used to partition the given ranks
+        Get the partitions used to partition the given ranks
         """
         used_parts = []
         for part_ranks in parts:
