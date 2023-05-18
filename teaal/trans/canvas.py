@@ -167,10 +167,6 @@ class Canvas:
             # Fix dynamic partitioning variable name
             new = part_ir.get_dyn_rank(str(symbol).upper()).lower()
 
-            # Fix static partitioning variable name
-            if (root,) in part_ir.get_static_parts():
-                new += "0"
-
             sexpr = sexpr.subs(symbol, Symbol(new))
 
         return CoordAccess.build_expr(sexpr)

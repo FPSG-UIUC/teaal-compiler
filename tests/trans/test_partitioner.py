@@ -84,6 +84,7 @@ def test_bad_halo():
     expr = "O[q] = I[2 * q + s] * F[s]"
     spec = """
                 Q: [uniform_shape(6)]
+                W: [follow(Q)]
     """
     _, partitioner = build_partitioner_conv(expr, spec)
 
@@ -155,6 +156,7 @@ def test_nway_shape_conv():
     expr = "O[q] = I[q + s] * F[s]"
     spec = """
                 Q: [nway_shape(6), nway_shape(3)]
+                W: [follow(Q)]
     """
     hifiber = "tmp0 = I_W\n" + \
         "tmp1 = tmp0.splitUniform((Q - 1) // 6 + 1, depth=0, halo=-1 + S)\n" + \
@@ -238,6 +240,7 @@ def test_uniform_occupancy_conv():
     expr = "O[q] = I[q + s] * F[s]"
     spec = """
                 Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
     """
     hifiber = "tmp0 = I_W\n" + \
         "tmp1 = tmp0.splitEqual(6, halo=-1 + S)\n" + \
@@ -253,6 +256,7 @@ def test_uniform_occupancy_follower_conv():
     expr = "O[q] = I[q + s] * J[q + s] * F[s]"
     spec = """
                 Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
     """
     hifiber = "tmp0 = J_W\n" + \
         "tmp1 = tmp0.splitNonUniform(i_q1, halo=-1 + S)\n" + \
@@ -297,6 +301,7 @@ def test_uniform_shape_conv():
     expr = "O[q] = I[q + s] * F[s]"
     spec = """
                 Q: [uniform_shape(6)]
+                W: [follow(Q)]
     """
     hifiber = "tmp0 = I_W\n" + \
         "tmp1 = tmp0.splitUniform(6, depth=0, halo=-1 + S)\n" + \

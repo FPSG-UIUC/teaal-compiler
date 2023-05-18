@@ -271,9 +271,7 @@ def test_get_coord_math_conv():
     coord_math.add(Tensor("I", ["W"]), Tree(
         "ranks", [make_iplus(["q", "s"])]))
     coord_math.add(Tensor("F", ["S"]), make_ranks(["s"]))
-    coord_math.prune(
-        program.get_loop_order().get_ranks(),
-        program.get_partitioning())
+    coord_math.prune({"Q", "S"})
 
     assert program.get_coord_math() == coord_math
 

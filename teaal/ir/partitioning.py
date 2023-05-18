@@ -48,7 +48,7 @@ class Partitioning:
         Create a new representation of the partitioning information
         """
         self.orig_ranks = ranks
-        self.eqn_exprs = coord_math.get_eqn_exprs()
+        self.coord_math = coord_math
 
         self.__build_part_graph(partitioning)
 
@@ -522,7 +522,7 @@ class Partitioning:
         roots: Dict[str, List[str]] = {}
         edge: Tuple[PartitioningNode, PartitioningNode]
         all_parts = {tuple(str(child) for child in ranks_tree.children): parts
-            for ranks_tree, parts in partitioning.items()}
+                     for ranks_tree, parts in partitioning.items()}
 
         self.part_rank = {}
         for part_ranks, parts in all_parts.items():
@@ -553,9 +553,6 @@ class Partitioning:
                         *edge, part=parts[0], part_ranks=part_ranks)
 
                 ranks.add(flattened_rank)
-                # TODO: Remove
-                self.eqn_exprs[Symbol(flattened_rank.lower())] = Symbol(
-                    flattened_rank.lower())
 
                 continue
 
@@ -587,7 +584,8 @@ class Partitioning:
 
                     edge = (source_node, RankNode(rank))
                     # TODO: Do we need this part_ranks?
-                    self.graph.add_edge(*edge, part=part, part_ranks=part_ranks)
+                    self.graph.add_edge(
+                        *edge, part=part, part_ranks=part_ranks)
 
                     continue
 
@@ -663,7 +661,7 @@ class Partitioning:
                 " specified")
 
         for rank in part_ranks:
-            if len(self.__part_to_tensor_rank(rank, all_ranks)) > 1:
+            if len(self.coord_math.get_all_exprs(rank.lower())) > 1:
                 raise ValueError(
                     "Cannot flatten rank " +
                     rank +
@@ -728,69 +726,6 @@ class Partitioning:
                 return True
 
         return False
-
-    def __part_to_tensor_rank(
-            self,
-            part_rank: str,
-            tensor_ranks: Iterable[str]) -> List[str]:
-        """
-        Returns a tensor rank if one corresponds to the given partition rank
-        """
-        part_root = self.get_root_name(part_rank).lower()
-        part_suffix = part_rank[len(part_root):]
-
-        matches = []
-        for tensor_rank in tensor_ranks:
-            tensor_root = self.get_root_name(tensor_rank).lower()
-            tensor_suffix = tensor_rank[len(tensor_root):]
-
-            atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
-            if (Symbol(part_root) in atoms or part_root ==
-                    tensor_root) and part_suffix == tensor_suffix:
-                matches.append(tensor_rank)
-
-        return matches
-
-    @staticmethod
-    def __single_part_rank(rank: str, part_ranks: List[str]) -> str:
-        """
-        Get a single part rank from a list
-        Raises an error if there is not exactly one element in the list
-        """
-        assert part_ranks
-
-        if len(part_ranks) > 1:
-            raise ValueError(
-                "Cannot partition " +
-                rank +
-                " with multiple specifications. Partitioning specified by " +
-                ", ".join(part_ranks))
-
-        return part_ranks[0]
-
-    def __tensor_to_part_rank(
-            self,
-            tensor_rank: str,
-            part_ranks: Iterable[Tuple[str, ...]]) -> List[str]:
-        """
-        Return a partition rank if one corresponds to the given tensor rank
-        """
-        assert not self.is_flattened(tensor_rank)
-
-        tensor_root = self.get_root_name(tensor_rank).lower()
-        tensor_suffix = tensor_rank[len(tensor_root):]
-
-        atoms = self.eqn_exprs[Symbol(tensor_root)].atoms(Symbol)
-        eqn_ranks = {str(atom).upper() + tensor_suffix for atom in atoms}
-
-        matches = []
-        # We do not need to worry about flattening, since we cannot do index
-        # math on flattened ranks (so they are handled separately)
-        for eqn_rank in eqn_ranks:
-            if (eqn_rank,) in part_ranks:
-                matches.append(eqn_rank)
-
-        return matches
 
     def __update_ranks(
             self, part_ranks: Tuple[str, ...], tensor_ranks: List[str], all_: bool) -> None:

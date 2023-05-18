@@ -121,8 +121,8 @@ class Program:
 
         # TODO: Move this logic to the loop order?
         def trans_names(r):
-            ranks = partitioning.get_available(r)
-            return {partitioning.get_root_name(rank) for rank in ranks}
+            ranks = self.partitioning.get_available(r)
+            return {self.partitioning.get_root_name(rank) for rank in ranks}
 
         names = [trans_names(rank) for rank in self.loop_order.get_ranks()]
         if names:

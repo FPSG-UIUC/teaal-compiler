@@ -30,7 +30,7 @@ def build_loop_order_conv():
     return LoopOrder(equation)
 
 
-def build_partitioning(parts):
+def build_partitioning(parts, coord_math):
     yaml = """
     mapping:
         partitioning:
@@ -38,13 +38,10 @@ def build_partitioning(parts):
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["Z"]
 
-    k, m, n = symbols("k m n")
-    eqn_exprs = {k: k, m: m, n: n}
-
-    return Partitioning(dict_, ["K", "M", "N"], eqn_exprs)
+    return Partitioning(dict_, ["K", "M", "N"], coord_math)
 
 
-def build_partitioning_conv(parts):
+def build_partitioning_conv(parts, coord_math):
     yaml = """
     mapping:
         partitioning:
@@ -52,10 +49,7 @@ def build_partitioning_conv(parts):
     """ + parts
     dict_ = Mapping.from_str(yaml).get_partitioning()["O"]
 
-    q, s, w = symbols("q s w")
-    eqn_exprs = {q: q, s: s, w: q + s}
-
-    return Partitioning(dict_, ["Q", "S", "W"], eqn_exprs)
+    return Partitioning(dict_, ["Q", "S", "W"], coord_math)
 
 
 def build_coord_math():
@@ -82,8 +76,8 @@ def build_coord_math_conv():
 def test_add_specified_no_partitioning():
     loop_order = build_loop_order()
 
-    partitioning = build_partitioning("")
     coord_math = build_coord_math()
+    partitioning = build_partitioning("", coord_math)
     loop_order.add(["K", "M", "N"], coord_math, partitioning)
 
     assert loop_order.get_ranks() == ["K", "M", "N"]
@@ -92,8 +86,8 @@ def test_add_specified_no_partitioning():
 def test_add_default_no_partitioning():
     loop_order = build_loop_order()
 
-    partitioning = build_partitioning("")
     coord_math = build_coord_math()
+    partitioning = build_partitioning("", coord_math)
     loop_order.add(None, coord_math, partitioning)
 
     assert loop_order.get_ranks() == ["M", "N", "K"]
@@ -107,8 +101,8 @@ def test_add_specified_partitioning():
                 M: [uniform_shape(6), uniform_occupancy(A.3)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
     order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
     loop_order.add(order, coord_math, partitioning)
 
@@ -133,11 +127,12 @@ def test_apply():
     order = ["K2", "M", "K1", "N", "K0"]
 
     loop_order = build_loop_order()
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
 
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(order, partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune({"K", "M", "N"})
 
     A = Tensor("A", ["M", "K", "N"])
     loop_order.apply(A)
@@ -163,11 +158,12 @@ def test_apply_flatten():
     order = ["K1", "MK01", "N", "MK00"]
 
     loop_order = build_loop_order()
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
 
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(order, partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune({"K", "M", "N"})
 
     A = Tensor("A", ["M", "K"])
     loop_order.apply(A)
@@ -201,12 +197,13 @@ def test_apply_flatten():
 
 def test_apply_conv():
     loop_order = build_loop_order_conv()
-    partitioning = build_partitioning_conv("")
     coord_math = build_coord_math_conv()
+    partitioning = build_partitioning_conv("", coord_math)
 
     order = ["W", "Q"]
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(order, partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune(set(order))
 
     I = Tensor("I", ["W"])
     loop_order.apply(I)
@@ -240,11 +237,12 @@ def test_get_iter_ranks():
     order = ["K1", "MK01", "N", "MK00"]
 
     loop_order = build_loop_order()
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
 
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(order, partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune({"K", "M", "N"})
 
     assert loop_order.get_iter_ranks("K1") == ("K1",)
     assert loop_order.get_iter_ranks("MK01") == ("MK01",)
@@ -279,8 +277,8 @@ def test_default_loop_order_after_partitioning():
                 M: [uniform_shape(20), uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
     loop_order.add(None, coord_math, partitioning)
 
     assert loop_order.get_ranks() == [
@@ -295,8 +293,8 @@ def test_default_loop_order_flattening():
                 (M, K0): [flatten()]
                 MK0: [uniform_occupancy(A.5)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
     loop_order.add(None, coord_math, partitioning)
 
     assert loop_order.get_ranks() == ["N", "K1", "MK01", "MK00"]
@@ -306,8 +304,8 @@ def test_default_loop_order_conv():
     # Note that this test is not strictly necessary (as nothing changes when we
     # introduce coords as expressions), but it is a sanity check
     loop_order = build_loop_order_conv()
-    partitioning = build_partitioning_conv("")
     coord_math = build_coord_math_conv()
+    partitioning = build_partitioning_conv("", coord_math)
 
     loop_order.add(None, coord_math, partitioning)
 
@@ -342,12 +340,13 @@ def test_is_ready():
                 M: [uniform_shape(4)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
 
     order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(loop_order.get_ranks(), partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune({"K", "M", "N"})
 
     assert loop_order.is_ready("N2", 1)
     assert loop_order.is_ready("K0", 5)
@@ -363,12 +362,13 @@ def test_is_ready_flattened():
                 (M, K0): [flatten()]
                 MK0: [uniform_occupancy(A.5)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
 
     order = ["K1", "MK01", "N", "MK00"]
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(loop_order.get_ranks(), partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune({"K", "M", "N"})
 
     assert loop_order.is_ready("MK00", 3)
     assert loop_order.is_ready("MK01", 1)
@@ -377,12 +377,13 @@ def test_is_ready_flattened():
 
 def test_is_ready_conv():
     loop_order = build_loop_order_conv()
-    partitioning = build_partitioning_conv("")
     coord_math = build_coord_math_conv()
+    partitioning = build_partitioning_conv("", coord_math)
 
     order = ["W", "Q"]
     loop_order.add(order, coord_math, partitioning)
-    coord_math.prune(loop_order.get_ranks(), partitioning)
+    # TODO: Use loop order function for this
+    coord_math.prune(set(order))
 
     assert loop_order.is_ready("Q", 1)
     assert loop_order.is_ready("S", 1)
@@ -397,8 +398,8 @@ def test_eq():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
     loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], coord_math, partitioning)
     loop_order2.add(
@@ -415,8 +416,8 @@ def test_neq_loop_order():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
     loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], coord_math, partitioning)
 
@@ -430,8 +431,8 @@ def test_neq_other_type():
                 M: [uniform_occupancy(A.6)]
                 N: [uniform_shape(2), nway_shape(7)]
     """
-    partitioning = build_partitioning(parts)
     coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
     loop_order1.add(
         ["N2", "K1", "M1", "N1", "K0", "M0", "N0"], coord_math, partitioning)
 

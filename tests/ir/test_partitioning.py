@@ -19,7 +19,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -737,7 +737,8 @@ def test_partition_names_conv():
 
     assert partitioning.partition_names(("W",), True) == ["W0"] + all_head
     assert partitioning.partition_names(("W",), False) == ["W6I", "Q7", "Q8"]
-    assert partitioning.partition_names(("W3I",), False) == ["W0"] + all_head[:3]
+    assert partitioning.partition_names(("W3I",), False) == [
+        "W0"] + all_head[:3]
 
 
 def test_partition_rank():

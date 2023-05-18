@@ -198,6 +198,7 @@ def make_conv_part(expr, loop_order):
         partitioning:
             O:
                 Q: [uniform_shape(10)]
+                W: [follow(Q)]
         loop-order:
             O: """ + loop_order
 
@@ -227,6 +228,7 @@ def test_eager_inputs_multiple_fibers():
         partitioning:
             O:
                 Q: [uniform_shape(10)]
+                W: [follow(Q)]
     """
     _, eqn = make_conv(expr, mapping)
     hifiber = "inputs_q1 = Fiber.fromLazy(i_q1 & j_q1)"

@@ -715,6 +715,7 @@ def test_graph_conv_part():
         partitioning:
             O:
                 Q: [uniform_shape(20), uniform_occupancy(I.10)]
+                W: [follow(Q)]
         loop-order:
             O: [Q2, Q1, S, Q0]
     """

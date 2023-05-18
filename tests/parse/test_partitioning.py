@@ -10,9 +10,11 @@ def test_flatten():
     tree = Tree("flatten", [])
     assert PartitioningParser.parse_partitioning("flatten()") == tree
 
+
 def test_follow():
     tree = Tree("follow", [Tree("leader", [Token("NAME", "P")])])
     assert PartitioningParser.parse_partitioning("follow(P)") == tree
+
 
 def test_nway_shape():
     tree = Tree("nway_shape", [Tree("int_sz", [Token("NUMBER", 7)])])
