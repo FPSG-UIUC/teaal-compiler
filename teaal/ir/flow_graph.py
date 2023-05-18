@@ -113,7 +113,7 @@ class FlowGraph:
             self.__build_partition_swizzling(tensor, flatten_info)
 
             # Get the root fiber
-            self.__build_swizzle_root_fiber(tensor)
+            self.__build_swizzle_root_fiber(tensor, True)
 
         # Add CollectingNodes
         for tensor in self.program.get_equation().get_tensors():
@@ -403,7 +403,7 @@ class FlowGraph:
         self.graph.add_edge(part_node, OtherNode("Graphics"))
         self.program.apply_partitioning(tensor, partitioning)
 
-    def __build_swizzle_root_fiber(self, tensor: Tensor) -> None:
+    def __build_swizzle_root_fiber(self, tensor: Tensor, static: bool) -> None:
         """
         Build a swizzleRanks(), getRoot(), and the resulting FiberNode
         """
@@ -424,6 +424,10 @@ class FlowGraph:
         # relevant ranks
         for rank in tensor.get_ranks():
             self.graph.add_edge(RankNode(root, rank), swizzle_node)
+
+        # If this is a static swizzle, do it before the graphics
+        if static:
+            self.graph.add_edge(swizzle_node, OtherNode("Graphics"))
 
     def __connect_dyn_part(self, tensor: Tensor, rank: str,
                            flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
@@ -459,7 +463,7 @@ class FlowGraph:
         self.graph.add_edge(fiber_node, ff_node)
         self.graph.add_edge(ff_node, part_node)
 
-        self.__build_swizzle_root_fiber(tensor)
+        self.__build_swizzle_root_fiber(tensor, False)
 
     def __prune(self) -> None:
         """

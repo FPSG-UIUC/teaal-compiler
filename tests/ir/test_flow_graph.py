@@ -107,6 +107,10 @@ def test_graph():
         "A", ["M", "K"], "loop-order"), GetRootNode("A", ["M", "K"]))
     corr.add_edge(SwizzleNode(
         "B", ["N", "K"], "loop-order"), GetRootNode("B", ["N", "K"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["M", "K"], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(SwizzleNode(
+        "B", ["N", "K"], "loop-order"), OtherNode("Graphics"))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -136,6 +140,10 @@ def test_graph_loop_order():
         "A", ["K", "M"], "loop-order"), GetRootNode("A", ["K", "M"]))
     corr.add_edge(SwizzleNode(
         "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["K", "M"], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(SwizzleNode(
+        "B", ["K", "N"], "loop-order"), OtherNode("Graphics"))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -204,7 +212,14 @@ def test_graph_static_parts():
                 "K2", "N1", "K1", "N0", "K0"], "loop-order"), GetRootNode(
             "B", [
                 "K2", "N1", "K1", "N0", "K0"]))
-
+    corr.add_edge(
+        SwizzleNode(
+            "A", [
+                "K2", "M", "K1", "K0"], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(
+        SwizzleNode(
+            "B", [
+                "K2", "N1", "K1", "N0", "K0"], "loop-order"), OtherNode("Graphics"))
     assert nx.is_isomorphic(graph, corr)
 
 
@@ -293,7 +308,11 @@ def test_graph_dyn_parts():
     corr.add_edge(SwizzleNode(
         "A", ["K", "M"], "loop-order"), GetRootNode("A", ["K", "M"]))
     corr.add_edge(SwizzleNode(
+        "A", ["K", "M"], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(SwizzleNode(
         "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(SwizzleNode(
+        "B", ["K", "N"], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(
         SwizzleNode(
             "A", [
@@ -415,10 +434,18 @@ def test_graph_mixed_parts():
                 "K3", "M", "K2I"]))
     corr.add_edge(
         SwizzleNode(
+            "A", [
+                "K3", "M", "K2I"], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(
+        SwizzleNode(
             "B", [
                 "K3", "K2I", "N"], "loop-order"), GetRootNode(
             "B", [
                 "K3", "K2I", "N"]))
+    corr.add_edge(
+        SwizzleNode(
+            "B", [
+                "K3", "K2I", "N"], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(
         SwizzleNode(
             "B", [
@@ -508,6 +535,8 @@ def test_graph_static_flattening():
                 'MK01', 'MK00'], "loop-order"))
     corr.add_edge(SwizzleNode(
         "A", ['K1', 'MK0'], "loop-order"), GetRootNode("A", ['K1', 'MK0']))
+    corr.add_edge(SwizzleNode(
+        "A", ['K1', 'MK0'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['K1', 'MK0']), LoopNode("K1"))
     corr.add_edge(PartNode("B", ('K',)), OtherNode("Graphics"))
     corr.add_edge(
@@ -517,6 +546,8 @@ def test_graph_static_flattening():
                 'K1', 'N', 'K0'], "loop-order"))
     corr.add_edge(SwizzleNode(
         "B", ['K1', 'N', 'K0'], "loop-order"), GetRootNode("B", ['K1', 'N', 'K0']))
+    corr.add_edge(SwizzleNode(
+        "B", ['K1', 'N', 'K0'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("B", ['K1', 'N', 'K0']), LoopNode("K1"))
     corr.add_edge(FromFiberNode("A", "MK0"), PartNode("A", ('MK0',)))
     corr.add_edge(SwizzleNode(
@@ -602,6 +633,8 @@ def test_graph_dyn_flattening():
                 'M0K01', 'M0K00'], 'loop-order'))
     corr.add_edge(SwizzleNode(
         'A', ['M', 'K'], 'loop-order'), GetRootNode('A', ['M', 'K']))
+    corr.add_edge(SwizzleNode(
+        'A', ['M', 'K'], 'loop-order'), OtherNode("Graphics"))
     corr.add_edge(GetRootNode('A', ['M', 'K']), FromFiberNode('A', 'M'))
     corr.add_edge(
         PartNode(
@@ -610,6 +643,8 @@ def test_graph_dyn_flattening():
                 'K1', 'N', 'K0'], 'loop-order'))
     corr.add_edge(SwizzleNode(
         'B', ['K', 'N'], 'loop-order'), GetRootNode('B', ['K', 'N']))
+    corr.add_edge(SwizzleNode(
+        'B', ['K', 'N'], 'loop-order'), OtherNode("Graphics"))
     corr.add_edge(GetRootNode('B', ['K', 'N']), FromFiberNode('B', 'K'))
     corr.add_edge(FromFiberNode('A', 'M'), PartNode('A', ('M',)))
     corr.add_edge(SwizzleNode(
@@ -661,6 +696,7 @@ def test_graph_conv():
         GetRootNode(
             "I",
             ["W"]))
+    corr.add_edge(SwizzleNode("I", ["W"], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(
         SwizzleNode(
             "F",
@@ -669,6 +705,7 @@ def test_graph_conv():
         GetRootNode(
             "F",
             ["S"]))
+    corr.add_edge(SwizzleNode("F", ["S"], "loop-order"), OtherNode("Graphics"))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -726,12 +763,21 @@ def test_graph_conv_part():
                 "Q2", "W1I"]))
     corr.add_edge(
         SwizzleNode(
+            "I", [
+                "Q2", "W1I"], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(
+        SwizzleNode(
             "F",
             ["S"],
             "loop-order"),
         GetRootNode(
             "F",
             ["S"]))
+    corr.add_edge(
+        SwizzleNode(
+            "F",
+            ["S"],
+            "loop-order"), OtherNode("Graphics"))
     corr.add_edge(
         SwizzleNode(
             "I", [
@@ -766,9 +812,13 @@ def test_graph_metrics():
     corr.add_edge(GetRootNode("T", ["M", "K", "N"]), LoopNode("M"))
     corr.add_edge(SwizzleNode(
         "A", ["M", "K"], "loop-order"), GetRootNode("A", ["M", "K"]))
+    corr.add_edge(SwizzleNode(
+        "A", ["M", "K"], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ["M", "K"]), LoopNode("M"))
     corr.add_edge(SwizzleNode(
         "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
+    corr.add_edge(SwizzleNode(
+        "B", ["K", "N"], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("B", ["K", "N"]), LoopNode("K"))
     corr.add_edge(SwizzleNode("B", ['K', 'N'],
                   "loop-order"), CollectingNode("B", "K"))

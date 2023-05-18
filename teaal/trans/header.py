@@ -140,8 +140,17 @@ class Header:
         avail = [False for _ in ranks]
 
         final_pos = {}
-        for rank in ranks:
-            final_pos[rank] = order.index(part.get_final_rank_id(output, rank))
+        i = 0
+        for pos in range(len(order)):
+            if i == len(ranks):
+                break
+
+            if loop_order.is_ready(
+                part.get_final_rank_id(
+                    output, ranks[i]), pos):
+                final_pos[ranks[i]] = pos
+
+                i += 1
 
         for tensor in self.program.get_equation().get_tensors():
             # Skip the output
