@@ -119,19 +119,8 @@ class Program:
 
         self.loop_order.add(opt_loop_order, self.coord_math, self.partitioning)
 
-        # TODO: Move this logic to the loop order?
-        def trans_names(r):
-            ranks = self.partitioning.get_available(r)
-            return {self.partitioning.get_root_name(rank) for rank in ranks}
-
-        names = [trans_names(rank) for rank in self.loop_order.get_ranks()]
-        if names:
-            avail_roots = set.union(*names)
-        else:
-            avail_roots = set()
-
         # Prune the coord math with this loop order
-        self.coord_math.prune(avail_roots)
+        self.coord_math.prune(self.loop_order.get_available_roots())
 
         # Get the spacetime information
         spacetime: Optional[Dict[str, List[Tree]]] = None

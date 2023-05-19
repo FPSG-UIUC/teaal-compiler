@@ -131,8 +131,7 @@ def test_apply():
     partitioning = build_partitioning(parts, coord_math)
 
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune({"K", "M", "N"})
+    coord_math.prune(loop_order.get_available_roots())
 
     A = Tensor("A", ["M", "K", "N"])
     loop_order.apply(A)
@@ -162,8 +161,7 @@ def test_apply_flatten():
     partitioning = build_partitioning(parts, coord_math)
 
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune({"K", "M", "N"})
+    coord_math.prune(loop_order.get_available_roots())
 
     A = Tensor("A", ["M", "K"])
     loop_order.apply(A)
@@ -202,8 +200,7 @@ def test_apply_conv():
 
     order = ["W", "Q"]
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune(set(order))
+    coord_math.prune(loop_order.get_available_roots())
 
     I = Tensor("I", ["W"])
     loop_order.apply(I)
@@ -216,6 +213,33 @@ def test_apply_conv():
     Z = Tensor("Z", ["Q"])
     loop_order.apply(Z)
     assert Z.get_ranks() == ["Q"]
+
+
+def test_get_available_roots_unconfigured():
+    loop_order = build_loop_order()
+
+    with pytest.raises(ValueError) as excinfo:
+        loop_order.get_available_roots()
+
+    assert str(
+        excinfo.value) == "Unconfigured loop order. Make sure to first call add()"
+
+
+def test_get_available_roots():
+    parts = """
+                K: [uniform_shape(4)]
+                (M, K0): [flatten()]
+                MK0: [uniform_occupancy(A.5), uniform_occupancy(A.3)]
+    """
+    order = ["K1", "MK01", "N", "MK00"]
+
+    loop_order = build_loop_order()
+    coord_math = build_coord_math()
+    partitioning = build_partitioning(parts, coord_math)
+
+    loop_order.add(order, coord_math, partitioning)
+
+    assert loop_order.get_available_roots() == {"K", "M", "N"}
 
 
 def test_get_iter_ranks_unconfigured():
@@ -241,8 +265,7 @@ def test_get_iter_ranks():
     partitioning = build_partitioning(parts, coord_math)
 
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune({"K", "M", "N"})
+    coord_math.prune(loop_order.get_available_roots())
 
     assert loop_order.get_iter_ranks("K1") == ("K1",)
     assert loop_order.get_iter_ranks("MK01") == ("MK01",)
@@ -345,8 +368,7 @@ def test_is_ready():
 
     order = ["K2", "N2", "K1", "M1", "N1", "K0", "M0", "N0"]
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune({"K", "M", "N"})
+    coord_math.prune(loop_order.get_available_roots())
 
     assert loop_order.is_ready("N2", 1)
     assert loop_order.is_ready("K0", 5)
@@ -367,8 +389,7 @@ def test_is_ready_flattened():
 
     order = ["K1", "MK01", "N", "MK00"]
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune({"K", "M", "N"})
+    coord_math.prune(loop_order.get_available_roots())
 
     assert loop_order.is_ready("MK00", 3)
     assert loop_order.is_ready("MK01", 1)
@@ -382,8 +403,7 @@ def test_is_ready_conv():
 
     order = ["W", "Q"]
     loop_order.add(order, coord_math, partitioning)
-    # TODO: Use loop order function for this
-    coord_math.prune(set(order))
+    coord_math.prune(loop_order.get_available_roots())
 
     assert loop_order.is_ready("Q", 1)
     assert loop_order.is_ready("S", 1)

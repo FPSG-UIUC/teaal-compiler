@@ -353,6 +353,11 @@ class Partitioning:
                 if isinstance(n, FlattenNode):
                     self.graph.nodes[node]["is_flattened"] = True
                     return True
+                elif isinstance(n, RankNode):
+                    preds.append(n.get_rank())
+                else:
+                    raise ValueError(
+                        "Unknown partitioning node type " + str(type(n.__name__)))  # pragma: no cover
 
         self.graph.nodes[node]["is_flattened"] = False
         return False

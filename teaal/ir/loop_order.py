@@ -28,7 +28,7 @@ from itertools import chain
 
 from lark.tree import Tree
 from sympy import Basic, Symbol
-from typing import Any, cast, Iterable, List, Optional, Tuple
+from typing import Any, cast, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.equation import Equation
@@ -95,6 +95,25 @@ class LoopOrder:
 
         order = list(chain.from_iterable(expanded))
         tensor.swizzle(order)
+
+    def get_available_roots(self) -> Set[str]:
+        """
+        Get the root names for ranks actually available for index math
+        """
+        if self.partitioning is None or self.ranks is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add()")
+
+        def trans_names(r):
+            ranks = self.partitioning.get_available(r)
+            return {self.partitioning.get_root_name(
+                rank) for rank in ranks if not self.partitioning.is_flattened(rank)}
+
+        names = [trans_names(rank) for rank in self.ranks]
+        if names:
+            return set.union(*names)
+
+        return set()
 
     def get_iter_ranks(self, rank: str) -> Tuple[str, ...]:
         """
