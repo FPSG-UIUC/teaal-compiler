@@ -193,10 +193,6 @@ class FlowGraph:
             part_node = PartNode(root, srcs)
             dsts = part.partition_names(srcs, False)
 
-            # TODO: Why is this needed...
-            part_ranks = part.partition_rank(srcs)
-            assert part_ranks is not None
-
             # Add the edge from the source ranks to the PartNode
             for src in srcs:
                 self.graph.add_edge(RankNode(root, src), part_node)
@@ -231,9 +227,9 @@ class FlowGraph:
                 continue
 
             rank = rank.upper()
-            # TODO: Why is this needed...
-            part_ranks = part.partition_rank((rank,))
-            if part_ranks and part_ranks in part.get_dyn_parts():
+            # part_ranks = part.partition_rank((rank,))
+            # if part_ranks and part_ranks in part.get_dyn_parts():
+            if (rank,) in part.get_dyn_parts():
                 self.__connect_dyn_part(tensor, rank, flatten_info)
 
         rank, tensors = iter_graph.peek_concord()
