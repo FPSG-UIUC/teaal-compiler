@@ -544,13 +544,11 @@ class Partitioning:
 
                 flatten_node = FlattenNode(part_ranks)
                 edge = (flatten_node, RankNode(flattened_rank))
-                self.graph.add_edge(
-                    *edge, part=parts[0], part_ranks=part_ranks)
+                self.graph.add_edge(*edge, part=parts[0])
 
                 for part_rank in part_ranks:
                     edge = (RankNode(part_rank), flatten_node)
-                    self.graph.add_edge(
-                        *edge, part=parts[0], part_ranks=part_ranks)
+                    self.graph.add_edge(*edge, part=parts[0])
 
                 ranks.add(flattened_rank)
 
@@ -583,9 +581,7 @@ class Partitioning:
                     self.__add_or_update_priority(rank, j)
 
                     edge = (source_node, RankNode(rank))
-                    # TODO: Do we need this part_ranks?
-                    self.graph.add_edge(
-                        *edge, part=part, part_ranks=part_ranks)
+                    self.graph.add_edge(*edge, part=part)
 
                     continue
 
@@ -598,8 +594,7 @@ class Partitioning:
                     self.__add_or_update_priority(int_rank, j)
 
                     edge = (source_node, RankNode(int_rank))
-                    self.graph.add_edge(
-                        *edge, part=parts[i - 1], part_ranks=part_ranks)
+                    self.graph.add_edge(*edge, part=parts[i - 1])
 
                     source_node = RankNode(int_rank)
 
@@ -607,8 +602,7 @@ class Partitioning:
                 self.__add_or_update_priority(rank, j)
 
                 edge = (source_node, RankNode(rank))
-                self.graph.add_edge(
-                    *edge, part=part, part_ranks=part_ranks)
+                self.graph.add_edge(*edge, part=part)
 
             # Add the bottom rank if needed
             if parts:
@@ -616,8 +610,7 @@ class Partitioning:
                 self.__add_or_update_priority(rank, 0)
 
                 edge = (source_node, RankNode(rank))
-                self.graph.add_edge(
-                    *edge, part=parts[-1], part_ranks=part_ranks)
+                self.graph.add_edge(*edge, part=parts[-1])
 
     def __check_flatten(self, part_ranks: Tuple[str, ...], all_parts: Dict[Tuple[str, ...],
                         List[Tree]], all_ranks: Iterable[str]) -> None:
