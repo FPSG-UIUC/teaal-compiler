@@ -1,5 +1,6 @@
 import pytest
 
+from teaal.hifiber import *
 from teaal.ir.tensor import Tensor
 from teaal.trans.utils import TransUtils
 
@@ -59,3 +60,9 @@ def test_curr_tmp():
     tmp = utils.next_tmp()
 
     assert utils.curr_tmp() == tmp
+
+def test_sub_hifiber():
+    expr = EBinOp(EVar("a"), OAdd(), EBinOp(EVar("b"), OMul(), EVar("c")))
+    assert TransUtils.sub_hifiber(expr, EVar("b"), EVar("d")).gen() == "a + d * c"
+    assert TransUtils.sub_hifiber(expr, OMul(), ODiv()).gen() == "a + b / c"
+    assert TransUtils.sub_hifiber(SExpr(expr), OMul(), ODiv()).gen(0) == "a + b / c"
