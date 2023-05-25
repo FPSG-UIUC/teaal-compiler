@@ -144,7 +144,7 @@ class CoordMath:
         # Prune unnecessary translations
         for ind, exprs in self.all_exprs.items():
             for expr in exprs:
-                if len(expr.atoms(Symbol) - avail) == 0:
+                if not (expr.atoms(Symbol) - avail):
                     self.trans[ind] = expr
 
     def __key(self) -> Iterable[Any]:

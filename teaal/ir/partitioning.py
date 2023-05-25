@@ -404,7 +404,7 @@ class Partitioning:
         """
         Get the name of the corresponding partitioned rank, should one exist
         """
-        if len(ranks) > 1 or self.is_flattened(ranks[0]):
+        if len(ranks) > 1:
             if ranks in self.all_parts:
                 return ranks
             return None
