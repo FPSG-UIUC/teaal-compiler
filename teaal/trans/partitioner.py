@@ -284,6 +284,8 @@ class Partitioner:
     def __build_halo(self, rank: str, part_rank: str) -> Expression:
         """
         Build halo expression
+
+        TODO: fix compute and support pre_halo
         """
         sexpr = self.program.get_coord_math().get_eqn_exprs()[
             Symbol(rank.lower())]
@@ -338,7 +340,13 @@ class Partitioner:
         """
         args: List[Argument] = [AJust(size)]
         if rank != part_rank:
-            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+            # TODO: Add pre_halo
+            args.append(
+                AParam(
+                    "post_halo",
+                    self.__build_halo(
+                        rank,
+                        part_rank)))
 
         curr_tmp = self.trans_utils.curr_tmp()
         part_call = EMethod(EVar(curr_tmp), "splitEqual", args)
@@ -358,7 +366,13 @@ class Partitioner:
             self.program.get_equation().get_tensor(leader).fiber_name())
         args: List[Argument] = [AJust(fiber)]
         if rank != part_rank:
-            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+            # TODO: Add pre_halo
+            args.append(
+                AParam(
+                    "post_halo",
+                    self.__build_halo(
+                        rank,
+                        part_rank)))
 
         curr_tmp = self.trans_utils.curr_tmp()
         part_call = EMethod(EVar(curr_tmp), "splitNonUniform", args)
@@ -377,11 +391,30 @@ class Partitioner:
         """
         # Build the depth and the arguments
         args: List[Argument] = []
+
+        # TODO: Maybe move to a helper function
+        # part_sym = Symbol(part_rank.lower())
+        # exprs = [expr for expr in self.program.get_coord_math().get_all_exprs(rank.lower()) if part_sym in expr]
+
+        # assert len(exprs) == 1
+        # trans = exprs[0]
+
+        # for atom in trans.atoms(Symbol) - {Symbol(part_rank.lower())}:
+        #     trans = trans.subs(atom, 0)
+
+        # step = CoordAccess.build_expr(trans)
+
         args.append(AJust(step))
         args.append(AParam("depth", EInt(depth)))
 
         if rank != part_rank:
-            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+            # TODO: Add pre_halo
+            args.append(
+                AParam(
+                    "post_halo",
+                    self.__build_halo(
+                        rank,
+                        part_rank)))
 
         # Build the call to splitUniform()
         curr_tmp = self.trans_utils.curr_tmp()

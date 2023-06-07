@@ -366,7 +366,7 @@ def test_hifiber_conv():
 
     hifiber = "O_Q1Q0 = Tensor(rank_ids=[\"Q1\", \"Q0\"])\n" + \
         "tmp0 = I_W\n" + \
-        "tmp1 = tmp0.splitUniform(10, depth=0, halo=-1 + S)\n" + \
+        "tmp1 = tmp0.splitUniform(10, depth=0, post_halo=-1 + S)\n" + \
         "I_Q1W0 = tmp1\n" + \
         "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])\n" + \
         "o_q1 = O_Q1Q0.getRoot()\n" + \

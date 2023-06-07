@@ -1,8 +1,25 @@
 einsum:
-    declaration:
-        Z: [M]
-    expressions:
-        - Z[m] = a
+  declaration:
+    A: [K, M]
+    B: [K, N]
+    Z: [M, N]
+  expressions:
+    - Z[m, n] = A[k, m] * B[k, n]
+mapping:
+  rank-order:
+    A: [K, M]
+    B: [K, N]
+    Z: [M, N]
+  partitioning:
+    Z:
+      K:
+        - uniform_shape(128)
+      (K0, M):
+        - flatten()
+      K0M:
+        - uniform_occupancy(A.16384)
+  loop-order:
+    Z: [K1, K0M1, K0M0, N]
 # einsum:
 #     declaration:
 #         # Graph

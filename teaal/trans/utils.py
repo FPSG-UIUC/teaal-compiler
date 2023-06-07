@@ -31,6 +31,7 @@ from typing import Any
 from teaal.hifiber import *
 from teaal.ir.tensor import Tensor
 
+
 class TransUtils:
     """
     Different utilities for generating HiFiber programs

@@ -159,7 +159,7 @@ def test_nway_shape_conv():
                 W: [follow(Q)]
     """
     hifiber = "tmp0 = I_W\n" + \
-        "tmp1 = tmp0.splitUniform((Q - 1) // 6 + 1, depth=0, halo=-1 + S)\n" + \
+        "tmp1 = tmp0.splitUniform((Q - 1) // 6 + 1, depth=0, post_halo=-1 + S)\n" + \
         "tmp2 = tmp1.splitUniform((Q - 1) // 3 + 1, depth=0)\n" + \
         "I_Q2Q1W0 = tmp2\n" + \
         "I_Q2Q1W0.setRankIds(rank_ids=[\"Q2\", \"Q1\", \"W0\"])"
@@ -243,7 +243,7 @@ def test_uniform_occupancy_conv():
                 W: [follow(Q)]
     """
     hifiber = "tmp0 = I_W\n" + \
-        "tmp1 = tmp0.splitEqual(6, halo=-1 + S)\n" + \
+        "tmp1 = tmp0.splitEqual(6, post_halo=-1 + S)\n" + \
         "I_Q1W0 = tmp1\n" + \
         "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
@@ -259,7 +259,7 @@ def test_uniform_occupancy_follower_conv():
                 W: [follow(Q)]
     """
     hifiber = "tmp0 = J_W\n" + \
-        "tmp1 = tmp0.splitNonUniform(i_q1, halo=-1 + S)\n" + \
+        "tmp1 = tmp0.splitNonUniform(i_q1, post_halo=-1 + S)\n" + \
         "J_Q1W0 = tmp1\n" + \
         "J_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
@@ -304,7 +304,7 @@ def test_uniform_shape_conv():
                 W: [follow(Q)]
     """
     hifiber = "tmp0 = I_W\n" + \
-        "tmp1 = tmp0.splitUniform(6, depth=0, halo=-1 + S)\n" + \
+        "tmp1 = tmp0.splitUniform(6, depth=0, post_halo=-1 + S)\n" + \
         "I_Q1W0 = tmp1\n" + \
         "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
 
