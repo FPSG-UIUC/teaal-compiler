@@ -1,70 +1,11 @@
 einsum:
   declaration:
-    A: [K, M]
-    B: [K, N]
-    Z: [M, N]
+    A: [K]
+    Z: [M]
   expressions:
-    - Z[m, n] = A[k, m] * B[k, n]
+    - Z[m] = A[2 * m]
 mapping:
-  rank-order:
-    A: [K, M]
-    B: [K, N]
-    Z: [M, N]
-  partitioning:
-    Z:
-      K:
-        - uniform_shape(128)
-      (K0, M):
-        - flatten()
-      K0M:
-        - uniform_occupancy(A.16384)
-  loop-order:
-    Z: [K1, K0M1, K0M0, N]
-# einsum:
-#     declaration:
-#         # Graph
-#         G: [D, S]
-#         # Previous iteration
-#         PP: [D]
-#         # Note that depending on the algorithm, SP may be a view into P
-#         # (the full vector of properties) or A (only the active vectors)
-#         SP: [S]
-#         # Phase outputs
-#         SO: [D, S]
-#         R: [D]
-#         P: [D]
-#         M: [D]
-#         A: [D]
-#     expressions:
-#         # Process Edge
-#         - SO[d, s] = G[d, s] * SP[s]
-#         - R[d] = PP[d] * SO[d, s]
-#         # Apply (update full vector of properties)
-#         - P[d] = R[d] + PP[d]
-#         # Create a mask of which ones were actually changed
-#         - M[d] = P[d] + n * PP[d]
-#         # Apply (create a new active vector)
-#         - A[d] = take(M[d], P[d], 1)
-# mapping:
-#     rank-order:
-#         G: [S, D]
-#     partitioning:
-#         # Remove all of the partitioning for parallelism for efficiency reasons
-#         SO:
-#             D: [uniform_shape(N)]
-#             S: [uniform_shape(N)]
-#         R:
-#             D: [uniform_shape(N)]
-#             S: [uniform_shape(N)]
-#         P:
-#             D: [uniform_shape(N)]
-#         M:
-#             D: [uniform_shape(N)]
-#         A:
-#             D: [uniform_shape(N)]
-#     loop-order:
-#         SO: [D1, S1, S0, D0]
-#         R: [D1, S1, S0, D0]
-#         P: [D1, D0]
-#         M: [D1, D0]
-#         A: [D1, D0]
+    partitioning:
+        Z:
+            M: [uniform_shape(10)]
+            K: [follow(M)]

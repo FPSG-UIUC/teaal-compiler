@@ -1,7 +1,7 @@
 from lark.lexer import Token
 from lark.tree import Tree
 import pytest
-from sympy import symbols
+from sympy import symbols, Symbol
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
@@ -130,6 +130,44 @@ def test_get_eqn_exprs():
     q, s, w = symbols("q s w")
 
     assert coord_math.get_eqn_exprs() == {w: q + s}
+
+
+def test_get_cond_expr_no_match():
+    coord_math = CoordMath()
+    tensor = Tensor("I", ["W"])
+    ranks = Tree("ranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, ranks)
+
+    with pytest.raises(ValueError) as excinfo:
+        coord_math.get_cond_expr("w", lambda _: False)
+    assert str(excinfo.value) == "No matching expression for index variable w"
+
+
+def test_get_cond_expr_too_many_matches():
+    coord_math = CoordMath()
+    tensor = Tensor("I", ["W"])
+    ranks = Tree("ranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, ranks)
+
+    with pytest.raises(ValueError) as excinfo:
+        coord_math.get_cond_expr("w", lambda _: True)
+    assert str(
+        excinfo.value) == "Multiple expressions match for index variable w: {q + s, w}" or str(
+        excinfo.value) == "Multiple expressions match for index variable w: {w, q + s}"
+
+
+def test_get_cond_expr():
+    coord_math = CoordMath()
+    tensor = Tensor("I", ["W"])
+    ranks = Tree("ranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, ranks)
+
+    q, s, w = symbols("q s w")
+
+    assert coord_math.get_cond_expr(
+        "w", lambda expr: q in expr.atoms(Symbol)) == q + s
+    assert coord_math.get_cond_expr(
+        "q", lambda expr: w in expr.atoms(Symbol)) == w - s
 
 
 def test_get_trans_no_prune():

@@ -40,6 +40,7 @@ def build_partitioner_conv(expr, parts):
             F: [S]
             I: [W]
             J: [W]
+            K: [V]
             O: [Q]
         expressions:
             - """ + expr + """
@@ -73,25 +74,30 @@ def build_partitioner_copy(parts):
     return program, partitioner
 
 
+def build_partitioner_math_no_halo(parts):
+    yaml = """
+    einsum:
+      declaration:
+        A: [K]
+        Z: [M]
+      expressions:
+        - Z[m] = A[2 * m]
+    mapping:
+        partitioning:
+            Z:
+    """ + parts
+
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
+
+    partitioner = Partitioner(program, TransUtils())
+    return program, partitioner
+
+
 def test_no_partitioning():
     tensor = Tensor("B", ["K", "N"])
     _, partitioner = build_partitioner("")
     assert partitioner.partition(tensor, ("N",)).gen(0) == ""
-
-
-def test_bad_halo():
-    tensor = Tensor("I", ["W"])
-    expr = "O[q] = I[2 * q + s] * F[s]"
-    spec = """
-                Q: [uniform_shape(6)]
-                W: [follow(Q)]
-    """
-    _, partitioner = build_partitioner_conv(expr, spec)
-
-    with pytest.raises(ValueError) as excinfo:
-        partitioner.partition(tensor, ("W",))
-
-    assert str(excinfo.value) == "Non-constant halo partitioning rank W"
 
 
 def test_flatten_unswizzled():
@@ -310,6 +316,37 @@ def test_uniform_shape_conv():
 
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+
+def test_uniform_shape_conv_double():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = I[q + s + 2 * v] * F[s] * K[v]"
+    spec = """
+                Q: [uniform_shape(6)]
+                W: [follow(Q)]
+    """
+    hifiber = "tmp0 = I_W\n" + \
+        "tmp1 = tmp0.splitUniform(6, depth=0, post_halo=-3 + S + 2 * V)\n" + \
+        "I_Q1W0 = tmp1\n" + \
+        "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+
+def test_uniform_shape_math_no_halo():
+    tensor = Tensor("A", ["K"])
+    spec = """
+                M: [uniform_shape(10)]
+                K: [follow(M)]
+    """
+    hifiber = "tmp0 = A_K\n" + \
+        "tmp1 = tmp0.splitUniform(2 * 10, depth=0)\n" + \
+        "A_M1K0 = tmp1\n" + \
+        "A_M1K0.setRankIds(rank_ids=[\"M1\", \"K0\"])"
+
+    _, partitioner = build_partitioner_math_no_halo(spec)
+    assert partitioner.partition(tensor, ("K",)).gen(depth=0) == hifiber
 
 
 def test_mixed():

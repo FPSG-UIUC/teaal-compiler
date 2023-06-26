@@ -29,7 +29,7 @@ from functools import reduce
 from lark.lexer import Token
 from lark.tree import Tree
 from sympy import Basic, solve, Symbol
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -118,8 +118,33 @@ class CoordMath:
         """
         Get the expression corresponding to the given coordinate as it was
         declared in the Einsum
+
+        TODO: Delete this function
         """
         return self.eqn_exprs
+
+    def get_cond_expr(self, ind: str, cond: Callable[[Basic], bool]) -> Basic:
+        """
+        Get an expression to translate the given index variable, provided it
+        meets the condition
+
+        Note: Exactly one expression must meet this condition
+        """
+        exprs = {
+            expr for expr in self.get_all_exprs(
+                ind.lower()) if cond(expr)}
+
+        if not exprs:
+            raise ValueError(
+                "No matching expression for index variable " + ind)
+        if len(exprs) > 1:
+            raise ValueError(
+                "Multiple expressions match for index variable " +
+                ind +
+                ": " +
+                str(exprs))
+
+        return next(iter(exprs))
 
     def get_trans(self, ind: Union[str, Symbol]) -> Basic:
         """
