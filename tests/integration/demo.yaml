@@ -7,5 +7,5 @@ einsum:
 mapping:
     partitioning:
         Z:
-            M: [uniform_shape(10)]
-            K: [follow(M)]
+            K: [uniform_shape(20), uniform_shape(10)]
+            M: [follow(K)]
