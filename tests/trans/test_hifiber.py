@@ -343,6 +343,53 @@ def test_hifiber_dyn_part():
     assert str(HiFiber(einsum, mapping)) == hifiber
 
 
+def test_hifiber_index_math_no_halo():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K]
+        Z: [M]
+      expressions:
+        - Z[m] = A[2 * m]
+    mapping:
+        partitioning:
+            Z:
+                M: [uniform_shape(10), uniform_shape(5)]
+                K: [follow(M)]
+    """
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+
+    hifiber = "Z_M2M1M0 = Tensor(rank_ids=[\"M2\", \"M1\", \"M0\"])\n" + \
+        "tmp0 = A_K\n" + \
+        "tmp1 = tmp0.splitUniform(2 * 10, depth=0)\n" + \
+        "tmp2 = tmp1.splitUniform(2 * 5, depth=1)\n" + \
+        "A_K2K1K0 = tmp2\n" + \
+        "A_K2K1K0.setRankIds(rank_ids=[\"K2\", \"K1\", \"K0\"])\n" + \
+        "z_m2 = Z_M2M1M0.getRoot()\n" + \
+        "a_k2 = A_K2K1K0.getRoot()\n" + \
+        "for m2, (z_m1, a_k1) in z_m2 << a_k2.project(trans_fn=lambda k2: 1 / 2 * k2).prune(trans_fn=lambda i, c, p: c % 1 == 0):\n" + \
+        "    inputs_m1 = Fiber.fromLazy(a_k1.project(trans_fn=lambda k1: 1 / 2 * k1).prune(trans_fn=lambda i, c, p: c % 1 == 0))\n" + \
+        "    for m1_pos, (m1, (z_m0, a_k0)) in enumerate(z_m1 << a_k1.project(trans_fn=lambda k1: 1 / 2 * k1).prune(trans_fn=lambda i, c, p: c % 1 == 0)):\n" + \
+        "        if m1_pos == 0:\n" + \
+        "            m0_start = 0\n" + \
+        "        else:\n" + \
+        "            m0_start = m1\n" + \
+        "        if m1_pos + 1 < len(inputs_m1):\n" + \
+        "            m0_end = inputs_m1.getCoords()[m1_pos + 1]\n" + \
+        "        else:\n" + \
+        "            m0_end = M\n" + \
+        "        for m0, (z_ref, a_val) in z_m0 << a_k0.project(trans_fn=lambda k0: 1 / 2 * k0, interval=(m0_start, m0_end)).prune(trans_fn=lambda i, c, p: c % 1 == 0):\n" + \
+        "            z_ref += a_val\n" + \
+        "tmp3 = Z_M2M1M0\n" + \
+        "tmp4 = tmp3.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp4.setRankIds(rank_ids=[\"M\"])\n" + \
+        "Z_M = tmp4"
+
+    assert str(HiFiber(einsum, mapping)) == hifiber
+
+
 def test_hifiber_conv():
     yaml = """
     einsum:

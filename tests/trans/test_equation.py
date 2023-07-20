@@ -403,7 +403,6 @@ def test_make_iter_expr_output_only_partition():
     iter_expr = "a_i0.iterRangeShapeRef(i1, i1 + I0, 1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
-
 def test_make_iter_expr_conv():
     expr = "O[p, q] = I[p + q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, S, Q]")
@@ -437,7 +436,6 @@ def test_make_iter_expr_conv_frac():
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
-
 def test_make_iter_expr_conv_project_output():
     expr = "O[p, q] = I[p + q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, S, W]")
@@ -452,9 +450,9 @@ def test_make_iter_expr_conv_project_output():
 
 
 def test_make_iter_expr_conv_enum():
-    expr = "O[p, q] = I[q + s] * F[s]"
+    expr = "O[p, q] = I[2 * q + s] * F[s]"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hifiber = "enumerate(o_q1 << i_w1.project(trans_fn=lambda w1: w1))"
+    hifiber = "enumerate(o_q1 << i_w1.project(trans_fn=lambda w1: 1 / 2 * w1))"
 
     assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 

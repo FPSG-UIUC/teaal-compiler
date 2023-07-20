@@ -363,7 +363,8 @@ class Equation:
 
         # If this is the bottom rank, perform the full projection
         suffix = partitioning.partition_suffix(rank.upper())
-        if suffix == "" or suffix == "0":
+        bottom_rank = suffix == "" or suffix == "0"
+        if bottom_rank:
             for symbol in sexpr.atoms(Symbol):
                 new_rank = partitioning.partition_rank((str(symbol).upper(),))
                 if new_rank:
@@ -389,8 +390,9 @@ class Equation:
 
         project = EMethod(EVar(tensor.fiber_name()), "project", args)
 
-        # If there are no fractional coordinates, we are done
-        if not Equation.__frac_coords(sexpr):
+        # If there are no fractional coordinates or this is not the bottom
+        # rank, we are done
+        if not Equation.__frac_coords(sexpr) or not bottom_rank:
             return project
 
         # Otherwise, we need to prune out the fractional coordinates
