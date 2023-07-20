@@ -217,7 +217,7 @@ def make_conv_part(expr, loop_order):
 def test_eager_inputs_one_fiber():
     expr = "O[p, q] = I[q + s] * F[s]"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hifiber = "inputs_q1 = i_q1"
+    hifiber = "inputs_q1 = Fiber.fromLazy(i_w1.project(trans_fn=lambda w1: w1))"
 
     assert eqn.make_eager_inputs("Q1", ["I"]).gen(0) == hifiber
 
@@ -231,7 +231,7 @@ def test_eager_inputs_multiple_fibers():
                 W: [follow(Q)]
     """
     _, eqn = make_conv(expr, mapping)
-    hifiber = "inputs_q1 = Fiber.fromLazy(i_q1 & j_q1)"
+    hifiber = "inputs_q1 = Fiber.fromLazy(i_w1.project(trans_fn=lambda w1: w1) & j_w1.project(trans_fn=lambda w1: w1))"
 
     assert eqn.make_eager_inputs("Q1", ["I", "J"]).gen(0) == hifiber
 
@@ -454,7 +454,7 @@ def test_make_iter_expr_conv_project_output():
 def test_make_iter_expr_conv_enum():
     expr = "O[p, q] = I[q + s] * F[s]"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hifiber = "enumerate(o_q1 << i_q1)"
+    hifiber = "enumerate(o_q1 << i_w1.project(trans_fn=lambda w1: w1))"
 
     assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 

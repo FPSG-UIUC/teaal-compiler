@@ -157,10 +157,12 @@ class LoopOrder:
             raise ValueError(
                 "Unconfigured loop order. Make sure to first call add()")
 
-        # If this rank is partitioned and this is not the inner-most rank, no
-        # projecting should occur
+        # If this rank is partitioned and this is not the inner-most rank, we
+        # don't need the other indices in the index math
         if not self.__innermost_rank(rank):
-            return self.ranks[pos] == rank
+            return self.partitioning.partition_rank(
+                (self.ranks[pos],)) == self.partitioning.partition_rank(
+                (rank,))
 
         # Otherwise, check if we have all index variables available
         avail = [self.partitioning.get_root_name(lrank).lower()

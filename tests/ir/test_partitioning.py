@@ -19,7 +19,7 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children)            : val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -400,9 +400,8 @@ def test_get_final_rank_id_conv():
     """
     partitioning = build_partitioning_conv(all_parts)
 
-    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W") == "Q2"
-    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "Q2") == "Q2"
-    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W1I") == "Q1"
+    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W") == "W2"
+    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W1I") == "W1"
     assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W0") == "W0"
     assert partitioning.get_final_rank_id(Tensor("F", ["S"]), "S") == "S"
 
@@ -733,12 +732,11 @@ def test_partition_names_conv():
                 W: [follow(Q)]
     """
     partitioning = build_partitioning_conv(all_parts)
-    all_head = ["Q" + str(i + 1) for i in range(8)]
+    all_head = ["W" + str(i) for i in range(9)]
 
-    assert partitioning.partition_names(("W",), True) == ["W0"] + all_head
-    assert partitioning.partition_names(("W",), False) == ["W6I", "Q7", "Q8"]
-    assert partitioning.partition_names(("W3I",), False) == [
-        "W0"] + all_head[:3]
+    assert partitioning.partition_names(("W",), True) == all_head
+    assert partitioning.partition_names(("W",), False) == ["W6I", "W7", "W8"]
+    assert partitioning.partition_names(("W3I",), False) == all_head[:4]
 
 
 def test_partition_rank():
@@ -877,14 +875,35 @@ def test_partition_ranks_conv():
     ranks = ["W"]
 
     new_ranks = partitioning.partition_ranks(ranks, {("W",)}, True, False)
-    assert new_ranks == ["Q2", "Q1", "W0"]
+    assert new_ranks == ["W2", "W1", "W0"]
 
     new_ranks = partitioning.partition_ranks(ranks, {("W",)}, False, False)
-    assert new_ranks == ["Q2", "W1I"]
+    assert new_ranks == ["W2", "W1I"]
 
     new_ranks = partitioning.partition_ranks(
         new_ranks, {("W1I",)}, False, False)
-    assert new_ranks == ["Q2", "Q1", "W0"]
+    assert new_ranks == ["W2", "W1", "W0"]
+
+
+def test_partition_suffix():
+    all_parts = """
+                P: [uniform_shape(500)]
+                Q:
+                    - uniform_shape(500)
+                    - uniform_shape(250)
+                    - uniform_occupancy(A.100)
+                    - uniform_occupancy(A.50)
+                    - uniform_shape(10)
+                    - uniform_occupancy(A.6)
+                    - uniform_shape(4)
+                    - uniform_shape(2)
+                W: [follow(Q)]
+    """
+    partitioning = build_partitioning_conv(all_parts)
+
+    assert partitioning.partition_suffix("P") == ""
+    assert partitioning.partition_suffix("Q2") == "2"
+    assert partitioning.partition_suffix("W4") == "4"
 
 
 def test_swizzle_for_flattening():

@@ -410,6 +410,29 @@ def test_is_ready_conv():
     assert not loop_order.is_ready("W", 1)
 
 
+def test_is_ready_part_conv():
+    loop_order = build_loop_order_conv()
+    coord_math = build_coord_math_conv()
+    parts = """
+                Q: [uniform_shape(20)]
+                W: [follow(Q)]
+    """
+    partitioning = build_partitioning_conv(parts, coord_math)
+
+    order = ["Q1", "W0", "Q0"]
+    loop_order.add(order, coord_math, partitioning)
+    coord_math.prune(loop_order.get_available_roots())
+
+    assert loop_order.is_ready("Q1", 0)
+    assert loop_order.is_ready("W1", 0)
+
+    assert loop_order.is_ready("W0", 1)
+    assert not loop_order.is_ready("Q0", 1)
+
+    assert loop_order.is_ready("S", 2)
+    assert loop_order.is_ready("Q0", 2)
+
+
 def test_eq():
     loop_order1 = build_loop_order()
     loop_order2 = build_loop_order()

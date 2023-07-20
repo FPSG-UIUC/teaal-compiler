@@ -105,13 +105,8 @@ class Partitioning:
             if not preds:
                 continue
 
-            if len(preds) == 1:
-                parent = preds[0]
-            else:
-                pred_ranks = [pred.get_rank() for pred in preds]
-                parent = RankNode(
-                    Partitioning.__best_match(
-                        node.get_rank(), pred_ranks))
+            assert len(preds) == 1
+            parent = preds[0]
 
             if isinstance(parent, FlattenNode):
                 # Ranks involved in flattening do not need to be translated
@@ -242,7 +237,9 @@ class Partitioning:
 
         preds = [n.get_rank() for n in self.graph.predecessors(node)]
         while preds:
-            node = RankNode(Partitioning.__best_match(rank, preds))
+            assert len(preds) == 1
+            node = RankNode(preds[0])
+
             preds = []
             for n in self.graph.predecessors(node):
                 if isinstance(n, FlattenNode):
@@ -347,7 +344,8 @@ class Partitioning:
 
         preds = [n.get_rank() for n in self.graph.predecessors(node)]
         while preds:
-            node = RankNode(Partitioning.__best_match(rank, preds))
+            assert len(preds) == 1
+            node = RankNode(preds[0])
             preds = []
             for n in self.graph.predecessors(node):
                 if isinstance(n, FlattenNode):
@@ -442,6 +440,15 @@ class Partitioning:
 
         return tensor_ranks
 
+    def partition_suffix(self, rank: str) -> str:
+        """
+        Get the suffix of a partition (excluding the root name)
+
+        TODO: Use this everywhere necessary
+        """
+        root = self.get_root_name(rank)
+        return rank[len(root):]
+
     def swizzle_for_flattening(self, tensor_ranks: List[str]):
         """
         Swizzle the tensor ranks to allow for flattening
@@ -479,29 +486,6 @@ class Partitioning:
             self.graph.add_node(node, priority=priority)
         else:
             self.graph.nodes[node]["priority"] = priority
-
-    @staticmethod
-    def __best_match(rank: str, test_ranks: Iterable[str]) -> str:
-        """Find the best match for a rank given a list of options"""
-
-        def prefix_match_len(rank0: str, rank1: str) -> int:
-            """Find the number of characters that these two match for"""
-            for i in range(min(len(rank0), len(rank1))):
-                if rank0[i] != rank1[i]:
-                    return i
-            return min(len(rank0), len(rank1))
-
-        best = None
-        match_len = -float("inf")
-        for test_rank in test_ranks:
-            new_match_len = prefix_match_len(rank, test_rank)
-            if new_match_len > match_len:
-                best = test_rank
-                match_len = new_match_len
-
-        assert best is not None
-
-        return best
 
     def __build_part_graph(self, partitioning: Dict[Tree, List[Tree]]) -> None:
         """
@@ -576,13 +560,13 @@ class Partitioning:
             for i, part in enumerate(parts):
                 j = len(parts) - i
                 if Partitioning.__is_static(part):
-                    if leader not in self.orig_ranks:
+                    if source_name not in self.orig_ranks:
                         raise ValueError(
                             "Shape-based partitioning found on rank " +
                             source_name +
                             " after flattening")
 
-                    rank = leader + str(j)
+                    rank = source_name + str(j)
                     self.__add_or_update_priority(rank, j)
 
                     edge = (source_node, RankNode(rank))
@@ -603,7 +587,7 @@ class Partitioning:
 
                     source_node = RankNode(int_rank)
 
-                rank = leader + str(j)
+                rank = source_name + str(j)
                 self.__add_or_update_priority(rank, j)
 
                 edge = (source_node, RankNode(rank))

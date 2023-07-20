@@ -367,13 +367,13 @@ def test_hifiber_conv():
     hifiber = "O_Q1Q0 = Tensor(rank_ids=[\"Q1\", \"Q0\"])\n" + \
         "tmp0 = I_W\n" + \
         "tmp1 = tmp0.splitUniform(10, depth=0, post_halo=-1 + S)\n" + \
-        "I_Q1W0 = tmp1\n" + \
-        "I_Q1W0.setRankIds(rank_ids=[\"Q1\", \"W0\"])\n" + \
+        "I_W1W0 = tmp1\n" + \
+        "I_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])\n" + \
         "o_q1 = O_Q1Q0.getRoot()\n" + \
         "f_s = F_S.getRoot()\n" + \
-        "i_q1 = I_Q1W0.getRoot()\n" + \
-        "inputs_q1 = i_q1\n" + \
-        "for q1_pos, (q1, (o_q0, i_w0)) in enumerate(o_q1 << i_q1):\n" + \
+        "i_w1 = I_W1W0.getRoot()\n" + \
+        "inputs_q1 = Fiber.fromLazy(i_w1.project(trans_fn=lambda w1: w1))\n" + \
+        "for q1_pos, (q1, (o_q0, i_w0)) in enumerate(o_q1 << i_w1.project(trans_fn=lambda w1: w1)):\n" + \
         "    if q1_pos == 0:\n" + \
         "        q0_start = 0\n" + \
         "    else:\n" + \
