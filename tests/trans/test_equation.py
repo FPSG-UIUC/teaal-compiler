@@ -403,6 +403,7 @@ def test_make_iter_expr_output_only_partition():
     iter_expr = "a_i0.iterRangeShapeRef(i1, i1 + I0, 1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
+
 def test_make_iter_expr_conv():
     expr = "O[p, q] = I[p + q + s] * F[s]"
     graph, eqn = make_conv(expr, "[P, S, Q]")
@@ -435,6 +436,7 @@ def test_make_iter_expr_conv_frac():
     iter_expr = "o_q << i_w.project(trans_fn=lambda w: 1 / 2 * w + -1 / 2 * s, interval=(0, Q)).prune(trans_fn=lambda i, c, p: c % 1 == 0)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
 
 def test_make_iter_expr_conv_project_output():
     expr = "O[p, q] = I[p + q + s] * F[s]"

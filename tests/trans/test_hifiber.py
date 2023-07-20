@@ -369,9 +369,9 @@ def test_hifiber_index_math_no_halo():
         "A_K2K1K0.setRankIds(rank_ids=[\"K2\", \"K1\", \"K0\"])\n" + \
         "z_m2 = Z_M2M1M0.getRoot()\n" + \
         "a_k2 = A_K2K1K0.getRoot()\n" + \
-        "for m2, (z_m1, a_k1) in z_m2 << a_k2.project(trans_fn=lambda k2: 1 / 2 * k2).prune(trans_fn=lambda i, c, p: c % 1 == 0):\n" + \
-        "    inputs_m1 = Fiber.fromLazy(a_k1.project(trans_fn=lambda k1: 1 / 2 * k1).prune(trans_fn=lambda i, c, p: c % 1 == 0))\n" + \
-        "    for m1_pos, (m1, (z_m0, a_k0)) in enumerate(z_m1 << a_k1.project(trans_fn=lambda k1: 1 / 2 * k1).prune(trans_fn=lambda i, c, p: c % 1 == 0)):\n" + \
+        "for m2, (z_m1, a_k1) in z_m2 << a_k2.project(trans_fn=lambda k2: 1 / 2 * k2):\n" + \
+        "    inputs_m1 = Fiber.fromLazy(a_k1.project(trans_fn=lambda k1: 1 / 2 * k1))\n" + \
+        "    for m1_pos, (m1, (z_m0, a_k0)) in enumerate(z_m1 << a_k1.project(trans_fn=lambda k1: 1 / 2 * k1)):\n" + \
         "        if m1_pos == 0:\n" + \
         "            m0_start = 0\n" + \
         "        else:\n" + \

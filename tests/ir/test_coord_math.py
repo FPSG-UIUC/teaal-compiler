@@ -121,17 +121,6 @@ def test_get_all_exprs():
     assert coord_math.get_all_exprs("mk") == [mk]
 
 
-def test_get_eqn_exprs():
-    coord_math = CoordMath()
-    tensor = Tensor("I", ["W"])
-    ranks = Tree("ranks", [make_iplus(["q", "s"])])
-    coord_math.add(tensor, ranks)
-
-    q, s, w = symbols("q s w")
-
-    assert coord_math.get_eqn_exprs() == {w: q + s}
-
-
 def test_get_cond_expr_no_match():
     coord_math = CoordMath()
     tensor = Tensor("I", ["W"])

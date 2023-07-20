@@ -114,15 +114,6 @@ class CoordMath:
         # translation
         return [sym]
 
-    def get_eqn_exprs(self) -> Dict[Symbol, Basic]:
-        """
-        Get the expression corresponding to the given coordinate as it was
-        declared in the Einsum
-
-        TODO: Delete this function
-        """
-        return self.eqn_exprs
-
     def get_cond_expr(self, ind: str, cond: Callable[[Basic], bool]) -> Basic:
         """
         Get an expression to translate the given index variable, provided it

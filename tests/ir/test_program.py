@@ -303,14 +303,13 @@ def test_get_loop_order():
 
     loop_order = LoopOrder(equation)
     ranks = ["K", "N", "M"]
-    eqn_exprs = program.get_coord_math().get_eqn_exprs()
     loop_order.add(
         ranks,
         program.get_coord_math(),
         Partitioning(
             {},
             ranks,
-            eqn_exprs))
+            program.get_coord_math()))
 
     assert program.get_loop_order() == loop_order
 
@@ -327,10 +326,9 @@ def test_get_partitioning_unconfigured():
 def test_get_partitioning():
     program = create_default()
     program.add_einsum(0)
-    eqn_exprs = program.get_coord_math().get_eqn_exprs()
 
     assert program.get_partitioning() == Partitioning(
-        {}, ["M", "N", "K"], eqn_exprs)
+        {}, ["M", "N", "K"], program.get_coord_math())
 
 
 def test_get_spacetime_unconfigured():
@@ -351,7 +349,6 @@ def test_get_spacetime_unspecified():
 def test_get_spacetime_specified():
     program = create_displayed("[K.pos, M.coord]")
     program.add_einsum(0)
-    eqn_exprs = program.get_coord_math().get_eqn_exprs()
 
     yaml = {
         "space": [
@@ -360,9 +357,9 @@ def test_get_spacetime_specified():
             SpaceTimeParser.parse("K.pos"),
             SpaceTimeParser.parse("M.coord")]}
     spacetime = SpaceTime(
-        yaml, Partitioning(
-            {}, [
-                "M", "N", "K"], eqn_exprs), program.get_equation().get_output().root_name())
+        yaml,
+        Partitioning({}, ["M", "N", "K"], program.get_coord_math()),
+        program.get_equation().get_output().root_name())
     assert program.get_spacetime() == spacetime
 
 
