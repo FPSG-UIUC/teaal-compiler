@@ -281,11 +281,9 @@ class Partitioner:
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, flat_call)
 
-    def __build_halo(self, rank: str, part_rank: str) -> Optional[Expression]:
+    def __build_halo(self, rank: str, part_rank: str) -> Tuple[Optional[Expression], Optional[Expression]]:
         """
         Build halo expression
-
-        TODO: fix compute and support pre_halo
         """
         # TODO: Pass trans as a parameter
         trans = self.program.get_coord_math().get_cond_expr(
@@ -293,9 +291,8 @@ class Partitioner:
         trans = trans.subs(Symbol(part_rank.lower()), 0)
 
         if trans == 0:
-            return None
+            return None, None
 
-        # TODO: Add prehalo
         if trans.func == Add:
             terms = list(trans.args)
         else:
@@ -303,6 +300,7 @@ class Partitioner:
 
         # Separate terms that will go in the prehalo and terms that will go
         # in the post_halo
+        sym_pre_halo: Expr = Number(0)
         sym_post_halo: Expr = Number(0)
         for term in terms:
             if term.func == Mul:
@@ -314,17 +312,23 @@ class Partitioner:
                     sym_post_halo = sym_post_halo + term
 
                 else:
-                    # TODO: add to prehalo
-                    pass
+                    sym_pre_halo = sym_pre_halo + -1 * cast(Expr, term)
 
             else:
                 sym_post_halo = sym_post_halo + term
 
-        post_halo = sym_post_halo
-        for symbol in sym_post_halo.atoms(Symbol):
-            post_halo = post_halo.subs(symbol, Symbol(str(symbol).upper()) - 1)
+        # If there is a halo, substitute in the halo rank shapes
+        def subs_halo_shapes(sym_halo: Expr) -> Optional[Expression]:
+            if not sym_halo:
+                return None
 
-        return CoordAccess.build_expr(post_halo)
+            halo = sym_halo
+            for symbol in sym_halo.atoms(Symbol):
+                halo = halo.subs(symbol, Symbol(str(symbol).upper()) - 1)
+
+            return CoordAccess.build_expr(halo)
+
+        return subs_halo_shapes(sym_pre_halo), subs_halo_shapes(sym_post_halo)
 
     def __nway_shape(
             self,
@@ -356,8 +360,10 @@ class Partitioner:
         Build call to splitEqual
         """
         args: List[Argument] = [AJust(size)]
-        # TODO: Add pre_halo
-        post_halo = self.__build_halo(rank, part_rank)
+        pre_halo, post_halo = self.__build_halo(rank, part_rank)
+        if pre_halo:
+            args.append(AParam("pre_halo", pre_halo))
+
         if post_halo:
             args.append(AParam("post_halo", post_halo))
 
@@ -378,7 +384,10 @@ class Partitioner:
         fiber = EVar(
             self.program.get_equation().get_tensor(leader).fiber_name())
         args: List[Argument] = [AJust(fiber)]
-        post_halo = self.__build_halo(rank, part_rank)
+        pre_halo, post_halo = self.__build_halo(rank, part_rank)
+        if pre_halo:
+            args.append(AParam("pre_halo", pre_halo))
+
         if post_halo:
             args.append(AParam("post_halo", post_halo))
 
@@ -412,8 +421,10 @@ class Partitioner:
         args.append(AJust(rank_step))
         args.append(AParam("depth", EInt(depth)))
 
-        # TODO: Add pre_halo
-        post_halo = self.__build_halo(rank, part_rank)
+        # Add the halos
+        pre_halo, post_halo = self.__build_halo(rank, part_rank)
+        if pre_halo:
+            args.append(AParam("pre_halo", pre_halo))
         if post_halo:
             args.append(AParam("post_halo", post_halo))
 

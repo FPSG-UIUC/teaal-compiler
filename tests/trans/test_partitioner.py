@@ -240,8 +240,23 @@ def test_uniform_occupancy_multiple():
     tensor.from_fiber()
     assert partitioner.partition(tensor, ("K1I",)).gen(depth=0) == hifiber
 
+def test_uniform_occupancy_pre_halo():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = I[q + -1 * s] * F[s]"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
+    """
+    hifiber = "tmp0 = I_W\n" + \
+        "tmp1 = tmp0.splitEqual(6, pre_halo=-1 + S)\n" + \
+        "I_W1W0 = tmp1\n" + \
+        "I_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
 
-def test_uniform_occupancy_conv():
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+
+def test_uniform_occupancy_post_halo():
     tensor = Tensor("I", ["W"])
     expr = "O[q] = I[q + s] * F[s]"
     spec = """
@@ -257,7 +272,42 @@ def test_uniform_occupancy_conv():
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
-def test_uniform_occupancy_follower_conv():
+
+def test_uniform_occupancy_pre_post_halo():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = I[q + s + -2 * v] * F[s] * K[v]"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
+    """
+    hifiber = "tmp0 = I_W\n" + \
+        "tmp1 = tmp0.splitEqual(6, pre_halo=-2 + 2 * V, post_halo=-1 + S)\n" + \
+        "I_W1W0 = tmp1\n" + \
+        "I_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+
+def test_uniform_occupancy_follower_pre_halo():
+    tensor = Tensor("J", ["W"])
+    expr = "O[q] = I[q + -1 * s] * J[q + -1 * s] * F[s]"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
+    """
+    # TODO: What if the coordinates need to be translated?
+    hifiber = "tmp0 = J_W\n" + \
+        "tmp1 = tmp0.splitNonUniform(i_w1, pre_halo=-1 + S)\n" + \
+        "J_W1W0 = tmp1\n" + \
+        "J_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
+
+    program, partitioner = build_partitioner_conv(expr, spec)
+    program.apply_partitioning(program.get_equation().get_tensor("I"), ("W",))
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+
+def test_uniform_occupancy_follower_post_halo():
     tensor = Tensor("J", ["W"])
     expr = "O[q] = I[q + s] * J[q + s] * F[s]"
     spec = """
@@ -267,6 +317,24 @@ def test_uniform_occupancy_follower_conv():
     # TODO: What if the coordinates need to be translated?
     hifiber = "tmp0 = J_W\n" + \
         "tmp1 = tmp0.splitNonUniform(i_w1, post_halo=-1 + S)\n" + \
+        "J_W1W0 = tmp1\n" + \
+        "J_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
+
+    program, partitioner = build_partitioner_conv(expr, spec)
+    program.apply_partitioning(program.get_equation().get_tensor("I"), ("W",))
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+
+def test_uniform_occupancy_follower_pre_post_halo():
+    tensor = Tensor("J", ["W"])
+    expr = "O[q] = I[q + s + -2 * v] * J[q + s + -2 * v] * F[s] * K[v]"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
+    """
+    # TODO: What if the coordinates need to be translated?
+    hifiber = "tmp0 = J_W\n" + \
+        "tmp1 = tmp0.splitNonUniform(i_w1, pre_halo=-2 + 2 * V, post_halo=-1 + S)\n" + \
         "J_W1W0 = tmp1\n" + \
         "J_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
 
@@ -303,7 +371,22 @@ def test_uniform_shape_var():
     assert_partition(tensor, spec, "N", hifiber)
 
 
-def test_uniform_shape_conv():
+def test_uniform_shape_conv_pre_halo():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = I[q + -1 * s] * F[s]"
+    spec = """
+                Q: [uniform_shape(6)]
+                W: [follow(Q)]
+    """
+    hifiber = "tmp0 = I_W\n" + \
+        "tmp1 = tmp0.splitUniform(6, depth=0, pre_halo=-1 + S)\n" + \
+        "I_W1W0 = tmp1\n" + \
+        "I_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
+def test_uniform_shape_conv_post_halo():
     tensor = Tensor("I", ["W"])
     expr = "O[q] = I[q + s] * F[s]"
     spec = """
@@ -318,6 +401,20 @@ def test_uniform_shape_conv():
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
+def test_uniform_shape_conv_pre_post_halo():
+    tensor = Tensor("I", ["W"])
+    expr = "O[q] = I[q + s + -2 * v] * F[s] * K[v]"
+    spec = """
+                Q: [uniform_shape(6)]
+                W: [follow(Q)]
+    """
+    hifiber = "tmp0 = I_W\n" + \
+        "tmp1 = tmp0.splitUniform(6, depth=0, pre_halo=-2 + 2 * V, post_halo=-1 + S)\n" + \
+        "I_W1W0 = tmp1\n" + \
+        "I_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
+
+    _, partitioner = build_partitioner_conv(expr, spec)
+    assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 def test_uniform_shape_conv_double():
     tensor = Tensor("I", ["W"])
