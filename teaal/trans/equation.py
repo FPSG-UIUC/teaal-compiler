@@ -64,10 +64,10 @@ class Equation:
         """
         Make the interval to project over: [rank_start, rank_end)
         """
-        root = self.program.get_partitioning().get_root_name(rank)
+        root, suffix = self.program.get_partitioning().split_rank_name(rank)
 
         # This should be the bottom of the partition
-        if rank[len(root):] != "0":
+        if suffix != "0":
             raise ValueError("Interval not necessary for rank " + rank)
 
         rank = rank.lower()
@@ -282,10 +282,10 @@ class Equation:
         """
         # Check the interval
         enum_int = False
-        root = self.program.get_partitioning().get_root_name(rank)
+        root, suffix = self.program.get_partitioning().split_rank_name(rank)
         # If this is not right before the bottom rank, we don't need to worry
         # about it
-        if rank[len(root):] == "1":
+        if suffix == "1":
             coord_math = self.program.get_coord_math()
             root_symbol = Symbol(root.lower())
 
@@ -353,7 +353,8 @@ class Equation:
 
         # Otherwise, we need to project
         partitioning = self.program.get_partitioning()
-        root = partitioning.get_root_name(rank.upper()).lower()
+        root, suffix = partitioning.split_rank_name(rank.upper())
+        root = root.lower()
         troot = partitioning.get_root_name(trank.upper()).lower()
 
         # If we are going to project, get the iteration rank in terms of the
@@ -362,7 +363,6 @@ class Equation:
             root, lambda expr: Symbol(troot) in expr.atoms(Symbol))
 
         # If this is the bottom rank, perform the full projection
-        suffix = partitioning.partition_suffix(rank.upper())
         bottom_rank = suffix == "" or suffix == "0"
         if bottom_rank:
             for symbol in sexpr.atoms(Symbol):

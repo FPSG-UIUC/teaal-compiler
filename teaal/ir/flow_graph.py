@@ -251,7 +251,7 @@ class FlowGraph:
         # will be projected and it is a partitioned rank (so we don't know the
         # bounds)
         if any(tensor.peek() != rank.lower() for tensor in tensors) and \
-                self.program.get_partitioning().partition_suffix(rank) == "0":
+                self.program.get_partitioning().split_rank_name(rank)[1] == "0":
             self.__build_project_interval(rank)
 
         _, tensors = iter_graph.pop_concord()

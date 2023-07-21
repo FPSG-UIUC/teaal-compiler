@@ -146,11 +146,10 @@ class Canvas:
         Build an expression to describe the relevant rank
         """
         part_ir = self.program.get_partitioning()
-        root = part_ir.get_root_name(rank.upper())
-        suffix = rank[len(root):]
+        root, suffix = part_ir.split_rank_name(rank.upper())
 
         # This is not the innermost rank
-        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "i":
+        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "I":
             return EVar(rank)
 
         # If this rank is the result of flattening, then build the access

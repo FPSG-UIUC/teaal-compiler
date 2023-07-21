@@ -219,5 +219,5 @@ class LoopOrder:
             raise ValueError(
                 "Unconfigured loop order. Make sure to first call add()")
 
-        suffix = rank[len(self.partitioning.get_root_name(rank)):]
+        _, suffix = self.partitioning.split_rank_name(rank)
         return len(suffix) == 0 or suffix == "0"

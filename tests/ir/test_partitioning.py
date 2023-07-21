@@ -885,7 +885,7 @@ def test_partition_ranks_conv():
     assert new_ranks == ["W2", "W1", "W0"]
 
 
-def test_partition_suffix():
+def test_split_rank_name():
     all_parts = """
                 P: [uniform_shape(500)]
                 Q:
@@ -901,9 +901,9 @@ def test_partition_suffix():
     """
     partitioning = build_partitioning_conv(all_parts)
 
-    assert partitioning.partition_suffix("P") == ""
-    assert partitioning.partition_suffix("Q2") == "2"
-    assert partitioning.partition_suffix("W4") == "4"
+    assert partitioning.split_rank_name("P") == ("P", "")
+    assert partitioning.split_rank_name("Q2") == ("Q", "2")
+    assert partitioning.split_rank_name("W4") == ("W", "4")
 
 
 def test_swizzle_for_flattening():

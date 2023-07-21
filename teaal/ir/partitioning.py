@@ -440,16 +440,14 @@ class Partitioning:
 
         return tensor_ranks
 
-    def partition_suffix(self, rank: str) -> str:
+    def split_rank_name(self, rank: str) -> Tuple[str, str]:
         """
-        Get the suffix of a partition (excluding the root name)
-
-        TODO: Use this everywhere necessary
+        Split the rank name into the root and the suffix
         """
         root = self.get_root_name(rank)
-        return rank[len(root):]
+        return root, rank[len(root):]
 
-    def swizzle_for_flattening(self, tensor_ranks: List[str]):
+    def swizzle_for_flattening(self, tensor_ranks: List[str]) -> List[str]:
         """
         Swizzle the tensor ranks to allow for flattening
         """
