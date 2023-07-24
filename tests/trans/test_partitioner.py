@@ -383,6 +383,7 @@ def test_uniform_occupancy_follower_translate_follow():
     assert str(
         excinfo.value) == "Cannot partition rank V with a leader of a different rank (W1)"
 
+
 def test_uniform_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """

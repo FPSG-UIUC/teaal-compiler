@@ -153,9 +153,19 @@ class Equation:
         end: Expression
         offset = part.get_offset(rank)
         if offset:
-            start = EVar(offset.lower())
-            part_end = EBinOp(start, OAdd(), EVar(rank))
-            end = EFunc("min", [AJust(part_end), AJust(EVar(root))])
+            # Take the ceil of the bottom of the partition
+            part_start = EVar(offset.lower())
+            start_plus1 = EBinOp(part_start, OAdd(), EInt(1))
+            int_start = EFunc("int", [AJust(start_plus1)])
+            start = EBinOp(int_start, OSub(), EInt(1))
+
+            # Take the ceiling of the top of the partition
+            part_end = EBinOp(part_start, OAdd(), EVar(rank))
+            min_end = EFunc("min", [AJust(part_end), AJust(EVar(root))])
+            end_plus1 = EBinOp(min_end, OAdd(), EInt(1))
+            int_end = EFunc("int", [AJust(end_plus1)])
+            end = EBinOp(int_end, OSub(), EInt(1))
+
         else:
             start = EInt(0)
             end = EVar(root)

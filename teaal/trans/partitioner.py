@@ -401,7 +401,12 @@ class Partitioner:
         lroot = self.program.get_partitioning().get_root_name(leader_rank.upper())
         root = self.program.get_partitioning().get_root_name(rank)
         if root != lroot:
-            raise ValueError("Cannot partition rank " + rank + " with a leader of a different rank (" + leader_rank.upper() + ")")
+            raise ValueError(
+                "Cannot partition rank " +
+                rank +
+                " with a leader of a different rank (" +
+                leader_rank.upper() +
+                ")")
 
         fiber = EVar(leader_tensor.fiber_name())
         args: List[Argument] = [AJust(fiber)]

@@ -4,7 +4,7 @@ einsum:
     F: [C, M, R, S]
     O: [B, M, P, Q]
   expressions:
-    - O[b, m, p, q] = I[b, c, 4*p+r, 4*q+s]*F[c, m, r, s]
+    - O[b, m, p, q] = I[b, c, p+r, q+s]*F[c, m, r, s]
 mapping:
   rank-order:
     I: [B, C, H, W]
@@ -12,11 +12,13 @@ mapping:
     O: [B, M, P, Q]
   partitioning:
     O:
-      M:
+      M:                              # filter partitioning
         - uniform_shape(32)           # 2 filters happening simultaneously per array
         - uniform_shape(16)           # 16 filters happening in interleaving fashion per PE
-      P:
-        - uniform_shape(7)            # process 7 rows at a time, strip mined
-      H: [follow(P)]
+      B:
+        - uniform_shape(4)
+      C:
+        - uniform_shape(6)            # 2 channels running simultaneously per PE
+        - uniform_shape(3)            # 3 channels running per PE
   loop-order:
-    O: [C, M2, B, M1, P1, P0, R, Q, S, M0]
+    O: [B1, C2, M2, B0, M1, P, C1, R, Q, S, M0, C0]
