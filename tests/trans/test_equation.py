@@ -395,12 +395,12 @@ def test_make_iter_expr_output_only_partition():
 
     graph.pop_concord()
     rank, tensors = graph.peek_concord()
-    iter_expr = "a_i1.iterRangeShapeRef(i2, i2 + I1, I0)"
+    iter_expr = "a_i1.iterRangeShapeRef(i2, min(i2 + I1, I), I0)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
     graph.pop_concord()
     rank, tensors = graph.peek_concord()
-    iter_expr = "a_i0.iterRangeShapeRef(i1, i1 + I0, 1)"
+    iter_expr = "a_i0.iterRangeShapeRef(i1, min(i1 + I0, I), 1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 

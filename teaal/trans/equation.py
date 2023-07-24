@@ -154,7 +154,8 @@ class Equation:
         offset = part.get_offset(rank)
         if offset:
             start = EVar(offset.lower())
-            end = EBinOp(start, OAdd(), EVar(rank))
+            part_end = EBinOp(start, OAdd(), EVar(rank))
+            end = EFunc("min", [AJust(part_end), AJust(EVar(root))])
         else:
             start = EInt(0)
             end = EVar(root)

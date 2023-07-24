@@ -292,11 +292,11 @@ class Partitioner:
                      part_rank: str) -> Tuple[Optional[Expression],
                                               Optional[Expression]]:
         """
-        Build halo expression
+        Build halo expression; returns (pre_halo, post_halo) if they exist
         """
-        # TODO: Pass trans as a parameter
         root = self.program.get_partitioning().get_root_name(rank)
         proot = self.program.get_partitioning().get_root_name(part_rank)
+
         trans = self.program.get_coord_math().get_cond_expr(
             root.lower(), lambda expr: Symbol(
                 proot.lower()) in expr.atoms(Symbol))
@@ -393,8 +393,17 @@ class Partitioner:
         """
         Build a call to splitNonUniform
         """
-        fiber = EVar(
-            self.program.get_equation().get_tensor(leader).fiber_name())
+        # Make sure there is no translation needed between the leader and
+        # follower tensors' ranks
+        leader_tensor = self.program.get_equation().get_tensor(leader)
+        leader_rank = leader_tensor.peek()
+        assert leader_rank is not None
+        lroot = self.program.get_partitioning().get_root_name(leader_rank.upper())
+        root = self.program.get_partitioning().get_root_name(rank)
+        if root != lroot:
+            raise ValueError("Cannot partition rank " + rank + " with a leader of a different rank (" + leader_rank.upper() + ")")
+
+        fiber = EVar(leader_tensor.fiber_name())
         args: List[Argument] = [AJust(fiber)]
         pre_halo, post_halo = self.__build_halo(rank, part_rank)
         if pre_halo:

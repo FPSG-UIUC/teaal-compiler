@@ -1,14 +1,22 @@
 einsum:
-    declaration:
-        I: [W]
-        F: [S]
-        O: [Q]
-    expressions:
-        - O[q] = I[q + s] * F[s]
+  declaration:
+    I: [B, C, H, W]
+    F: [C, M, R, S]
+    O: [B, M, P, Q]
+  expressions:
+    - O[b, m, p, q] = I[b, c, 4*p+r, 4*q+s]*F[c, m, r, s]
 mapping:
-    partitioning:
-        O:
-            Q: [uniform_occupancy(I.10), uniform_occupancy(I.5)]
-            W: [follow(Q)]
-    loop-order:
-        O: [Q2, Q1, S, Q0]
+  rank-order:
+    I: [B, C, H, W]
+    F: [M, C, R, S]
+    O: [B, M, P, Q]
+  partitioning:
+    O:
+      M:
+        - uniform_shape(32)           # 2 filters happening simultaneously per array
+        - uniform_shape(16)           # 16 filters happening in interleaving fashion per PE
+      P:
+        - uniform_shape(7)            # process 7 rows at a time, strip mined
+      H: [follow(P)]
+  loop-order:
+    O: [C, M2, B, M1, P1, P0, R, Q, S, M0]

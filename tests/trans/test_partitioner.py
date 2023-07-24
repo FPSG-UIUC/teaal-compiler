@@ -366,6 +366,23 @@ def test_uniform_occupancy_multiple_levels_with_halo():
     assert partitioner.partition(tensor, ("W1I",)).gen(depth=0) == hifiber
 
 
+def test_uniform_occupancy_follower_translate_follow():
+    tensor = Tensor("K", ["V"])
+    expr = "O[q] = I[q + s] * K[2 * q + s] * F[s]"
+    spec = """
+                Q: [uniform_occupancy(I.6)]
+                W: [follow(Q)]
+                V: [follow(Q)]
+    """
+    program, partitioner = build_partitioner_conv(expr, spec)
+    program.apply_partitioning(program.get_equation().get_tensor("I"), ("W",))
+
+    with pytest.raises(ValueError) as excinfo:
+        partitioner.partition(tensor, ("V",)).gen(depth=0)
+
+    assert str(
+        excinfo.value) == "Cannot partition rank V with a leader of a different rank (W1)"
+
 def test_uniform_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """
