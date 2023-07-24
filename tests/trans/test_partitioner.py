@@ -240,6 +240,7 @@ def test_uniform_occupancy_multiple():
     tensor.from_fiber()
     assert partitioner.partition(tensor, ("K1I",)).gen(depth=0) == hifiber
 
+
 def test_uniform_occupancy_pre_halo():
     tensor = Tensor("I", ["W"])
     expr = "O[q] = I[q + -1 * s] * F[s]"
@@ -270,7 +271,6 @@ def test_uniform_occupancy_post_halo():
 
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
-
 
 
 def test_uniform_occupancy_pre_post_halo():
@@ -343,6 +343,29 @@ def test_uniform_occupancy_follower_pre_post_halo():
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
 
+def test_uniform_occupancy_multiple_levels_with_halo():
+    expr = "O[q] = I[2 * q + s] * F[s]"
+    spec = """
+                Q: [uniform_occupancy(I.10), uniform_occupancy(I.5)]
+                W: [follow(Q)]
+    """
+
+    program, partitioner = build_partitioner_conv(expr, spec)
+    tensor = program.get_equation().get_tensor("I")
+
+    # [W] -> [W2, W1I] -> [W1I]
+    program.apply_partitioning(tensor, ("W",))
+    tensor.pop()
+    tensor.from_fiber()
+
+    hifiber = "tmp0 = I_W1I\n" + \
+        "tmp1 = tmp0.splitEqual(5, post_halo=-1 + S)\n" + \
+        "I_W1W0 = tmp1\n" + \
+        "I_W1W0.setRankIds(rank_ids=[\"W1\", \"W0\"])"
+
+    assert partitioner.partition(tensor, ("W1I",)).gen(depth=0) == hifiber
+
+
 def test_uniform_shape():
     tensor = Tensor("B", ["K", "N"])
     spec = """
@@ -386,6 +409,7 @@ def test_uniform_shape_conv_pre_halo():
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
+
 def test_uniform_shape_conv_post_halo():
     tensor = Tensor("I", ["W"])
     expr = "O[q] = I[q + s] * F[s]"
@@ -401,6 +425,7 @@ def test_uniform_shape_conv_post_halo():
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
 
+
 def test_uniform_shape_conv_pre_post_halo():
     tensor = Tensor("I", ["W"])
     expr = "O[q] = I[q + s + -2 * v] * F[s] * K[v]"
@@ -415,6 +440,7 @@ def test_uniform_shape_conv_pre_post_halo():
 
     _, partitioner = build_partitioner_conv(expr, spec)
     assert partitioner.partition(tensor, ("W",)).gen(depth=0) == hifiber
+
 
 def test_uniform_shape_conv_double():
     tensor = Tensor("I", ["W"])
@@ -525,6 +551,7 @@ def assert_unpartition(spec, hifiber_options):
     partitioner = Partitioner(program, TransUtils())
     hifiber = partitioner.unpartition(
         program.get_equation().get_output()).gen(0)
+
     assert hifiber in hifiber_options
 
 
@@ -563,6 +590,19 @@ def test_unpartition_all():
         "tmp2.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
         "Z_MN = tmp2"
     assert_unpartition(spec, [hifiber_option1, hifiber_option2])
+
+
+def test_unpartition_multiple_dyn():
+    spec = """
+                M: [uniform_occupancy(A.10), uniform_occupancy(A.5)]
+    """
+
+    hifiber = "tmp0 = Z_M2M1M0N\n" + \
+        "tmp1 = tmp0.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
+        "tmp1.setRankIds(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = tmp1"
+
+    assert_unpartition(spec, [hifiber])
 
 
 def test_unpartition_flatten():

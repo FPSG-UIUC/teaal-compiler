@@ -1,11 +1,14 @@
 einsum:
-  declaration:
-    A: [K]
-    Z: [M]
-  expressions:
-    - Z[m] = A[2 * m]
+    declaration:
+        I: [W]
+        F: [S]
+        O: [Q]
+    expressions:
+        - O[q] = I[q + s] * F[s]
 mapping:
     partitioning:
-        Z:
-            K: [uniform_shape(20), uniform_shape(10)]
-            M: [follow(K)]
+        O:
+            Q: [uniform_occupancy(I.10), uniform_occupancy(I.5)]
+            W: [follow(Q)]
+    loop-order:
+        O: [Q2, Q1, S, Q0]

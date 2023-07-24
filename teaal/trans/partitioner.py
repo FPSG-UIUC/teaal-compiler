@@ -133,6 +133,12 @@ class Partitioner:
             if isinstance(info, tuple):
                 # Undo split with flatten
                 if len(info) == 1:
+                    # Skip temporary ranks (created by occupancy-based
+                    # partitioning)
+                    _, suffix = part_ir.split_rank_name(info[0])
+                    if suffix and suffix[-1] == "I":
+                        continue
+
                     block.add(
                         self.__build_flatten(
                             "merge", ranks.index(
@@ -281,14 +287,20 @@ class Partitioner:
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, flat_call)
 
-    def __build_halo(self, rank: str, part_rank: str) -> Tuple[Optional[Expression], Optional[Expression]]:
+    def __build_halo(self,
+                     rank: str,
+                     part_rank: str) -> Tuple[Optional[Expression],
+                                              Optional[Expression]]:
         """
         Build halo expression
         """
         # TODO: Pass trans as a parameter
+        root = self.program.get_partitioning().get_root_name(rank)
+        proot = self.program.get_partitioning().get_root_name(part_rank)
         trans = self.program.get_coord_math().get_cond_expr(
-            rank, lambda expr: Symbol(part_rank.lower()) in expr.atoms(Symbol))
-        trans = trans.subs(Symbol(part_rank.lower()), 0)
+            root.lower(), lambda expr: Symbol(
+                proot.lower()) in expr.atoms(Symbol))
+        trans = trans.subs(Symbol(proot.lower()), 0)
 
         if trans == 0:
             return None, None
