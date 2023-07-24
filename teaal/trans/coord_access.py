@@ -60,6 +60,16 @@ class CoordAccess:
             raise ValueError("Unable to translate operator " + str(sexpr.func))
 
     @staticmethod
+    def isolate_rank(expr: Basic, rank: str):
+        """
+        Substitute 0 for all Symbols that are not the given rank
+        """
+        for atom in expr.atoms(Symbol) - {Symbol(rank.lower())}:
+            expr = expr.subs(atom, 0)
+
+        return expr
+
+    @staticmethod
     def __combine(sexpr: Basic, op: Type[Operator]) -> Expression:
         """
         Fold together an expression

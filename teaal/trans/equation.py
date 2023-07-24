@@ -54,11 +54,9 @@ class Equation:
                    for input_ in inputs]
         iter_expr = self.__make_input_iter_expr(rank, tensors)
 
-        # If there is only one fiber, its already eager
-        if len(inputs) == 1:
-            return SAssign(AVar("inputs_" + rank.lower()), iter_expr)
-
-        # Otherwise, use Fiber.fromLazy()
+        # Use Fiber.fromLazy() to translate
+        # Note: Assume that if we are making eager inputs, then we are
+        # projecting this rank
         method_call = EMethod(EVar("Fiber"), "fromLazy", [AJust(iter_expr)])
         return SAssign(AVar("inputs_" + rank.lower()), method_call)
 
@@ -66,10 +64,10 @@ class Equation:
         """
         Make the interval to project over: [rank_start, rank_end)
         """
-        root = self.program.get_partitioning().get_root_name(rank)
+        root, suffix = self.program.get_partitioning().split_rank_name(rank)
 
         # This should be the bottom of the partition
-        if rank[len(root):] != "0":
+        if suffix != "0":
             raise ValueError("Interval not necessary for rank " + rank)
 
         rank = rank.lower()
@@ -155,8 +153,19 @@ class Equation:
         end: Expression
         offset = part.get_offset(rank)
         if offset:
-            start = EVar(offset.lower())
-            end = EBinOp(start, OAdd(), EVar(rank))
+            # Take the ceil of the bottom of the partition
+            part_start = EVar(offset.lower())
+            start_plus1 = EBinOp(part_start, OAdd(), EInt(1))
+            int_start = EFunc("int", [AJust(start_plus1)])
+            start = EBinOp(int_start, OSub(), EInt(1))
+
+            # Take the ceiling of the top of the partition
+            part_end = EBinOp(part_start, OAdd(), EVar(rank))
+            min_end = EFunc("min", [AJust(part_end), AJust(EVar(root))])
+            end_plus1 = EBinOp(min_end, OAdd(), EInt(1))
+            int_end = EFunc("int", [AJust(end_plus1)])
+            end = EBinOp(int_end, OSub(), EInt(1))
+
         else:
             start = EInt(0)
             end = EVar(root)
@@ -284,10 +293,10 @@ class Equation:
         """
         # Check the interval
         enum_int = False
-        root = self.program.get_partitioning().get_root_name(rank)
+        root, suffix = self.program.get_partitioning().split_rank_name(rank)
         # If this is not right before the bottom rank, we don't need to worry
         # about it
-        if rank[len(root):] == "1":
+        if suffix == "1":
             coord_math = self.program.get_coord_math()
             root_symbol = Symbol(root.lower())
 
@@ -355,30 +364,46 @@ class Equation:
 
         # Otherwise, we need to project
         partitioning = self.program.get_partitioning()
-        root = partitioning.get_root_name(rank.upper()).lower()
+        root, suffix = partitioning.split_rank_name(rank.upper())
+        root = root.lower()
         troot = partitioning.get_root_name(trank.upper()).lower()
 
-        # Solve for the tensor index and substitute in the partitioned rank (if
-        # relevant)
-        math = self.program.get_coord_math().get_trans(troot)
-        sexpr = solve(math - Symbol(troot), Symbol(root))[0]
-        for symbol in sexpr.atoms(Symbol):
-            new_rank = partitioning.partition_rank((str(symbol).upper(),))
-            if new_rank:
-                sexpr = sexpr.subs(symbol, str(symbol) + "0")
+        # If we are going to project, get the iteration rank in terms of the
+        # tensor rank
+        sexpr = self.program.get_coord_math().get_cond_expr(
+            root, lambda expr: Symbol(troot) in expr.atoms(Symbol))
 
-        # Build the interval
-        if rank == root:
-            interval = ETuple([EInt(0), EVar(rank.upper())])
+        # If this is the bottom rank, perform the full projection
+        bottom_rank = suffix == "" or suffix == "0"
+        if bottom_rank:
+            for symbol in sexpr.atoms(Symbol):
+                new_rank = partitioning.partition_rank((str(symbol).upper(),))
+                if new_rank:
+                    sexpr = sexpr.subs(symbol, str(symbol) + "0")
+
+        # If not, we do not need to translate the halo
         else:
-            interval = ETuple([EVar(rank + "_start"), EVar(rank + "_end")])
+            sexpr = CoordAccess.isolate_rank(sexpr, troot)
+            sexpr = sexpr.subs(troot, trank)
 
         lambda_ = ELambda([trank], CoordAccess.build_expr(sexpr))
-        args = [AParam("trans_fn", lambda_), AParam("interval", interval)]
+        args = [AParam("trans_fn", lambda_)]
+
+        # Build the interval if we need to make sure that the halo does not
+        # add extra computation
+        if suffix == "":
+            interval = ETuple([EInt(0), EVar(rank.upper())])
+            args.append(AParam("interval", interval))
+
+        elif suffix == "0":
+            interval = ETuple([EVar(rank + "_start"), EVar(rank + "_end")])
+            args.append(AParam("interval", interval))
+
         project = EMethod(EVar(tensor.fiber_name()), "project", args)
 
-        # If there are no fractional coordinates, we are done
-        if not Equation.__frac_coords(sexpr):
+        # If there are no fractional coordinates or this is not the bottom
+        # rank, we are done
+        if not Equation.__frac_coords(sexpr) or not bottom_rank:
             return project
 
         # Otherwise, we need to prune out the fractional coordinates

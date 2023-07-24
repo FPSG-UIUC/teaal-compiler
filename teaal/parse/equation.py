@@ -2,7 +2,7 @@
 Lexing and parsing for a single Einsum
 """
 
-from lark import Lark
+from lark import Lark, Token
 from lark.tree import Tree
 
 
@@ -21,7 +21,10 @@ class EquationParser:
         ?iexpr: (iterm "+")* iterm -> iplus
 
         ?iterm: NAME -> ijust
-              | NUMBER "*" NAME -> itimes
+              | num "*" NAME -> itimes
+
+        ?num: NUMBER -> pos
+            | "-" NUMBER -> neg
 
         ?output: NAME "[" ranks "]"
 
@@ -42,4 +45,20 @@ class EquationParser:
 
     @staticmethod
     def parse(equation: str) -> Tree:
-        return EquationParser.parser.parse(equation)
+        tree = EquationParser.parser.parse(equation)
+
+        # Parse both positive and negative numbers
+        for itimes in tree.find_data("itimes"):
+            num = itimes.children[0]
+            assert isinstance(num, Tree)
+
+            if num.data == "pos":
+                itimes.children[0] = num.children[0]
+
+            # Otherwise, it is a negative
+            else:
+                pos = num.children[0]
+                assert isinstance(pos, Token)
+                itimes.children[0] = Token("NUMBER", str(-1 * int(pos)))
+
+        return tree

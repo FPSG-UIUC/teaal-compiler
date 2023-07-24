@@ -26,6 +26,7 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
+from sympy import Symbol
 from typing import cast, Dict, List, Optional, Tuple
 
 from teaal.ir.flow_nodes import *
@@ -193,9 +194,6 @@ class FlowGraph:
             part_node = PartNode(root, srcs)
             dsts = part.partition_names(srcs, False)
 
-            part_ranks = part.partition_rank(srcs)
-            assert part_ranks is not None
-
             # Add the edge from the source ranks to the PartNode
             for src in srcs:
                 self.graph.add_edge(RankNode(root, src), part_node)
@@ -230,8 +228,9 @@ class FlowGraph:
                 continue
 
             rank = rank.upper()
-            part_ranks = part.partition_rank((rank,))
-            if part_ranks and part_ranks in part.get_dyn_parts():
+            # part_ranks = part.partition_rank((rank,))
+            # if part_ranks and part_ranks in part.get_dyn_parts():
+            if (rank,) in part.get_dyn_parts():
                 self.__connect_dyn_part(tensor, rank, flatten_info)
 
         rank, tensors = iter_graph.peek_concord()
@@ -252,7 +251,7 @@ class FlowGraph:
         # will be projected and it is a partitioned rank (so we don't know the
         # bounds)
         if any(tensor.peek() != rank.lower() for tensor in tensors) and \
-                part.get_root_name(rank) != rank:
+                self.program.get_partitioning().split_rank_name(rank)[1] == "0":
             self.__build_project_interval(rank)
 
         _, tensors = iter_graph.pop_concord()
@@ -356,14 +355,27 @@ class FlowGraph:
         """
         part = self.program.get_partitioning()
         # Flattening does not matter because we cannot flatten index math ranks
-        part_names = part.partition_names((part.get_root_name(rank),), True)
-        rank0 = part_names[0]
-        rank1 = part_names[1]
+        rank1 = rank[:-1] + "1"
+        rank0 = rank
 
         # Connect the EagerInputNode
         eager_input_node = EagerInputNode(rank1, self.iter_map[rank1])
         for tname in self.iter_map[rank1]:
-            fiber_name = tname.lower() + "_" + rank1.lower()
+
+            # Get the tensor rank corresponding to this loop rank
+            tensor = self.program.get_equation().get_tensor(tname)
+            tranks = [Symbol(trank.lower())
+                      for trank in tensor.get_init_ranks()]
+            trans = self.program.get_coord_math().get_cond_expr(
+                part.get_root_name(rank), lambda expr: any(
+                    trank in expr.atoms(Symbol) for trank in tranks))
+            matches = [
+                trank for trank in tranks if trank in trans.atoms(Symbol)]
+            assert len(matches) == 1
+            trank_root = str(matches[0])
+
+            # Add that fiber to the eager input
+            fiber_name = tname.lower() + "_" + trank_root + "1"
             self.graph.add_edge(FiberNode(fiber_name), eager_input_node)
 
         # Connect the IntervalNode

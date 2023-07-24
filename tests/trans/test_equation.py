@@ -198,6 +198,7 @@ def make_conv_part(expr, loop_order):
         partitioning:
             O:
                 Q: [uniform_shape(10)]
+                W: [follow(Q)]
         loop-order:
             O: """ + loop_order
 
@@ -216,7 +217,7 @@ def make_conv_part(expr, loop_order):
 def test_eager_inputs_one_fiber():
     expr = "O[p, q] = I[q + s] * F[s]"
     _, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hifiber = "inputs_q1 = i_q1"
+    hifiber = "inputs_q1 = Fiber.fromLazy(i_w1.project(trans_fn=lambda w1: w1))"
 
     assert eqn.make_eager_inputs("Q1", ["I"]).gen(0) == hifiber
 
@@ -227,9 +228,10 @@ def test_eager_inputs_multiple_fibers():
         partitioning:
             O:
                 Q: [uniform_shape(10)]
+                W: [follow(Q)]
     """
     _, eqn = make_conv(expr, mapping)
-    hifiber = "inputs_q1 = Fiber.fromLazy(i_q1 & j_q1)"
+    hifiber = "inputs_q1 = Fiber.fromLazy(i_w1.project(trans_fn=lambda w1: w1) & j_w1.project(trans_fn=lambda w1: w1))"
 
     assert eqn.make_eager_inputs("Q1", ["I", "J"]).gen(0) == hifiber
 
@@ -393,12 +395,12 @@ def test_make_iter_expr_output_only_partition():
 
     graph.pop_concord()
     rank, tensors = graph.peek_concord()
-    iter_expr = "a_i1.iterRangeShapeRef(i2, i2 + I1, I0)"
+    iter_expr = "a_i1.iterRangeShapeRef(int(i2 + 1) - 1, int(min(i2 + I1, I) + 1) - 1, I0)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
     graph.pop_concord()
     rank, tensors = graph.peek_concord()
-    iter_expr = "a_i0.iterRangeShapeRef(i1, i1 + I0, 1)"
+    iter_expr = "a_i0.iterRangeShapeRef(int(i1 + 1) - 1, int(min(i1 + I0, I) + 1) - 1, 1)"
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
 
@@ -450,9 +452,9 @@ def test_make_iter_expr_conv_project_output():
 
 
 def test_make_iter_expr_conv_enum():
-    expr = "O[p, q] = I[q + s] * F[s]"
+    expr = "O[p, q] = I[2 * q + s] * F[s]"
     graph, eqn = make_conv_part(expr, "[Q1, P, S, Q0]")
-    hifiber = "enumerate(o_q1 << i_q1)"
+    hifiber = "enumerate(o_q1 << i_w1.project(trans_fn=lambda w1: 1 / 2 * w1))"
 
     assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 

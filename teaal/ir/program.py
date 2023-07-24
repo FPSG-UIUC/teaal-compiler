@@ -107,10 +107,9 @@ class Program:
         ranks = self.__all_ranks()
         if output.root_name() in partitioning.keys():
             self.partitioning = Partitioning(
-                partitioning[output.root_name()], ranks, self.coord_math.get_eqn_exprs())
+                partitioning[output.root_name()], ranks, self.coord_math)
         else:
-            self.partitioning = Partitioning(
-                {}, ranks, self.coord_math.get_eqn_exprs())
+            self.partitioning = Partitioning({}, ranks, self.coord_math)
 
         # Store the loop order
         loop_orders = self.mapping.get_loop_orders()
@@ -121,7 +120,7 @@ class Program:
         self.loop_order.add(opt_loop_order, self.coord_math, self.partitioning)
 
         # Prune the coord math with this loop order
-        self.coord_math.prune(self.loop_order.get_ranks(), self.partitioning)
+        self.coord_math.prune(self.loop_order.get_available_roots())
 
         # Get the spacetime information
         spacetime: Optional[Dict[str, List[Tree]]] = None

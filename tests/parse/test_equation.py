@@ -51,3 +51,23 @@ def test_ind_times():
     tree = make_einsum(make_output("Z", ["m"]), make_tensor_ranks(
         "A", Tree("ranks", [make_itimes(["2", "m"])])))
     assert EquationParser.parse("Z[m] = A[2 * m]")
+
+
+def test_ind_times_neg():
+    tree = make_einsum(
+        make_output(
+            "Z", ["m"]), make_tensor_ranks(
+            "A", Tree(
+                "ranks", [
+                    Tree(
+                        "iplus", [
+                            Tree(
+                                "itimes", [
+                                    Token(
+                                        "NUMBER", "2"), Token(
+                                            "NAME", "m")]), Tree(
+                                                "itimes", [
+                                                    Token(
+                                                        "NUMBER", "-1"), Token(
+                                                            "NAME", "k")])])])))
+    assert EquationParser.parse("Z[m] = A[2 * m + -1 * k]")

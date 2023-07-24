@@ -26,8 +26,43 @@ HiFiber AST base classes
 
 import abc
 
+from typing import Any, Dict
 
-class Argument(metaclass=abc.ABCMeta):
+
+class Base():
+    def __eq__(self, other: object) -> bool:
+        """
+        The == operator for HiFiber code
+
+        """
+        if isinstance(other, type(self)):
+            return self.__key() == other.__key()
+        return False
+
+    def __hash__(self) -> int:
+        """
+        Hash the node (needed to insert it into the graph)
+        """
+        return hash(repr(self))
+
+    def __key(self) -> Dict[str, Any]:
+        """
+        A tuple of all fields of a node
+        """
+        return vars(self)
+
+    def __repr__(self) -> str:
+        """
+        A string representation of the node for hashing
+        """
+        attrs = self.__key()
+        strs = [key + "=" + attrs[key] if isinstance(attrs[key], str)
+                else key + "=" + repr(attrs[key])
+                for key in sorted(attrs)]
+        return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
+
+
+class Argument(Base, metaclass=abc.ABCMeta):
     """
     Argument interface
     """
@@ -40,7 +75,7 @@ class Argument(metaclass=abc.ABCMeta):
         raise NotImplementedError  # pragma: no cover
 
 
-class Assignable(metaclass=abc.ABCMeta):
+class Assignable(Base, metaclass=abc.ABCMeta):
     """
     Assignable interface
     """
@@ -53,7 +88,7 @@ class Assignable(metaclass=abc.ABCMeta):
         raise NotImplementedError  # pragma: no cover
 
 
-class Expression(metaclass=abc.ABCMeta):
+class Expression(Base, metaclass=abc.ABCMeta):
     """
     Expression interface
     """
@@ -66,7 +101,7 @@ class Expression(metaclass=abc.ABCMeta):
         raise NotImplementedError  # pragma: no cover
 
 
-class Operator(metaclass=abc.ABCMeta):
+class Operator(Base, metaclass=abc.ABCMeta):
     """
     Operator interface
     """
@@ -79,7 +114,7 @@ class Operator(metaclass=abc.ABCMeta):
         raise NotImplementedError  # pragma: no cover
 
 
-class Payload(metaclass=abc.ABCMeta):
+class Payload(Base, metaclass=abc.ABCMeta):
     """
     Payload interface
     """
@@ -92,7 +127,7 @@ class Payload(metaclass=abc.ABCMeta):
         raise NotImplementedError  # pragma: no cover
 
 
-class Statement(metaclass=abc.ABCMeta):
+class Statement(Base, metaclass=abc.ABCMeta):
     """
     Statement interface
     """

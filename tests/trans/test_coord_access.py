@@ -30,3 +30,9 @@ def test_build_expr_unknown_func():
 
     assert str(
         excinfo.value) == "Unable to translate operator <class 'sympy.core.power.Pow'>"
+
+
+def test_isolate_rank():
+    assert CoordAccess.isolate_rank(
+        sympify("a + 2 * b + c"),
+        "B") == sympify("2 * b")

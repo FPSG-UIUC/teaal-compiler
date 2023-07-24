@@ -28,7 +28,7 @@ from itertools import chain
 
 from lark.tree import Tree
 from sympy import Basic, Symbol
-from typing import Any, cast, Iterable, List, Optional, Tuple
+from typing import Any, cast, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.equation import Equation
@@ -96,6 +96,25 @@ class LoopOrder:
         order = list(chain.from_iterable(expanded))
         tensor.swizzle(order)
 
+    def get_available_roots(self) -> Set[str]:
+        """
+        Get the root names for ranks actually available for index math
+        """
+        if self.partitioning is None or self.ranks is None:
+            raise ValueError(
+                "Unconfigured loop order. Make sure to first call add()")
+
+        def trans_names(r):
+            ranks = self.partitioning.get_available(r)
+            return {self.partitioning.get_root_name(
+                rank) for rank in ranks if not self.partitioning.is_flattened(rank)}
+
+        names = [trans_names(rank) for rank in self.ranks]
+        if names:
+            return set.union(*names)
+
+        return set()
+
     def get_iter_ranks(self, rank: str) -> Tuple[str, ...]:
         """
         Get the ranks that this rank should expand into when iterating over
@@ -138,10 +157,12 @@ class LoopOrder:
             raise ValueError(
                 "Unconfigured loop order. Make sure to first call add()")
 
-        # If this rank is partitioned and this is not the inner-most rank, no
-        # projecting should occur
+        # If this rank is partitioned and this is not the inner-most rank, we
+        # don't need the other indices in the index math
         if not self.__innermost_rank(rank):
-            return self.ranks[pos] == rank
+            return self.partitioning.partition_rank(
+                (self.ranks[pos],)) == self.partitioning.partition_rank(
+                (rank,))
 
         # Otherwise, check if we have all index variables available
         avail = [self.partitioning.get_root_name(lrank).lower()
@@ -198,5 +219,5 @@ class LoopOrder:
             raise ValueError(
                 "Unconfigured loop order. Make sure to first call add()")
 
-        suffix = rank[len(self.partitioning.get_root_name(rank)):]
+        _, suffix = self.partitioning.split_rank_name(rank)
         return len(suffix) == 0 or suffix == "0"

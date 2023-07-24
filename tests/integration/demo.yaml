@@ -1,53 +1,24 @@
 einsum:
-    declaration:
-        Z: [M]
-    expressions:
-        - Z[m] = a
-# einsum:
-#     declaration:
-#         # Graph
-#         G: [D, S]
-#         # Previous iteration
-#         PP: [D]
-#         # Note that depending on the algorithm, SP may be a view into P
-#         # (the full vector of properties) or A (only the active vectors)
-#         SP: [S]
-#         # Phase outputs
-#         SO: [D, S]
-#         R: [D]
-#         P: [D]
-#         M: [D]
-#         A: [D]
-#     expressions:
-#         # Process Edge
-#         - SO[d, s] = G[d, s] * SP[s]
-#         - R[d] = PP[d] * SO[d, s]
-#         # Apply (update full vector of properties)
-#         - P[d] = R[d] + PP[d]
-#         # Create a mask of which ones were actually changed
-#         - M[d] = P[d] + n * PP[d]
-#         # Apply (create a new active vector)
-#         - A[d] = take(M[d], P[d], 1)
-# mapping:
-#     rank-order:
-#         G: [S, D]
-#     partitioning:
-#         # Remove all of the partitioning for parallelism for efficiency reasons
-#         SO:
-#             D: [uniform_shape(N)]
-#             S: [uniform_shape(N)]
-#         R:
-#             D: [uniform_shape(N)]
-#             S: [uniform_shape(N)]
-#         P:
-#             D: [uniform_shape(N)]
-#         M:
-#             D: [uniform_shape(N)]
-#         A:
-#             D: [uniform_shape(N)]
-#     loop-order:
-#         SO: [D1, S1, S0, D0]
-#         R: [D1, S1, S0, D0]
-#         P: [D1, D0]
-#         M: [D1, D0]
-#         A: [D1, D0]
+  declaration:
+    I: [B, C, H, W]
+    F: [C, M, R, S]
+    O: [B, M, P, Q]
+  expressions:
+    - O[b, m, p, q] = I[b, c, p+r, q+s]*F[c, m, r, s]
+mapping:
+  rank-order:
+    I: [B, C, H, W]
+    F: [M, C, R, S]
+    O: [B, M, P, Q]
+  partitioning:
+    O:
+      M:                              # filter partitioning
+        - uniform_shape(32)           # 2 filters happening simultaneously per array
+        - uniform_shape(16)           # 16 filters happening in interleaving fashion per PE
+      B:
+        - uniform_shape(4)
+      C:
+        - uniform_shape(6)            # 2 channels running simultaneously per PE
+        - uniform_shape(3)            # 3 channels running per PE
+  loop-order:
+    O: [B1, C2, M2, B0, M1, P, C1, R, Q, S, M0, C0]

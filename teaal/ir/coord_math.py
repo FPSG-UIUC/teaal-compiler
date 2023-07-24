@@ -29,9 +29,8 @@ from functools import reduce
 from lark.lexer import Token
 from lark.tree import Tree
 from sympy import Basic, solve, Symbol
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 
-from teaal.ir.partitioning import Partitioning
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
 
@@ -115,12 +114,28 @@ class CoordMath:
         # translation
         return [sym]
 
-    def get_eqn_exprs(self) -> Dict[Symbol, Basic]:
+    def get_cond_expr(self, ind: str, cond: Callable[[Basic], bool]) -> Basic:
         """
-        Get the expression corresponding to the given coordinate as it was
-        declared in the Einsum
+        Get an expression to translate the given index variable, provided it
+        meets the condition
+
+        Note: Exactly one expression must meet this condition
         """
-        return self.eqn_exprs
+        exprs = {
+            expr for expr in self.get_all_exprs(
+                ind.lower()) if cond(expr)}
+
+        if not exprs:
+            raise ValueError(
+                "No matching expression for index variable " + ind)
+        if len(exprs) > 1:
+            raise ValueError(
+                "Multiple expressions match for index variable " +
+                ind +
+                ": " +
+                str(exprs))
+
+        return next(iter(exprs))
 
     def get_trans(self, ind: Union[str, Symbol]) -> Basic:
         """
@@ -134,28 +149,18 @@ class CoordMath:
 
         return self.trans[ind]
 
-    def prune(self, loop_order: List[str], partitioning: Partitioning) -> None:
+    def prune(self, avail_roots: Set[str]) -> None:
         """
         Prune out all coord translations not available with this loop order
         """
         self.trans = {}
 
-        # Build the set of symbols available
-        def trans_names(r):
-            ranks = partitioning.get_available(r)
-            return {Symbol(partitioning.get_root_name(rank).lower())
-                    for rank in ranks}
-
-        names = [trans_names(rank) for rank in loop_order]
-        if names:
-            avail = set.union(*names)
-        else:
-            avail = set()
+        avail = set(Symbol(root.lower()) for root in avail_roots)
 
         # Prune unnecessary translations
         for ind, exprs in self.all_exprs.items():
             for expr in exprs:
-                if len(expr.atoms(Symbol) - avail) == 0:
+                if not (expr.atoms(Symbol) - avail):
                     self.trans[ind] = expr
 
     def __key(self) -> Iterable[Any]:

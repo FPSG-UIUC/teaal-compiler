@@ -146,11 +146,10 @@ class Canvas:
         Build an expression to describe the relevant rank
         """
         part_ir = self.program.get_partitioning()
-        root = part_ir.get_root_name(rank.upper())
-        suffix = rank[len(root):]
+        root, suffix = part_ir.split_rank_name(rank.upper())
 
         # This is not the innermost rank
-        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "i":
+        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "I":
             return EVar(rank)
 
         # If this rank is the result of flattening, then build the access
@@ -166,10 +165,6 @@ class Canvas:
         for symbol in sexpr.atoms(Symbol):
             # Fix dynamic partitioning variable name
             new = part_ir.get_dyn_rank(str(symbol).upper()).lower()
-
-            # Fix static partitioning variable name
-            if (root,) in part_ir.get_static_parts():
-                new += "0"
 
             sexpr = sexpr.subs(symbol, Symbol(new))
 

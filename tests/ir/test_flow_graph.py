@@ -715,6 +715,7 @@ def test_graph_conv_part():
         partitioning:
             O:
                 Q: [uniform_shape(20), uniform_occupancy(I.10)]
+                W: [follow(Q)]
         loop-order:
             O: [Q2, Q1, S, Q0]
     """
@@ -741,30 +742,30 @@ def test_graph_conv_part():
         PartNode(
             "I", ("W",)), SwizzleNode(
             "I", [
-                "Q2", "W1I"], "loop-order"))
+                "W2", "W1I"], "loop-order"))
     corr.add_edge(
         PartNode(
             "I", ("W1I",)), SwizzleNode(
             "I", [
-                "Q1", "W0"], "loop-order"))
-    corr.add_edge(GetRootNode("I", ["Q2", "W1I"]), LoopNode("Q2"))
+                "W1", "W0"], "loop-order"))
+    corr.add_edge(GetRootNode("I", ["W2", "W1I"]), LoopNode("Q2"))
     corr.add_edge(GetRootNode("F", ["S"]), LoopNode("S"))
     corr.add_edge(FromFiberNode("I", "W1I"), PartNode("I", ("W1I",)))
-    corr.add_edge(GetRootNode("I", ["Q1", "W0"]), LoopNode("Q1"))
+    corr.add_edge(GetRootNode("I", ["W1", "W0"]), LoopNode("Q1"))
     corr.add_edge(LoopNode("Q1"), IntervalNode("Q0"))
     corr.add_edge(IntervalNode("Q0"), LoopNode("Q0"))
-    corr.add_edge(GetRootNode("I", ["Q1", "W0"]), EagerInputNode("Q1", ["I"]))
+    corr.add_edge(GetRootNode("I", ["W1", "W0"]), EagerInputNode("Q1", ["I"]))
     corr.add_edge(EagerInputNode("Q1", ["I"]), IntervalNode("Q0"))
     corr.add_edge(
         SwizzleNode(
             "I", [
-                "Q2", "W1I"], "loop-order"), GetRootNode(
+                "W2", "W1I"], "loop-order"), GetRootNode(
             "I", [
-                "Q2", "W1I"]))
+                "W2", "W1I"]))
     corr.add_edge(
         SwizzleNode(
             "I", [
-                "Q2", "W1I"], "loop-order"), OtherNode("Graphics"))
+                "W2", "W1I"], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(
         SwizzleNode(
             "F",
@@ -781,9 +782,9 @@ def test_graph_conv_part():
     corr.add_edge(
         SwizzleNode(
             "I", [
-                "Q1", "W0"], "loop-order"), GetRootNode(
+                "W1", "W0"], "loop-order"), GetRootNode(
             "I", [
-                "Q1", "W0"]))
+                "W1", "W0"]))
 
     assert nx.is_isomorphic(graph, corr)
 

@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the partitiong specification
 """
 from lark.tree import Tree
-from sympy import Symbol
+from sympy import Add, Basic, Expr, Mul, Number, Symbol
 from typing import cast, List, Optional, Set, Tuple, Union
 
 from teaal.hifiber import *
@@ -133,6 +133,12 @@ class Partitioner:
             if isinstance(info, tuple):
                 # Undo split with flatten
                 if len(info) == 1:
+                    # Skip temporary ranks (created by occupancy-based
+                    # partitioning)
+                    _, suffix = part_ir.split_rank_name(info[0])
+                    if suffix and suffix[-1] == "I":
+                        continue
+
                     block.add(
                         self.__build_flatten(
                             "merge", ranks.index(
@@ -281,31 +287,60 @@ class Partitioner:
         next_tmp = AVar(self.trans_utils.next_tmp())
         return SAssign(next_tmp, flat_call)
 
-    def __build_halo(self, rank: str, part_rank: str) -> Expression:
+    def __build_halo(self,
+                     rank: str,
+                     part_rank: str) -> Tuple[Optional[Expression],
+                                              Optional[Expression]]:
         """
-        Build halo expression
+        Build halo expression; returns (pre_halo, post_halo) if they exist
         """
-        sexpr = self.program.get_coord_math().get_eqn_exprs()[
-            Symbol(rank.lower())]
-        part = self.program.get_partitioning()
-        part_symbol = Symbol(part_rank.lower())
+        root = self.program.get_partitioning().get_root_name(rank)
+        proot = self.program.get_partitioning().get_root_name(part_rank)
 
-        replace = {}
-        for symbol in sexpr.atoms(Symbol):
-            final = str(symbol).upper()
+        trans = self.program.get_coord_math().get_cond_expr(
+            root.lower(), lambda expr: Symbol(
+                proot.lower()) in expr.atoms(Symbol))
+        trans = trans.subs(Symbol(proot.lower()), 0)
 
-            # Replace each value with the largest value it can take on
-            if symbol != part_symbol:
-                replace[symbol] = Symbol(final) - 1
+        if trans == 0:
+            return None, None
 
-        for symbol, max_ in replace.items():
-            sexpr = sexpr.subs(symbol, max_)
+        if trans.func == Add:
+            terms = list(trans.args)
+        else:
+            terms = [trans]
 
-        sexpr -= part_symbol
-        if part_symbol in sexpr.atoms(Symbol):
-            raise ValueError("Non-constant halo partitioning rank " + rank)
+        # Separate terms that will go in the prehalo and terms that will go
+        # in the post_halo
+        sym_pre_halo: Expr = Number(0)
+        sym_post_halo: Expr = Number(0)
+        for term in terms:
+            if term.func == Mul:
+                coeffs = term.atoms(Number)
+                assert len(coeffs) == 1
+                coeff = next(iter(coeffs))
 
-        return CoordAccess.build_expr(sexpr)
+                if coeff > 0:
+                    sym_post_halo = sym_post_halo + term
+
+                else:
+                    sym_pre_halo = sym_pre_halo + -1 * cast(Expr, term)
+
+            else:
+                sym_post_halo = sym_post_halo + term
+
+        # If there is a halo, substitute in the halo rank shapes
+        def subs_halo_shapes(sym_halo: Expr) -> Optional[Expression]:
+            if not sym_halo:
+                return None
+
+            halo = sym_halo
+            for symbol in sym_halo.atoms(Symbol):
+                halo = halo.subs(symbol, Symbol(str(symbol).upper()) - 1)
+
+            return CoordAccess.build_expr(halo)
+
+        return subs_halo_shapes(sym_pre_halo), subs_halo_shapes(sym_post_halo)
 
     def __nway_shape(
             self,
@@ -337,8 +372,12 @@ class Partitioner:
         Build call to splitEqual
         """
         args: List[Argument] = [AJust(size)]
-        if rank != part_rank:
-            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+        pre_halo, post_halo = self.__build_halo(rank, part_rank)
+        if pre_halo:
+            args.append(AParam("pre_halo", pre_halo))
+
+        if post_halo:
+            args.append(AParam("post_halo", post_halo))
 
         curr_tmp = self.trans_utils.curr_tmp()
         part_call = EMethod(EVar(curr_tmp), "splitEqual", args)
@@ -354,11 +393,29 @@ class Partitioner:
         """
         Build a call to splitNonUniform
         """
-        fiber = EVar(
-            self.program.get_equation().get_tensor(leader).fiber_name())
+        # Make sure there is no translation needed between the leader and
+        # follower tensors' ranks
+        leader_tensor = self.program.get_equation().get_tensor(leader)
+        leader_rank = leader_tensor.peek()
+        assert leader_rank is not None
+        lroot = self.program.get_partitioning().get_root_name(leader_rank.upper())
+        root = self.program.get_partitioning().get_root_name(rank)
+        if root != lroot:
+            raise ValueError(
+                "Cannot partition rank " +
+                rank +
+                " with a leader of a different rank (" +
+                leader_rank.upper() +
+                ")")
+
+        fiber = EVar(leader_tensor.fiber_name())
         args: List[Argument] = [AJust(fiber)]
-        if rank != part_rank:
-            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+        pre_halo, post_halo = self.__build_halo(rank, part_rank)
+        if pre_halo:
+            args.append(AParam("pre_halo", pre_halo))
+
+        if post_halo:
+            args.append(AParam("post_halo", post_halo))
 
         curr_tmp = self.trans_utils.curr_tmp()
         part_call = EMethod(EVar(curr_tmp), "splitNonUniform", args)
@@ -377,11 +434,25 @@ class Partitioner:
         """
         # Build the depth and the arguments
         args: List[Argument] = []
-        args.append(AJust(step))
+
+        expr = self.program.get_coord_math().get_cond_expr(
+            rank, lambda expr: Symbol(part_rank.lower()) in expr.atoms(Symbol))
+        sym_step = CoordAccess.build_expr(
+            CoordAccess.isolate_rank(expr, part_rank))
+        rank_step = cast(
+            Expression, TransUtils.sub_hifiber(
+                sym_step, EVar(
+                    part_rank.lower()), step))
+
+        args.append(AJust(rank_step))
         args.append(AParam("depth", EInt(depth)))
 
-        if rank != part_rank:
-            args.append(AParam("halo", self.__build_halo(rank, part_rank)))
+        # Add the halos
+        pre_halo, post_halo = self.__build_halo(rank, part_rank)
+        if pre_halo:
+            args.append(AParam("pre_halo", pre_halo))
+        if post_halo:
+            args.append(AParam("post_halo", post_halo))
 
         # Build the call to splitUniform()
         curr_tmp = self.trans_utils.curr_tmp()

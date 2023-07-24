@@ -24,6 +24,8 @@ SOFTWARE.
 Useful functions for generating HiFiber code
 """
 
+from copy import deepcopy
+
 from typing import Any
 
 from teaal.hifiber import *
@@ -118,3 +120,21 @@ class TransUtils:
         """
         self.count += 1
         return "tmp" + str(self.count)
+
+    @staticmethod
+    def sub_hifiber(hifiber: Base, old: Base, new: Base) -> Base:
+        """
+        Substitute all instances of old with new in hifiber
+
+        Note: the type checking is not strict enough to ensure correctness
+        """
+        if hifiber == old:
+            return deepcopy(new)
+
+        copied = deepcopy(hifiber)
+        attrs = vars(copied)
+        for key, val in attrs.items():
+            if isinstance(val, Base):
+                copied.__dict__[key] = TransUtils.sub_hifiber(val, old, new)
+
+        return copied

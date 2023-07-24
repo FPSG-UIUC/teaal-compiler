@@ -1,7 +1,7 @@
 from lark.lexer import Token
 from lark.tree import Tree
 import pytest
-from sympy import symbols
+from sympy import symbols, Symbol
 
 from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
@@ -17,6 +17,7 @@ def parse_partitioning():
         partitioning:
             O:
                 Q: [uniform_shape(10)]
+                W: [follow(Q)]
     """
     return Mapping.from_str(yaml).get_partitioning()["O"]
 
@@ -120,7 +121,31 @@ def test_get_all_exprs():
     assert coord_math.get_all_exprs("mk") == [mk]
 
 
-def test_get_eqn_exprs():
+def test_get_cond_expr_no_match():
+    coord_math = CoordMath()
+    tensor = Tensor("I", ["W"])
+    ranks = Tree("ranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, ranks)
+
+    with pytest.raises(ValueError) as excinfo:
+        coord_math.get_cond_expr("w", lambda _: False)
+    assert str(excinfo.value) == "No matching expression for index variable w"
+
+
+def test_get_cond_expr_too_many_matches():
+    coord_math = CoordMath()
+    tensor = Tensor("I", ["W"])
+    ranks = Tree("ranks", [make_iplus(["q", "s"])])
+    coord_math.add(tensor, ranks)
+
+    with pytest.raises(ValueError) as excinfo:
+        coord_math.get_cond_expr("w", lambda _: True)
+    assert str(
+        excinfo.value) == "Multiple expressions match for index variable w: {q + s, w}" or str(
+        excinfo.value) == "Multiple expressions match for index variable w: {w, q + s}"
+
+
+def test_get_cond_expr():
     coord_math = CoordMath()
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
@@ -128,7 +153,10 @@ def test_get_eqn_exprs():
 
     q, s, w = symbols("q s w")
 
-    assert coord_math.get_eqn_exprs() == {w: q + s}
+    assert coord_math.get_cond_expr(
+        "w", lambda expr: q in expr.atoms(Symbol)) == q + s
+    assert coord_math.get_cond_expr(
+        "q", lambda expr: w in expr.atoms(Symbol)) == w - s
 
 
 def test_get_trans_no_prune():
@@ -147,11 +175,8 @@ def test_prune():
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
 
-    loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"], coord_math.get_eqn_exprs())
-
     coord_math.add(tensor, ranks)
-    coord_math.prune(loop_order, part)
+    coord_math.prune({"Q", "W"})
 
     q, s, w = symbols("q s w")
 
@@ -174,12 +199,7 @@ def test_prune_partitioned():
     ranks = make_ranks(["s"])
     coord_math.add(tensor, ranks)
 
-    loop_order = ["Q1", "S", "Q0"]
-    part = Partitioning(
-        parse_partitioning(), [
-            "Q", "S", "W"], coord_math.get_eqn_exprs())
-
-    coord_math.prune(loop_order, part)
+    coord_math.prune({"Q", "S"})
 
     q, s, w = symbols("q s w")
 
@@ -188,56 +208,17 @@ def test_prune_partitioned():
     assert coord_math.get_trans("s") == s
 
 
-def test_pruned_flattened():
-    coord_math = CoordMath()
-    tensor = Tensor("A", ["K", "M"])
-    ranks = make_ranks(["k", "m"])
-    coord_math.add(tensor, ranks)
-
-    tensor = Tensor("B", ["K", "N"])
-    ranks = make_ranks(["k", "n"])
-    coord_math.add(tensor, ranks)
-
-    tensor = Tensor("Z", ["M", "N"])
-    ranks = make_ranks(["m", "n"])
-    coord_math.add(tensor, ranks)
-
-    loop_order = ["K1", "MK01", "N", "MK00"]
-    yaml = """
-    mapping:
-        partitioning:
-            Z:
-                K: [uniform_shape(4)]
-                (M, K0): [flatten()]
-                MK0: [uniform_occupancy(A.5)]
-    """
-    parsed = Mapping.from_str(yaml).get_partitioning()["Z"]
-    part = Partitioning(parsed, ["K", "M", "N"], coord_math.get_eqn_exprs())
-
-    coord_math.prune(loop_order, part)
-
-    k, m, n = symbols("k m n")
-
-    assert coord_math.get_trans("k") == k
-    assert coord_math.get_trans("m") == m
-    assert coord_math.get_trans("n") == n
-
-
 def test_eq_true():
     coord_math0 = CoordMath()
     coord_math1 = CoordMath()
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
 
-    loop_order = ["W", "Q"]
-    part0 = Partitioning({}, ["Q", "S", "W"], coord_math0.get_eqn_exprs())
-    part1 = Partitioning({}, ["Q", "S", "W"], coord_math1.get_eqn_exprs())
-
     coord_math0.add(tensor, ranks)
-    coord_math0.prune(loop_order, part0)
+    coord_math0.prune({"W", "Q"})
 
     coord_math1.add(tensor, ranks)
-    coord_math1.prune(loop_order, part1)
+    coord_math1.prune({"W", "Q"})
 
     assert coord_math0 == coord_math1
 
@@ -248,11 +229,9 @@ def test_eq_false():
 
     tensor = Tensor("I", ["W"])
     ranks = Tree("ranks", [make_iplus(["q", "s"])])
-    loop_order = ["W", "Q"]
-    part = Partitioning({}, ["Q", "S", "W"], coord_math0.get_eqn_exprs())
 
     coord_math0.add(tensor, ranks)
-    coord_math0.prune(loop_order, part)
+    coord_math0.prune({"W", "Q"})
 
     coord_math1.add(tensor, ranks)
 
