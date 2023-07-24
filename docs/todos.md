@@ -13,7 +13,7 @@
 [x] Remove the `sum(...).(...)` from the specification
 [x] Correctly manage Einsums with both multiplication and addition
 [ ] Report which Einsums are fused together
-[ ] Disallow partitioning on tensors with expressions as indices
+[x] Disallow partitioning on tensors with expressions as indices
 
 ## Priority: 3
 
@@ -22,7 +22,7 @@
 
 ## Priority: 4+
 
-[ ] Correctly support partitioning on tensors with expressions as indices
+[x] Correctly support partitioning on tensors with expressions as indices
 [ ] Add a way to generate `displayTensor()` calls
 [ ] Allow the formatted arrays for all fibers of a rank to be flattened together
 [ ] On-chip memory traffic modeling
@@ -32,4 +32,4 @@
 ## Future Meeting Agendas
 
 [ ] Discuss how trace generation works
-[ ] Discuss Joel's Isosceles paper
+[x] Discuss Joel's Isosceles paper
