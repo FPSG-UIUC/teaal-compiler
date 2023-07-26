@@ -102,7 +102,6 @@ def test_unspecified():
 
     assert arch.get_spec() == spec
 
-
 def test_all_spec():
     regs = build_local("Registers", "Buffet", {})
     mac = build_local("MAC", "compute", {})

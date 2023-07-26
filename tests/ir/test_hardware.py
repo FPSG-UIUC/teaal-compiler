@@ -162,7 +162,7 @@ def test_get_component():
     attrs = {"width": 8, "depth": 3145728}
     assert_component(CacheComponent, "FiberCache", attrs)
 
-    assert_component(ComputeComponent, "Compute", {})
+    assert_component(FunctionalComponent, "Compute", {})
 
     attrs = {"datawidth": 8, "bandwidth": 128}
     assert_component(DRAMComponent, "Memory", attrs)
@@ -265,7 +265,7 @@ def test_get_compute_components():
 
     intersect = SkipAheadComponent(
         "Intersect0", {}, bindings.get("Intersect0"))
-    mac = ComputeComponent("MAC", {}, bindings.get("MAC"))
+    mac = FunctionalComponent("MAC", {}, bindings.get("MAC"))
 
     assert hardware.get_compute_components("Z") == [intersect, mac]
 
@@ -475,7 +475,7 @@ def test_get_tree():
     hardware = Hardware(arch, bindings)
 
     regs = BuffetComponent("Registers", {}, bindings.get("Registers"))
-    mac = ComputeComponent("MAC", {}, bindings.get("MAC"))
+    mac = FunctionalComponent("MAC", {}, bindings.get("MAC"))
     pe = Level("PE", 8, {}, [regs, mac], [])
 
     mem_attrs = {"datawidth": 8, "bandwidth": 128}

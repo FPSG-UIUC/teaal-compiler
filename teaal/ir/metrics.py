@@ -73,7 +73,7 @@ class Metrics:
         # Collect other information
         self.__build_mergers()
 
-    def get_compute_components(self) -> List[ComputeComponent]:
+    def get_compute_components(self) -> List[FunctionalComponent]:
         """
         Get all relevant compute components for this Einsum
         """

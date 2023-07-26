@@ -64,7 +64,7 @@ class Hardware:
         """
         return self.__compute_helper(einsum, self.tree)
 
-    def get_compute_components(self, einsum: str) -> List[ComputeComponent]:
+    def get_compute_components(self, einsum: str) -> List[FunctionalComponent]:
         """
         Get a list of compute components relevant to this einsum
         """
@@ -73,7 +73,7 @@ class Hardware:
         components = []
         for level in path:
             for component in level.get_local():
-                if isinstance(component, ComputeComponent) and \
+                if isinstance(component, FunctionalComponent) and \
                         component.get_bindings(einsum):
                     components.append(component)
 
@@ -159,7 +159,7 @@ class Hardware:
             class_ = CacheComponent
 
         elif local["class"].lower() == "compute":
-            class_ = ComputeComponent
+            class_ = FunctionalComponent
 
         elif local["class"].lower() == "dram":
             class_ = DRAMComponent
@@ -217,7 +217,7 @@ class Hardware:
         # Check if a local component performs compute for this einsum
         root = False
         for comp in level.get_local():
-            if isinstance(comp, ComputeComponent) and \
+            if isinstance(comp, FunctionalComponent) and \
                     comp.get_bindings(einsum):
                 return [level]
 

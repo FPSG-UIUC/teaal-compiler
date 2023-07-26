@@ -111,7 +111,7 @@ class Collector:
 
         return SExpr(call)
 
-    def __compute_metrics(self, component: ComputeComponent) -> Statement:
+    def __compute_metrics(self, component: FunctionalComponent) -> Statement:
         """
         Get the compute metrics for this hardware
         """
@@ -275,8 +275,10 @@ class Collector:
 
         name = EVar(binding["tensor"] + "_" + "".join(binding["init_ranks"]))
         depth = EInt(binding["swap_depth"])
-        radix = TransUtils.build_expr(component.get_radix())
-        next_latency = TransUtils.build_expr(component.get_next_latency())
+
+        # TODO: Use the correct merger parameters
+        radix = TransUtils.build_expr(component.attrs["radix"])
+        next_latency = TransUtils.build_expr(component.attrs["next_latency"])
 
         args = [AJust(arg) for arg in [name, depth, radix, next_latency]]
 
