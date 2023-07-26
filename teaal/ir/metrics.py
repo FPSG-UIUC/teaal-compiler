@@ -73,12 +73,12 @@ class Metrics:
         # Collect other information
         self.__build_mergers()
 
-    def get_compute_components(self) -> List[FunctionalComponent]:
+    def get_functional_components(self) -> List[FunctionalComponent]:
         """
         Get all relevant compute components for this Einsum
         """
         einsum = self.program.get_equation().get_output().root_name()
-        return self.hardware.get_compute_components(einsum)
+        return self.hardware.get_functional_components(einsum)
 
     def get_format(self, tensor: Tensor) -> dict:
         """

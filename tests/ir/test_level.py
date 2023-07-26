@@ -53,6 +53,6 @@ def test_eq():
 
 def test_repr():
     level = build_level()
-    repr_ = "(Level, System, 1, {'clock_frequency': 1000000000}, [(DRAMComponent, DRAM, {'datawidth': 8, 'bandwidth': 128}, {'A': 'M'})], [(Level, PE, 8, {}, [(FunctionalComponent, MAC, {}, {})], [])])"
+    repr_ = "(Level, System, 1, {'clock_frequency': 1000000000}, [(DRAMComponent, DRAM, {'A': 'M'}, 128)], [(Level, PE, 8, {}, [(FunctionalComponent, MAC, {})], [])])"
 
     assert repr(level) == repr_

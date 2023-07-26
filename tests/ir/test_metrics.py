@@ -181,14 +181,14 @@ def test_not_implemented_root_not_in_dram():
         Metrics(program, hardware, format_)
 
 
-def test_get_compute_components():
+def test_get_functional_components():
     metrics = build_metrics()
     bindings = Bindings.from_str(build_gamma_yaml())
 
     intersect = LeaderFollowerComponent(
         "Intersection", {}, bindings.get("Intersection"))
 
-    assert metrics.get_compute_components() == [intersect]
+    assert metrics.get_functional_components() == [intersect]
 
 
 def test_get_format():
@@ -213,7 +213,12 @@ def test_get_merger_components():
     assert metrics.get_merger_components() == []
 
     bindings = Bindings.from_str(yaml)
-    attrs = {"radix": 64, "next_latency": 1}
+    # TODO: Remove radix/next_latency
+    attrs = {
+        "inputs": 64,
+        "comparator_radix": 64,
+        "radix": 64,
+        "next_latency": 1}
     merger = MergerComponent(
         "HighRadixMerger",
         attrs,
@@ -249,6 +254,9 @@ def test_get_merger_components_output():
         local:
         - name: Merger
           class: Merger
+          attributes:
+            inputs: 64
+            comparator_radix: 64
 
         - name: Compute
           class: compute
@@ -269,7 +277,9 @@ def test_get_merger_components_output():
     metrics = Metrics(program, hardware, format_)
 
     bindings = Bindings.from_str(yaml)
-    merger = MergerComponent("Merger", {}, bindings.get("Merger"))
+    merger = MergerComponent(
+        "Merger", {
+            "inputs": 64, "comparator_radix": 64}, bindings.get("Merger"))
     binding = bindings.get("Merger")[0].copy()
     binding["final_ranks"] = ["M", "N"]
 
@@ -301,6 +311,9 @@ def test_get_merger_components_part_merge():
         local:
         - name: Merger
           class: Merger
+          attributes:
+            inputs: 64
+            comparator_radix: 64
 
         - name: Compute
           class: compute
@@ -321,7 +334,9 @@ def test_get_merger_components_part_merge():
     metrics = Metrics(program, hardware, format_)
 
     bindings = Bindings.from_str(yaml)
-    merger = MergerComponent("Merger", {}, bindings.get("Merger"))
+    merger = MergerComponent(
+        "Merger", {
+            "inputs": 64, "comparator_radix": 64}, bindings.get("Merger"))
     binding = bindings.get("Merger")[0].copy()
     binding["final_ranks"] = ["M1", "K", "M0"]
 

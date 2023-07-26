@@ -62,6 +62,13 @@ architecture:
           - name: HighRadixMerger
             class: Merger
             attributes:
+              inputs: 64
+              comparator_radix: 64
+              outputs: 1
+              order: fifo
+              reduce: False
+
+              # TODO: Remove these attributes
               radix: 64
               next_latency: 1
 

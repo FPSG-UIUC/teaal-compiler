@@ -24,7 +24,7 @@ SOFTWARE.
 Representation an hardware component
 """
 
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 
 class Component:
@@ -37,6 +37,7 @@ class Component:
         Construct a component
         """
         self.name = name
+        # TODO: Remove this (not used)
         self.attrs = attrs
         self.bindings: Any = {}
 
@@ -55,11 +56,11 @@ class Component:
             return self.__key() == other.__key()
         return False
 
-    def __key(self) -> Iterable[Any]:
+    def __key(self) -> Tuple[Any, ...]:
         """
         A tuple of all fields of a component
         """
-        return (self.name, self.attrs, self.bindings)
+        return (self.name, self.bindings)
 
     def __repr__(self) -> str:
         """
@@ -78,7 +79,14 @@ class Component:
 
         if not isinstance(attrs[key], bool):
             class_ = type(self).__name__[:-9]
-            raise ValueError("Bad " + key + " " + str(attrs[key]) + " for " + class_ + " " + self.name)
+            raise ValueError("Bad " +
+                             key +
+                             " " +
+                             str(attrs[key]) +
+                             " for " +
+                             class_ +
+                             " " +
+                             self.name)
 
         return attrs[key]
 
@@ -91,11 +99,22 @@ class Component:
 
         if not isinstance(attrs[key], int):
             class_ = type(self).__name__[:-9]
-            raise ValueError("Bad " + key + " " + str(attrs[key]) + " for " + class_ + " " + self.name)
+            raise ValueError("Bad " +
+                             key +
+                             " " +
+                             str(attrs[key]) +
+                             " for " +
+                             class_ +
+                             " " +
+                             self.name)
 
         return attrs[key]
 
-    def _check_str_attr(self, attrs: dict, key: str, options: Set[str]) -> Optional[str]:
+    def _check_str_attr(
+            self,
+            attrs: dict,
+            key: str,
+            options: Set[str]) -> Optional[str]:
         """
         Check that a string attribute is correctly specified
         """
@@ -104,13 +123,26 @@ class Component:
 
         class_ = type(self).__name__[:-9]
         if not isinstance(attrs[key], str):
-            raise ValueError("Bad " + key + " " + str(attrs[key]) + " for " + class_ + " " + self.name)
+            raise ValueError("Bad " +
+                             key +
+                             " " +
+                             str(attrs[key]) +
+                             " for " +
+                             class_ +
+                             " " +
+                             self.name)
 
         if attrs[key] not in options:
-            raise ValueError(attrs[key] + " is not a valid value for attribute " + key + " of class " + class_ + ". Choose one of " + str(options))
+            raise ValueError(
+                attrs[key] +
+                " is not a valid value for attribute " +
+                key +
+                " of class " +
+                class_ +
+                ". Choose one of " +
+                str(options))
 
         return attrs[key]
-
 
 
 class FunctionalComponent(Component):
@@ -177,14 +209,24 @@ class MemoryComponent(Component):
         Get the bandwidth
         """
         if self.bandwidth is None:
-            raise ValueError("Bandwidth unspecified for component " + self.name)
+            raise ValueError(
+                "Bandwidth unspecified for component " +
+                self.name)
 
         return self.bandwidth
+
+    def _Component__key(self) -> Tuple[Any, ...]:
+        """
+        A tuple of all fields
+        """
+        return (self.name, self.bindings, self.bandwidth)
+
 
 class BufferComponent(MemoryComponent):
     """
     A Component for a buffer
     """
+
     def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
         """
         Construct a buffet component
@@ -212,6 +254,18 @@ class BufferComponent(MemoryComponent):
 
         return self.width
 
+    def _Component__key(self) -> Tuple[Any, ...]:
+        """
+        A tuple of all fields
+        """
+        return (
+            self.name,
+            self.bindings,
+            self.bandwidth,
+            self.depth,
+            self.width)
+
+
 class BuffetComponent(BufferComponent):
     """
     A Component for a Buffet
@@ -220,6 +274,7 @@ class BuffetComponent(BufferComponent):
     """
     pass
 
+
 class CacheComponent(BufferComponent):
     """
     A Component for a Cache
@@ -227,6 +282,7 @@ class CacheComponent(BufferComponent):
     TODO: Do we even need a separate class for this?
     """
     pass
+
 
 class ComputeComponent(FunctionalComponent):
     """
@@ -250,11 +306,19 @@ class ComputeComponent(FunctionalComponent):
         """
         return self.type
 
+    def _Component__key(self) -> Tuple[Any, ...]:
+        """
+        A tuple of all fields
+        """
+        return (self.name, self.bindings, self.type)
+
+
 class DRAMComponent(MemoryComponent):
     """
     A Component for DRAM
     """
     pass
+
 
 class LeaderFollowerComponent(FunctionalComponent):
     """
@@ -281,7 +345,9 @@ class MergerComponent(Component):
 
         comparator_radix = self._check_int_attr(attrs, "comparator_radix")
         if comparator_radix is None:
-            raise ValueError("Comparator radix unspecified for component " + self.name)
+            raise ValueError(
+                "Comparator radix unspecified for component " +
+                self.name)
         self.comparator_radix = comparator_radix
 
         outputs = self._check_int_attr(attrs, "outputs")
@@ -298,7 +364,8 @@ class MergerComponent(Component):
 
         reduce_ = self._check_bool_attr(attrs, "reduce")
         if reduce_:
-            raise NotImplementedError("Concurrent merge and reduction not supported")
+            raise NotImplementedError(
+                "Concurrent merge and reduction not supported")
         self.reduce = False
 
         self.bindings = []
@@ -347,6 +414,20 @@ class MergerComponent(Component):
         Get whether or not the merger performs concurrent reduction
         """
         return self.reduce
+
+    def _Component__key(self) -> Tuple[Any, ...]:
+        """
+        A tuple of all fields
+        """
+        return (
+            self.name,
+            self.bindings,
+            self.inputs,
+            self.comparator_radix,
+            self.outputs,
+            self.order,
+            self.reduce)
+
 
 class SkipAheadComponent(FunctionalComponent):
     """

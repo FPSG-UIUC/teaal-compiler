@@ -64,7 +64,8 @@ class Hardware:
         """
         return self.__compute_helper(einsum, self.tree)
 
-    def get_compute_components(self, einsum: str) -> List[FunctionalComponent]:
+    def get_functional_components(
+            self, einsum: str) -> List[FunctionalComponent]:
         """
         Get a list of compute components relevant to this einsum
         """

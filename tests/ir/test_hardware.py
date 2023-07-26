@@ -94,6 +94,13 @@ def test_get_component():
         - name: HighRadixMerger
           class: Merger
           attributes:
+            inputs: 64
+            comparator_radix: 64
+            outputs: 1
+            order: fifo
+            reduce: False
+
+            # TODO: Remove these attributes
             radix: 64
             next_latency: 1
 
@@ -169,7 +176,15 @@ def test_get_component():
 
     assert_component(LeaderFollowerComponent, "LFIntersect", {})
 
-    attrs = {"radix": 64, "next_latency": 1}
+    # TODO: Remove radix and next_latency
+    attrs = {
+        "inputs": 64,
+        "comparator_radix": 64,
+        "outputs": 1,
+        "order": "fifo",
+        "reduce": False,
+        "radix": 64,
+        "next_latency": 1}
     assert_component(MergerComponent, "HighRadixMerger", attrs)
 
     assert_component(SkipAheadComponent, "SAIntersect", {})
@@ -223,7 +238,7 @@ def test_get_compute_path():
     assert hardware.get_compute_path("T") == []
 
 
-def test_get_compute_components():
+def test_get_functional_components():
     yaml = """
     architecture:
       subtree:
@@ -267,7 +282,7 @@ def test_get_compute_components():
         "Intersect0", {}, bindings.get("Intersect0"))
     mac = FunctionalComponent("MAC", {}, bindings.get("MAC"))
 
-    assert hardware.get_compute_components("Z") == [intersect, mac]
+    assert hardware.get_functional_components("Z") == [intersect, mac]
 
 
 def test_get_merger_components():
@@ -282,6 +297,13 @@ def test_get_merger_components():
           - name: Merger0
             class: Merger
             attributes:
+              inputs: 64
+              comparator_radix: 64
+              outputs: 1
+              order: fifo
+              reduce: False
+
+              # TODO: Remove these attributes
               radix: 64
               next_latency: 1
 
@@ -295,6 +317,13 @@ def test_get_merger_components():
           - name: Merger1
             class: Merger
             attributes:
+              inputs: 64
+              comparator_radix: 64
+              outputs: 1
+              order: fifo
+              reduce: False
+
+              # TODO: Remove these attributes
               radix: 64
               next_latency: 1
 
@@ -320,7 +349,15 @@ def test_get_merger_components():
     bindings = Bindings.from_str(yaml)
     hardware = Hardware(arch, bindings)
 
-    attrs = {"radix": 64, "next_latency": 1}
+    # TODO: Remove radix and next_latency
+    attrs = {
+        "inputs": 64,
+        "comparator_radix": 64,
+        "outputs": 1,
+        "order": "fifo",
+        "reduce": False,
+        "radix": 64,
+        "next_latency": 1}
     merger0 = MergerComponent("Merger0", attrs, bindings.get("Merger0"))
     merger1 = MergerComponent("Merger1", attrs, bindings.get("Merger1"))
 

@@ -75,7 +75,7 @@ class Collector:
                 tensor.set_is_output(True)
 
         # Add the compute information
-        for compute in self.metrics.get_compute_components():
+        for compute in self.metrics.get_functional_components():
             block.add(self.__compute_metrics(compute))
 
         # Add the merger information
