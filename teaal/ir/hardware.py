@@ -75,7 +75,7 @@ class Hardware:
         for level in path:
             for component in level.get_local():
                 if isinstance(component, FunctionalComponent) and \
-                        component.get_bindings(einsum):
+                        component.get_bindings()[einsum]:
                     components.append(component)
 
         return components
@@ -98,7 +98,7 @@ class Hardware:
         """
         Get a list of paths this tensor will be loaded into
         """
-        paths = self.__traffic_helper(tensor, self.tree)
+        paths = self.__traffic_helper(einsum, tensor, self.tree)
 
         # Merge all paths together
         final: List[MemoryComponent] = []
@@ -219,12 +219,12 @@ class Hardware:
         root = False
         for comp in level.get_local():
             if isinstance(comp, FunctionalComponent) and \
-                    comp.get_bindings(einsum):
+                    comp.get_bindings()[einsum]:
                 return [level]
 
         return []
 
-    def __traffic_helper(self, tensor: str,
+    def __traffic_helper(self, einsum: str, tensor: str,
                          level: Level) -> List[List[MemoryComponent]]:
         """
         Recursive implementation to find the memory traffic pattern of a tensor
@@ -233,12 +233,16 @@ class Hardware:
         # Recurse down the tree
         paths = []
         for subtree in level.get_subtrees():
-            paths.extend(self.__traffic_helper(tensor, subtree))
+            paths.extend(self.__traffic_helper(einsum, tensor, subtree))
 
         # Check if the memory components at this level store the tensor
         mem_components = []
         for comp in level.get_local():
-            if isinstance(comp, MemoryComponent) and comp.get_binding(tensor):
+            if isinstance(
+                    comp,
+                    MemoryComponent) and comp.get_binding(
+                    einsum,
+                    tensor):
                 mem_components.append(comp)
 
         # Return a list of paths

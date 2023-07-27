@@ -144,22 +144,18 @@ class FlowGraph:
         if not self.metrics:
             return
 
+        # TODO: Collect what we actually need to collect
         # None if the tensor is never stored in DRAM
-        if not self.metrics.in_dram(tensor):
-            return
+        # if not self.metrics.in_dram(tensor):
+        #     return
 
-        # None if the tensor is stationary
-        if self.metrics.on_chip_stationary(tensor):
-            return
+        # root = tensor.root_name()
+        # rank = self.metrics.get_on_chip_rank(tensor)
+        # swizzle_node = SwizzleNode(root, tensor.get_ranks(), "loop-order")
+        # collecting_node = CollectingNode(root, rank)
 
-        # Otherwise, add a CollectingNode
-        root = tensor.root_name()
-        rank = self.metrics.get_on_chip_rank(tensor)
-        swizzle_node = SwizzleNode(root, tensor.get_ranks(), "loop-order")
-        collecting_node = CollectingNode(root, rank)
-
-        self.graph.add_edge(swizzle_node, collecting_node)
-        self.graph.add_edge(collecting_node, MetricsNode("Start"))
+        # self.graph.add_edge(swizzle_node, collecting_node)
+        # self.graph.add_edge(collecting_node, MetricsNode("Start"))
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:

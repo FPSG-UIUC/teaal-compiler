@@ -24,7 +24,7 @@ SOFTWARE.
 Parse the input YAML for the bindings
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from teaal.parse.yaml import YamlParser
 
@@ -39,12 +39,20 @@ class Bindings:
         Read the YAML input
         """
 
-        self.components = {}
+        self.components: Dict[str, Dict[str, List[dict]]] = {}
         if yaml is None or "bindings" not in yaml.keys():
             return
 
-        for binding in yaml["bindings"]:
-            self.components[binding["name"]] = binding["bindings"]
+        self.configs = {}
+        for einsum in yaml["bindings"]:
+            self.components[einsum] = {}
+
+            for binding in yaml["bindings"][einsum]:
+                if "config" in binding:
+                    self.configs[einsum] = binding["config"]
+                else:
+                    self.components[einsum][binding["component"]
+                                            ] = binding["bindings"]
 
     @classmethod
     def from_file(cls, filename: str) -> "Bindings":
@@ -60,11 +68,20 @@ class Bindings:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get(self, name) -> List[dict]:
+    def get(self, name: str) -> Dict[str, List[dict]]:
         """
         Get the binding information for a component
         """
-        if name not in self.components.keys():
-            return []
+        info = {}
 
-        return self.components[name]
+        for einsum in self.components:
+            if name in self.components[einsum].keys():
+                info[einsum] = self.components[einsum][name]
+
+        return info
+
+    def get_config(self, einsum: str) -> str:
+        """
+        Get the hardware configuration for a given Einsum
+        """
+        return self.configs[einsum]

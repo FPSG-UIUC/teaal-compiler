@@ -59,11 +59,6 @@ class Metrics:
             self.program.apply_all_partitioning(tensor)
             self.program.get_loop_order().apply(tensor)
 
-        # Collect the memory traffic information
-        self.__build_dram_tensors()
-        self.__build_off_chip_traffic_info()
-        self.__build_stationary()
-
         # Reset all tensors
         for tensor in self.program.get_equation().get_tensors():
             is_output = tensor.get_is_output()
@@ -92,65 +87,6 @@ class Metrics:
         """
         return self.mergers
 
-    def get_on_chip_buffer(self, tensor: Tensor) -> MemoryComponent:
-        """
-        Gets the on-chip buffer for a particular tensor
-        """
-        if not self.in_dram(tensor):
-            raise ValueError(
-                "Tensor " +
-                tensor.root_name() +
-                " not stored in DRAM")
-
-        return self.on_chip_buffer[tensor.root_name()]
-
-    def get_on_chip_rank(self, tensor: Tensor) -> str:
-        """
-        Returns the rank of the given tensor that is used for memory traffic
-        """
-        if not self.in_dram(tensor):
-            raise ValueError(
-                "Tensor " +
-                tensor.root_name() +
-                " not stored in DRAM")
-
-        return self.on_chip_rank[tensor.root_name()][1]
-
-    def in_dram(self, tensor: Tensor) -> bool:
-        """
-        Returns True if the tensor is stored in DRAM
-        """
-        return tensor.root_name() in self.dram_tensors
-
-    def on_chip_stationary(self, tensor: Tensor) -> bool:
-        """
-        Returns True if this tensor is stationary (i.e., its DRAM traffic
-        can be computed by calculating its footprint)
-        """
-        return tensor.root_name() in self.stationary
-
-    def __build_dram_tensors(self) -> None:
-        """
-        Build the set of tensors stored in DRAM
-        """
-        self.dram_tensors = set()
-        einsum = self.program.get_equation().get_output().root_name()
-
-        # For each tensor
-        for tensor in self.program.get_equation().get_tensors():
-            path = self.hardware.get_traffic_path(einsum, tensor.root_name())
-
-            if not path or not isinstance(path[0], DRAMComponent):
-                continue
-
-            if len(path) < 2:
-                raise ValueError(
-                    "Tensor " +
-                    tensor.root_name() +
-                    " never buffered on chip")
-
-            self.dram_tensors.add(tensor.root_name())
-
     def __build_mergers(self) -> None:
         """
         Build a list of mergers that will be relevant
@@ -158,8 +94,9 @@ class Metrics:
         all_mergers = self.hardware.get_merger_components()
         easy_access = {}
 
+        einsum = self.program.get_equation().get_output().root_name()
         for merger in all_mergers:
-            for binding in merger.get_bindings():
+            for binding in merger.get_bindings()[einsum]:
                 # Create a map from
                 # (tensor name, init ranks, final ranks) to the component
                 name = binding["tensor"]
@@ -216,6 +153,7 @@ class Metrics:
 
                 check_tensor(tensor)
 
+                # TODO: What is this? Do we care about it?
                 # Now check any dynamic swizzling after partitioning
                 # opt_rank = tensor.peek()
                 # while opt_rank is not None:
@@ -231,59 +169,6 @@ class Metrics:
 
             tensor.reset()
             tensor.set_is_output(is_output)
-
-    def __build_off_chip_traffic_info(self) -> None:
-        """
-        Build a mapping from tensors to the rank buffered on chip
-        """
-        self.on_chip_rank = {}
-        self.on_chip_buffer = {}
-        einsum = self.program.get_equation().get_output().root_name()
-
-        # For each tensor
-        for tensor in self.program.get_equation().get_tensors():
-            # We don't care about tensors not in DRAM
-            if not self.in_dram(tensor):
-                continue
-
-            name = tensor.root_name()
-            path = self.hardware.get_traffic_path(einsum, name)
-
-            # Get the bindings
-            mem_binding = path[0].get_binding(name)
-            on_chip_binding = path[1].get_binding(name)
-
-            # Indicates an error with Hardware.get_traffic_path()
-            if not mem_binding or not on_chip_binding:
-                raise ValueError("Something is wrong...")  # pragma: no cover
-
-            # Build a dictionary of tensors to the
-            # (rank in DRAM, rank in last on-chip buffer)
-            self.on_chip_rank[name] = (mem_binding, on_chip_binding)
-
-            # Save the component where the tensor is buffered on-chip
-            self.on_chip_buffer[name] = path[1]
-
-    def __build_stationary(self) -> None:
-        """
-        Build a set of DRAM -> on chip stationary tensors
-        """
-        self.stationary = set()
-        einsum = self.program.get_equation().get_output().root_name()
-
-        for name, (mem_rank, on_chip_rank) in self.on_chip_rank.items():
-            tensor = self.program.get_equation().get_tensor(name)
-
-            if mem_rank != "root":
-                raise NotImplementedError
-
-            prefix = tensor.get_prefix(on_chip_rank)
-
-            # The tensor is stationary if its prefix is also a prefix to the
-            # loop order
-            if prefix == self.program.get_loop_order().get_ranks()[
-                    :len(prefix)]:
-                self.stationary.add(name)
 
     def __check_configuration(self) -> None:
         """

@@ -32,20 +32,30 @@ class Component:
     Representation an hardware component
     """
 
-    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a component
         """
         self.name = name
         # TODO: Remove this (not used)
         self.attrs = attrs
-        self.bindings: Any = {}
+        self.bindings = bindings
 
     def get_name(self) -> str:
         """
         Get the component name
         """
         return self.name
+
+    def get_bindings(self) -> Dict[str, List[dict]]:
+        """
+        Get the operations that are bound to this merger
+
+        TODO: Test
+        TODO: Do we want to expose this directly
+        """
+        return self.bindings
 
     def __eq__(self, other: object) -> bool:
         """
@@ -150,31 +160,12 @@ class FunctionalComponent(Component):
     Superclass for all functional unit components (compute, intersection, mergers, etc.)
     """
 
-    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a functional component
         """
         super().__init__(name, attrs, bindings)
-        self.bindings = {}
-
-        for binding in bindings:
-            einsum = binding["einsum"]
-            if einsum not in self.bindings.keys():
-                self.bindings[einsum] = []
-
-            # Append the dictionary containing the other properties
-            info = binding.copy()
-            del info["einsum"]
-            self.bindings[einsum].append(info)
-
-    def get_bindings(self, einsum: str) -> List[dict]:
-        """
-        Get the operations that are bound for this einsum
-        """
-        if einsum not in self.bindings.keys():
-            return []
-
-        return self.bindings[einsum]
 
 
 class MemoryComponent(Component):
@@ -182,27 +173,70 @@ class MemoryComponent(Component):
     Superclass for all memory components
     """
 
-    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a memory component
         """
         super().__init__(name, attrs, bindings)
 
-        self.bindings = {}
-
         self.bandwidth = self._check_int_attr(attrs, "bandwidth")
 
-        for binding in bindings:
-            self.bindings[binding["tensor"]] = binding["rank"]
+        self.tensor_bindings: Dict[str, Dict[str, List[dict]]] = {}
+        for einsum in self.bindings.keys():
+            self.tensor_bindings[einsum] = {}
+            for binding in self.bindings[einsum]:
+                if "tensor" not in binding:
+                    raise ValueError(
+                        "Tensor not specified for Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
 
-    def get_binding(self, tensor: str) -> Optional[str]:
-        """
-        Given a tensor, give the rank bound to this memory
-        """
-        if tensor not in self.bindings.keys():
-            return None
+                tensor = binding["tensor"]
+                if "rank" not in binding:
+                    raise ValueError(
+                        "Rank not specified for tensor " +
+                        tensor +
+                        " in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
 
-        return self.bindings[tensor]
+                if "type" not in binding:
+                    raise ValueError(
+                        "Type not specified for tensor " +
+                        tensor +
+                        " in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
+
+                types = {"coord", "payload", "elem"}
+                if binding["type"] not in types:
+                    raise ValueError("Type " +
+                                     str(binding["type"]) +
+                                     " for " +
+                                     self.name +
+                                     " on tensor " +
+                                     tensor +
+                                     " in Einsum " +
+                                     einsum +
+                                     " not one of " +
+                                     str(types))
+
+                if "format" not in binding:
+                    raise ValueError(
+                        "Format not specified for tensor " +
+                        tensor +
+                        " in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
+
+                if binding["tensor"] not in self.tensor_bindings[einsum]:
+                    self.tensor_bindings[einsum][binding["tensor"]] = []
+                self.tensor_bindings[einsum][binding["tensor"]].append(binding)
 
     def get_bandwidth(self) -> int:
         """
@@ -214,6 +248,18 @@ class MemoryComponent(Component):
                 self.name)
 
         return self.bandwidth
+
+    def get_binding(self, einsum: str, tensor: str) -> List[dict]:
+        """
+        Given a tensor, get a list of bindings to that rank
+        """
+        if einsum not in self.tensor_bindings:
+            return []
+
+        if tensor not in self.tensor_bindings[einsum]:
+            return []
+
+        return self.tensor_bindings[einsum][tensor]
 
     def _Component__key(self) -> Tuple[Any, ...]:
         """
@@ -227,9 +273,10 @@ class BufferComponent(MemoryComponent):
     A Component for a buffer
     """
 
-    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
         """
-        Construct a buffet component
+        Construct a buffer component
         """
         super().__init__(name, attrs, bindings)
 
@@ -269,17 +316,47 @@ class BufferComponent(MemoryComponent):
 class BuffetComponent(BufferComponent):
     """
     A Component for a Buffet
-
-    TODO: Do we even need a separate class for this?
     """
-    pass
+
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
+        """
+        Construct a buffet component
+        """
+        super().__init__(name, attrs, bindings)
+        for einsum in self.tensor_bindings:
+            for tensor, tensor_bindings in self.tensor_bindings[einsum].items(
+            ):
+                for binding in tensor_bindings:
+                    if "evict-on" not in binding:
+                        raise ValueError(
+                            "Evict-on not specified for tensor " +
+                            tensor +
+                            " in Einsum " +
+                            einsum +
+                            " in binding to " +
+                            self.name)
+
+                    if "style" not in binding:
+                        binding["style"] = "lazy"
+
+                    styles = {"lazy", "eager"}
+                    if binding["style"] not in styles:
+                        raise ValueError("Style " +
+                                         str(binding["style"]) +
+                                         " for " +
+                                         self.name +
+                                         " on tensor " +
+                                         tensor +
+                                         " in Einsum " +
+                                         einsum +
+                                         " not one of " +
+                                         str(styles))
 
 
 class CacheComponent(BufferComponent):
     """
     A Component for a Cache
-
-    TODO: Do we even need a separate class for this?
     """
     pass
 
@@ -289,7 +366,8 @@ class ComputeComponent(FunctionalComponent):
     A Component for a compute functional unit
     """
 
-    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a compute component
         """
@@ -332,7 +410,8 @@ class MergerComponent(Component):
     A Component for a merger
     """
 
-    def __init__(self, name: str, attrs: dict, bindings: List[dict]) -> None:
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a compute component
         """
@@ -367,23 +446,6 @@ class MergerComponent(Component):
             raise NotImplementedError(
                 "Concurrent merge and reduction not supported")
         self.reduce = False
-
-        self.bindings = []
-        for binding in bindings:
-            init = binding["init_ranks"]
-            d = binding["swap_depth"]
-            final = init[:d] + [init[d + 1]] + [init[d]] + init[(d + 2):]
-
-            info = binding.copy()
-            info["final_ranks"] = final
-
-            self.bindings.append(info)
-
-    def get_bindings(self) -> List[dict]:
-        """
-        Get the operations that are bound to this merger
-        """
-        return self.bindings
 
     def get_comparator_radix(self) -> int:
         """

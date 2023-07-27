@@ -1,22 +1,47 @@
-  architecture:
-    subtree:
-    - name: System
+architecture:
+  Config0:
+  - name: System
+    attributes:
+      clock_frequency: 1000000000
+
+    local:
+    - name: Memory
+      class: DRAM
       attributes:
-        clock_frequency: 1000000000
+        datawidth: 8
+        bandwidth: 128
+
+    subtree:
+    - name: PE[0..7]
 
       local:
-      - name: Memory
-        class: DRAM
-        attributes:
-          datawidth: 8
-          bandwidth: 128
+      - name: Registers
+        class: Buffet
 
-      subtree:
-      - name: PE[0..7]
+      - name: MAC
+        class: compute
 
-        local:
-        - name: Registers
-          class: Buffet
+  Config1:
+  - name: System
+    attributes:
+      clock_frequency: 1000000000
 
-        - name: MAC
-          class: compute
+    local:
+    - name: Memory
+      class: DRAM
+      attributes:
+        datawidth: 8
+        bandwidth: 128
+
+    subtree:
+    - name: PE[0..7]
+
+      local:
+      - name: Registers
+        class: Buffet
+
+      - name: MAC0
+        class: compute
+
+      - name: MAC1
+        class: compute

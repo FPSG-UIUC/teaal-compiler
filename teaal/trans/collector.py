@@ -119,7 +119,7 @@ class Collector:
         metrics = EAccess(EVar("metrics"), EString(einsum))
         block = SBlock([])
 
-        for binding in component.get_bindings(einsum):
+        for binding in component.get_bindings()[einsum]:
             if isinstance(component, LeaderFollowerComponent):
                 rank = binding["rank"]
                 leader = self.__get_leader(rank, binding["leader"])
@@ -183,85 +183,83 @@ class Collector:
         Get the memory metrics for a given tensor
         """
         block = SBlock([])
-
-        # Dictionary accesses
-        einsum = EString(self.program.get_equation().get_output().root_name())
-        metrics = EAccess(EVar("metrics"), einsum)
-        fp_access = (metrics, EString(tensor.root_name() + " footprint"))
-        tf_access = (metrics, EString(tensor.root_name() + " traffic"))
-
-        # No memory traffic if the tensor is not stored in DRAM
-        if not self.metrics.in_dram(tensor):
-            block.add(SAssign(AAccess(*fp_access), EInt(0)))
-            block.add(SAssign(AAccess(*tf_access), EInt(0)))
-            return block
-
-        # Make a format for this tensor
-        name = tensor.tensor_name()
-        spec = TransUtils.build_expr(self.metrics.get_format(tensor))
-        constr = EFunc("Format", [AJust(EVar(name)), AJust(spec)])
-        format_ = name + "_format"
-        block.add(SAssign(AVar(format_), constr))
-
-        # Compute its memory footprint
-        footprint = EMethod(EVar(format_), "getTensor", [])
-        block.add(SAssign(AAccess(*fp_access), footprint))
-
-        # If it is stationary, its footprint is its traffic, else compue
-        # the traffic
-        if self.metrics.on_chip_stationary(tensor):
-            block.add(SAssign(AAccess(*tf_access), EAccess(*fp_access)))
-
-        else:
-            # First compute the traffic from loading the buffered subtrees
-            traffic = self.__mem_traffic(tensor)
-
-            # TODO: Make this more realistic
-            # We assume that the other ranks are secretly buffered
-            # somewhere else
-            buffer_rank = self.metrics.get_on_chip_rank(tensor)
-            prefix = tensor.get_prefix(buffer_rank)
-
-            for rank in prefix:
-                arg = AJust(EString(rank))
-                rank_fp = EMethod(EVar(format_), "getRank", [arg])
-
-            traffic = EBinOp(traffic, OAdd(), rank_fp)
-
-            block.add(SAssign(AAccess(*tf_access), traffic))
-
         return block
+
+        # TODO: This is all terrible
+        # # Dictionary accesses
+        # einsum = EString(self.program.get_equation().get_output().root_name())
+        # metrics = EAccess(EVar("metrics"), einsum)
+        # fp_access = (metrics, EString(tensor.root_name() + " footprint"))
+        # tf_access = (metrics, EString(tensor.root_name() + " traffic"))
+
+        # # Make a format for this tensor
+        # name = tensor.tensor_name()
+        # spec = TransUtils.build_expr(self.metrics.get_format(tensor))
+        # constr = EFunc("Format", [AJust(EVar(name)), AJust(spec)])
+        # format_ = name + "_format"
+        # block.add(SAssign(AVar(format_), constr))
+
+        # # Compute its memory footprint
+        # footprint = EMethod(EVar(format_), "getTensor", [])
+        # block.add(SAssign(AAccess(*fp_access), footprint))
+
+        # # If it is stationary, its footprint is its traffic, else compue
+        # # the traffic
+        # if self.metrics.on_chip_stationary(tensor):
+        #     block.add(SAssign(AAccess(*tf_access), EAccess(*fp_access)))
+
+        # else:
+        #     # First compute the traffic from loading the buffered subtrees
+        #     traffic = self.__mem_traffic(tensor)
+
+        #     # TODO: Make this more realistic
+        #     # We assume that the other ranks are secretly buffered
+        #     # somewhere else
+        #     buffer_rank = self.metrics.get_on_chip_rank(tensor)
+        #     prefix = tensor.get_prefix(buffer_rank)
+
+        #     for rank in prefix:
+        #         arg = AJust(EString(rank))
+        #         rank_fp = EMethod(EVar(format_), "getRank", [arg])
+
+        #     traffic = EBinOp(traffic, OAdd(), rank_fp)
+
+        #     block.add(SAssign(AAccess(*tf_access), traffic))
+
+        # return block
 
     def __mem_traffic(self, tensor: Tensor) -> Expression:
         """
         Get the expression for computing the memory traffic for this tensor
         """
-        buffer_ = self.metrics.get_on_chip_buffer(tensor)
+        return EVar("foo")
+        # TODO: This is also terrible
+        # buffer_ = self.metrics.get_on_chip_buffer(tensor)
 
-        if isinstance(buffer_, BuffetComponent):
-            args = []
-            args.append(AJust(EVar(tensor.tensor_name())))
-            args.append(AJust(EString(self.metrics.get_on_chip_rank(tensor))))
-            args.append(AJust(EVar(tensor.tensor_name() + "_format")))
+        # if isinstance(buffer_, BuffetComponent):
+        #     args = []
+        #     args.append(AJust(EVar(tensor.tensor_name())))
+        #     args.append(AJust(EString(self.metrics.get_on_chip_rank(tensor))))
+        #     args.append(AJust(EVar(tensor.tensor_name() + "_format")))
 
-            return EMethod(EVar("Traffic"), "buffetTraffic", args)
+        #     return EMethod(EVar("Traffic"), "buffetTraffic", args)
 
-        elif isinstance(buffer_, CacheComponent):
-            capacity = buffer_.get_depth() * buffer_.get_width()
+        # elif isinstance(buffer_, CacheComponent):
+        #     capacity = buffer_.get_depth() * buffer_.get_width()
 
-            args = []
-            args.append(AJust(EVar(tensor.tensor_name())))
-            args.append(AJust(EString(self.metrics.get_on_chip_rank(tensor))))
-            args.append(AJust(EVar(tensor.tensor_name() + "_format")))
-            args.append(AJust(EInt(capacity)))
+        #     args = []
+        #     args.append(AJust(EVar(tensor.tensor_name())))
+        #     args.append(AJust(EString(self.metrics.get_on_chip_rank(tensor))))
+        #     args.append(AJust(EVar(tensor.tensor_name() + "_format")))
+        #     args.append(AJust(EInt(capacity)))
 
-            return EMethod(EVar("Traffic"), "cacheTraffic", args)
+        #     return EMethod(EVar("Traffic"), "cacheTraffic", args)
 
-        else:
-            # This error should be caught by the Hardware constructor
-            raise ValueError(
-                "Unknown MemoryComponent " +
-                repr(buffer_))  # pragma: no cover
+        # else:
+        #     # This error should be caught by the Hardware constructor
+        #     raise ValueError(
+        #         "Unknown MemoryComponent " +
+        #         repr(buffer_))  # pragma: no cover
 
     def __merger_metrics(
             self,
