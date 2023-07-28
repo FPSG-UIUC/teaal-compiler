@@ -65,7 +65,7 @@ def build_gamma():
 
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
-    hardware = Hardware(arch, bindings)
+    hardware = Hardware(arch, bindings, program)
 
     format_ = Format.from_str(yaml)
 
@@ -789,6 +789,54 @@ def test_graph_conv_part():
     assert nx.is_isomorphic(graph, corr)
 
 
+def test_graph_metrics_no_loops():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+      expressions:
+        - Z[] = a
+    architecture:
+      accel:
+      - name: empty
+    bindings:
+      Z:
+      - config: accel
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    hardware = Hardware(arch, bindings, program)
+
+    format_ = Format.from_str(yaml)
+
+    program.add_einsum(0)
+    metrics = Metrics(program, hardware, format_)
+    graph = FlowGraph(program, metrics, []).get_graph()
+
+    corr = nx.DiGraph()
+
+    corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
+    corr.add_edge(OtherNode("Body"), MetricsNode("End"))
+    corr.add_edge(OtherNode("Graphics"), OtherNode("Body"))
+    corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), GetRootNode("Z", []))
+    corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+    corr.add_edge(MetricsNode("Start"), OtherNode("Body"))
+    corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
+    corr.add_edge(GetRootNode("Z", []), OtherNode("Body"))
+
+    assert nx.is_isomorphic(graph, corr)
+
+
 def test_graph_metrics():
     program, hardware, format_ = build_gamma()
     program.add_einsum(0)
@@ -797,33 +845,87 @@ def test_graph_metrics():
 
     corr = nx.DiGraph()
 
-    corr.add_edge(LoopNode("M"), LoopNode("K"))
-    corr.add_edge(LoopNode("K"), LoopNode("N"))
-    corr.add_edge(LoopNode("K"), OtherNode("Body"))
+    corr.add_edge(LoopNode("M1"), LoopNode("M0"))
+    corr.add_edge(LoopNode("M0"), LoopNode("K1"))
+    corr.add_edge(LoopNode("M0"), FromFiberNode("A", "K"))
+    corr.add_edge(LoopNode("K1"), LoopNode("K0"))
+    corr.add_edge(LoopNode("K0"), LoopNode("N"))
+    corr.add_edge(LoopNode("K0"), OtherNode("Body"))
     corr.add_edge(LoopNode("N"), OtherNode("Body"))
-    corr.add_edge(OtherNode("Graphics"), LoopNode("M"))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("M1"))
     corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
-    corr.add_edge(OtherNode("Output"), GetRootNode("T", ["M", "K", "N"]))
+    corr.add_edge(
+        OtherNode("Output"), GetRootNode(
+            "T", [
+                'M1', 'M0', 'K1', 'K0', 'N']))
     corr.add_edge(OtherNode("Body"), OtherNode("Footer"))
     corr.add_edge(OtherNode("Body"), MetricsNode("End"))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
-    corr.add_edge(MetricsNode("Start"), LoopNode("M"))
+    corr.add_edge(MetricsNode("Start"), LoopNode("M1"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "K0", "fiber"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "K0", "iter"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "M0", "iter"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "M0", "fiber"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("B", "N", "iter"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("B", "N", "fiber"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("B", "K0", "iter"))
+    corr.add_edge(MetricsNode("Start"), CollectingNode("B", "K0", "fiber"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
-    corr.add_edge(GetRootNode("T", ["M", "K", "N"]), LoopNode("M"))
+    corr.add_edge(
+        GetRootNode(
+            "T", [
+                'M1', 'M0', 'K1', 'K0', 'N']), LoopNode("M1"))
+    corr.add_edge(
+        PartNode(
+            "A", ('K',)), SwizzleNode(
+            "A", [
+                'K1', 'K0'], "loop-order"))
+    corr.add_edge(
+        PartNode(
+            "A", ('M',)), SwizzleNode(
+            "A", [
+                'M1', 'M0', 'K'], "loop-order"))
     corr.add_edge(SwizzleNode(
-        "A", ["M", "K"], "loop-order"), GetRootNode("A", ["M", "K"]))
+        "A", ['M', 'K'], "loop-order"), GetRootNode("A", ['M', 'K']))
+    corr.add_edge(
+        SwizzleNode(
+            "A", [
+                'M', 'K'], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(GetRootNode("A", ['M', 'K']), FromFiberNode("A", "M"))
+    corr.add_edge(
+        PartNode(
+            "B", ('K',)), SwizzleNode(
+            "B", [
+                'K1', 'K0', 'N'], "loop-order"))
     corr.add_edge(SwizzleNode(
-        "A", ["M", "K"], "loop-order"), OtherNode("Graphics"))
-    corr.add_edge(GetRootNode("A", ["M", "K"]), LoopNode("M"))
+        "B", ['K', 'N'], "loop-order"), GetRootNode("B", ['K', 'N']))
+    corr.add_edge(
+        SwizzleNode(
+            "B", [
+                'K', 'N'], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(GetRootNode("B", ['K', 'N']), FromFiberNode("B", "K"))
+    corr.add_edge(CollectingNode("A", "K0", "fiber"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("A", "K0", "iter"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("A", "M0", "iter"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("A", "M0", "fiber"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("B", "N", "iter"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("B", "N", "fiber"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("B", "K0", "iter"), LoopNode("M1"))
+    corr.add_edge(CollectingNode("B", "K0", "fiber"), LoopNode("M1"))
+    corr.add_edge(FromFiberNode("A", "M"), PartNode("A", ('M',)))
     corr.add_edge(SwizzleNode(
-        "B", ["K", "N"], "loop-order"), GetRootNode("B", ["K", "N"]))
+        "A", ['M1', 'M0', 'K'], "loop-order"), GetRootNode("A", ['M1', 'M0', 'K']))
+    corr.add_edge(GetRootNode("A", ['M1', 'M0', 'K']), LoopNode("M1"))
+    corr.add_edge(FromFiberNode("B", "K"), PartNode("B", ('K',)))
     corr.add_edge(SwizzleNode(
-        "B", ["K", "N"], "loop-order"), OtherNode("Graphics"))
-    corr.add_edge(GetRootNode("B", ["K", "N"]), LoopNode("K"))
-    corr.add_edge(SwizzleNode("B", ['K', 'N'],
-                  "loop-order"), CollectingNode("B", "K"))
-    corr.add_edge(CollectingNode("B", "K"), MetricsNode("Start"))
+        "B", ['K1', 'K0', 'N'], "loop-order"), GetRootNode("B", ['K1', 'K0', 'N']))
+    corr.add_edge(GetRootNode("B", ['K1', 'K0', 'N']), LoopNode("K1"))
+    corr.add_edge(FromFiberNode("A", "K"), PartNode("A", ('K',)))
+    corr.add_edge(SwizzleNode(
+        "A", ['K1', 'K0'], "loop-order"), GetRootNode("A", ['K1', 'K0']))
+    corr.add_edge(GetRootNode("A", ['K1', 'K0']), PartNode("B", ('K',)))
+    corr.add_edge(GetRootNode("A", ['K1', 'K0']), LoopNode("K1"))
 
     assert nx.is_isomorphic(graph, corr)
 

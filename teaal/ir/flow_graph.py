@@ -144,18 +144,16 @@ class FlowGraph:
         if not self.metrics:
             return
 
-        # TODO: Collect what we actually need to collect
-        # None if the tensor is never stored in DRAM
-        # if not self.metrics.in_dram(tensor):
-        #     return
+        loop_ranks = self.program.get_loop_order().get_ranks()
+        if not loop_ranks:
+            return
 
-        # root = tensor.root_name()
-        # rank = self.metrics.get_on_chip_rank(tensor)
-        # swizzle_node = SwizzleNode(root, tensor.get_ranks(), "loop-order")
-        # collecting_node = CollectingNode(root, rank)
-
-        # self.graph.add_edge(swizzle_node, collecting_node)
-        # self.graph.add_edge(collecting_node, MetricsNode("Start"))
+        loop_node = LoopNode(loop_ranks[0])
+        tensor_name = tensor.root_name()
+        for rank, type_ in self.metrics.get_collected_tensor_info(tensor_name):
+            collecting_node = CollectingNode(tensor_name, rank, type_)
+            self.graph.add_edge(MetricsNode("Start"), collecting_node)
+            self.graph.add_edge(collecting_node, loop_node)
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
@@ -285,12 +283,15 @@ class FlowGraph:
         chain: List[Node] = [OtherNode("StartLoop")]
         for rank in loop_order:
             chain.append(LoopNode(rank))
-            self.graph.add_edge(chain[-2], chain[-1])
+        chain.append(OtherNode("Body"))
+
+        # Note that the chain is guaranteed to have at least two nodes
+        for i in range(len(chain) - 1):
+            self.graph.add_edge(chain[i], chain[i + 1])
 
         # Add the graphics generation, body, and footer
         self.graph.add_edge(OtherNode("Graphics"), OtherNode("StartLoop"))
         self.graph.add_edge(OtherNode("Output"), OtherNode("Graphics"))
-        self.graph.add_edge(chain[-1], OtherNode("Body"))
         self.graph.add_edge(OtherNode("Body"), OtherNode("Footer"))
 
         # If we have Metrics, we need to add the MetricsNodes
