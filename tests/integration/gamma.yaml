@@ -177,6 +177,11 @@ bindings:
       type: coord
       format: default
       evict-on: K1
+    - tensor: A
+      rank: K0
+      type: payload
+      format: default
+      evict-on: K1
   - component: Intersection
     bindings:
     - rank: K0
@@ -201,7 +206,7 @@ bindings:
     bindings:
     - tensor: Z
       rank: M0
-      type: coord
+      type: payload
       format: default
       evict-on: M1
     - tensor: Z

@@ -90,11 +90,18 @@ class Metrics:
                     einsum, tensor, rank, "payload", format_)
                 elem_path = self.hardware.get_traffic_path(
                     einsum, tensor, rank, "elem", format_)
-                used = coord_path or payload_path or elem_path
+                used = any(
+                    len(path) > 1 for path in [
+                        coord_path,
+                        payload_path,
+                        elem_path] if path is not None)
+
+                if not used:
+                    continue
 
                 if used and loop_format is not None and format_ != loop_format:
                     raise ValueError("Multiple potential formats " +
-                                     str([loop_format, format_]) +
+                                     str({loop_format, format_}) +
                                      " for tensor " +
                                      tensor +
                                      " in Einsum " +
@@ -104,7 +111,7 @@ class Metrics:
                 if used:
                     info.add((rank, "fiber"))
 
-                if payload_path:
+                if payload_path and len(payload_path) > 1:
                     info.add((rank, "iter"))
 
         return info
