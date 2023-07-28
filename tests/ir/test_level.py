@@ -4,7 +4,8 @@ from teaal.ir.level import Level
 
 def build_local():
     attrs = {"datawidth": 8, "bandwidth": 128}
-    bindings = [{"tensor": "A", "rank": "M"}]
+    bindings = {"Z": [{"tensor": "A", "rank": "M",
+                       "format": "default", "type": "payload"}]}
     return DRAMComponent("DRAM", attrs, bindings)
 
 
@@ -19,7 +20,7 @@ def build_level():
 
 
 def build_subtree():
-    return Level("PE", 8, {}, [FunctionalComponent("MAC", {}, [])], [])
+    return Level("PE", 8, {}, [FunctionalComponent("MAC", {}, {})], [])
 
 
 def test_get_attr():
@@ -53,6 +54,6 @@ def test_eq():
 
 def test_repr():
     level = build_level()
-    repr_ = "(Level, System, 1, {'clock_frequency': 1000000000}, [(DRAMComponent, DRAM, {'A': 'M'}, 128)], [(Level, PE, 8, {}, [(FunctionalComponent, MAC, {})], [])])"
+    repr_ = "(Level, System, 1, {'clock_frequency': 1000000000}, [(DRAMComponent, DRAM, {'Z': [{'tensor': 'A', 'rank': 'M', 'format': 'default', 'type': 'payload'}]}, 128)], [(Level, PE, 8, {}, [(FunctionalComponent, MAC, {})], [])])"
 
     assert repr(level) == repr_

@@ -249,17 +249,29 @@ class MemoryComponent(Component):
 
         return self.bandwidth
 
-    def get_binding(self, einsum: str, tensor: str) -> List[dict]:
+    def get_binding(self, einsum: str, tensor: str, rank: str,
+                    type_: str, format_: str) -> Optional[Dict[str, Any]]:
         """
         Given a tensor, get a list of bindings to that rank
         """
         if einsum not in self.tensor_bindings:
-            return []
+            return None
 
         if tensor not in self.tensor_bindings[einsum]:
-            return []
+            return None
 
-        return self.tensor_bindings[einsum][tensor]
+        final_binding: Optional[Dict[str, Any]] = None
+        for binding in self.tensor_bindings[einsum][tensor]:
+            if binding["rank"] == rank and binding["type"] == type_ and binding["format"] == format_:
+
+                if final_binding is None:
+                    final_binding = binding
+
+                else:
+                    raise ValueError("Multiple bindings for " + str(
+                        [("einsum", einsum), ("tensor", tensor), ("rank", rank), ("type", type_), ("format", format_)]))
+
+        return final_binding
 
     def _Component__key(self) -> Tuple[Any, ...]:
         """

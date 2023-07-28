@@ -40,10 +40,10 @@ class Bindings:
         """
 
         self.components: Dict[str, Dict[str, List[dict]]] = {}
+        self.configs = {}
         if yaml is None or "bindings" not in yaml.keys():
             return
 
-        self.configs = {}
         for einsum in yaml["bindings"]:
             self.components[einsum] = {}
 
@@ -68,7 +68,7 @@ class Bindings:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get(self, name: str) -> Dict[str, List[dict]]:
+    def get_component(self, name: str) -> Dict[str, List[dict]]:
         """
         Get the binding information for a component
         """
@@ -79,6 +79,12 @@ class Bindings:
                 info[einsum] = self.components[einsum][name]
 
         return info
+
+    def get_bindings(self) -> Dict[str, Dict[str, List[dict]]]:
+        """
+        Get the binding information for all components
+        """
+        return self.components
 
     def get_config(self, einsum: str) -> str:
         """

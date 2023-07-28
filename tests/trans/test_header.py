@@ -155,6 +155,19 @@ def test_make_swizzle_loop_order():
     assert header.make_swizzle(tensor, "loop-order").gen(depth=0) == hifiber
 
 
+def test_make_swizzle_none():
+    hifiber = ""
+
+    mapping = """
+      rank-order:
+        A: [M, K]
+    """
+
+    header = build_matmul_header(mapping)
+    tensor = Tensor("A", ["M", "K"])
+    assert header.make_swizzle(tensor, "loop-order").gen(depth=0) == hifiber
+
+
 def test_make_swizzle_partitioning():
     hifiber = "A_K1MK0 = A_K1K0M.swizzleRanks(rank_ids=[\"K1\", \"M\", \"K0\"])"
 

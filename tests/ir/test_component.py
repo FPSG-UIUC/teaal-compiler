@@ -81,6 +81,14 @@ def test_memory_binding_errs():
     assert str(
         excinfo.value) == "Format not specified for tensor A in Einsum Z in binding to Mem"
 
+    bindings = {"Z": [{"tensor": "A", "rank": "M", "type": "payload", "format": "default"},
+                      {"tensor": "A", "rank": "M", "type": "payload", "format": "default"}]}
+    memory = MemoryComponent("Memory", {"bandwidth": 256}, bindings)
+    with pytest.raises(ValueError) as excinfo:
+        memory.get_binding("Z", "A", "M", "payload", "default")
+    assert str(
+        excinfo.value) == "Multiple bindings for [('einsum', 'Z'), ('tensor', 'A'), ('rank', 'M'), ('type', 'payload'), ('format', 'default')]"
+
 
 def test_memory_component():
     bindings = {"Z": [{"tensor": "A", "rank": "M",
@@ -89,8 +97,14 @@ def test_memory_component():
 
     assert memory.get_bandwidth() == 256
 
-    assert memory.get_binding("Z", "A") == bindings["Z"]
-    assert memory.get_binding("Z", "B") == []
+    assert memory.get_binding(
+        "Z",
+        "A",
+        "M",
+        "payload",
+        "default") == bindings["Z"][0]
+    assert memory.get_binding("Z", "B", "M", "payload", "default") is None
+    assert memory.get_binding("T", "A", "M", "payload", "default") is None
 
     assert repr(
         memory) == "(MemoryComponent, Memory, {'Z': [{'tensor': 'A', 'rank': 'M', 'type': 'payload', 'format': 'default'}]}, 256)"
@@ -160,7 +174,12 @@ def test_buffet_component():
                        "evict-on": "root"}]}
     buffet = BuffetComponent("LLB", attrs, bindings)
 
-    assert buffet.get_binding("Z", "A") == bindings["Z"]
+    assert buffet.get_binding(
+        "Z",
+        "A",
+        "M",
+        "payload",
+        "default") == bindings["Z"][0]
 
     bindings = {"Z": [{"tensor": "A",
                        "rank": "M",
@@ -169,14 +188,19 @@ def test_buffet_component():
                        "evict-on": "root"}]}
     buffet = BuffetComponent("LLB", attrs, bindings)
 
-    bindings_corr = [{"tensor": "A",
-                      "rank": "M",
-                      "type": "payload",
-                      "format": "default",
-                      "style": "lazy",
-                      "evict-on": "root"}]
+    bindings_corr = {"tensor": "A",
+                     "rank": "M",
+                     "type": "payload",
+                     "format": "default",
+                     "style": "lazy",
+                     "evict-on": "root"}
 
-    assert buffet.get_binding("Z", "A") == bindings_corr
+    assert buffet.get_binding(
+        "Z",
+        "A",
+        "M",
+        "payload",
+        "default") == bindings_corr
 
 
 def test_cache_component():

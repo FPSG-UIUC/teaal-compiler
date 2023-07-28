@@ -186,7 +186,7 @@ def test_get_functional_components():
     bindings = Bindings.from_str(build_gamma_yaml())
 
     intersect = LeaderFollowerComponent(
-        "Intersection", {}, bindings.get("Intersection"))
+        "Intersection", {}, bindings.get_component("Intersection"))
 
     assert metrics.get_functional_components() == [intersect]
 
@@ -222,9 +222,9 @@ def test_get_merger_components():
     merger = MergerComponent(
         "HighRadixMerger",
         attrs,
-        bindings.get("HighRadixMerger"))
+        bindings.get_component("HighRadixMerger"))
 
-    binding = bindings.get("HighRadixMerger")[0].copy()
+    binding = bindings.get_component("HighRadixMerger")[0].copy()
     binding["final_ranks"] = ["M", "N", "K"]
 
     program.reset()
@@ -279,8 +279,8 @@ def test_get_merger_components_output():
     bindings = Bindings.from_str(yaml)
     merger = MergerComponent(
         "Merger", {
-            "inputs": 64, "comparator_radix": 64}, bindings.get("Merger"))
-    binding = bindings.get("Merger")[0].copy()
+            "inputs": 64, "comparator_radix": 64}, bindings.get_component("Merger"))
+    binding = bindings.get_component("Merger")[0].copy()
     binding["final_ranks"] = ["M", "N"]
 
     assert metrics.get_merger_components() == [(merger, binding)]
@@ -336,8 +336,8 @@ def test_get_merger_components_part_merge():
     bindings = Bindings.from_str(yaml)
     merger = MergerComponent(
         "Merger", {
-            "inputs": 64, "comparator_radix": 64}, bindings.get("Merger"))
-    binding = bindings.get("Merger")[0].copy()
+            "inputs": 64, "comparator_radix": 64}, bindings.get_component("Merger"))
+    binding = bindings.get_component("Merger")[0].copy()
     binding["final_ranks"] = ["M1", "K", "M0"]
 
     assert metrics.get_merger_components() == [(merger, binding)]
@@ -356,8 +356,11 @@ def test_get_on_chip_buffer():
     bindings = Bindings.from_str(build_gamma_yaml())
 
     attrs = {"width": 8, "depth": 3145728}
-    cache = CacheComponent("FiberCache", attrs, bindings.get("FiberCache"))
-    regs = BuffetComponent("RegFile0", {}, bindings.get("RegFile0"))
+    cache = CacheComponent(
+        "FiberCache",
+        attrs,
+        bindings.get_component("FiberCache"))
+    regs = BuffetComponent("RegFile0", {}, bindings.get_component("RegFile0"))
 
     assert metrics.get_on_chip_buffer(Tensor("A", ["M", "K"])) == regs
     assert metrics.get_on_chip_buffer(Tensor("B", ["K", "N"])) == cache

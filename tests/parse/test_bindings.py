@@ -3,7 +3,7 @@ from teaal.parse.bindings import Bindings
 
 def test_empty():
     bindings = Bindings.from_str("")
-    assert bindings.get("BAD") == {}
+    assert bindings.get_component("BAD") == {}
 
 
 def test_no_bindings():
@@ -12,7 +12,7 @@ def test_no_bindings():
       - bar
       - baz
     """
-    assert Bindings.from_str(yaml).get("BAD") == {}
+    assert Bindings.from_str(yaml).get_component("BAD") == {}
 
 
 def test_defined():
@@ -34,7 +34,13 @@ def test_defined():
     mac = {"Z": [{"op": "add"}]}
 
     assert bindings.get_config("Z") == "Config0"
-    assert bindings.get("Memory") == mem
-    assert bindings.get("Registers") == regs
-    assert bindings.get("MAC") == mac
-    assert bindings.get("BAD") == {}
+    assert bindings.get_component("Memory") == mem
+    assert bindings.get_component("Registers") == regs
+    assert bindings.get_component("MAC") == mac
+    assert bindings.get_component("BAD") == {}
+
+    assert bindings.get_bindings() == {
+        "Z": {
+            "Memory": mem["Z"],
+            "Registers": regs["Z"],
+            "MAC": mac["Z"]}}

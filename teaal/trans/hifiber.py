@@ -64,7 +64,7 @@ class HiFiber:
         self.hardware: Optional[Hardware] = None
         self.format = format_
         if arch and bindings and arch.get_spec():
-            self.hardware = Hardware(arch, bindings)
+            self.hardware = Hardware(arch, bindings, self.program)
 
         self.trans_utils = TransUtils()
 
