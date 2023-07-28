@@ -459,11 +459,66 @@ class MergerComponent(Component):
                 "Concurrent merge and reduction not supported")
         self.reduce = False
 
+        self.tensor_bindings: Dict[str, Dict[str, List[dict]]] = {}
+        for einsum, einsum_bindings in self.bindings.items():
+            self.tensor_bindings[einsum] = {}
+            for binding in einsum_bindings:
+                if "tensor" not in binding:
+                    raise ValueError(
+                        "Tensor not specified for Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
+
+                tensor = binding["tensor"]
+                if tensor not in self.tensor_bindings[einsum]:
+                    self.tensor_bindings[einsum][tensor] = []
+
+                if "init-ranks" not in binding:
+                    raise ValueError(
+                        "Initial ranks not specified for tensor " +
+                        tensor +
+                        " in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
+
+                if "final-ranks" not in binding:
+                    raise ValueError(
+                        "Final ranks not specified for tensor " +
+                        tensor +
+                        " in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
+
+                self.tensor_bindings[einsum][tensor].append(binding)
+
     def get_comparator_radix(self) -> int:
         """
         Get the comparator_radix
         """
         return self.comparator_radix
+
+    def get_init_ranks(self, einsum: str, tensor: str, final_ranks: List[str]) -> Optional[List[str]]:
+        """
+        Get the initial ranks for the given merge
+        """
+        if einsum not in self.tensor_bindings:
+            return None
+
+        if tensor not in self.tensor_bindings[einsum]:
+            return None
+
+        init_ranks: Optional[List[str]] = None
+        for binding in self.tensor_bindings[einsum][tensor]:
+            if binding["final-ranks"] == final_ranks:
+                if init_ranks is not None:
+                    raise ValueError("Merge binding from both " + str(init_ranks) + " and " + str(binding["init-ranks"]) + " to " + str(final_ranks))
+
+                init_ranks = binding["init-ranks"]
+
+        return init_ranks
 
     def get_inputs(self) -> int:
         """

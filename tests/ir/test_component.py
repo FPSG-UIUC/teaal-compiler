@@ -336,6 +336,27 @@ def test_merger_attr_errs():
         MergerComponent("Merger1", attrs, [])
     assert str(excinfo.value) == "Concurrent merge and reduction not supported"
 
+def test_merger_binding_errs():
+    attrs = {
+        "inputs": 64,
+        "comparator_radix": 32,
+        "outputs": 2,
+        "order": "opt",
+        "reduce": False}
+    binding = {"Z": [{"init-ranks": ["M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
+    with pytest.raises(ValueError) as excinfo:
+        MergerComponent("Merger1", attrs, binding)
+    assert str(excinfo.value) == "Tensor not specified for Einsum Z in binding to Merger1"
+
+    binding = {"Z": [{"tensor": "T", "final-ranks": ["M", "N", "K"]}]}
+    with pytest.raises(ValueError) as excinfo:
+        MergerComponent("Merger1", attrs, binding)
+    assert str(excinfo.value) == "Initial ranks not specified for tensor T in Einsum Z in binding to Merger1"
+
+    binding = {"Z": [{"tensor": "T", "init-ranks": ["M", "N", "K"]}]}
+    with pytest.raises(ValueError) as excinfo:
+        MergerComponent("Merger1", attrs, binding)
+    assert str(excinfo.value) == "Final ranks not specified for tensor T in Einsum Z in binding to Merger1"
 
 def test_merger_component():
     attrs = {
@@ -344,12 +365,12 @@ def test_merger_component():
         "outputs": 2,
         "order": "opt",
         "reduce": False}
-    binding = {"Z": [{"tensor": "T", "init_ranks": [
-        "M", "K", "N"], "final_ranks": ["M", "N", "K"]}]}
+    binding = {"Z": [{"tensor": "T", "init-ranks": [
+        "M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
     merger = MergerComponent("Merger0", attrs, binding)
 
-    bindings = {"Z": [{"tensor": "T", "init_ranks": [
-        "M", "K", "N"], "final_ranks": ["M", "N", "K"]}]}
+    bindings = {"Z": [{"tensor": "T", "init-ranks": [
+        "M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
     assert merger.get_bindings() == bindings
 
     assert merger.get_inputs() == 64
@@ -358,8 +379,12 @@ def test_merger_component():
     assert merger.get_order() == "opt"
     assert merger.get_reduce() == False
 
+    assert merger.get_init_ranks("Z", "T", ["M", "N", "K"]) == ["M", "K", "N"]
+    assert merger.get_init_ranks("T", "T", ["M", "K", "N"]) is None
+    assert merger.get_init_ranks("Z", "A", ["M", "K"]) is None
+
     assert repr(
-        merger) == "(MergerComponent, Merger0, {'Z': [{'tensor': 'T', 'init_ranks': ['M', 'K', 'N'], 'final_ranks': ['M', 'N', 'K']}]}, 64, 32, 2, opt, False)"
+        merger) == "(MergerComponent, Merger0, {'Z': [{'tensor': 'T', 'init-ranks': ['M', 'K', 'N'], 'final-ranks': ['M', 'N', 'K']}]}, 64, 32, 2, opt, False)"
 
     attrs = {"inputs": 200, "comparator_radix": 2}
     merger = MergerComponent("Merger1", attrs, binding)

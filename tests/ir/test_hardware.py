@@ -274,8 +274,8 @@ def test_get_component():
       - component: HighRadixMerger
         bindings:
         - tensor: T
-          init_ranks: [M, K, N]
-          final_ranks: [M, N, K]
+          init-ranks: [M, K, N]
+          final-ranks: [M, N, K]
 
       - component: SAIntersect
         bindings:
@@ -319,7 +319,7 @@ def test_get_component():
     assert_component(SkipAheadComponent, "SAIntersect", {})
 
 
-def test_get_functional_components():
+def test_get_components():
     yaml = """
     einsum:
       declaration:
@@ -383,93 +383,7 @@ def test_get_functional_components():
         "Intersect0", {}, bindings.get_component("Intersect0"))
     mac = FunctionalComponent("MAC", {}, bindings.get_component("MAC"))
 
-    assert hardware.get_functional_components("Z") == [intersect, mac]
-
-
-# TODO: Delete
-# def test_get_merger_components():
-#     yaml = """
-#     architecture:
-#       subtree:
-#       - name: System
-#
-#         subtree:
-#         - name: SwapStage0
-#           local:
-#           - name: Merger0
-#             class: Merger
-#             attributes:
-#               inputs: 64
-#               comparator_radix: 64
-#               outputs: 1
-#               order: fifo
-#               reduce: False
-#
-#               # TODO: Remove these attributes
-#               radix: 64
-#               next_latency: 1
-#
-#         - name: ComputeStage
-#           local:
-#           - name: Compute
-#             class: compute
-#
-#         - name: SwapStage1
-#           local:
-#           - name: Merger1
-#             class: Merger
-#             attributes:
-#               inputs: 64
-#               comparator_radix: 64
-#               outputs: 1
-#               order: fifo
-#               reduce: False
-#
-#               # TODO: Remove these attributes
-#               radix: 64
-#               next_latency: 1
-#
-#     bindings:
-#       - name: Merger0
-#         bindings:
-#         - tensor: T
-#           init_ranks: [M, K, N]
-#           swap_depth: 1
-#
-#       - name: Compute
-#         bindings:
-#         - einsum: Z
-#           op: add
-#
-#       - name: Merger1
-#         bindings:
-#         - tensor: Z
-#           init_ranks: [N, M]
-#           swap_depth: 0
-#     """
-#     arch = Architecture.from_str(yaml)
-#     bindings = Bindings.from_str(yaml)
-#     hardware = Hardware(arch, bindings)
-#
-#     # TODO: Remove radix and next_latency
-#     attrs = {
-#         "inputs": 64,
-#         "comparator_radix": 64,
-#         "outputs": 1,
-#         "order": "fifo",
-#         "reduce": False,
-#         "radix": 64,
-#         "next_latency": 1}
-#     merger0 = MergerComponent(
-#         "Merger0",
-#         attrs,
-#         bindings.get_component("Merger0"))
-#     merger1 = MergerComponent(
-#         "Merger1",
-#         attrs,
-#         bindings.get_component("Merger1"))
-#
-#     assert hardware.get_merger_components() == [merger0, merger1]
+    assert hardware.get_components("Z", FunctionalComponent) == [intersect, mac]
 
 
 def test_get_traffic_path_multiple_bindings():

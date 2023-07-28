@@ -75,12 +75,14 @@ class Collector:
                 tensor.set_is_output(True)
 
         # Add the compute information
-        for compute in self.metrics.get_functional_components():
+        # TODO: Fix with new metrics information
+        for compute in self.metrics.hardware.get_components(self.program.get_equation().get_output().root_name(), FunctionalComponent):
             block.add(self.__compute_metrics(compute))
 
         # Add the merger information
-        for merge, name in self.metrics.get_merger_components():
-            block.add(self.__merger_metrics(merge, name))
+        # TODO: Fix with new metrics information
+        # for merge, name in self.metrics.get_merger_components():
+        #     block.add(self.__merger_metrics(merge, name))
 
         return block
 

@@ -24,7 +24,7 @@ SOFTWARE.
 Representation of the hardware of an accelerator
 """
 
-from typing import Dict, Type
+from typing import Dict, Set, Type, TypeVar
 
 from teaal.ir.component import *
 from teaal.ir.level import Level
@@ -32,6 +32,7 @@ from teaal.ir.program import Program
 
 from teaal.parse import *
 
+T = TypeVar("T")
 
 class Hardware:
     """
@@ -88,31 +89,16 @@ class Hardware:
         return []
         # return self.__compute_helper(einsum, self.tree[self.configs[einsum]])
 
-    def get_functional_components(
-            self, einsum: str) -> List[FunctionalComponent]:
+    def get_components(self, einsum: str, class_: Type[T]) -> List[T]:
         """
-        Get a list of compute components relevant to this einsum
+        Get a list of components relevant to this einsum
         """
-        components = []
+        components: List[T] = []
         for name in self.bindings.get_bindings()[einsum]:
             component = self.components[name]
-            if isinstance(component, FunctionalComponent):
+            if isinstance(component, class_):
                 components.append(component)
         return components
-
-    def get_merger_components(self) -> List[MergerComponent]:
-        """
-        Get all merger components
-
-        TODO: Do we need this?
-        """
-        raise ValueError("Do we need this???")
-        mergers = []
-        for component in self.components.values():
-            if isinstance(component, MergerComponent):
-                mergers.append(component)
-
-        return mergers
 
     def get_traffic_path(
             self,

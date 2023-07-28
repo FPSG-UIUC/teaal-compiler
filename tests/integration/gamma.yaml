@@ -32,39 +32,43 @@ mapping:
       time: [M1, N, K0]
 format:
   A:
-    M:
-      format: U
-      pbits: 32
-    K:
-      format: C
-      cbits: 32
-      pbits: 64
+    default:
+      rank-order: [M1, M0, K1, K0]
+      M1:
+        format: U
+      M0:
+        format: U
+        pbits: 32
+      K1:
+        format: C
+      K0:
+        format: C
+        cbits: 32
+        pbits: 64
   B:
-    K:
-      format: U
-      pbits: 32
-    N:
-      format: C
-      cbits: 32
-      pbits: 64
-  T:
-    M:
-      format: C
-      cbits: 32
-    K:
-      format: C
-    N:
-      format: C
-      cbits: 32
-      pbits: 64
+    default:
+      rank-order: [K1, K0, N]
+      K1:
+        format: U
+      K0:
+        format: U
+        pbits: 32
+      N:
+        format: C
+        cbits: 32
+        pbits: 64
   Z:
-    M:
-      format: U
-      pbits: 32
-    N:
-      format: C
-      cbits: 32
-      pbits: 64
+    default:
+      rank-order: [M1, M0, N]
+      M1:
+        format: U
+      M0:
+        format: U
+        pbits: 32
+      N:
+        format: C
+        cbits: 32
+        pbits: 64
 architecture:
   Accelerator:
   - name: System
@@ -88,9 +92,9 @@ architecture:
       - name: PE[0..31] # 32 PEs
         local:
         - name: Stage0RegFile
-          class: SRAM
+          class: Buffet
         - name: Stage1RegFile
-          class: SRAM
+          class: Buffet
         subtree:
         - name: Stage0
           local:
@@ -124,60 +128,55 @@ bindings:
   - component: MainMemory
     bindings:
     - tensor: A
-      rank: M
+      rank: M0
       type: payload
+      format: default
     - tensor: A
-      rank: K
+      rank: K0
       type: coord
+      format: default
     - tensor: A
-      rank: K
+      rank: K0
       type: payload
+      format: default
     - tensor: B
-      rank: K
+      rank: K0
       type: payload
+      format: default
     - tensor: B
       rank: N
       type: coord
+      format: default
     - tensor: B
       rank: N
       type: payload
+      format: default
   - component: FiberCache
     bindings:
     - tensor: B
-      rank: K
+      rank: K0
       type: payload
+      format: default
     - tensor: B
       rank: N
       type: coord
+      format: default
     - tensor: B
       rank: N
       type: payload
+      format: default
   - component: Stage0RegFile
     bindings:
     - tensor: A
-      rank: M
+      rank: M0
       type: payload
+      format: default
+      evict-on: M1
     - tensor: A
-      rank: K
+      rank: K0
       type: coord
-    - tensor: B
-      rank: K
-      type: payload
-    - tensor: B
-      rank: N
-      type: coord
-    - tensor: B
-      rank: N
-      type: payload
-    - tensor: T
-      rank: M
-      type: coord
-    - tensor: T
-      rank: N
-      type: coord
-    - tensor: T
-      rank: N
-      type: payload
+      format: default
+      evict-on: K1
   - component: Intersection
     bindings:
     - rank: K0
@@ -186,51 +185,40 @@ bindings:
   - config: Accelerator
   - component: MainMemory
     bindings:
-    - tensor: A
-      rank: M
-      type: payload
-    - tensor: A
-      rank: K
-      type: coord
-    - tensor: A
-      rank: K
-      type: payload
     - tensor: Z
-      rank: M
+      rank: M0
       type: payload
+      format: default
     - tensor: Z
       rank: N
       type: coord
+      format: default
     - tensor: Z
       rank: N
       type: payload
+      format: default
   - component: Stage1RegFile
     bindings:
-    - tensor: A
-      rank: K
-      type: payload
-    - tensor: T
-      rank: M
-      type: coord
-    - tensor: T
-      rank: N
-      type: coord
-    - tensor: T
-      rank: N
-      type: payload
     - tensor: Z
-      rank: M
+      rank: M0
       type: coord
+      format: default
+      evict-on: M1
     - tensor: Z
       rank: N
       type: coord
+      format: default
+      evict-on: M0
     - tensor: Z
       rank: N
       type: payload
+      format: default
+      evict-on: M0
   - component: HighRadixMerger
     bindings:
-    - op: merge
-      tensor: T
+    - tensor: T
+      init-ranks: [M, K, N]
+      final-ranks: [M, N, K]
   - component: FPMul
     bindings:
     - op: mul

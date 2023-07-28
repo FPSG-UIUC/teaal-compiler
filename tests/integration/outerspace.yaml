@@ -89,7 +89,7 @@ bindings:
   - name: Sort
     bindings:
     - tensor: T
-      init_ranks: [M, K, N]
+      init-ranks: [M, K, N]
       swap_depth: 1
 
   - name: Compute
