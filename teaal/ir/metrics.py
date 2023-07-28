@@ -84,13 +84,21 @@ class Metrics:
                 if rank == "rank-order":
                     continue
 
-                coord_path = self.hardware.get_traffic_path(einsum, tensor, rank, "coord", format_)
-                payload_path = self.hardware.get_traffic_path(einsum, tensor, rank, "payload", format_)
-                elem_path = self.hardware.get_traffic_path(einsum, tensor, rank, "elem", format_)
+                coord_path = self.hardware.get_traffic_path(
+                    einsum, tensor, rank, "coord", format_)
+                payload_path = self.hardware.get_traffic_path(
+                    einsum, tensor, rank, "payload", format_)
+                elem_path = self.hardware.get_traffic_path(
+                    einsum, tensor, rank, "elem", format_)
                 used = coord_path or payload_path or elem_path
 
                 if used and loop_format is not None and format_ != loop_format:
-                    raise ValueError("Multiple potential formats " + str([loop_format, format_]) + " for tensor " + tensor + " in Einsum " + einsum)
+                    raise ValueError("Multiple potential formats " +
+                                     str([loop_format, format_]) +
+                                     " for tensor " +
+                                     tensor +
+                                     " in Einsum " +
+                                     einsum)
                 loop_format = format_
 
                 if used:
@@ -101,7 +109,8 @@ class Metrics:
 
         return info
 
-    def get_merger_init_ranks(self, tensor: str, final_ranks: List[str]) -> Optional[List[str]]:
+    def get_merger_init_ranks(self, tensor: str,
+                              final_ranks: List[str]) -> Optional[List[str]]:
         """
         Get the initial ranks for merges that must be tracked by the hardware
         """
@@ -115,7 +124,11 @@ class Metrics:
                 continue
 
             if init_ranks is not None:
-                raise ValueError("Multiple bindings for merge of tensor " + tensor + " to final rank order " + str(final_ranks))
+                raise ValueError(
+                    "Multiple bindings for merge of tensor " +
+                    tensor +
+                    " to final rank order " +
+                    str(final_ranks))
 
             init_ranks = opt_init_ranks
 

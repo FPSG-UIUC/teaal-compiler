@@ -49,7 +49,8 @@ def test_missing_rank_order():
 
     with pytest.raises(ValueError) as excinfo:
         Format.from_str(yaml)
-    assert str(excinfo.value) == "Rank order not specified for tensor A in format BAD"
+    assert str(
+        excinfo.value) == "Rank order not specified for tensor A in format BAD"
 
 
 def test_format():

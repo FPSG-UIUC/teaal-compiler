@@ -383,7 +383,9 @@ def test_get_components():
         "Intersect0", {}, bindings.get_component("Intersect0"))
     mac = FunctionalComponent("MAC", {}, bindings.get_component("MAC"))
 
-    assert hardware.get_components("Z", FunctionalComponent) == [intersect, mac]
+    assert hardware.get_components(
+        "Z", FunctionalComponent) == [
+        intersect, mac]
 
 
 def test_get_traffic_path_multiple_bindings():

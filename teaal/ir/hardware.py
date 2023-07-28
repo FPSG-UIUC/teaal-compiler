@@ -34,6 +34,7 @@ from teaal.parse import *
 
 T = TypeVar("T")
 
+
 class Hardware:
     """
     Representation of the hardware of an accelerator

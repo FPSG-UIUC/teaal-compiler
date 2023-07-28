@@ -500,7 +500,8 @@ class MergerComponent(Component):
         """
         return self.comparator_radix
 
-    def get_init_ranks(self, einsum: str, tensor: str, final_ranks: List[str]) -> Optional[List[str]]:
+    def get_init_ranks(self, einsum: str, tensor: str,
+                       final_ranks: List[str]) -> Optional[List[str]]:
         """
         Get the initial ranks for the given merge
         """
@@ -514,7 +515,12 @@ class MergerComponent(Component):
         for binding in self.tensor_bindings[einsum][tensor]:
             if binding["final-ranks"] == final_ranks:
                 if init_ranks is not None:
-                    raise ValueError("Merge binding from both " + str(init_ranks) + " and " + str(binding["init-ranks"]) + " to " + str(final_ranks))
+                    raise ValueError("Merge binding from both " +
+                                     str(init_ranks) +
+                                     " and " +
+                                     str(binding["init-ranks"]) +
+                                     " to " +
+                                     str(final_ranks))
 
                 init_ranks = binding["init-ranks"]
 

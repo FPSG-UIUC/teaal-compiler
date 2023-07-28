@@ -48,7 +48,11 @@ class Format:
         for tensor, formats in self.yaml.items():
             for format_, spec in formats.items():
                 if "rank-order" not in spec.keys():
-                    raise ValueError("Rank order not specified for tensor " + tensor + " in format " + format_)
+                    raise ValueError(
+                        "Rank order not specified for tensor " +
+                        tensor +
+                        " in format " +
+                        format_)
 
     @classmethod
     def from_file(cls, filename: str) -> "Format":

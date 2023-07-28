@@ -76,7 +76,8 @@ class Collector:
 
         # Add the compute information
         # TODO: Fix with new metrics information
-        for compute in self.metrics.hardware.get_components(self.program.get_equation().get_output().root_name(), FunctionalComponent):
+        for compute in self.metrics.hardware.get_components(
+                self.program.get_equation().get_output().root_name(), FunctionalComponent):
             block.add(self.__compute_metrics(compute))
 
         # Add the merger information

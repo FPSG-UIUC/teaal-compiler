@@ -336,6 +336,7 @@ def test_merger_attr_errs():
         MergerComponent("Merger1", attrs, [])
     assert str(excinfo.value) == "Concurrent merge and reduction not supported"
 
+
 def test_merger_binding_errs():
     attrs = {
         "inputs": 64,
@@ -343,20 +344,51 @@ def test_merger_binding_errs():
         "outputs": 2,
         "order": "opt",
         "reduce": False}
-    binding = {"Z": [{"init-ranks": ["M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
+    binding = {
+        "Z": [{"init-ranks": ["M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
     with pytest.raises(ValueError) as excinfo:
         MergerComponent("Merger1", attrs, binding)
-    assert str(excinfo.value) == "Tensor not specified for Einsum Z in binding to Merger1"
+    assert str(
+        excinfo.value) == "Tensor not specified for Einsum Z in binding to Merger1"
 
     binding = {"Z": [{"tensor": "T", "final-ranks": ["M", "N", "K"]}]}
     with pytest.raises(ValueError) as excinfo:
         MergerComponent("Merger1", attrs, binding)
-    assert str(excinfo.value) == "Initial ranks not specified for tensor T in Einsum Z in binding to Merger1"
+    assert str(
+        excinfo.value) == "Initial ranks not specified for tensor T in Einsum Z in binding to Merger1"
 
     binding = {"Z": [{"tensor": "T", "init-ranks": ["M", "N", "K"]}]}
     with pytest.raises(ValueError) as excinfo:
         MergerComponent("Merger1", attrs, binding)
-    assert str(excinfo.value) == "Final ranks not specified for tensor T in Einsum Z in binding to Merger1"
+    assert str(
+        excinfo.value) == "Final ranks not specified for tensor T in Einsum Z in binding to Merger1"
+
+    attrs = {
+        "inputs": 64,
+        "comparator_radix": 32,
+        "outputs": 2,
+        "order": "opt",
+        "reduce": False}
+    binding = {"Z": [{"tensor": "T",
+                      "init-ranks": ["M",
+                                     "K",
+                                     "N"],
+                      "final-ranks": ["M",
+                                      "N",
+                                      "K"]},
+                     {"tensor": "T",
+                      "init-ranks": ["K",
+                                     "M",
+                                     "N"],
+                      "final-ranks": ["M",
+                                      "N",
+                                      "K"]}]}
+    merger = MergerComponent("Merger1", attrs, binding)
+    with pytest.raises(ValueError) as excinfo:
+        merger.get_init_ranks("Z", "T", ["M", "N", "K"])
+    assert str(
+        excinfo.value) == "Merge binding from both ['M', 'K', 'N'] and ['K', 'M', 'N'] to ['M', 'N', 'K']"
+
 
 def test_merger_component():
     attrs = {

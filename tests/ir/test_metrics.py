@@ -25,13 +25,16 @@ def parse_yamls(yaml):
 
     return program, arch, bindings, format_
 
+
 def test_get_collected_tensor_info():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
     hardware = Hardware(arch, bindings, program)
     metrics = Metrics(program, hardware, format_)
 
-    assert metrics.get_collected_tensor_info("A") == {("K0", "fiber"), ("M0", "iter"), ("M0", "fiber"), ("K0", "iter")}
-    assert metrics.get_collected_tensor_info("B") == {("N", "iter"), ("K0", "fiber"), ("N", "fiber"), ("K0", "iter")}
+    assert metrics.get_collected_tensor_info("A") == {(
+        "K0", "fiber"), ("M0", "iter"), ("M0", "fiber"), ("K0", "iter")}
+    assert metrics.get_collected_tensor_info("B") == {(
+        "N", "iter"), ("K0", "fiber"), ("N", "fiber"), ("K0", "iter")}
     assert metrics.get_collected_tensor_info("T") == set()
 
     program.reset()
@@ -41,7 +44,9 @@ def test_get_collected_tensor_info():
 
     assert metrics.get_collected_tensor_info("A") == set()
     assert metrics.get_collected_tensor_info("T") == set()
-    assert metrics.get_collected_tensor_info("Z") == {("M0", "iter"), ("N", "iter"), ("M0", "fiber"), ("N", "fiber")}
+    assert metrics.get_collected_tensor_info("Z") == {(
+        "M0", "iter"), ("N", "iter"), ("M0", "fiber"), ("N", "fiber")}
+
 
 def test_get_merger_init_ranks_multiple_bindings():
     yaml = """
@@ -94,7 +99,9 @@ def test_get_merger_init_ranks_multiple_bindings():
 
     with pytest.raises(ValueError) as excinfo:
         metrics.get_merger_init_ranks("A", ["N", "M"])
-    assert str(excinfo.value) == "Multiple bindings for merge of tensor A to final rank order ['N', 'M']"
+    assert str(
+        excinfo.value) == "Multiple bindings for merge of tensor A to final rank order ['N', 'M']"
+
 
 def test_get_merger_init_ranks():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
@@ -104,6 +111,10 @@ def test_get_merger_init_ranks():
     hardware = Hardware(arch, bindings, program)
     metrics = Metrics(program, hardware, format_)
 
-    assert metrics.get_merger_init_ranks("T", ["M", "N", "K"]) == ["M", "K", "N"]
-    assert metrics.get_merger_init_ranks("T", ["M1", "M0", "K1", "N", "K0"]) is None
+    assert metrics.get_merger_init_ranks(
+        "T", [
+            "M", "N", "K"]) == [
+        "M", "K", "N"]
+    assert metrics.get_merger_init_ranks(
+        "T", ["M1", "M0", "K1", "N", "K0"]) is None
     assert metrics.get_merger_init_ranks("Z", ["M", "N"]) is None
