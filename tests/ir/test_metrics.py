@@ -164,6 +164,7 @@ def test_get_collected_tensor_info_extra_intersection_test():
     assert metrics.get_collected_tensor_info("C") == set()
     assert metrics.get_collected_tensor_info("Z") == set()
 
+
 def test_get_fiber_trace():
     yaml = """
     einsum:
@@ -270,6 +271,7 @@ def test_get_fiber_trace():
     assert metrics.get_fiber_trace("F", "K", True) == "intersect_11"
     assert metrics.get_fiber_trace("G", "M", True) == "union_11"
     assert metrics.get_fiber_trace("G", "K", True) == "union_9"
+
 
 def test_get_merger_init_ranks_multiple_bindings():
     yaml = """

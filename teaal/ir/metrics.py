@@ -139,7 +139,11 @@ class Metrics:
 
         return info
 
-    def get_fiber_trace(self, tensor: str, rank: str, is_load_trace: bool) -> str:
+    def get_fiber_trace(
+            self,
+            tensor: str,
+            rank: str,
+            is_load_trace: bool) -> str:
         """
         Get the name of the fiber trace for this fiber
         """
@@ -181,7 +185,8 @@ class Metrics:
         tensors = self.program.get_equation().get_tensors()
         final_ranks = []
         for tensor in tensors:
-            final_ranks.append(set(part_ir.partition_ranks(tensor.get_init_ranks(), part_ir.get_all_parts(), True, True)))
+            final_ranks.append(set(part_ir.partition_ranks(
+                tensor.get_init_ranks(), part_ir.get_all_parts(), True, True)))
 
         coiters: Dict[str, List[Tensor]] = {}
         for rank in self.program.get_loop_order().get_ranks():
@@ -193,18 +198,21 @@ class Metrics:
         self.fiber_traces: Dict[str, Dict[str, Dict[bool, str]]] = {}
         for rank in self.program.get_loop_order().get_ranks():
             self.fiber_traces[rank] = {}
-            output, inputs = self.program.get_equation().get_iter(coiters[rank])
+            output, inputs = self.program.get_equation().get_iter(
+                coiters[rank])
 
             parent = "iter"
             next_label = 0
             if output and not inputs:
-                # If there is only an output, there is no separate read and write trace
-                self.fiber_traces[rank][output.root_name()] = {True: parent, False: parent}
+                # If there is only an output, there is no separate read and
+                # write trace
+                self.fiber_traces[rank][output.root_name()] = {
+                    True: parent, False: parent}
                 continue
 
-
             if output:
-                self.fiber_traces[rank][output.root_name()] = {True: "populate_read_0", False: "populate_write_0"}
+                self.fiber_traces[rank][output.root_name()] = {
+                    True: "populate_read_0", False: "populate_write_0"}
 
                 parent = "populate_1"
 
@@ -218,36 +226,24 @@ class Metrics:
             for i, term in enumerate(inputs):
                 if len(term) == 1:
                     if i + 1 < len(inputs):
-                        self.fiber_traces[rank][term[0].root_name()] = {True: "union_" + str(union_label)}
+                        self.fiber_traces[rank][term[0].root_name()] = {
+                            True: "union_" + str(union_label)}
                     # i + 1 == len(inputs)
                     else:
-                        self.fiber_traces[rank][term[0].root_name()] = {True: parent}
+                        self.fiber_traces[rank][term[0].root_name()] = {
+                            True: parent}
 
                 # Otherwise we have multiple tensors intersected together
                 else:
                     for tensor in term[:-1]:
-                        self.fiber_traces[rank][tensor.root_name()] = {True: "intersect_" + str(next_label)}
+                        self.fiber_traces[rank][tensor.root_name()] = {
+                            True: "intersect_" + str(next_label)}
                         next_label += 2
 
-                    self.fiber_traces[rank][term[-1].root_name()] = {True: "intersect_" + str(next_label - 1)}
+                    self.fiber_traces[rank][term[-1].root_name()
+                                            ] = {True: "intersect_" + str(next_label - 1)}
 
                 if union_label is not None:
                     parent = "union_" + str(union_label + 1)
                     union_label = next_label
                     next_label += 2
-
-    def __get_iter_trees(self, inputs: List[List[Tensor]]) -> List[Union[Tensor, tuple]]:
-        """
-        Expand the inputs into a tree symbolizing how the input will be iterated
-
-        [[A, B, C], [D, E, F]] -> (a & (b & c)) | (d & (e & f)) -> [(a, (b, c)), (d, (e, f))]
-        """
-        trees: List[Union[Tensor, tuple]] = []
-
-        for term in inputs:
-            tree: Union[Tensor, tuple] = term[-1]
-            for input_ in reversed(term[:-1]):
-                tree = (input_, tree)
-            trees.append(tree)
-
-        return trees
