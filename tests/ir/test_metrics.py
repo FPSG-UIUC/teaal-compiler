@@ -164,6 +164,112 @@ def test_get_collected_tensor_info_extra_intersection_test():
     assert metrics.get_collected_tensor_info("C") == set()
     assert metrics.get_collected_tensor_info("Z") == set()
 
+def test_get_fiber_trace():
+    yaml = """
+    einsum:
+      declaration:
+        Z0: [M]
+        Z1: [M]
+        Z2: [M]
+        Z3: [M]
+        Z4: [M]
+        A: [M, K]
+        B: [M, K]
+        C: [M, K]
+        D: [M, K]
+        E: [M, K]
+        F: [M, K]
+        G: [M, K]
+      expressions:
+        - Z0[m] = a
+        - Z1[m] = A[m, k]
+        - Z2[m] = A[m, k] * B[m, k]
+        - Z3[m] = A[m, k] + B[m, k]
+        - Z4[m] = A[m, k] * B[m, k] * C[m, k] + D[m, k] + E[m, k] * F[m, k] + G[m, k]
+    architecture:
+      accel:
+      - name: empty
+    bindings:
+      Z0:
+      - config: accel
+      Z1:
+      - config: accel
+      Z2:
+      - config: accel
+      Z3:
+      - config: accel
+      Z4:
+      - config: accel
+    format:
+      Z0:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("Z0", "M", True) == "iter"
+    assert metrics.get_fiber_trace("Z0", "M", False) == "iter"
+
+    program.reset()
+    program.add_einsum(1)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("Z1", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z1", "M", False) == "populate_write_0"
+    assert metrics.get_fiber_trace("A", "M", True) == "populate_1"
+    assert metrics.get_fiber_trace("A", "K", True) == "iter"
+
+    program.reset()
+    program.add_einsum(2)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("Z2", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z2", "M", False) == "populate_write_0"
+    assert metrics.get_fiber_trace("A", "M", True) == "intersect_2"
+    assert metrics.get_fiber_trace("A", "K", True) == "intersect_0"
+    assert metrics.get_fiber_trace("B", "M", True) == "intersect_3"
+    assert metrics.get_fiber_trace("B", "K", True) == "intersect_1"
+
+    program.reset()
+    program.add_einsum(3)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("Z3", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z3", "M", False) == "populate_write_0"
+    assert metrics.get_fiber_trace("A", "M", True) == "union_2"
+    assert metrics.get_fiber_trace("A", "K", True) == "union_0"
+    assert metrics.get_fiber_trace("B", "M", True) == "union_3"
+    assert metrics.get_fiber_trace("B", "K", True) == "union_1"
+
+    program.reset()
+    program.add_einsum(4)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("Z4", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z4", "M", False) == "populate_write_0"
+    assert metrics.get_fiber_trace("A", "M", True) == "intersect_4"
+    assert metrics.get_fiber_trace("A", "K", True) == "intersect_2"
+    assert metrics.get_fiber_trace("B", "M", True) == "intersect_6"
+    assert metrics.get_fiber_trace("B", "K", True) == "intersect_4"
+    assert metrics.get_fiber_trace("C", "M", True) == "intersect_7"
+    assert metrics.get_fiber_trace("C", "K", True) == "intersect_5"
+    assert metrics.get_fiber_trace("D", "M", True) == "union_8"
+    assert metrics.get_fiber_trace("D", "K", True) == "union_6"
+    assert metrics.get_fiber_trace("E", "M", True) == "intersect_12"
+    assert metrics.get_fiber_trace("E", "K", True) == "intersect_10"
+    assert metrics.get_fiber_trace("F", "M", True) == "intersect_13"
+    assert metrics.get_fiber_trace("F", "K", True) == "intersect_11"
+    assert metrics.get_fiber_trace("G", "M", True) == "union_11"
+    assert metrics.get_fiber_trace("G", "K", True) == "union_9"
 
 def test_get_merger_init_ranks_multiple_bindings():
     yaml = """
