@@ -52,7 +52,8 @@ class Equation:
         """
         tensors = [self.program.get_equation().get_tensor(input_)
                    for input_ in inputs]
-        iter_expr = self.__make_input_iter_expr(rank, tensors)
+        _, input_tensors = self.program.get_equation().get_iter(tensors)
+        iter_expr = self.__make_input_iter_expr(rank, input_tensors)
 
         # Use Fiber.fromLazy() to translate
         # Note: Assume that if we are making eager inputs, then we are
@@ -106,19 +107,20 @@ class Equation:
         if not tensors:
             raise ValueError("Must iterate over at least one tensor")
 
+        output, inputs = self.program.get_equation().get_iter(tensors)
+
         # If there are no input tensors, we need to iterRangeShapeRef on the
         # output
-        output_tensor = self.__get_output_tensor(tensors)
-        if len(tensors) == 1 and output_tensor:
+        if len(tensors) == 1 and output:
             iter_output = self.__make_output_only_iter_expr(rank)
             return self.__add_enumerate(rank, iter_output)
 
         # Build the expression of the inputs
-        expr = self.__make_input_iter_expr(rank, tensors)
+        expr = self.__make_input_iter_expr(rank, inputs)
 
         # Finally, add in the output
-        if output_tensor:
-            trank = output_tensor.peek()
+        if output:
+            trank = output.peek()
             if trank is not None:
                 trank = trank.upper()
 
@@ -127,8 +129,7 @@ class Equation:
                     "Cannot project into the output tensor. Replace " +
                     rank + " with " + str(trank) + " in the loop order")
 
-            expr = Equation.__add_operator(
-                EVar(output_tensor.fiber_name()), OLtLt(), expr)
+            expr = Equation.__add_operator(EVar(output.fiber_name()), OLtLt(), expr)
 
         return self.__add_enumerate(rank, expr)
 
@@ -193,14 +194,13 @@ class Equation:
                 "Must have at least one tensor to make the payload")
 
         # Separate the tensors into terms
-        terms = self.__separate_terms(tensors)
-        output_tensor = self.__get_output_tensor(tensors)
+        output, inputs = self.program.get_equation().get_iter(tensors)
 
         payload: Payload
-        if terms:
+        if inputs:
             # Construct the term payloads
             term_payloads = []
-            for term in terms:
+            for term in inputs:
                 payload = PVar(term[-1].fiber_name())
                 for factor in reversed(term[:-1]):
                     payload = PTuple([PVar(factor.fiber_name()), payload])
@@ -212,11 +212,11 @@ class Equation:
                 payload = PTuple([PVar("_"), term_payload, payload])
 
             # Put the output on the outside
-            if output_tensor:
-                payload = PTuple([PVar(output_tensor.fiber_name()), payload])
+            if output:
+                payload = PTuple([PVar(output.fiber_name()), payload])
 
-        elif output_tensor:
-            payload = PVar(output_tensor.fiber_name())
+        elif output:
+            payload = PVar(output.fiber_name())
 
         else:
             # We should never get to this state
@@ -329,16 +329,6 @@ class Equation:
 
         return any(Equation.__frac_coords(arg) for arg in sexpr.args)
 
-    def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
-        """
-        Get the output tensor if it exists
-        """
-        output = self.program.get_equation().get_output()
-        if output in tensors:
-            return output
-        else:
-            return None
-
     def __in_update(self, factor: str) -> bool:
         """
         Returns true if the factor should be included in the update
@@ -416,16 +406,13 @@ class Equation:
     def __make_input_iter_expr(
             self,
             rank: str,
-            tensors: List[Tensor]) -> Expression:
+            tensors: List[List[Tensor]]) -> Expression:
         """
         Make the iteration expression for the inputs
         """
-        # Separate the tensors into terms
-        terms = self.__separate_terms(tensors)
-
         # Combine terms with intersections
         intersections = []
-        for term in terms:
+        for term in tensors:
             expr = self.__iter_fiber(rank, term[-1])
             for factor in reversed(term[:-1]):
                 fiber = self.__iter_fiber(rank, factor)
@@ -439,19 +426,3 @@ class Equation:
 
         return expr
 
-    def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
-        """
-        Separate a list of tensors according to which term they belong to
-        """
-        # Separate the tensors
-        terms: List[List[Tensor]] = [[]
-                                     for _ in self.program.get_equation().get_term_tensors()]
-        for tensor in tensors:
-            if tensor.get_is_output():
-                continue
-
-            terms[self.program.get_equation().get_factor_order()[
-                tensor.root_name()][0]].append(tensor)
-
-        # Remove any empty lists
-        return [term for term in terms if term]

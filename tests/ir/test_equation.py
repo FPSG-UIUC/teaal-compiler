@@ -70,19 +70,30 @@ def test_repeated_tensor():
 def test_get_factor_order():
     equation = create_complex()
     assert equation.get_factor_order() == {
-        "A": (
-            0, 1), "C": (
-            0, 2), "d": (
-                0, 0), "B": (
-                    1, 0), "T": (
-                        1, 1), "e": (
-                            1, 2)}
+        "A": (0, 1),
+        "C": (0, 2),
+        "d": (0, 0),
+        "B": (1, 0),
+        "T": (1, 1),
+        "e": (1, 2)}
 
 
 def test_get_in_update():
     equation = create_complex()
     assert equation.get_in_update() == [[True, True, True], [
         False, False, True]]
+
+def test_get_iter():
+    equation = create_complex()
+    A = equation.get_tensor("A")
+    B = equation.get_tensor("B")
+    C = equation.get_tensor("C")
+    T = equation.get_tensor("T")
+    Z = equation.get_tensor("Z")
+
+    assert equation.get_iter([A, B]) == (None, [[A], [B]])
+    assert equation.get_iter([C, T, B, Z]) == (Z, [[C], [B, T]])
+    assert equation.get_iter([A, C]) == (None, [[A, C]])
 
 
 def test_get_output():

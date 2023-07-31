@@ -94,15 +94,15 @@ class Collector:
         """
         return SExpr(EMethod(EVar("Metrics"), "endCollect", []))
 
-    def set_collecting(self, tensor_name: str, rank: str) -> Statement:
+    def set_collecting(self, tensor_name: Optional[str], rank: str, type_: str, consumable: bool) -> Statement:
         """
         Collect the statistics about a tensor
         """
-        tensor = self.program.get_equation().get_tensor(tensor_name)
-        args = [AJust(EString(rank)), AJust(EBool(True))]
-        call = EMethod(EVar(tensor.tensor_name()), "setCollecting", args)
+        if tensor_name is None:
+            if type_ != "iter":
+                raise ValueError("Tensor must be specified for trace type " + type_)
 
-        return SExpr(call)
+        return SBlock([])
 
     def start(self) -> Statement:
         """
