@@ -466,7 +466,6 @@ class FlowGraph:
         if self.metrics:
             init_ranks = self.metrics.get_merger_init_ranks(
                 root, tensor.get_ranks())
-            print(root, tensor.get_ranks(), init_ranks)
             if init_ranks:
                 metrics_swizzle_node = SwizzleNode(root, init_ranks, "metrics")
 

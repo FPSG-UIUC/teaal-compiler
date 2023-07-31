@@ -13,44 +13,31 @@ mapping:
     B: [K, N]
     T: [M, K, N]
     Z: [M, N]
-  partitioning:
-    T:
-      M: [uniform_occupancy(A.32)]
-      K: [uniform_occupancy(A.64)]
-    Z:
-      M: [uniform_occupancy(A.32)]
-      K: [uniform_occupancy(A.64)]
   loop-order:
-    T: [M1, M0, K1, K0, N]
-    Z: [M1, M0, K1, N, K0]
+    T: [M, K, N]
+    Z: [M, N, K]
   spacetime:
     T:
-      space: [M0, K1]
-      time: [M1, K0, N]
+      space: [M]
+      time: [K, N]
     Z:
-      space: [M0, K1]
-      time: [M1, N, K0]
+      space: [M]
+      time: [N, K]
 format:
   A:
     default:
-      rank-order: [M1, M0, K1, K0]
-      M1:
-        format: U
-      M0:
+      rank-order: [M, K]
+      M:
         format: U
         pbits: 32
-      K1:
-        format: C
-      K0:
+      K:
         format: C
         cbits: 32
         pbits: 64
   B:
     default:
-      rank-order: [K1, K0, N]
-      K1:
-        format: U
-      K0:
+      rank-order: [K, N]
+      K:
         format: U
         pbits: 32
       N:
@@ -59,10 +46,8 @@ format:
         pbits: 64
   Z:
     default:
-      rank-order: [M1, M0, N]
-      M1:
-        format: U
-      M0:
+      rank-order: [M, N]
+      M:
         format: U
         pbits: 32
       N:
@@ -128,19 +113,19 @@ bindings:
   - component: MainMemory
     bindings:
     - tensor: A
-      rank: M0
+      rank: M
       type: payload
       format: default
     - tensor: A
-      rank: K0
+      rank: K
       type: coord
       format: default
     - tensor: A
-      rank: K0
+      rank: K
       type: payload
       format: default
     - tensor: B
-      rank: K0
+      rank: K
       type: payload
       format: default
     - tensor: B
@@ -154,7 +139,7 @@ bindings:
   - component: FiberCache
     bindings:
     - tensor: B
-      rank: K0
+      rank: K
       type: payload
       format: default
     - tensor: B
@@ -168,30 +153,30 @@ bindings:
   - component: Stage0RegFile
     bindings:
     - tensor: A
-      rank: M0
+      rank: M
       type: payload
       format: default
-      evict-on: M1
+      evict-on: root
     - tensor: A
-      rank: K0
+      rank: K
       type: coord
       format: default
-      evict-on: K1
+      evict-on: M
     - tensor: A
-      rank: K0
+      rank: K
       type: payload
       format: default
-      evict-on: K1
+      evict-on: M
   - component: Intersect
     bindings:
-    - rank: K0
+    - rank: K
       leader: A
   Z:
   - config: Accelerator
   - component: MainMemory
     bindings:
     - tensor: Z
-      rank: M0
+      rank: M
       type: payload
       format: default
     - tensor: Z
@@ -205,25 +190,25 @@ bindings:
   - component: Stage1RegFile
     bindings:
     - tensor: Z
-      rank: M0
+      rank: M
       type: payload
       format: default
-      evict-on: M1
+      evict-on: root
     - tensor: Z
       rank: N
       type: coord
       format: default
-      evict-on: M0
+      evict-on: M
     - tensor: Z
       rank: N
       type: payload
       format: default
-      evict-on: M0
+      evict-on: M
   - component: HighRadixMerger
     bindings:
     - tensor: T
-      init-ranks: [K1, K0, N]
-      final-ranks: [K1, N, K0]
+      init-ranks: [M, K, N]
+      final-ranks: [M, N, K]
   - component: FPMul
     bindings:
     - op: mul
