@@ -152,11 +152,12 @@ class FlowGraph:
         tensor_name = tensor.root_name()
         for rank, type_ in self.metrics.get_collected_tensor_info(tensor_name):
             if type_ == "fiber":
-                collecting_node = CollectingNode(tensor_name, rank, type_)
+                collecting_node = CollectingNode(
+                    tensor_name, rank, type_, False)
 
             # type_ == "iter"
             else:
-                collecting_node = CollectingNode(None, rank, type_)
+                collecting_node = CollectingNode(None, rank, type_, False)
 
             self.graph.add_edge(MetricsNode("Start"), collecting_node)
             self.graph.add_edge(collecting_node, loop_node)

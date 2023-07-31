@@ -36,7 +36,12 @@ class CollectingNode(Node):
     tensor
     """
 
-    def __init__(self, tensor: Optional[str], rank: str, type_: str) -> None:
+    def __init__(
+            self,
+            tensor: Optional[str],
+            rank: str,
+            type_: str,
+            consumable: bool) -> None:
         """
         Construct a node for the collection of reuse metrics for a tensor's
         rank
@@ -44,6 +49,13 @@ class CollectingNode(Node):
         self.tensor = tensor
         self.rank = rank
         self.type = type_
+        self.consumable = consumable
+
+    def get_consumable(self) -> bool:
+        """
+        Accessor for the consumable property
+        """
+        return self.consumable
 
     def get_rank(self) -> str:
         """
@@ -67,7 +79,7 @@ class CollectingNode(Node):
         """
         Iterable of fields of a Collecting
         """
-        return self.tensor, self.rank, self.type
+        return self.tensor, self.rank, self.type, self.consumable
 
 
 class EagerInputNode(Node):

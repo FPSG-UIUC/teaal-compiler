@@ -857,13 +857,55 @@ def test_graph_metrics_T():
     corr.add_edge(OtherNode("Output"), GetRootNode("T", ['M', 'K', 'N']))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode(None, "K", "iter"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "M", "fiber"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode(None, "M", "iter"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "K", "fiber"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("B", "N", "fiber"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode(None, "N", "iter"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("B", "K", "fiber"))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            None,
+            "K",
+            "iter",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "A",
+            "M",
+            "fiber",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            None,
+            "M",
+            "iter",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "A",
+            "K",
+            "fiber",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "B",
+            "N",
+            "fiber",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            None,
+            "N",
+            "iter",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "B",
+            "K",
+            "fiber",
+            False))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("T", ['M', 'K', 'N']), LoopNode("M"))
     corr.add_edge(SwizzleNode(
@@ -880,13 +922,13 @@ def test_graph_metrics_T():
             "B", [
                 'K', 'N'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("B", ['K', 'N']), LoopNode("K"))
-    corr.add_edge(CollectingNode(None, "K", "iter"), LoopNode("M"))
-    corr.add_edge(CollectingNode("A", "M", "fiber"), LoopNode("M"))
-    corr.add_edge(CollectingNode(None, "M", "iter"), LoopNode("M"))
-    corr.add_edge(CollectingNode("A", "K", "fiber"), LoopNode("M"))
-    corr.add_edge(CollectingNode("B", "N", "fiber"), LoopNode("M"))
-    corr.add_edge(CollectingNode(None, "N", "iter"), LoopNode("M"))
-    corr.add_edge(CollectingNode("B", "K", "fiber"), LoopNode("M"))
+    corr.add_edge(CollectingNode(None, "K", "iter", False), LoopNode("M"))
+    corr.add_edge(CollectingNode("A", "M", "fiber", False), LoopNode("M"))
+    corr.add_edge(CollectingNode(None, "M", "iter", False), LoopNode("M"))
+    corr.add_edge(CollectingNode("A", "K", "fiber", False), LoopNode("M"))
+    corr.add_edge(CollectingNode("B", "N", "fiber", False), LoopNode("M"))
+    corr.add_edge(CollectingNode(None, "N", "iter", False), LoopNode("M"))
+    corr.add_edge(CollectingNode("B", "K", "fiber", False), LoopNode("M"))
 
     assert nx.is_isomorphic(graph, corr)
 
@@ -912,10 +954,34 @@ def test_graph_metrics_Z():
     corr.add_edge(OtherNode("Output"), GetRootNode("Z", ['M', 'N']))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("Z", "M", "fiber"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode(None, "N", "iter"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("Z", "N", "fiber"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode(None, "M", "iter"))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "Z",
+            "M",
+            "fiber",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            None,
+            "N",
+            "iter",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "Z",
+            "N",
+            "fiber",
+            False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            None,
+            "M",
+            "iter",
+            False))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", ['M', 'N']), LoopNode("M"))
     corr.add_edge(SwizzleNode(
@@ -938,10 +1004,10 @@ def test_graph_metrics_Z():
             "A", [
                 'M', 'K'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['M', 'K']), LoopNode("M"))
-    corr.add_edge(CollectingNode("Z", "M", "fiber"), LoopNode("M"))
-    corr.add_edge(CollectingNode(None, "N", "iter"), LoopNode("M"))
-    corr.add_edge(CollectingNode("Z", "N", "fiber"), LoopNode("M"))
-    corr.add_edge(CollectingNode(None, "M", "iter"), LoopNode("M"))
+    corr.add_edge(CollectingNode("Z", "M", "fiber", False), LoopNode("M"))
+    corr.add_edge(CollectingNode(None, "N", "iter", False), LoopNode("M"))
+    corr.add_edge(CollectingNode("Z", "N", "fiber", False), LoopNode("M"))
+    corr.add_edge(CollectingNode(None, "M", "iter", False), LoopNode("M"))
 
     assert nx.is_isomorphic(graph, corr)
 

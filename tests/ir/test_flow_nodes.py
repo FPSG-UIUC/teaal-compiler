@@ -2,12 +2,13 @@ from teaal.ir.flow_nodes import *
 
 
 def test_collecting_node():
-    assert repr(CollectingNode("A", "K", "fiber")
-                ) == "(CollectingNode, A, K, fiber)"
+    assert repr(CollectingNode("A", "K", "fiber", False)
+                ) == "(CollectingNode, A, K, fiber, False)"
 
-    assert CollectingNode("A", "K", "fiber").get_tensor() == "A"
-    assert CollectingNode("A", "K", "fiber").get_rank() == "K"
-    assert CollectingNode("A", "K", "fiber").get_type() == "fiber"
+    assert CollectingNode("A", "K", "fiber", False).get_tensor() == "A"
+    assert CollectingNode("A", "K", "fiber", False).get_rank() == "K"
+    assert CollectingNode("A", "K", "fiber", False).get_type() == "fiber"
+    assert not CollectingNode("A", "K", "fiber", False).get_consumable()
 
 
 def test_eager_input_node():
