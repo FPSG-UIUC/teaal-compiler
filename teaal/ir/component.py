@@ -413,6 +413,7 @@ class IntersectorComponent(FunctionalComponent):
     """
     A Component superclass for all intersectors
     """
+
     def __init__(self, name: str, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
@@ -423,14 +424,18 @@ class IntersectorComponent(FunctionalComponent):
         for einsum, einsum_bindings in bindings.items():
             for binding in einsum_bindings:
                 if "rank" not in binding:
-                    raise ValueError("Rank unspecified in Einsum " + einsum + " in binding to " + self.name)
-
+                    raise ValueError(
+                        "Rank unspecified in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
 
 
 class LeaderFollowerComponent(IntersectorComponent):
     """
     A Component for leader-follower intersection
     """
+
     def __init__(self, name: str, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
@@ -441,7 +446,11 @@ class LeaderFollowerComponent(IntersectorComponent):
         for einsum, einsum_bindings in bindings.items():
             for binding in einsum_bindings:
                 if "leader" not in binding:
-                    raise ValueError("Leader unspecified in Einsum " + einsum + " in binding to " + self.name)
+                    raise ValueError(
+                        "Leader unspecified in Einsum " +
+                        einsum +
+                        " in binding to " +
+                        self.name)
 
 
 class MergerComponent(Component):
@@ -594,5 +603,12 @@ class MergerComponent(Component):
 class SkipAheadComponent(IntersectorComponent):
     """
     A Component for skip-ahead intersection
+    """
+    pass
+
+
+class TwoFingerComponent(IntersectorComponent):
+    """
+    A Component for two-finger intersection
     """
     pass

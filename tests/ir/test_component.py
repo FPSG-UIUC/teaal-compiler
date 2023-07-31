@@ -20,6 +20,7 @@ def test_component_repr():
     component = Component("Test", {"attrs0": 5}, {"Z": [{"foo": "bar"}]})
     assert repr(component) == "(Component, Test, {'Z': [{'foo': 'bar'}]})"
 
+
 def test_component_get_bindings():
     component = Component("Test", {"attrs0": 5}, {"Z": [{"foo": "bar"}]})
 
@@ -246,21 +247,27 @@ def test_dram_component():
                        "type": "payload", "format": "default"}]}
     dram = DRAMComponent("DRAM", {"datawidth": 8, "bandwidth": 128}, bindings)
 
+
 def test_intersector_component_binding_errs():
     bindings = {"Z": [{"foo": "bar"}]}
     with pytest.raises(ValueError) as excinfo:
         IntersectorComponent("Intersection", {}, bindings)
-    assert str(excinfo.value) == "Rank unspecified in Einsum Z in binding to Intersection"
+    assert str(
+        excinfo.value) == "Rank unspecified in Einsum Z in binding to Intersection"
+
 
 def test_intersector_component():
     bindings = {"Z": [{"rank": "K"}]}
     intersector = IntersectorComponent("Intersection", {}, bindings)
 
+
 def test_leader_follower_component_binding_errs():
     bindings = {"Z": [{"rank": "K"}]}
     with pytest.raises(ValueError) as excinfo:
         LeaderFollowerComponent("Intersection", {}, bindings)
-    assert str(excinfo.value) == "Leader unspecified in Einsum Z in binding to Intersection"
+    assert str(
+        excinfo.value) == "Leader unspecified in Einsum Z in binding to Intersection"
+
 
 def test_leader_follower_component():
     bindings = {"Z": [{"rank": "K", "leader": "A"}]}
@@ -451,3 +458,8 @@ def test_merger_component():
 def test_skip_ahead_component():
     bindings = {"Z": [{"rank": "K2"}]}
     skip_ahead = SkipAheadComponent("K2Intersection", {}, bindings)
+
+
+def test_two_finger_intersector():
+    bindings = {"Z": [{"rank": "K2"}]}
+    skip_ahead = TwoFingerComponent("K2Intersection", {}, bindings)

@@ -104,8 +104,8 @@ def test_get_collected_tensor_info():
     hardware = Hardware(arch, bindings, program)
     metrics = Metrics(program, hardware, format_)
 
-    assert metrics.get_collected_tensor_info("A") == {(
-        "K", "fiber", False), ("M", "iter", False), ("M", "fiber", False), ("K", "iter", False), ("K", "fiber", True)}
+    assert metrics.get_collected_tensor_info("A") == {("K", "fiber", False), (
+        "M", "iter", False), ("M", "fiber", False), ("K", "iter", False), ("K", "fiber", True)}
     assert metrics.get_collected_tensor_info("B") == {(
         "N", "iter", False), ("K", "fiber", False), ("N", "fiber", False), ("K", "iter", False)}
     assert metrics.get_collected_tensor_info("T") == set()
@@ -119,6 +119,50 @@ def test_get_collected_tensor_info():
     assert metrics.get_collected_tensor_info("T") == set()
     assert metrics.get_collected_tensor_info("Z") == {(
         "M", "iter", False), ("N", "iter", False), ("M", "fiber", False), ("N", "fiber", False)}
+
+
+def test_get_collected_tensor_info_extra_intersection_test():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M, N]
+        A: [M]
+        B: [M]
+        C: [N]
+      expressions:
+      - Z[m, n] = A[m] * B[m] * C[n]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Intersector
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+      - component: Intersector
+        bindings:
+        - rank: M
+    format:
+      Z:
+        default:
+          rank-order: [M, N]
+          M:
+            format: C
+          N:
+            format: C
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_collected_tensor_info("A") == {("M", "fiber", True)}
+    assert metrics.get_collected_tensor_info("B") == {("M", "fiber", True)}
+    assert metrics.get_collected_tensor_info("C") == set()
+    assert metrics.get_collected_tensor_info("Z") == set()
 
 
 def test_get_merger_init_ranks_multiple_bindings():

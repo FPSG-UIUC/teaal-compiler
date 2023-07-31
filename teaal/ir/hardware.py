@@ -162,6 +162,9 @@ class Hardware:
             elif type_ == "skip-ahead":
                 class_ = SkipAheadComponent
 
+            elif type_ == "two-finger":
+                class_ = TwoFingerComponent
+
             else:
                 raise ValueError("Unknown intersection type: " + type_)
 

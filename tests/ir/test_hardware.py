@@ -211,6 +211,11 @@ def test_get_component():
           attributes:
             type: skip-ahead
 
+        - name: TFIntersect
+          class: Intersector
+          attributes:
+            type: two-finger
+
     bindings:
       T:
       - config: Accelerator
@@ -280,6 +285,10 @@ def test_get_component():
       - component: SAIntersect
         bindings:
         - rank: K2
+
+      - component: TFIntersect
+        bindings:
+        - rank: K1
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -289,8 +298,6 @@ def test_get_component():
     def assert_component(type_, name, attrs):
         binding = bindings.get_component(name)
         component = type_(name, attrs, binding)
-        print(hardware.get_component(name))
-        print(component)
 
         assert hardware.get_component(name) == component
 
@@ -317,6 +324,8 @@ def test_get_component():
     assert_component(MergerComponent, "HighRadixMerger", attrs)
 
     assert_component(SkipAheadComponent, "SAIntersect", {})
+
+    assert_component(TwoFingerComponent, "TFIntersect", {})
 
 
 def test_get_components():

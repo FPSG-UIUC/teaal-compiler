@@ -929,7 +929,13 @@ def test_graph_metrics_T():
     corr.add_edge(CollectingNode("B", "N", "fiber", False), LoopNode("M"))
     corr.add_edge(CollectingNode(None, "N", "iter", False), LoopNode("M"))
     corr.add_edge(CollectingNode("B", "K", "fiber", False), LoopNode("M"))
-    corr.add_edge(MetricsNode("Start"), CollectingNode("A", "K", "fiber", True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "A",
+            "K",
+            "fiber",
+            True))
     corr.add_edge(CollectingNode("A", "K", "fiber", True), LoopNode("M"))
 
     assert nx.is_isomorphic(graph, corr)

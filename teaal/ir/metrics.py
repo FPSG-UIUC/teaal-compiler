@@ -117,19 +117,23 @@ class Metrics:
                     info.add((rank, "iter", False))
 
         # Collect traces for intersection
-        tensor_ir = self.program.get_equation().get_tensor(tensor)
-        part_ir = self.program.get_partitioning()
-        final_ranks = part_ir.partition_ranks(tensor_ir.get_init_ranks(), part_ir.get_all_parts(), True, True)
-        for intersector in self.hardware.get_components(einsum, IntersectorComponent):
-            for binding in intersector.get_bindings()[einsum]:
-                if isinstance(intersector, LeaderFollowerComponent) and \
-                        binding["leader"] != tensor:
-                    continue
+        if not tensor == einsum:
+            tensor_ir = self.program.get_equation().get_tensor(tensor)
+            part_ir = self.program.get_partitioning()
+            final_ranks = part_ir.partition_ranks(
+                tensor_ir.get_init_ranks(), part_ir.get_all_parts(), True, True)
 
-                if binding["rank"] not in final_ranks:
-                    continue
+            for intersector in self.hardware.get_components(
+                    einsum, IntersectorComponent):
+                for binding in intersector.get_bindings()[einsum]:
+                    if isinstance(intersector, LeaderFollowerComponent) and \
+                            binding["leader"] != tensor:
+                        continue
 
-                info.add((rank, "fiber", True))
+                    if binding["rank"] not in final_ranks:
+                        continue
+
+                    info.add((binding["rank"], "fiber", True))
 
         return info
 
