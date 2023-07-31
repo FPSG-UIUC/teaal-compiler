@@ -203,9 +203,12 @@ class HiFiber:
                         repr(node))  # pragma: no cover
 
             elif isinstance(node, CollectingNode):
+                # TODO: Fix
+                tns = node.get_tensor()
+                assert tns is not None
                 code.add(
                     self.collector.set_collecting(
-                        node.get_tensor(),
+                        tns,
                         node.get_rank()))
 
             elif isinstance(node, GetPayloadNode):

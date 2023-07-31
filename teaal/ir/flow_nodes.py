@@ -25,7 +25,7 @@ Representations of all of the nodes in the FlowGraph
 """
 
 import abc
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
 from teaal.ir.node import Node
 
@@ -36,7 +36,7 @@ class CollectingNode(Node):
     tensor
     """
 
-    def __init__(self, tensor: str, rank: str, type_: str) -> None:
+    def __init__(self, tensor: Optional[str], rank: str, type_: str) -> None:
         """
         Construct a node for the collection of reuse metrics for a tensor's
         rank
@@ -51,7 +51,7 @@ class CollectingNode(Node):
         """
         return self.rank
 
-    def get_tensor(self) -> str:
+    def get_tensor(self) -> Optional[str]:
         """
         Accessor for the tensor
         """

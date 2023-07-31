@@ -151,7 +151,13 @@ class FlowGraph:
         loop_node = LoopNode(loop_ranks[0])
         tensor_name = tensor.root_name()
         for rank, type_ in self.metrics.get_collected_tensor_info(tensor_name):
-            collecting_node = CollectingNode(tensor_name, rank, type_)
+            if type_ == "fiber":
+                collecting_node = CollectingNode(tensor_name, rank, type_)
+
+            # type_ == "iter"
+            else:
+                collecting_node = CollectingNode(None, rank, type_)
+
             self.graph.add_edge(MetricsNode("Start"), collecting_node)
             self.graph.add_edge(collecting_node, loop_node)
 
@@ -174,6 +180,7 @@ class FlowGraph:
 
             for rank in partitioning:
                 self.graph.add_edge(RankNode(root, rank), swizzle_node)
+            self.program.apply_partition_swizzling(tensor)
 
             # Add to flattening info
             flatten_info[root].append(partitioning)
@@ -400,6 +407,22 @@ class FlowGraph:
 
             self.graph.add_edge(swizzle_node, part_node)
 
+            # Add an additional swizzle node to ensure that the tensor always
+            # starts in the correct order before being merged by a hardware
+            # merger
+            if self.metrics:
+                init_ranks = self.metrics.get_merger_init_ranks(
+                    root, tensor.get_ranks())
+                if init_ranks:
+                    metrics_swizzle_node = SwizzleNode(
+                        root, init_ranks, "metrics")
+
+                    for rank in init_ranks:
+                        self.graph.add_edge(
+                            RankNode(root, rank), metrics_swizzle_node)
+
+                    self.graph.add_edge(metrics_swizzle_node, swizzle_node)
+
         # Otherwise, add the edge from the source rank to the partitioning
         else:
             self.graph.add_edge(RankNode(root, partitioning[0]), part_node)
@@ -437,6 +460,24 @@ class FlowGraph:
         # If this is a static swizzle, do it before the graphics
         if static:
             self.graph.add_edge(swizzle_node, OtherNode("Graphics"))
+
+        # Add an additional swizzle node to ensure that the tensor always
+        # starts in the correct order before being merged by a hardware merger
+        if self.metrics:
+            init_ranks = self.metrics.get_merger_init_ranks(
+                root, tensor.get_ranks())
+            print(root, tensor.get_ranks(), init_ranks)
+            if init_ranks:
+                metrics_swizzle_node = SwizzleNode(root, init_ranks, "metrics")
+
+                for rank in init_ranks:
+                    self.graph.add_edge(
+                        RankNode(
+                            root,
+                            rank),
+                        metrics_swizzle_node)
+
+                self.graph.add_edge(metrics_swizzle_node, swizzle_node)
 
     def __connect_dyn_part(self, tensor: Tensor, rank: str,
                            flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:

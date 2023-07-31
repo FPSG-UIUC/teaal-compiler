@@ -182,7 +182,7 @@ bindings:
       type: payload
       format: default
       evict-on: K1
-  - component: Intersection
+  - component: Intersect
     bindings:
     - rank: K0
       leader: A
@@ -222,8 +222,8 @@ bindings:
   - component: HighRadixMerger
     bindings:
     - tensor: T
-      init-ranks: [M, K, N]
-      final-ranks: [M, N, K]
+      init-ranks: [K1, K0, N]
+      final-ranks: [K1, N, K0]
   - component: FPMul
     bindings:
     - op: mul
