@@ -56,7 +56,9 @@ class Equation:
         """
         return self.factor_order
 
-    def get_iter(self, tensors: List[Tensor]) -> Tuple[Optional[Tensor], List[List[Tensor]]]:
+    def get_iter(self,
+                 tensors: List[Tensor]) -> Tuple[Optional[Tensor],
+                                                 List[List[Tensor]]]:
         """
         Organize the tensors as they are iterated in the for loop
         Returns (Optional[output], [[tensors intersected together] unioned together])

@@ -129,7 +129,8 @@ class Equation:
                     "Cannot project into the output tensor. Replace " +
                     rank + " with " + str(trank) + " in the loop order")
 
-            expr = Equation.__add_operator(EVar(output.fiber_name()), OLtLt(), expr)
+            expr = Equation.__add_operator(
+                EVar(output.fiber_name()), OLtLt(), expr)
 
         return self.__add_enumerate(rank, expr)
 
@@ -425,4 +426,3 @@ class Equation:
             expr = Equation.__add_operator(intersection, OOr(), expr)
 
         return expr
-

@@ -83,6 +83,7 @@ def test_get_in_update():
     assert equation.get_in_update() == [[True, True, True], [
         False, False, True]]
 
+
 def test_get_iter():
     equation = create_complex()
     A = equation.get_tensor("A")

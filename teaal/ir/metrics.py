@@ -51,6 +51,8 @@ class Metrics:
         self.hardware = hardware
         self.format = format_
 
+        self.__build_fiber_traces()
+
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
         """
@@ -161,3 +163,39 @@ class Metrics:
             init_ranks = opt_init_ranks
 
         return init_ranks
+
+    def __build_fiber_traces(self) -> None:
+        """
+        Build the fiber traces
+        """
+        pass
+        # part_ir = self.program.get_partitioning()
+
+        # tensors = self.program.get_equation().get_tensors()
+        # final_ranks = []
+        # for tensor in tensors:
+        #     final_ranks.append(set(part_ir.partition_ranks(tensor.get_init_ranks(), part_ir.get_all_parts(), True, True)))
+
+        # coiters = {}
+        # for rank in self.program.get_loop_order().get_ranks():
+        #     coiters[rank] = []
+        #     for tensor, final in zip(tensors, final_ranks):
+        #         if rank in final:
+        #             coiters.append(tensor)
+
+        # self.fiber_traces = {}
+        # for rank in self.program.get_loop_order().get_ranks():
+        #     self.fiber_traces[rank] = {}
+        #     output, inputs = self.program.get_equation().get_iter(coiters[rank])
+        #
+        #     # If there is only one tensor
+        #     parent = "iter"
+        #     if output and not inputs:
+        #         self.fiber_traces[rank][output.root_name()] = parent
+        #         continue
+
+        #     if output is None and len(inputs) == 1 and len(inputs[0]) == 1:
+        #         self.fiber_traces[rank][inputs[0][0].root_name()] = parent
+        #         continue
+
+        #     if output
