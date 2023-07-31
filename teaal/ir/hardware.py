@@ -80,16 +80,6 @@ class Hardware:
         """
         return self.components[name]
 
-    def get_compute_path(self, einsum: str) -> List[Level]:
-        """
-        Get a list of levels with dataflow corresponding to this einsum
-
-        TODO: Remove this
-        """
-        raise ValueError("Do we really need this???")
-        return []
-        # return self.__compute_helper(einsum, self.tree[self.configs[einsum]])
-
     def get_components(self, einsum: str, class_: Type[T]) -> List[T]:
         """
         Get a list of components relevant to this einsum

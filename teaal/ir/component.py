@@ -50,9 +50,8 @@ class Component:
 
     def get_bindings(self) -> Dict[str, List[dict]]:
         """
-        Get the operations that are bound to this merger
+        Get the operations that are bound to this component
 
-        TODO: Test
         TODO: Do we want to expose this directly
         """
         return self.bindings
@@ -410,11 +409,39 @@ class DRAMComponent(MemoryComponent):
     pass
 
 
-class LeaderFollowerComponent(FunctionalComponent):
+class IntersectorComponent(FunctionalComponent):
+    """
+    A Component superclass for all intersectors
+    """
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
+        """
+        Construct an intersector component
+        """
+        super().__init__(name, attrs, bindings)
+
+        for einsum, einsum_bindings in bindings.items():
+            for binding in einsum_bindings:
+                if "rank" not in binding:
+                    raise ValueError("Rank unspecified in Einsum " + einsum + " in binding to " + self.name)
+
+
+
+class LeaderFollowerComponent(IntersectorComponent):
     """
     A Component for leader-follower intersection
     """
-    pass
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
+        """
+        Construct a leader-follower intersector component
+        """
+        super().__init__(name, attrs, bindings)
+
+        for einsum, einsum_bindings in bindings.items():
+            for binding in einsum_bindings:
+                if "leader" not in binding:
+                    raise ValueError("Leader unspecified in Einsum " + einsum + " in binding to " + self.name)
 
 
 class MergerComponent(Component):
@@ -425,7 +452,7 @@ class MergerComponent(Component):
     def __init__(self, name: str, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
-        Construct a compute component
+        Construct a merger component
         """
         super().__init__(name, attrs, bindings)
 
@@ -564,7 +591,7 @@ class MergerComponent(Component):
             self.reduce)
 
 
-class SkipAheadComponent(FunctionalComponent):
+class SkipAheadComponent(IntersectorComponent):
     """
     A Component for skip-ahead intersection
     """

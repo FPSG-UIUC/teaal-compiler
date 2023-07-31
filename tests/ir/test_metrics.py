@@ -105,9 +105,9 @@ def test_get_collected_tensor_info():
     metrics = Metrics(program, hardware, format_)
 
     assert metrics.get_collected_tensor_info("A") == {(
-        "K", "fiber"), ("M", "iter"), ("M", "fiber"), ("K", "iter")}
+        "K", "fiber", False), ("M", "iter", False), ("M", "fiber", False), ("K", "iter", False), ("K", "fiber", True)}
     assert metrics.get_collected_tensor_info("B") == {(
-        "N", "iter"), ("K", "fiber"), ("N", "fiber"), ("K", "iter")}
+        "N", "iter", False), ("K", "fiber", False), ("N", "fiber", False), ("K", "iter", False)}
     assert metrics.get_collected_tensor_info("T") == set()
 
     program.reset()
@@ -118,7 +118,7 @@ def test_get_collected_tensor_info():
     assert metrics.get_collected_tensor_info("A") == set()
     assert metrics.get_collected_tensor_info("T") == set()
     assert metrics.get_collected_tensor_info("Z") == {(
-        "M", "iter"), ("N", "iter"), ("M", "fiber"), ("N", "fiber")}
+        "M", "iter", False), ("N", "iter", False), ("M", "fiber", False), ("N", "fiber", False)}
 
 
 def test_get_merger_init_ranks_multiple_bindings():

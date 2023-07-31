@@ -51,10 +51,11 @@ class Metrics:
         self.hardware = hardware
         self.format = format_
 
-    def get_collected_tensor_info(self, tensor: str) -> Set[Tuple[str, str]]:
+    def get_collected_tensor_info(
+            self, tensor: str) -> Set[Tuple[str, str, bool]]:
         """
         Get a specification for which ranks in the loop order need to be
-        collected in the form {(rank, type)}, where type is one of
+        collected in the form {(rank, type, consumable)}, where type is one of
             - "fiber" - corresponding to iteration over that fiber
             - "iter" - corresponding to the iteration of the loop nest
         """
@@ -79,6 +80,7 @@ class Metrics:
         info = set()
 
         # TODO: What about eager binding?
+        # Collect traces for data traffic
         for format_ in formats:
             for rank in spec[format_]:
                 if rank == "rank-order":
@@ -109,10 +111,25 @@ class Metrics:
                 loop_format = format_
 
                 if used:
-                    info.add((rank, "fiber"))
+                    info.add((rank, "fiber", False))
 
                 if payload_path and len(payload_path) > 1:
-                    info.add((rank, "iter"))
+                    info.add((rank, "iter", False))
+
+        # Collect traces for intersection
+        tensor_ir = self.program.get_equation().get_tensor(tensor)
+        part_ir = self.program.get_partitioning()
+        final_ranks = part_ir.partition_ranks(tensor_ir.get_init_ranks(), part_ir.get_all_parts(), True, True)
+        for intersector in self.hardware.get_components(einsum, IntersectorComponent):
+            for binding in intersector.get_bindings()[einsum]:
+                if isinstance(intersector, LeaderFollowerComponent) and \
+                        binding["leader"] != tensor:
+                    continue
+
+                if binding["rank"] not in final_ranks:
+                    continue
+
+                info.add((rank, "fiber", True))
 
         return info
 
