@@ -51,8 +51,6 @@ class Component:
     def get_bindings(self) -> Dict[str, List[dict]]:
         """
         Get the operations that are bound to this component
-
-        TODO: Do we want to expose this directly
         """
         return self.bindings
 

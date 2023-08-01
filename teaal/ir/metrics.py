@@ -114,6 +114,12 @@ class Metrics:
         """
         return self.format
 
+    def get_hardware(self) -> Hardware:
+        """
+        Get the hardware IR
+        """
+        return self.hardware
+
     def get_loop_formats(self) -> Dict[str, str]:
         """
         Get the tensors that have assigned formats during the loop nest as

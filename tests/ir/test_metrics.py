@@ -424,6 +424,14 @@ def test_get_format():
     assert metrics.get_format() == format_
 
 
+def test_get_hardware():
+    program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_hardware() == hardware
+
+
 def test_get_loop_formats():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
     hardware = Hardware(arch, bindings, program)

@@ -54,8 +54,12 @@ class Collector:
         if self.program.get_einsum_ind() == 0:
             block.add(SAssign(AVar("metrics"), EDict({})))
 
-        einsum = EString(self.program.get_equation().get_output().root_name())
-        block.add(SAssign(AAccess(EVar("metrics"), einsum), EDict({})))
+        einsum = self.program.get_equation().get_output().root_name()
+        block.add(
+            SAssign(
+                AAccess(
+                    EVar("metrics"), EString(einsum)), EDict(
+                    {})))
 
         # Create the formats
         formats_dict: Dict[Expression, Expression] = {}
@@ -71,6 +75,13 @@ class Collector:
                 "Format", [AJust(tensor_var), AJust(format_yaml)])
 
         block.add(SAssign(AVar("formats"), EDict(formats_dict)))
+
+        # Create the bindings
+        for buffer_ in self.metrics.get_hardware().get_components(einsum, BufferComponent):
+            bindings = TransUtils.build_expr(buffer_.get_bindings()[einsum])
+            bindings_var = AVar(buffer_.get_name() + "_bindings")
+
+            block.add(SAssign(bindings_var, bindings))
 
         return block
 

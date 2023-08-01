@@ -34,7 +34,12 @@ def test_dump():
 
     hifiber = "metrics = {}\n" + \
         "metrics[\"T\"] = {}\n" + \
-        "formats = {\"A\": Format(A_MK, {\"rank-order\": [\"M\", \"K\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"B\": Format(B_KN, {\"rank-order\": [\"K\", \"N\"], \"K\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}"
+        "formats = {\"A\": Format(A_MK, {\"rank-order\": [\"M\", \"K\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"B\": Format(B_KN, {\"rank-order\": [\"K\", \"N\"], \"K\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
+        "FiberCache_bindings = [{\"tensor\": \"B\", \"rank\": \"K\", \"type\": \"payload\", \"format\": \"default\"}, {\"tensor\": \"B\", \"rank\": \"N\", \"type\": \"coord\", \"format\": \"default\"}, {\"tensor\": \"B\", \"rank\": \"N\", \"type\": \"payload\", \"format\": \"default\"}]\n" + \
+        "Stage0RegFile_bindings = [{\"tensor\": \"A\", \"rank\": \"M\", \"type\": \"payload\", \"format\": \"default\", \"evict-on\": \"root\", \"style\": \"lazy\"}, {\"tensor\": \"A\", \"rank\": \"K\", \"type\": \"coord\", \"format\": \"default\", \"evict-on\": \"M\", \"style\": \"lazy\"}, {\"tensor\": \"A\", \"rank\": \"K\", \"type\": \"payload\", \"format\": \"default\", \"evict-on\": \"M\", \"style\": \"lazy\"}]"
+
+    # print(collector.dump().gen(0))
+    # assert False
 
     assert collector.dump().gen(0) == hifiber
 
