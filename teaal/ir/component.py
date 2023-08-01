@@ -65,6 +65,12 @@ class Component:
             return self.__key() == other.__key()
         return False
 
+    def __hash__(self) -> int:
+        """
+        Hash the component
+        """
+        return hash(repr(self))
+
     def __key(self) -> Tuple[Any, ...]:
         """
         A tuple of all fields of a component

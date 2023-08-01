@@ -4,16 +4,24 @@ from teaal.ir.component import *
 
 
 def test_component_get_name():
-    component = Component("Test", {}, [])
+    component = Component("Test", {}, {})
     assert component.get_name() == "Test"
 
 
 def test_component_eq():
-    component0 = Component("Test", {"attr0": 5}, [])
-    component1 = Component("Test", {"attr0": 5}, [])
+    component0 = Component("Test", {"attr0": 5}, {})
+    component1 = Component("Test", {"attr0": 5}, {})
 
     assert component0 == component1
     assert component0 != "foo"
+
+
+def test_component_hash():
+    set_ = set()
+    set_.add(Component("foo", {}, {"Z": [{"foo": "bar"}]}))
+
+    assert Component("foo", {}, {"Z": [{"foo": "bar"}]}) in set_
+    assert "" not in set_
 
 
 def test_component_repr():

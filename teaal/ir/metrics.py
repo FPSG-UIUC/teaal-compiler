@@ -55,6 +55,36 @@ class Metrics:
         self.__build_fiber_traces()
         self.__build_used_traffic_paths()
 
+    def get_buffered_data(self) -> Dict[str, Dict[str, List[Tuple[str, str]]]]:
+        """
+        Get, for each memory, the tensor, rank, and type (coord, payload, elem)
+        buffered for all buffers that we actually need to track traffic
+
+        Returns Dict[component, Dict[tensor, List[(rank, type)]]]
+        """
+        buffered_data: Dict[str, Dict[str, List[Tuple[str, str]]]] = {}
+        types = ["coord", "payload", "elem"]
+        for tensor, (_, paths_per_rank) in self.used_traffic_paths.items():
+            for rank, paths in paths_per_rank.items():
+                for type_, path in zip(types, paths):
+                    # If this data is not loaded from somewhere to somewhere,
+                    # there is nothing to track
+                    if len(path) == 0:
+                        continue
+
+                    for buffer_ in path:
+                        buffer_name = buffer_.get_name()
+                        if buffer_name not in buffered_data:
+                            buffered_data[buffer_name] = {}
+
+                        if tensor not in buffered_data[buffer_name]:
+                            buffered_data[buffer_name][tensor] = []
+
+                        buffered_data[buffer_name][tensor].append(
+                            (rank, type_))
+
+        return buffered_data
+
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
         """
@@ -68,13 +98,13 @@ class Metrics:
         info = set()
         einsum = self.program.get_equation().get_output().root_name()
         if tensor in self.used_traffic_paths:
-            for rank in self.used_traffic_paths[tensor][1]:
-                if any(
-                        len(path) > 1 for path in self.used_traffic_paths[tensor][1][rank]):
+            for rank, paths in self.used_traffic_paths[tensor][1].items():
+                if any(len(path) > 1 for path in paths):
                     info.add((rank, "fiber", False))
 
-                payload_path = self.used_traffic_paths[tensor][1][rank][1]
-                if payload_path and len(payload_path) > 1:
+                # We only want to load the payload if we actually make it into
+                # the loop
+                if paths[1] and len(paths[1]) > 1:
                     info.add((rank, "iter", False))
 
         # Collect traces for intersection
