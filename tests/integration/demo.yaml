@@ -1,14 +1,12 @@
-einsum:
-    declaration:
-        A: [K, M]
-        B: [K, N]
-        Z: [M, N]
-    expressions:
-        - Z[m, n] = A[k, m] * B[k, n]
-mapping:
-    partitioning:
-        Z:
-            K: [uniform_occupancy(A.6), uniform_occupancy(A.3)]
-            N: [uniform_occupancy(B.5)]
-    loop-order:
-        Z: [K2, M, N1, K1, N0, K0]
+    einsum:
+      declaration:
+        Z4: [M]
+        A: [M, K]
+        B: [M, K]
+        C: [M, K]
+        D: [M, K]
+        E: [M, K]
+        F: [M, K]
+        G: [M, K]
+      expressions:
+        - Z4[m] = A[m, k] * B[m, k] * C[m, k] + D[m, k] + E[m, k] * F[m, k] + G[m, k]

@@ -51,6 +51,7 @@ class Metrics:
         self.hardware = hardware
         self.format = format_
 
+        self.__build_coiter_ranks()
         self.__build_fiber_traces()
 
     def get_collected_tensor_info(
@@ -174,6 +175,22 @@ class Metrics:
 
         return init_ranks
 
+    def __build_coiter_ranks(self) -> None:
+        """
+        Map the ranks to the coiterators that coiterate over them
+        """
+        self.coiterators: Dict[str, Component] = {}
+        einsum = self.program.get_equation().get_output().root_name()
+        for intersector in self.hardware.get_components(
+                einsum, IntersectorComponent):
+            for binding in intersector.get_bindings()[einsum]:
+                rank = binding["rank"]
+                # Not clear how to map co-iterators onto components
+                if rank in self.coiterators:
+                    raise NotImplementedError
+
+                self.coiterators[rank] = intersector
+
     def __build_fiber_traces(self) -> None:
         """
         Build the fiber traces
@@ -235,10 +252,23 @@ class Metrics:
 
                 # Otherwise we have multiple tensors intersected together
                 else:
-                    for tensor in term[:-1]:
+                    for j, tensor in enumerate(term[:-1]):
+                        # Not clear which intersection should performed
+                        # with this component
+                        if rank in self.coiterators and len(inputs) > 1:
+                            raise NotImplementedError
+
                         self.fiber_traces[rank][tensor.root_name()] = {
                             True: "intersect_" + str(next_label)}
-                        next_label += 2
+
+                        if rank in self.coiterators and isinstance(
+                                self.coiterators[rank], LeaderFollowerComponent) and j + 2 < len(term):
+                            # TODO: The inputs need to be reorganized so that
+                            # the leader is first
+
+                            next_label += 1
+                        else:
+                            next_label += 2
 
                     self.fiber_traces[rank][term[-1].root_name()
                                             ] = {True: "intersect_" + str(next_label - 1)}

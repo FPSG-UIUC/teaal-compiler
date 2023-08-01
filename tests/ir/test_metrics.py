@@ -273,6 +273,150 @@ def test_get_fiber_trace():
     assert metrics.get_fiber_trace("G", "K", True) == "union_9"
 
 
+def test_get_fiber_trace_leader_follower_multiple_intersectors():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M]
+        A: [M, K]
+        B: [M, K]
+        C: [M, K]
+        D: [M, K]
+      expressions:
+        - Z[m] = A[m, k] * B[m, k] + C[m, k] * D[m, k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: LeaderFollower0
+          class: Intersector
+          attributes:
+            type: leader-follower
+        - name: LeaderFollower1
+          class: Intersector
+          attributes:
+            type: leader-follower
+    bindings:
+      Z:
+      - config: accel
+      - component: LeaderFollower0
+        bindings:
+        - rank: M
+          leader: A
+      - component: LeaderFollower1
+        bindings:
+        - rank: M
+          leader: A
+    format:
+      Z0:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+
+    with pytest.raises(NotImplementedError):
+        metrics = Metrics(program, hardware, format_)
+
+
+def test_get_fiber_trace_leader_follower_multiple_terms():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M]
+        A: [M, K]
+        B: [M, K]
+        C: [M, K]
+        D: [M, K]
+      expressions:
+        - Z[m] = A[m, k] * B[m, k] + C[m, k] * D[m, k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: LeaderFollower
+          class: Intersector
+          attributes:
+            type: leader-follower
+    bindings:
+      Z:
+      - config: accel
+      - component: LeaderFollower
+        bindings:
+        - rank: M
+          leader: A
+        - rank: K
+          leader: A
+    format:
+      Z0:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+
+    with pytest.raises(NotImplementedError):
+        metrics = Metrics(program, hardware, format_)
+
+
+def test_get_fiber_trace_leader_follower():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M]
+        A: [M, K]
+        B: [M, K]
+        C: [M, K]
+        D: [M, K]
+      expressions:
+        - Z[m] = A[m, k] * B[m, k] * C[m, k] * D[m, k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: LeaderFollower
+          class: Intersector
+          attributes:
+            type: leader-follower
+    bindings:
+      Z:
+      - config: accel
+      - component: LeaderFollower
+        bindings:
+        - rank: M
+          leader: A
+        - rank: K
+          leader: A
+    format:
+      Z0:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("Z", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z", "M", False) == "populate_write_0"
+    assert metrics.get_fiber_trace("A", "M", True) == "intersect_2"
+    assert metrics.get_fiber_trace("A", "K", True) == "intersect_0"
+    assert metrics.get_fiber_trace("B", "M", True) == "intersect_3"
+    assert metrics.get_fiber_trace("B", "K", True) == "intersect_1"
+    assert metrics.get_fiber_trace("C", "M", True) == "intersect_4"
+    assert metrics.get_fiber_trace("C", "K", True) == "intersect_2"
+    assert metrics.get_fiber_trace("D", "M", True) == "intersect_5"
+    assert metrics.get_fiber_trace("D", "K", True) == "intersect_3"
+
+
 def test_get_merger_init_ranks_multiple_bindings():
     yaml = """
     einsum:
