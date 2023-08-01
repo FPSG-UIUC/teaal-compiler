@@ -53,6 +53,7 @@ class Metrics:
 
         self.__build_coiter_ranks()
         self.__build_fiber_traces()
+        self.__build_used_traffic_paths()
 
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
@@ -62,60 +63,17 @@ class Metrics:
             - "fiber" - corresponding to iteration over that fiber
             - "iter" - corresponding to the iteration of the loop nest
         """
-        spec = self.format.get_spec(tensor)
-
-        # Identify the formats that can correspond to the iteration of this
-        # loop nest
-        formats = []
-        loop_order = self.program.get_loop_order()
-        for format_ in spec:
-            format_ranks = spec[format_]["rank-order"]
-
-            temp_tensor = Tensor(tensor, format_ranks)
-            loop_order.apply(temp_tensor)
-
-            if temp_tensor.get_ranks() == format_ranks:
-                formats.append(format_)
-
-        # Build the set of specs to collect
-        einsum = self.program.get_equation().get_output().root_name()
-        loop_format: Optional[str] = None
-        info = set()
-
         # TODO: What about eager binding?
         # Collect traces for data traffic
-        for format_ in formats:
-            for rank in spec[format_]:
-                if rank == "rank-order":
-                    continue
-
-                coord_path = self.hardware.get_traffic_path(
-                    einsum, tensor, rank, "coord", format_)
-                payload_path = self.hardware.get_traffic_path(
-                    einsum, tensor, rank, "payload", format_)
-                elem_path = self.hardware.get_traffic_path(
-                    einsum, tensor, rank, "elem", format_)
-                used = any(
-                    len(path) > 1 for path in [
-                        coord_path,
-                        payload_path,
-                        elem_path] if path is not None)
-
-                if not used:
-                    continue
-
-                if used and loop_format is not None and format_ != loop_format:
-                    raise ValueError("Multiple potential formats " +
-                                     str({loop_format, format_}) +
-                                     " for tensor " +
-                                     tensor +
-                                     " in Einsum " +
-                                     einsum)
-                loop_format = format_
-
-                if used:
+        info = set()
+        einsum = self.program.get_equation().get_output().root_name()
+        if tensor in self.used_traffic_paths:
+            for rank in self.used_traffic_paths[tensor][1]:
+                if any(
+                        len(path) > 1 for path in self.used_traffic_paths[tensor][1][rank]):
                     info.add((rank, "fiber", False))
 
+                payload_path = self.used_traffic_paths[tensor][1][rank][1]
                 if payload_path and len(payload_path) > 1:
                     info.add((rank, "iter", False))
 
@@ -144,11 +102,11 @@ class Metrics:
             self,
             tensor: str,
             rank: str,
-            is_load_trace: bool) -> str:
+            is_read_trace: bool) -> str:
         """
         Get the name of the fiber trace for this fiber
         """
-        return self.fiber_traces[rank][tensor][is_load_trace]
+        return self.fiber_traces[rank][tensor][is_read_trace]
 
     def get_merger_init_ranks(self, tensor: str,
                               final_ranks: List[str]) -> Optional[List[str]]:
@@ -195,7 +153,7 @@ class Metrics:
         """
         Build the fiber traces
 
-        self.fiber_traces: Dict[rank, Dict[tensor, Dict[is_load_trace, trace]]]
+        self.fiber_traces: Dict[rank, Dict[tensor, Dict[is_read_trace, trace]]]
         """
         part_ir = self.program.get_partitioning()
 
@@ -277,3 +235,70 @@ class Metrics:
                     parent = "union_" + str(union_label + 1)
                     union_label = next_label
                     next_label += 2
+
+    def __build_used_traffic_paths(self) -> None:
+        """
+        Build a dictionary of used loop formats:
+        Dict[tensor, Tuple[format, Dict[rank, Tuple[coord_path, payload_path, elem_path]]]]
+        """
+        self.used_traffic_paths: Dict[str,
+                                      Tuple[str,
+                                            Dict[str,
+                                                 Tuple[List[MemoryComponent],
+                                                       List[MemoryComponent],
+                                                       List[MemoryComponent]]]]] = {}
+        for tensor_ir in self.program.get_equation().get_tensors():
+            tensor = tensor_ir.root_name()
+            spec = self.format.get_spec(tensor)
+
+            # Identify the formats that can correspond to the iteration of this
+            # loop nest
+            formats = []
+            loop_order = self.program.get_loop_order()
+            for format_ in spec:
+                format_ranks = spec[format_]["rank-order"]
+
+                temp_tensor = Tensor(tensor, format_ranks)
+                loop_order.apply(temp_tensor)
+
+                if temp_tensor.get_ranks() == format_ranks:
+                    formats.append(format_)
+
+            # Build the set of specs to collect
+            einsum = self.program.get_equation().get_output().root_name()
+
+            # TODO: What about eager binding?
+            for format_ in formats:
+                for rank in spec[format_]:
+                    if rank == "rank-order":
+                        continue
+
+                    coord_path = self.hardware.get_traffic_path(
+                        einsum, tensor, rank, "coord", format_)
+                    payload_path = self.hardware.get_traffic_path(
+                        einsum, tensor, rank, "payload", format_)
+                    elem_path = self.hardware.get_traffic_path(
+                        einsum, tensor, rank, "elem", format_)
+                    used = any(
+                        len(path) > 1 for path in [
+                            coord_path,
+                            payload_path,
+                            elem_path] if path is not None)
+
+                    if not used:
+                        continue
+
+                    if used and tensor in self.used_traffic_paths and self.used_traffic_paths[
+                            tensor][0] != format_:
+                        raise ValueError("Multiple potential formats " +
+                                         str({self.used_traffic_paths[tensor][0], format_}) +
+                                         " for tensor " +
+                                         tensor +
+                                         " in Einsum " +
+                                         einsum)
+
+                    if tensor not in self.used_traffic_paths:
+                        self.used_traffic_paths[tensor] = (format_, {})
+
+                    self.used_traffic_paths[tensor][1][rank] = (
+                        coord_path, payload_path, elem_path)

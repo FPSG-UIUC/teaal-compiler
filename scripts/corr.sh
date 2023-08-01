@@ -15,7 +15,5 @@ do
 done
 
 # Run the corrected files
-python -m pytest --cov=teaal --cov-report term-missing tests/parse tests/hifiber tests/ir tests/trans/test_canvas.py tests/trans/test_coord_access.py tests/trans/test_equation.py tests/trans/test_footer.py tests/trans/test_graphics.py tests/trans/test_header.py tests/trans/test_partitioner.py tests/trans/test_utils.py
-
-# python -m pytest tests/trans/test_collector.py
+python -m pytest --cov=teaal --cov-report term-missing tests/parse tests/hifiber tests/ir tests/trans/test_canvas.py tests/trans/test_coord_access.py tests/trans/test_equation.py tests/trans/test_footer.py tests/trans/test_graphics.py tests/trans/test_header.py tests/trans/test_partitioner.py tests/trans/test_utils.py tests/trans/test_collector.py
 # python -m pytest tests/trans/test_hifiber.py

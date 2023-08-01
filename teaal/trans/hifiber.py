@@ -208,7 +208,8 @@ class HiFiber:
                         node.get_tensor(),
                         node.get_rank(),
                         node.get_type(),
-                        node.get_consumable()))
+                        node.get_consumable(),
+                        node.get_is_read_trace()))
 
             elif isinstance(node, GetPayloadNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())

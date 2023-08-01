@@ -26,7 +26,7 @@ def parse_yamls(yaml):
     return program, arch, bindings, format_
 
 
-def test_get_collected_tensor_info_multiple_formats():
+def test_used_traffic_paths():
     yaml = """
     einsum:
       declaration:
@@ -89,10 +89,9 @@ def test_get_collected_tensor_info_multiple_formats():
     """
     program, arch, bindings, format_ = parse_yamls(yaml)
     hardware = Hardware(arch, bindings, program)
-    metrics = Metrics(program, hardware, format_)
 
     with pytest.raises(ValueError) as excinfo:
-        metrics.get_collected_tensor_info("A")
+        Metrics(program, hardware, format_)
     assert str(
         excinfo.value) in {
         "Multiple potential formats {'default0', 'default1'} for tensor A in Einsum Z",
