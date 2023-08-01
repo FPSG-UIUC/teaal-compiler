@@ -28,6 +28,17 @@ def build_collector(yaml, i):
     return Collector(program, metrics)
 
 
+def test_dump():
+    yaml = build_gamma_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"T\"] = {}\n" + \
+        "formats = {\"A\": Format(A_MK, {\"rank-order\": [\"M\", \"K\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"B\": Format(B_KN, {\"rank-order\": [\"K\", \"N\"], \"K\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}"
+
+    assert collector.dump().gen(0) == hifiber
+
+
 def test_end():
     hifiber = "Metrics.endCollect()"
 

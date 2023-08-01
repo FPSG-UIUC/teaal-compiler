@@ -53,37 +53,7 @@ class Metrics:
 
         self.__build_coiter_ranks()
         self.__build_fiber_traces()
-        self.__build_used_traffic_paths()
-
-    def get_buffered_data(self) -> Dict[str, Dict[str, List[Tuple[str, str]]]]:
-        """
-        Get, for each memory, the tensor, rank, and type (coord, payload, elem)
-        buffered for all buffers that we actually need to track traffic
-
-        Returns Dict[component, Dict[tensor, List[(rank, type)]]]
-        """
-        buffered_data: Dict[str, Dict[str, List[Tuple[str, str]]]] = {}
-        types = ["coord", "payload", "elem"]
-        for tensor, (_, paths_per_rank) in self.used_traffic_paths.items():
-            for rank, paths in paths_per_rank.items():
-                for type_, path in zip(types, paths):
-                    # If this data is not loaded from somewhere to somewhere,
-                    # there is nothing to track
-                    if len(path) == 0:
-                        continue
-
-                    for buffer_ in path:
-                        buffer_name = buffer_.get_name()
-                        if buffer_name not in buffered_data:
-                            buffered_data[buffer_name] = {}
-
-                        if tensor not in buffered_data[buffer_name]:
-                            buffered_data[buffer_name][tensor] = []
-
-                        buffered_data[buffer_name][tensor].append(
-                            (rank, type_))
-
-        return buffered_data
+        self.__build_traffic_paths()
 
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
@@ -97,8 +67,8 @@ class Metrics:
         # Collect traces for data traffic
         info = set()
         einsum = self.program.get_equation().get_output().root_name()
-        if tensor in self.used_traffic_paths:
-            for rank, paths in self.used_traffic_paths[tensor][1].items():
+        if tensor in self.traffic_paths:
+            for rank, paths in self.traffic_paths[tensor][1].items():
                 if any(len(path) > 1 for path in paths):
                     info.add((rank, "fiber", False))
 
@@ -138,6 +108,22 @@ class Metrics:
         """
         return self.fiber_traces[rank][tensor][is_read_trace]
 
+    def get_format(self) -> Format:
+        """
+        Get the parsed format yaml
+        """
+        return self.format
+
+    def get_loop_formats(self) -> Dict[str, str]:
+        """
+        Get the tensors that have assigned formats during the loop nest as
+        well as the corresponding format
+        """
+        loop_formats = {}
+        for tensor, (format_, _) in self.traffic_paths.items():
+            loop_formats[tensor] = format_
+        return loop_formats
+
     def get_merger_init_ranks(self, tensor: str,
                               final_ranks: List[str]) -> Optional[List[str]]:
         """
@@ -162,6 +148,37 @@ class Metrics:
             init_ranks = opt_init_ranks
 
         return init_ranks
+
+    def get_source_memory(
+            self,
+            component: str,
+            tensor: str,
+            rank: str,
+            type_: str) -> Optional[MemoryComponent]:
+        """
+        Get the source for this data
+        """
+        t = ["coord", "payload", "elem"].index(type_)
+
+        if tensor not in self.traffic_paths:
+            return None
+
+        path = self.traffic_paths[tensor][1][rank][t]
+        component_ir = self.hardware.get_component(component)
+        if not isinstance(component_ir, MemoryComponent):
+            raise ValueError(
+                "Destination component " +
+                component +
+                " not a memory")
+
+        if component_ir not in path:
+            return None
+
+        i = path.index(component_ir)
+        if i == 0:
+            return None
+
+        return path[i - 1]
 
     def __build_coiter_ranks(self) -> None:
         """
@@ -266,17 +283,17 @@ class Metrics:
                     union_label = next_label
                     next_label += 2
 
-    def __build_used_traffic_paths(self) -> None:
+    def __build_traffic_paths(self) -> None:
         """
         Build a dictionary of used loop formats:
         Dict[tensor, Tuple[format, Dict[rank, Tuple[coord_path, payload_path, elem_path]]]]
         """
-        self.used_traffic_paths: Dict[str,
-                                      Tuple[str,
-                                            Dict[str,
-                                                 Tuple[List[MemoryComponent],
-                                                       List[MemoryComponent],
-                                                       List[MemoryComponent]]]]] = {}
+        self.traffic_paths: Dict[str,
+                                 Tuple[str,
+                                       Dict[str,
+                                            Tuple[List[MemoryComponent],
+                                                  List[MemoryComponent],
+                                                  List[MemoryComponent]]]]] = {}
         for tensor_ir in self.program.get_equation().get_tensors():
             tensor = tensor_ir.root_name()
             spec = self.format.get_spec(tensor)
@@ -309,26 +326,18 @@ class Metrics:
                         einsum, tensor, rank, "payload", format_)
                     elem_path = self.hardware.get_traffic_path(
                         einsum, tensor, rank, "elem", format_)
-                    used = any(
-                        len(path) > 1 for path in [
-                            coord_path,
-                            payload_path,
-                            elem_path] if path is not None)
 
-                    if not used:
-                        continue
-
-                    if used and tensor in self.used_traffic_paths and self.used_traffic_paths[
+                    if tensor in self.traffic_paths and self.traffic_paths[
                             tensor][0] != format_:
                         raise ValueError("Multiple potential formats " +
-                                         str({self.used_traffic_paths[tensor][0], format_}) +
+                                         str({self.traffic_paths[tensor][0], format_}) +
                                          " for tensor " +
                                          tensor +
                                          " in Einsum " +
                                          einsum)
 
-                    if tensor not in self.used_traffic_paths:
-                        self.used_traffic_paths[tensor] = (format_, {})
+                    if tensor not in self.traffic_paths:
+                        self.traffic_paths[tensor] = (format_, {})
 
-                    self.used_traffic_paths[tensor][1][rank] = (
+                    self.traffic_paths[tensor][1][rank] = (
                         coord_path, payload_path, elem_path)

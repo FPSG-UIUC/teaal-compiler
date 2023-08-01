@@ -57,6 +57,21 @@ class Collector:
         einsum = EString(self.program.get_equation().get_output().root_name())
         block.add(SAssign(AAccess(EVar("metrics"), einsum), EDict({})))
 
+        # Create the formats
+        formats_dict: Dict[Expression, Expression] = {}
+        for tensor, format_ in self.metrics.get_loop_formats().items():
+            temp_tensor = Tensor(
+                tensor, self.program.get_equation().get_tensor(tensor).get_ranks())
+            tensor_var = EVar(temp_tensor.tensor_name())
+
+            format_yaml = TransUtils.build_expr(
+                self.metrics.get_format().get_spec(tensor)[format_])
+
+            formats_dict[EString(tensor)] = EFunc(
+                "Format", [AJust(tensor_var), AJust(format_yaml)])
+
+        block.add(SAssign(AVar("formats"), EDict(formats_dict)))
+
         return block
 
     @staticmethod

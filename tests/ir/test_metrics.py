@@ -98,147 +98,6 @@ def test_used_traffic_paths():
         "Multiple potential formats {'default1', 'default0'} for tensor A in Einsum Z"}
 
 
-def test_get_buffered_data():
-    yaml = """
-    einsum:
-      declaration:
-        A: [K, M]
-        B: [K]
-        C: [K]
-        Z: [M]
-      expressions:
-      - Z[m] = A[k, m] * B[k] * C[k]
-
-    architecture:
-      accel:
-      - name: level0
-        local:
-        - name: DRAM
-          class: DRAM
-          attributes:
-            bandwidth: 512
-
-        subtree:
-        - name: level1
-          local:
-          - name: L2Cache
-            class: Cache
-            attributes:
-              width: 64
-              depth: 1024
-              bandwidth: 2048
-
-          subtree:
-          - name: level2
-            local:
-            - name: L1Cache
-              class: Cache
-              attributes:
-                width: 64
-                depth: 128
-
-    bindings:
-      Z:
-      - config: accel
-      - component: DRAM
-        bindings:
-        - tensor: A
-          rank: M
-          type: payload
-          format: default
-        - tensor: A
-          rank: K
-          type: coord
-          format: default
-        - tensor: A
-          rank: K
-          type: payload
-          format: default
-        - tensor: Z
-          rank: M
-          type: elem
-          format: default
-      - component: L2Cache
-        bindings:
-        - tensor: A
-          rank: M
-          type: payload
-          format: default
-        - tensor: A
-          rank: K
-          type: coord
-          format: default
-        - tensor: A
-          rank: K
-          type: payload
-          format: default
-        - tensor: Z
-          rank: M
-          type: elem
-          format: default
-      - component: L1Cache
-        bindings:
-        - tensor: A
-          rank: K
-          type: coord
-          format: default
-        - tensor: A
-          rank: K
-          type: payload
-          format: default
-        - tensor: B
-          rank: K
-          type: payload
-          format: default
-        - tensor: Z
-          rank: M
-          type: elem
-          format: default
-
-    format:
-      A:
-        default:
-          rank-order: [M, K]
-          M:
-            format: U
-            pbits: 32
-          K:
-            format: C
-            cbits: 32
-            pbits: 64
-      B:
-        default:
-          rank-order: [K]
-          K:
-            format: U
-            pbits: 64
-      Z:
-        default:
-          rank-order: [M]
-          M:
-            format: C
-            cbits: 32
-            pbits: 64
-    """
-    program, arch, bindings, format_ = parse_yamls(yaml)
-    hardware = Hardware(arch, bindings, program)
-    metrics = Metrics(program, hardware, format_)
-
-    corr = {
-        "DRAM": {
-            "Z": [
-                ("M", "elem")], "A": [
-                ("M", "payload"), ("K", "coord"), ("K", "payload")]}, "L2Cache": {
-                    "Z": [
-                        ("M", "elem")], "A": [
-                            ("M", "payload"), ("K", "coord"), ("K", "payload")]}, "L1Cache": {
-                                "Z": [
-                                    ("M", "elem")], "A": [
-                                        ("K", "coord"), ("K", "payload")]}}
-
-    assert metrics.get_buffered_data() == corr
-
-
 def test_get_collected_tensor_info():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
     hardware = Hardware(arch, bindings, program)
@@ -557,6 +416,22 @@ def test_get_fiber_trace_leader_follower():
     assert metrics.get_fiber_trace("D", "K", True) == "intersect_3"
 
 
+def test_get_format():
+    program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_format() == format_
+
+
+def test_get_loop_formats():
+    program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_loop_formats() == {"A": "default", "B": "default"}
+
+
 def test_get_merger_init_ranks_multiple_bindings():
     yaml = """
     einsum:
@@ -627,3 +502,185 @@ def test_get_merger_init_ranks():
     assert metrics.get_merger_init_ranks(
         "T", ["M1", "M0", "K1", "N", "K0"]) is None
     assert metrics.get_merger_init_ranks("Z", ["M", "N"]) is None
+
+
+def test_get_source_memory_not_memory():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M]
+      expressions:
+        - Z[m] = a
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: LeaderFollower
+          class: Intersector
+          attributes:
+            type: leader-follower
+        - name: DRAM
+          class: DRAM
+    bindings:
+      Z:
+      - config: accel
+      - component: DRAM
+        bindings:
+        - tensor: Z
+          rank: M
+          type: payload
+          format: default
+    format:
+      Z:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    with pytest.raises(ValueError) as excinfo:
+        metrics.get_source_memory("LeaderFollower", "Z", "M", "payload")
+    assert str(
+        excinfo.value) == "Destination component LeaderFollower not a memory"
+
+
+def test_get_source_memory():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K, M]
+        B: [K, M]
+        C: [K]
+        Z: [M]
+      expressions:
+      - Z[m] = A[k, m] * B[k, m] * C[k]
+
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: DRAM
+          class: DRAM
+          attributes:
+            bandwidth: 512
+
+        subtree:
+        - name: level1
+          local:
+          - name: L2Cache
+            class: Cache
+            attributes:
+              width: 64
+              depth: 1024
+              bandwidth: 2048
+
+          subtree:
+          - name: level2
+            local:
+            - name: L1Cache
+              class: Cache
+              attributes:
+                width: 64
+                depth: 128
+
+    bindings:
+      Z:
+      - config: accel
+      - component: DRAM
+        bindings:
+        - tensor: A
+          rank: M
+          type: payload
+          format: default
+        - tensor: A
+          rank: K
+          type: coord
+          format: default
+        - tensor: A
+          rank: K
+          type: payload
+          format: default
+        - tensor: Z
+          rank: M
+          type: elem
+          format: default
+      - component: L2Cache
+        bindings:
+        - tensor: A
+          rank: M
+          type: payload
+          format: default
+        - tensor: A
+          rank: K
+          type: coord
+          format: default
+        - tensor: A
+          rank: K
+          type: payload
+          format: default
+        - tensor: Z
+          rank: M
+          type: elem
+          format: default
+      - component: L1Cache
+        bindings:
+        - tensor: A
+          rank: K
+          type: coord
+          format: default
+        - tensor: A
+          rank: K
+          type: payload
+          format: default
+        - tensor: B
+          rank: K
+          type: payload
+          format: default
+        - tensor: Z
+          rank: M
+          type: elem
+          format: default
+
+    format:
+      A:
+        default:
+          rank-order: [M, K]
+          M:
+            format: U
+            pbits: 32
+          K:
+            format: C
+            cbits: 32
+            pbits: 64
+      B:
+        default:
+          rank-order: [M, K]
+          M:
+            format: U
+          K:
+            format: U
+            pbits: 64
+      Z:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            cbits: 32
+            pbits: 64
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_source_memory("L2Cache", "C", "K", "payload") is None
+    assert metrics.get_source_memory("L1Cache", "B", "M", "payload") is None
+    assert metrics.get_source_memory("L2Cache", "B", "K", "payload") is None
+    assert metrics.get_source_memory("L1Cache", "B", "K", "payload") is None
+    assert metrics.get_source_memory(
+        "L2Cache", "A", "M", "payload") == hardware.get_component("DRAM")
+    assert metrics.get_source_memory(
+        "L1Cache", "Z", "M", "elem") == hardware.get_component("L2Cache")
