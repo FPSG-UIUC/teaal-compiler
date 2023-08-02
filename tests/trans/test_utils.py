@@ -18,6 +18,7 @@ def test_build_expr():
     assert TransUtils.build_expr("foo").gen() == "\"foo\""
     assert TransUtils.build_expr([1, 2, 3, 4]).gen() == "[1, 2, 3, 4]"
     assert TransUtils.build_expr({1: 2, 3: 4}).gen() == "{1: 2, 3: 4}"
+    assert TransUtils.build_expr((1, 2, 3, 4)).gen() == "(1, 2, 3, 4)"
 
 
 def test_build_rank_ids():

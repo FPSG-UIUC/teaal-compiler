@@ -63,6 +63,10 @@ class TransUtils:
                      for key, val in obj.items()}
             return EDict(dict_)
 
+        elif isinstance(obj, tuple):
+            tuple_ = [TransUtils.build_expr(elem) for elem in obj]
+            return ETuple(tuple(tuple_))
+
         else:
             raise ValueError("Unable to translate " +
                              str(obj) + " with type " + str(type(obj)))

@@ -64,12 +64,14 @@ class Collector:
         # Create the formats
         formats_dict: Dict[Expression, Expression] = {}
         for tensor, format_ in self.metrics.get_loop_formats().items():
-            temp_tensor = Tensor(
-                tensor, self.program.get_equation().get_tensor(tensor).get_ranks())
-            tensor_var = EVar(temp_tensor.tensor_name())
+            loop_format = self.metrics.get_format().get_spec(tensor)[format_]
+            tensor_var = EVar(
+                tensor +
+                "_" +
+                "".join(
+                    loop_format["rank-order"]))
 
-            format_yaml = TransUtils.build_expr(
-                self.metrics.get_format().get_spec(tensor)[format_])
+            format_yaml = TransUtils.build_expr(loop_format)
 
             formats_dict[EString(tensor)] = EFunc(
                 "Format", [AJust(tensor_var), AJust(format_yaml)])
@@ -77,11 +79,122 @@ class Collector:
         block.add(SAssign(AVar("formats"), EDict(formats_dict)))
 
         # Create the bindings
+        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+        metrics_dict: Dict[str, Set[str]] = {}
         for buffer_ in self.metrics.get_hardware().get_components(einsum, BufferComponent):
             bindings = TransUtils.build_expr(buffer_.get_bindings()[einsum])
-            bindings_var = AVar(buffer_.get_name() + "_bindings")
+            bindings_var = AVar("bindings")
 
             block.add(SAssign(bindings_var, bindings))
+
+            # Create the traces for each buffer
+            # TODO: What if the binding is for an unswizzled tensor
+            traces = {}
+            for binding in buffer_.get_bindings()[einsum]:
+                trace, create_trace = self.__get_trace(binding, True)
+                block.add(create_trace)
+                traces[(binding["tensor"], binding["rank"],
+                        binding["type"], "read")] = trace
+
+                # We also need a write trace for the output
+                output = self.program.get_equation().get_output().root_name()
+                if binding["tensor"] == output:
+                    trace, create_trace = self.__get_trace(binding, False)
+                    block.add(create_trace)
+                    traces[(binding["tensor"], binding["rank"],
+                            binding["type"], "write")] = trace
+
+            traces_dict = TransUtils.build_expr(traces)
+            block.add(SAssign(AVar("traces"), traces_dict))
+
+            python_args = [
+                "bindings",
+                "formats",
+                "traces",
+                buffer_.get_width() *
+                buffer_.get_depth(),
+                buffer_.get_width()]
+            args = [AJust(TransUtils.build_expr(arg)) for arg in python_args]
+
+            if isinstance(buffer_, BuffetComponent):
+                traffic_func = "buffetTraffic"
+            # Buffer is a cache
+            else:
+                traffic_func = "cacheTraffic"
+
+            block.add(
+                SAssign(
+                    AVar("traffic"),
+                    EMethod(
+                        EVar("Traffic"),
+                        traffic_func,
+                        args)))
+
+            # Now add it to the metrics dictionary
+            added = set()
+            for binding in buffer_.get_bindings()[einsum]:
+                tensor = binding["tensor"]
+                tensor_ir = self.program.get_equation().get_tensor(tensor)
+                src_component = self.metrics.get_source_memory(
+                    buffer_.get_name(), tensor, binding["rank"], binding["type"])
+
+                if src_component is None:
+                    continue
+
+                src = src_component.get_name()
+
+                if src not in metrics_dict:
+                    metrics_dict[src] = set()
+                    block.add(
+                        SAssign(
+                            AAccess(
+                                metrics_einsum, EString(src)), EDict(
+                                {})))
+
+                metrics_src = EAccess(metrics_einsum, EString(src))
+                metrics_tensor = EAccess(metrics_src, EString(tensor))
+                if tensor not in metrics_dict[src]:
+                    metrics_dict[src].add(tensor)
+                    block.add(
+                        SAssign(
+                            AAccess(
+                                metrics_src, EString(tensor)), EDict(
+                                {})))
+                    block.add(
+                        SAssign(
+                            AAccess(
+                                metrics_tensor,
+                                EString("read")),
+                            EInt(0)))
+
+                    if tensor_ir.get_is_output():
+                        block.add(
+                            SAssign(
+                                AAccess(
+                                    metrics_tensor,
+                                    EString("write")),
+                                EInt(0)))
+
+                if (src, tensor) not in added:
+                    traffic_access = EAccess(EVar("traffic"), EString(tensor))
+                    block.add(
+                        SIAssign(
+                            AAccess(
+                                metrics_tensor,
+                                EString("read")),
+                            OAdd(),
+                            EAccess(
+                                traffic_access,
+                                EString("read"))))
+
+                    if tensor_ir.get_is_output():
+                        block.add(
+                            SIAssign(
+                                AAccess(
+                                    metrics_tensor, EString("write")), OAdd(), EAccess(
+                                    traffic_access, EString("write"))))
+
+                    added.add((src, tensor))
 
         return block
 
@@ -135,3 +248,29 @@ class Collector:
         call = EMethod(EVar("Metrics"), "beginCollect", [AJust(EList(order))])
 
         return SExpr(call)
+
+    def __get_trace(self, binding: dict,
+                    is_read: bool) -> Tuple[str, Statement]:
+        """
+        Get the (trace, HiFiber to produce the trace)
+        """
+        einsum = self.program.get_equation().get_output().root_name()
+        prefix = self.metrics.get_hardware().get_prefix(einsum) + \
+            "-" + binding["rank"] + "-"
+        fiber_trace = self.metrics.get_fiber_trace(
+            binding["tensor"], binding["rank"], is_read)
+
+        block = SBlock([])
+        if binding["type"] == "payload":
+            input_fn = prefix + fiber_trace + ".csv"
+            filter_fn = prefix + "iter.csv"
+            trace_fn = prefix + fiber_trace + "_payload.csv"
+
+            args = [AJust(EString(fn))
+                    for fn in [input_fn, filter_fn, trace_fn]]
+            block.add(SExpr(EMethod(EVar("Traffic"), "filterTrace", args)))
+
+        else:
+            trace_fn = prefix + fiber_trace + ".csv"
+
+        return trace_fn, block

@@ -1,6 +1,7 @@
 bindings:
   Z:
   - config: Config0
+    prefix: tmp/Z
   - component: Memory
     bindings:
     - tensor: A

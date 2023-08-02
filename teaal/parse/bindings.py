@@ -41,18 +41,26 @@ class Bindings:
 
         self.components: Dict[str, Dict[str, List[dict]]] = {}
         self.configs = {}
+        self.prefixes = {}
         if yaml is None or "bindings" not in yaml.keys():
             return
 
         for einsum in yaml["bindings"]:
             self.components[einsum] = {}
 
+            configured = False
             for binding in yaml["bindings"][einsum]:
                 if "config" in binding:
                     self.configs[einsum] = binding["config"]
+                    self.prefixes[einsum] = binding["prefix"]
+                    configured = True
                 else:
                     self.components[einsum][binding["component"]
                                             ] = binding["bindings"]
+
+            if not configured:
+                raise ValueError(
+                    "Accelerator config and prefix missing for Einsum " + einsum)
 
     @classmethod
     def from_file(cls, filename: str) -> "Bindings":
@@ -91,3 +99,9 @@ class Bindings:
         Get the hardware configuration for a given Einsum
         """
         return self.configs[einsum]
+
+    def get_prefix(self, einsum: str) -> str:
+        """
+        Get the metrics prefix for the given Einsum
+        """
+        return self.prefixes[einsum]

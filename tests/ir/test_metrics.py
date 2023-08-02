@@ -48,6 +48,7 @@ def test_used_traffic_paths():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: Memory
         bindings:
         - tensor: A
@@ -141,6 +142,7 @@ def test_get_collected_tensor_info_extra_intersection_test():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: Intersector
         bindings:
         - rank: M
@@ -192,14 +194,19 @@ def test_get_fiber_trace():
     bindings:
       Z0:
       - config: accel
+        prefix: tmp/Z0
       Z1:
       - config: accel
+        prefix: tmp/Z1
       Z2:
       - config: accel
+        prefix: tmp/Z2
       Z3:
       - config: accel
+        prefix: tmp/Z3
       Z4:
       - config: accel
+        prefix: tmp/Z4
     format:
       Z0:
         default:
@@ -298,6 +305,7 @@ def test_get_fiber_trace_leader_follower_multiple_intersectors():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: LeaderFollower0
         bindings:
         - rank: M
@@ -343,6 +351,7 @@ def test_get_fiber_trace_leader_follower_multiple_terms():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: LeaderFollower
         bindings:
         - rank: M
@@ -386,6 +395,7 @@ def test_get_fiber_trace_leader_follower():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: LeaderFollower
         bindings:
         - rank: M
@@ -465,6 +475,7 @@ def test_get_merger_init_ranks_multiple_bindings():
     bindings:
       Z:
       - config: merger
+        prefix: tmp/Z
       - component: Merger0
         bindings:
         - tensor: A
@@ -532,6 +543,7 @@ def test_get_source_memory_not_memory():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: DRAM
         bindings:
         - tensor: Z
@@ -598,6 +610,7 @@ def test_get_source_memory():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: DRAM
         bindings:
         - tensor: A

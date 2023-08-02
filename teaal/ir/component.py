@@ -24,7 +24,9 @@ SOFTWARE.
 Representation an hardware component
 """
 
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+
+S = TypeVar("S")
 
 
 class Component:
@@ -83,14 +85,18 @@ class Component:
                 for key in self.__key()]
         return "(" + type(self).__name__ + ", " + ", ".join(strs) + ")"
 
-    def _check_bool_attr(self, attrs: dict, key: str) -> Optional[bool]:
+    def _check_attr(
+            self,
+            attrs: dict,
+            key: str,
+            type_: Type[S]) -> Optional[S]:
         """
-        Check that a boolean attribute is correctly specified
+        Check that the attribute is correctly specified
         """
         if key not in attrs.keys():
             return None
 
-        if not isinstance(attrs[key], bool):
+        if not isinstance(attrs[key], type_):
             class_ = type(self).__name__[:-9]
             raise ValueError("Bad " +
                              key +
@@ -103,14 +109,21 @@ class Component:
 
         return attrs[key]
 
-    def _check_int_attr(self, attrs: dict, key: str) -> Optional[int]:
+    def _check_float_attr(self, attrs: dict, key: str) -> Optional[float]:
         """
-        Check that an integer attribute is correctly specified
+        Check that the attribute is correctly specified
         """
         if key not in attrs.keys():
             return None
 
-        if not isinstance(attrs[key], int):
+        if attrs[key] == "inf":
+            return float("inf")
+
+        if not isinstance(
+                attrs[key],
+                float) and not isinstance(
+                attrs[key],
+                int):
             class_ = type(self).__name__[:-9]
             raise ValueError("Bad " +
                              key +
@@ -183,7 +196,7 @@ class MemoryComponent(Component):
         """
         super().__init__(name, attrs, bindings)
 
-        self.bandwidth = self._check_int_attr(attrs, "bandwidth")
+        self.bandwidth = self._check_attr(attrs, "bandwidth", int)
 
         self.tensor_bindings: Dict[str, Dict[str, List[dict]]] = {}
         for einsum in self.bindings.keys():
@@ -295,10 +308,10 @@ class BufferComponent(MemoryComponent):
         """
         super().__init__(name, attrs, bindings)
 
-        self.depth = self._check_int_attr(attrs, "depth")
-        self.width = self._check_int_attr(attrs, "width")
+        self.depth = self._check_float_attr(attrs, "depth")
+        self.width = self._check_attr(attrs, "width", int)
 
-    def get_depth(self) -> int:
+    def get_depth(self) -> float:
         """
         Get the buffer depth
         """
@@ -469,19 +482,19 @@ class MergerComponent(Component):
         """
         super().__init__(name, attrs, bindings)
 
-        inputs = self._check_int_attr(attrs, "inputs")
+        inputs = self._check_attr(attrs, "inputs", int)
         if inputs is None:
             raise ValueError("Inputs unspecified for component " + self.name)
         self.inputs = inputs
 
-        comparator_radix = self._check_int_attr(attrs, "comparator_radix")
+        comparator_radix = self._check_attr(attrs, "comparator_radix", int)
         if comparator_radix is None:
             raise ValueError(
                 "Comparator radix unspecified for component " +
                 self.name)
         self.comparator_radix = comparator_radix
 
-        outputs = self._check_int_attr(attrs, "outputs")
+        outputs = self._check_attr(attrs, "outputs", int)
         if outputs is None:
             self.outputs = 1
         else:
@@ -493,7 +506,7 @@ class MergerComponent(Component):
         else:
             self.order = order
 
-        reduce_ = self._check_bool_attr(attrs, "reduce")
+        reduce_ = self._check_attr(attrs, "reduce", bool)
         if reduce_:
             raise NotImplementedError(
                 "Concurrent merge and reduction not supported")

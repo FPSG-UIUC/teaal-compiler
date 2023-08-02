@@ -17,6 +17,7 @@ def test_no_arch():
     bindings:
       Z:
       - config: arch
+        prefix: tmp/Z
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -41,6 +42,7 @@ def test_bad_arch():
     bindings:
       Z:
       - config: config0
+        prefix: tmp/Z
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -68,6 +70,7 @@ def test_bad_component():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -96,6 +99,7 @@ def test_bad_intersector():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -122,6 +126,7 @@ def test_no_binding():
     bindings:
       Z:
       - config: arch
+        prefix: tmp/Z
     """
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
@@ -219,6 +224,7 @@ def test_get_component():
     bindings:
       T:
       - config: Accelerator
+        prefix: tmp/T
       - component: LLB
         bindings:
         - tensor: A
@@ -257,6 +263,7 @@ def test_get_component():
 
       Z:
       - config: Accelerator
+        prefix: tmp/Z
       - component: LLB
         bindings:
         - tensor: Z
@@ -367,6 +374,7 @@ def test_get_components():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
 
       - component: Intersect0
         bindings:
@@ -378,6 +386,7 @@ def test_get_components():
 
       X:
       - config: accel
+        prefix: tmp/X
       - component: Intersect1
         bindings:
         - rank: J
@@ -423,6 +432,7 @@ def test_get_traffic_path_multiple_bindings():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
 
       - component: Memory0
         bindings:
@@ -510,6 +520,7 @@ def test_get_traffic_path():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: Memory
         bindings:
         - tensor: A
@@ -551,6 +562,7 @@ def test_get_traffic_path():
 
       X:
       - config: accel
+        prefix: tmp/X
       - component: MAC1
         bindings:
         - op: add
@@ -585,6 +597,17 @@ def test_get_traffic_path():
     assert hardware.get_traffic_path(
         "Z", "Z", "M", "coord", "default") == [s1b]
     assert hardware.get_traffic_path("X", "B", "M", "payload", "default") == []
+
+
+def test_get_prefix():
+    gamma = "tests/integration/gamma.yaml"
+    arch = Architecture.from_file(gamma)
+    bindings = Bindings.from_file(gamma)
+    program = Program(Einsum.from_file(gamma), Mapping.from_file(gamma))
+    hardware = Hardware(arch, bindings, program)
+
+    assert hardware.get_prefix("T") == "tmp/gamma_T"
+    assert hardware.get_prefix("Z") == "tmp/gamma_Z"
 
 
 def test_get_tree():

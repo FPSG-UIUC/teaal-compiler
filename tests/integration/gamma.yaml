@@ -78,8 +78,14 @@ architecture:
         local:
         - name: Stage0RegFile
           class: Buffet
+          attributes:
+            width: 64
+            depth: inf # Not specified by Gamma
         - name: Stage1RegFile
           class: Buffet
+          attributes:
+            width: 64
+            depth: inf # Not specified by Gamma
         subtree:
         - name: Stage0
           local:
@@ -110,6 +116,7 @@ architecture:
 bindings:
   T:
   - config: Accelerator
+    prefix: tmp/gamma_T
   - component: MainMemory
     bindings:
     - tensor: A
@@ -173,6 +180,7 @@ bindings:
       leader: A
   Z:
   - config: Accelerator
+    prefix: tmp/gamma_Z
   - component: MainMemory
     bindings:
     - tensor: Z
@@ -187,6 +195,23 @@ bindings:
       rank: N
       type: payload
       format: default
+  - component: Stage0RegFile
+    bindings:
+    - tensor: A
+      rank: M
+      type: payload
+      format: default
+      evict-on: root
+    - tensor: A
+      rank: K
+      type: coord
+      format: default
+      evict-on: M
+    - tensor: A
+      rank: K
+      type: payload
+      format: default
+      evict-on: M
   - component: Stage1RegFile
     bindings:
     - tensor: Z

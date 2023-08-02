@@ -837,6 +837,7 @@ def test_graph_metrics_no_loops():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
     format:
       Z:
         default:
@@ -1192,6 +1193,7 @@ def test_graph_metrics_swizzle_for_part():
     bindings:
       Z:
       - config: accel
+        prefix: tmp/Z
       - component: Merger
         bindings:
         - tensor: A

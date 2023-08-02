@@ -91,6 +91,12 @@ class Hardware:
                 components.append(component)
         return components
 
+    def get_prefix(self, einsum: str):
+        """
+        Get the prefix for collected metrics for the given Einsum
+        """
+        return self.bindings.get_prefix(einsum)
+
     def get_traffic_path(
             self,
             einsum: str,

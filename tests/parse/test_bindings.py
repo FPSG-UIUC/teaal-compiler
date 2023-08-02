@@ -1,3 +1,5 @@
+import pytest
+
 from teaal.parse.bindings import Bindings
 
 
@@ -13,6 +15,20 @@ def test_no_bindings():
       - baz
     """
     assert Bindings.from_str(yaml).get_component("BAD") == {}
+
+
+def test_no_config():
+    yaml = """
+    bindings:
+      Z:
+      - component: foo
+        bindings:
+        - tensor: bar
+    """
+    with pytest.raises(ValueError) as excinfo:
+        Bindings.from_str(yaml)
+    assert str(
+        excinfo.value) == "Accelerator config and prefix missing for Einsum Z"
 
 
 def test_defined():
@@ -34,6 +50,8 @@ def test_defined():
     mac = {"Z": [{"op": "add"}]}
 
     assert bindings.get_config("Z") == "Config0"
+    assert bindings.get_prefix("Z") == "tmp/Z"
+
     assert bindings.get_component("Memory") == mem
     assert bindings.get_component("Registers") == regs
     assert bindings.get_component("MAC") == mac
