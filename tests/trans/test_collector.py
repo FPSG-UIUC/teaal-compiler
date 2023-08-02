@@ -12,6 +12,11 @@ def build_gamma_yaml():
         return f.read()
 
 
+def build_outerspace_yaml():
+    with open("tests/integration/outerspace.yaml", "r") as f:
+        return f.read()
+
+
 def build_collector(yaml, i):
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -28,7 +33,7 @@ def build_collector(yaml, i):
     return Collector(program, metrics)
 
 
-def test_dump_T():
+def test_dump_gamma_T():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
 
@@ -56,7 +61,7 @@ def test_dump_T():
     assert collector.dump().gen(0) == hifiber
 
 
-def test_dump_Z():
+def test_dump_gamma_Z():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 1)
 
@@ -82,6 +87,34 @@ def test_dump_Z():
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[\"Z\"][\"write\"]\n" + \
         "metrics[\"Z\"][\"HighRadixMerger\"] = {}\n" + \
         "metrics[\"Z\"][\"HighRadixMerger\"][\"T_MKN\"] = Compute.numSwaps(T_MKN, 1, 64, 1)"
+
+    # print(collector.dump().gen(0))
+    # assert False
+
+    assert collector.dump().gen(0) == hifiber
+
+
+def test_dump_outerspace_Z():
+    yaml = build_outerspace_yaml()
+    collector = build_collector(yaml, 2)
+
+    hifiber = "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"Z\": Format(Z_MN, {\"rank-order\": [\"M\", \"N\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
+        "bindings = [{\"tensor\": \"Z\", \"rank\": \"M\", \"type\": \"payload\", \"format\": \"default\", \"evict-on\": \"root\", \"style\": \"lazy\"}, {\"tensor\": \"Z\", \"rank\": \"N\", \"type\": \"coord\", \"format\": \"default\", \"evict-on\": \"M\", \"style\": \"lazy\"}, {\"tensor\": \"Z\", \"rank\": \"N\", \"type\": \"payload\", \"format\": \"default\", \"evict-on\": \"M\", \"style\": \"lazy\"}]\n" + \
+        "Traffic.filterTrace(\"outerspace_Z-M-populate_read_0.csv\", \"outerspace_Z-M-iter.csv\", \"outerspace_Z-M-populate_read_0_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"outerspace_Z-M-populate_write_0.csv\", \"outerspace_Z-M-iter.csv\", \"outerspace_Z-M-populate_write_0_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"outerspace_Z-N-populate_read_0.csv\", \"outerspace_Z-N-iter.csv\", \"outerspace_Z-N-populate_read_0_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"outerspace_Z-N-populate_write_0.csv\", \"outerspace_Z-N-iter.csv\", \"outerspace_Z-N-populate_write_0_payload.csv\")\n" + \
+        "traces = {(\"Z\", \"M\", \"payload\", \"read\"): \"outerspace_Z-M-populate_read_0_payload.csv\", (\"Z\", \"M\", \"payload\", \"write\"): \"outerspace_Z-M-populate_write_0_payload.csv\", (\"Z\", \"N\", \"coord\", \"read\"): \"outerspace_Z-N-populate_read_0.csv\", (\"Z\", \"N\", \"coord\", \"write\"): \"outerspace_Z-N-populate_write_0.csv\", (\"Z\", \"N\", \"payload\", \"read\"): \"outerspace_Z-N-populate_read_0_payload.csv\", (\"Z\", \"N\", \"payload\", \"write\"): \"outerspace_Z-N-populate_write_0_payload.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(\"bindings\", \"formats\", \"traces\", 1024, 64)\n" + \
+        "metrics[\"Z\"][\"MainMemory\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[\"Z\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"SortHW\"] = {}\n" + \
+        "metrics[\"Z\"][\"SortHW\"][\"T1_MKN\"] = Compute.numSwaps(T1_MKN, 1, \"N\", \"N\")"
 
     # print(collector.dump().gen(0))
     # assert False
@@ -126,6 +159,6 @@ def test_set_collecting():
 def test_start():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
-    hifiber = "Metrics.beginCollect([\"M\", \"K\", \"N\"])"
+    hifiber = "Metrics.beginCollect(\"tmp/gamma_T\")"
 
     assert collector.start().gen(0) == hifiber

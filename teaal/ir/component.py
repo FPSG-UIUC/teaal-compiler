@@ -482,12 +482,14 @@ class MergerComponent(Component):
         """
         super().__init__(name, attrs, bindings)
 
-        inputs = self._check_attr(attrs, "inputs", int)
+        # TODO: change back to int
+        inputs = self._check_float_attr(attrs, "inputs")
         if inputs is None:
             raise ValueError("Inputs unspecified for component " + self.name)
         self.inputs = inputs
 
-        comparator_radix = self._check_attr(attrs, "comparator_radix", int)
+        # TODO: change back to int
+        comparator_radix = self._check_float_attr(attrs, "comparator_radix")
         if comparator_radix is None:
             raise ValueError(
                 "Comparator radix unspecified for component " +
@@ -547,7 +549,7 @@ class MergerComponent(Component):
 
                 self.tensor_bindings[einsum][tensor].append(binding)
 
-    def get_comparator_radix(self) -> int:
+    def get_comparator_radix(self) -> float:
         """
         Get the comparator_radix
         """
@@ -579,7 +581,7 @@ class MergerComponent(Component):
 
         return init_ranks
 
-    def get_inputs(self) -> int:
+    def get_inputs(self) -> float:
         """
         Get the number of inputs
         """

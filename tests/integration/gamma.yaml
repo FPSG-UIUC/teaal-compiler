@@ -63,8 +63,7 @@ architecture:
     - name: MainMemory
       class: DRAM
       attributes:
-        # 128 GB/s = 128 * 2^30 * 8 bits/s
-        bandwidth: 1099511627776
+        bandwidth: 1099511627776 # 128 GB/s = 128 * 2^30 * 8 bits/s
     subtree:
     - name: Chip
       local:

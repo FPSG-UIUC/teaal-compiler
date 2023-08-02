@@ -117,9 +117,9 @@ class Collector:
         """
         Start metrics collection
         """
-        loop_order = self.program.get_loop_order()
-        order = [EString(rank) for rank in loop_order.get_ranks()]
-        call = EMethod(EVar("Metrics"), "beginCollect", [AJust(EList(order))])
+        einsum = self.program.get_equation().get_output().root_name()
+        prefix = EString(self.metrics.get_hardware().get_prefix(einsum))
+        call = EMethod(EVar("Metrics"), "beginCollect", [AJust(prefix)])
 
         return SExpr(call)
 
@@ -182,28 +182,47 @@ class Collector:
 
                 input_ = binding["tensor"] + "_" + "".join(init_ranks)
                 tensor_name = EVar(input_)
-                # TODO: Way more complicated merges are possible than a single swap
-                depth = EInt([i == f for i, f in zip(init_ranks, final_ranks)].index(False))
+                # TODO: Way more complicated merges are possible than a single
+                # swap
+                depth = EInt([i == f for i, f in zip(
+                    init_ranks, final_ranks)].index(False))
 
                 # TODO: This is very bad; Need to first update the HiFiber
-                radix: Expression = EInt(merger.get_comparator_radix())
+                radix: Expression
                 next_latency: Expression
-                if merger.get_comparator_radix() < float("inf"):
+                if merger.get_inputs() < float("inf"):
+                    cradix = merger.get_comparator_radix()
+                    assert isinstance(cradix, int)
+                    radix = EInt(cradix)
                     next_latency = EInt(1)
                 else:
                     radix = EString("N")
                     next_latency = EString("N")
 
-                args = [AJust(expr) for expr in [tensor_name, depth, radix, next_latency]]
+                args = [
+                    AJust(expr) for expr in [
+                        tensor_name,
+                        depth,
+                        radix,
+                        next_latency]]
                 swaps_call = EMethod(EVar("Compute"), "numSwaps", args)
 
                 merger_name = merger.get_name()
                 if merger_name not in mergers_set:
                     mergers_set.add(merger_name)
-                    block.add(SAssign(AAccess(metrics_einsum, EString(merger_name)), EDict({})))
+                    block.add(
+                        SAssign(
+                            AAccess(
+                                metrics_einsum, EString(merger_name)), EDict(
+                                {})))
 
                 metrics_merger = EAccess(metrics_einsum, EString(merger_name))
-                block.add(SAssign(AAccess(metrics_merger, EString(input_)), swaps_call))
+                block.add(
+                    SAssign(
+                        AAccess(
+                            metrics_merger,
+                            EString(input_)),
+                        swaps_call))
 
         return block
 
