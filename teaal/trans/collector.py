@@ -80,7 +80,7 @@ class Collector:
 
         # Create the bindings
         metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
-        metrics_dict: Dict[str, Set[str]] = {}
+        traffic_dict: Dict[str, Set[str]] = {}
         for buffer_ in self.metrics.get_hardware().get_components(einsum, BufferComponent):
             bindings = TransUtils.build_expr(buffer_.get_bindings()[einsum])
             bindings_var = AVar("bindings")
@@ -95,8 +95,6 @@ class Collector:
                 block.add(create_trace)
                 traces[(binding["tensor"], binding["rank"],
                         binding["type"], "read")] = trace
-
-                # We also need a write trace for the output
                 output = self.program.get_equation().get_output().root_name()
                 if binding["tensor"] == output:
                     trace, create_trace = self.__get_trace(binding, False)
@@ -143,8 +141,8 @@ class Collector:
 
                 src = src_component.get_name()
 
-                if src not in metrics_dict:
-                    metrics_dict[src] = set()
+                if src not in traffic_dict:
+                    traffic_dict[src] = set()
                     block.add(
                         SAssign(
                             AAccess(
@@ -153,8 +151,8 @@ class Collector:
 
                 metrics_src = EAccess(metrics_einsum, EString(src))
                 metrics_tensor = EAccess(metrics_src, EString(tensor))
-                if tensor not in metrics_dict[src]:
-                    metrics_dict[src].add(tensor)
+                if tensor not in traffic_dict[src]:
+                    traffic_dict[src].add(tensor)
                     block.add(
                         SAssign(
                             AAccess(
@@ -191,10 +189,43 @@ class Collector:
                         block.add(
                             SIAssign(
                                 AAccess(
-                                    metrics_tensor, EString("write")), OAdd(), EAccess(
-                                    traffic_access, EString("write"))))
+                                    metrics_tensor, EString("write")),
+                                OAdd(),
+                                EAccess(traffic_access, EString("write"))))
 
                     added.add((src, tensor))
+
+        # Track the merges
+        mergers_set: Set[str] = set()
+        for merger in self.metrics.get_hardware().get_components(einsum, MergerComponent):
+            for binding in merger.get_bindings()[einsum]:
+                init_ranks = binding["init-ranks"]
+                final_ranks = binding["final-ranks"]
+
+                input_ = binding["tensor"] + "_" + "".join(init_ranks)
+                tensor_name = EVar(input_)
+                # TODO: Way more complicated merges are possible than a single swap
+                depth = EInt([i == f for i, f in zip(init_ranks, final_ranks)].index(False))
+
+                # TODO: This is very bad; Need to first update the HiFiber
+                radix: Expression = EInt(merger.get_comparator_radix())
+                next_latency: Expression
+                if merger.get_comparator_radix() < float("inf"):
+                    next_latency = EInt(1)
+                else:
+                    radix = EString("N")
+                    next_latency = EString("N")
+
+                args = [AJust(expr) for expr in [tensor_name, depth, radix, next_latency]]
+                swaps_call = EMethod(EVar("Compute"), "numSwaps", args)
+
+                merger_name = merger.get_name()
+                if merger_name not in mergers_set:
+                    mergers_set.add(merger_name)
+                    block.add(SAssign(AAccess(metrics_einsum, EString(merger_name)), EDict({})))
+
+                metrics_merger = EAccess(metrics_einsum, EString(merger_name))
+                block.add(SAssign(AAccess(metrics_merger, EString(input_)), swaps_call))
 
         return block
 

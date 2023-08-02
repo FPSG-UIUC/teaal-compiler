@@ -79,7 +79,9 @@ def test_dump_Z():
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] = 0\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[\"Z\"][\"read\"]\n" + \
-        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[\"Z\"][\"write\"]"
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"HighRadixMerger\"] = {}\n" + \
+        "metrics[\"Z\"][\"HighRadixMerger\"][\"T_MKN\"] = Compute.numSwaps(T_MKN, 1, 64, 1)"
 
     # print(collector.dump().gen(0))
     # assert False
