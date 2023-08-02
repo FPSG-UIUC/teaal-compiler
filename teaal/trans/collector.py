@@ -62,23 +62,158 @@ class Collector:
                     {})))
 
         # Create the formats
+        block.add(self.__build_formats())
+
+        # Track the traffic
+        block.add(self.__build_traffic())
+
+        # Track the merges
+        block.add(self.__build_merges())
+
+        return block
+
+    @staticmethod
+    def end() -> Statement:
+        """
+        End metrics collection
+        """
+        return SExpr(EMethod(EVar("Metrics"), "endCollect", []))
+
+    def set_collecting(
+            self,
+            tensor: Optional[str],
+            rank: str,
+            type_: str,
+            consumable: bool,
+            is_read_trace: bool) -> Statement:
+        """
+        Collect the statistics about a tensor
+        """
+        if tensor is None:
+            if type_ != "iter":
+                raise ValueError(
+                    "Tensor must be specified for trace type " + type_)
+            trace = "iter"
+
+        # type == "fiber"
+        else:
+            if type_ != "fiber":
+                raise ValueError(
+                    "Unable to collect " +
+                    type_ +
+                    " traces for a specific tensor " +
+                    tensor)
+            trace = self.metrics.get_fiber_trace(tensor, rank, is_read_trace)
+
+        args: List[Argument] = [
+            AJust(
+                EString(rank)), AParam(
+                "type_", EString(trace)), AParam(
+                "consumable", EBool(consumable))]
+
+        return SExpr(EMethod(EVar("Metrics"), "trace", args))
+
+    def start(self) -> Statement:
+        """
+        Start metrics collection
+        """
+        loop_order = self.program.get_loop_order()
+        order = [EString(rank) for rank in loop_order.get_ranks()]
+        call = EMethod(EVar("Metrics"), "beginCollect", [AJust(EList(order))])
+
+        return SExpr(call)
+
+    def __get_trace(self, binding: dict,
+                    is_read: bool) -> Tuple[str, Statement]:
+        """
+        Get the (trace, HiFiber to produce the trace)
+        """
+        einsum = self.program.get_equation().get_output().root_name()
+        prefix = self.metrics.get_hardware().get_prefix(einsum) + \
+            "-" + binding["rank"] + "-"
+        fiber_trace = self.metrics.get_fiber_trace(
+            binding["tensor"], binding["rank"], is_read)
+
+        block = SBlock([])
+        if binding["type"] == "payload":
+            input_fn = prefix + fiber_trace + ".csv"
+            filter_fn = prefix + "iter.csv"
+            trace_fn = prefix + fiber_trace + "_payload.csv"
+
+            args = [AJust(EString(fn))
+                    for fn in [input_fn, filter_fn, trace_fn]]
+            block.add(SExpr(EMethod(EVar("Traffic"), "filterTrace", args)))
+
+        else:
+            trace_fn = prefix + fiber_trace + ".csv"
+
+        return trace_fn, block
+
+    def __build_formats(self) -> Statement:
+        """
+        Add the code to build the formats dictionary
+        """
         formats_dict: Dict[Expression, Expression] = {}
         for tensor, format_ in self.metrics.get_loop_formats().items():
             loop_format = self.metrics.get_format().get_spec(tensor)[format_]
             tensor_var = EVar(
-                tensor +
-                "_" +
-                "".join(
-                    loop_format["rank-order"]))
+                tensor + "_" + "".join(loop_format["rank-order"]))
 
             format_yaml = TransUtils.build_expr(loop_format)
 
             formats_dict[EString(tensor)] = EFunc(
                 "Format", [AJust(tensor_var), AJust(format_yaml)])
 
-        block.add(SAssign(AVar("formats"), EDict(formats_dict)))
+        return SAssign(AVar("formats"), EDict(formats_dict))
 
-        # Create the bindings
+    def __build_merges(self) -> Statement:
+        """
+        Add the code to compute the merge operations
+        """
+        block = SBlock([])
+        einsum = self.program.get_equation().get_output().root_name()
+
+        mergers_set: Set[str] = set()
+        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+        for merger in self.metrics.get_hardware().get_components(einsum, MergerComponent):
+            for binding in merger.get_bindings()[einsum]:
+                init_ranks = binding["init-ranks"]
+                final_ranks = binding["final-ranks"]
+
+                input_ = binding["tensor"] + "_" + "".join(init_ranks)
+                tensor_name = EVar(input_)
+                # TODO: Way more complicated merges are possible than a single swap
+                depth = EInt([i == f for i, f in zip(init_ranks, final_ranks)].index(False))
+
+                # TODO: This is very bad; Need to first update the HiFiber
+                radix: Expression = EInt(merger.get_comparator_radix())
+                next_latency: Expression
+                if merger.get_comparator_radix() < float("inf"):
+                    next_latency = EInt(1)
+                else:
+                    radix = EString("N")
+                    next_latency = EString("N")
+
+                args = [AJust(expr) for expr in [tensor_name, depth, radix, next_latency]]
+                swaps_call = EMethod(EVar("Compute"), "numSwaps", args)
+
+                merger_name = merger.get_name()
+                if merger_name not in mergers_set:
+                    mergers_set.add(merger_name)
+                    block.add(SAssign(AAccess(metrics_einsum, EString(merger_name)), EDict({})))
+
+                metrics_merger = EAccess(metrics_einsum, EString(merger_name))
+                block.add(SAssign(AAccess(metrics_merger, EString(input_)), swaps_call))
+
+        return block
+
+    def __build_traffic(self) -> Statement:
+        """
+        Add the code to compute traffic
+        """
+        block = SBlock([])
+        einsum = self.program.get_equation().get_output().root_name()
+
         metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
         traffic_dict: Dict[str, Set[str]] = {}
         for buffer_ in self.metrics.get_hardware().get_components(einsum, BufferComponent):
@@ -195,113 +330,4 @@ class Collector:
 
                     added.add((src, tensor))
 
-        # Track the merges
-        mergers_set: Set[str] = set()
-        for merger in self.metrics.get_hardware().get_components(einsum, MergerComponent):
-            for binding in merger.get_bindings()[einsum]:
-                init_ranks = binding["init-ranks"]
-                final_ranks = binding["final-ranks"]
-
-                input_ = binding["tensor"] + "_" + "".join(init_ranks)
-                tensor_name = EVar(input_)
-                # TODO: Way more complicated merges are possible than a single swap
-                depth = EInt([i == f for i, f in zip(init_ranks, final_ranks)].index(False))
-
-                # TODO: This is very bad; Need to first update the HiFiber
-                radix: Expression = EInt(merger.get_comparator_radix())
-                next_latency: Expression
-                if merger.get_comparator_radix() < float("inf"):
-                    next_latency = EInt(1)
-                else:
-                    radix = EString("N")
-                    next_latency = EString("N")
-
-                args = [AJust(expr) for expr in [tensor_name, depth, radix, next_latency]]
-                swaps_call = EMethod(EVar("Compute"), "numSwaps", args)
-
-                merger_name = merger.get_name()
-                if merger_name not in mergers_set:
-                    mergers_set.add(merger_name)
-                    block.add(SAssign(AAccess(metrics_einsum, EString(merger_name)), EDict({})))
-
-                metrics_merger = EAccess(metrics_einsum, EString(merger_name))
-                block.add(SAssign(AAccess(metrics_merger, EString(input_)), swaps_call))
-
         return block
-
-    @staticmethod
-    def end() -> Statement:
-        """
-        End metrics collection
-        """
-        return SExpr(EMethod(EVar("Metrics"), "endCollect", []))
-
-    def set_collecting(
-            self,
-            tensor: Optional[str],
-            rank: str,
-            type_: str,
-            consumable: bool,
-            is_read_trace: bool) -> Statement:
-        """
-        Collect the statistics about a tensor
-        """
-        if tensor is None:
-            if type_ != "iter":
-                raise ValueError(
-                    "Tensor must be specified for trace type " + type_)
-            trace = "iter"
-
-        # type == "fiber"
-        else:
-            if type_ != "fiber":
-                raise ValueError(
-                    "Unable to collect " +
-                    type_ +
-                    " traces for a specific tensor " +
-                    tensor)
-            trace = self.metrics.get_fiber_trace(tensor, rank, is_read_trace)
-
-        args: List[Argument] = [
-            AJust(
-                EString(rank)), AParam(
-                "type_", EString(trace)), AParam(
-                "consumable", EBool(consumable))]
-
-        return SExpr(EMethod(EVar("Metrics"), "trace", args))
-
-    def start(self) -> Statement:
-        """
-        Start metrics collection
-        """
-        loop_order = self.program.get_loop_order()
-        order = [EString(rank) for rank in loop_order.get_ranks()]
-        call = EMethod(EVar("Metrics"), "beginCollect", [AJust(EList(order))])
-
-        return SExpr(call)
-
-    def __get_trace(self, binding: dict,
-                    is_read: bool) -> Tuple[str, Statement]:
-        """
-        Get the (trace, HiFiber to produce the trace)
-        """
-        einsum = self.program.get_equation().get_output().root_name()
-        prefix = self.metrics.get_hardware().get_prefix(einsum) + \
-            "-" + binding["rank"] + "-"
-        fiber_trace = self.metrics.get_fiber_trace(
-            binding["tensor"], binding["rank"], is_read)
-
-        block = SBlock([])
-        if binding["type"] == "payload":
-            input_fn = prefix + fiber_trace + ".csv"
-            filter_fn = prefix + "iter.csv"
-            trace_fn = prefix + fiber_trace + "_payload.csv"
-
-            args = [AJust(EString(fn))
-                    for fn in [input_fn, filter_fn, trace_fn]]
-            block.add(SExpr(EMethod(EVar("Traffic"), "filterTrace", args)))
-
-        else:
-            trace_fn = prefix + fiber_trace + ".csv"
-
-        return trace_fn, block
