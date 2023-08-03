@@ -150,11 +150,17 @@ class FlowGraph:
 
         loop_node = LoopNode(loop_ranks[0])
         tensor_name = tensor.root_name()
+        collecting_nodes = []
         for rank, type_, consumable in self.metrics.get_collected_tensor_info(
                 tensor_name):
             if type_ == "fiber":
-                collecting_nodes = [CollectingNode(
-                    tensor_name, rank, type_, consumable, True)]
+                collecting_nodes.append(
+                    CollectingNode(
+                        tensor_name,
+                        rank,
+                        type_,
+                        consumable,
+                        True))
 
                 if self.program.get_equation().get_output().root_name() == tensor_name:
                     collecting_nodes.append(
@@ -167,17 +173,12 @@ class FlowGraph:
 
             # type_ == "iter"
             else:
-                collecting_nodes = [
-                    CollectingNode(
-                        None,
-                        rank,
-                        type_,
-                        consumable,
-                        True)]
+                collecting_nodes.append(CollectingNode(
+                    None, rank, type_, consumable, True))
 
-            for collecting_node in collecting_nodes:
-                self.graph.add_edge(MetricsNode("Start"), collecting_node)
-                self.graph.add_edge(collecting_node, loop_node)
+        for collecting_node in collecting_nodes:
+            self.graph.add_edge(MetricsNode("Start"), collecting_node)
+            self.graph.add_edge(collecting_node, loop_node)
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:

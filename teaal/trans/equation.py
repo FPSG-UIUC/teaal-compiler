@@ -419,7 +419,7 @@ class Equation:
         leader_follower = False
         leader = ""
         if self.metrics is not None:
-            intersector =  self.metrics.get_coiter(rank)
+            intersector = self.metrics.get_coiter(rank)
 
             # If this uses leader-follower intersection
             if isinstance(intersector, LeaderFollowerComponent):
@@ -438,8 +438,7 @@ class Equation:
             if leader_follower:
                 # If there is more than one term, there is ambiguity we are
                 # not capturing
-                if len(tensors) > 1:
-                    raise NotImplementedError
+                assert len(tensors) == 1
 
                 leader_tensor = self.program.get_equation().get_tensor(leader)
                 fiber_args = [self.__iter_fiber(rank, leader_tensor)]
@@ -447,6 +446,8 @@ class Equation:
                 for factor in term:
                     if factor.root_name() == leader:
                         continue
+
+                    # TODO: Only eager fibers can follow
                     fiber_args.append(self.__iter_fiber(rank, factor))
 
                 args: List[Argument] = [AJust(fiber) for fiber in fiber_args]

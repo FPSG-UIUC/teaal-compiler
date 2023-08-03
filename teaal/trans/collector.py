@@ -291,11 +291,19 @@ class Collector:
             block.add(SAssign(AVar("traces"), traces_dict))
 
             args = [
-                AJust(EVar("bindings")),
-                AJust(EVar("formats")),
-                AJust(EVar("traces")),
-                AJust(TransUtils.build_expr(buffer_.get_width() * buffer_.get_depth())),
-                AJust(TransUtils.build_expr(buffer_.get_width()))]
+                AJust(
+                    EVar("bindings")),
+                AJust(
+                    EVar("formats")),
+                AJust(
+                    EVar("traces")),
+                AJust(
+                    TransUtils.build_expr(
+                        buffer_.get_width() *
+                        buffer_.get_depth())),
+                AJust(
+                    TransUtils.build_expr(
+                        buffer_.get_width()))]
 
             if isinstance(buffer_, BuffetComponent):
                 traffic_func = "buffetTraffic"
@@ -357,7 +365,11 @@ class Collector:
                                 EInt(0)))
 
                 if (src, tensor) not in added:
-                    traffic_access = EAccess(EAccess(EVar("traffic"), EInt(0)), EString(tensor))
+                    traffic_access = EAccess(
+                        EAccess(
+                            EVar("traffic"),
+                            EInt(0)),
+                        EString(tensor))
                     block.add(
                         SIAssign(
                             AAccess(

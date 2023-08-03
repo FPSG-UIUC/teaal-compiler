@@ -52,6 +52,7 @@ def build_header_conv(loop_order):
 
     return header
 
+
 def build_header_gamma():
     fname = "tests/integration/gamma.yaml"
     einsum = Einsum.from_file(fname)
@@ -68,6 +69,7 @@ def build_header_gamma():
 
     header = Header(program, metrics, Partitioner(program, TransUtils()))
     return header
+
 
 def build_matmul_header(mapping):
     exprs = """
@@ -123,6 +125,7 @@ def test_make_output_shape():
     header = build_header(exprs, "")
     assert header.make_output().gen(depth=0) == hifiber
 
+
 def test_make_output_no_shape_flattening():
     exprs = """
             - Z[m, n] = C[m, n]
@@ -152,11 +155,13 @@ def test_make_output_conv_shape():
 
     assert header.make_output().gen(0) == hifiber
 
+
 def test_make_output_metrics_shape():
     hifiber = "T_MKN = Tensor(rank_ids=[\"M\", \"K\", \"N\"], shape=[M, K, N])"
     header = build_header_gamma()
 
     assert header.make_output().gen(0) == hifiber
+
 
 def test_make_swizzle_bad():
     header = build_matmul_header("")

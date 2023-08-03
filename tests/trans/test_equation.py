@@ -214,6 +214,7 @@ def make_conv_part(expr, loop_order):
 
     return IterationGraph(program), Equation(program, None)
 
+
 def make_gamma():
     fname = "tests/integration/gamma.yaml"
     einsum = Einsum.from_file(fname)
@@ -229,7 +230,6 @@ def make_gamma():
     metrics = Metrics(program, hardware, format_)
 
     return IterationGraph(program), Equation(program, metrics)
-
 
 
 def test_eager_inputs_one_fiber():
@@ -348,6 +348,7 @@ def test_make_iter_expr_display_slip():
     iter_expr = "b_i & (c_i & d_i)"
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
+
 
 def test_make_iter_expr_leader_follower():
     graph, eqn = make_gamma()
@@ -497,11 +498,13 @@ def test_make_iter_expr_conv_part():
 
     assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 
+
 def test_make_iter_expr_metrics():
     graph, eqn = make_gamma()
     hifiber = "t_m << a_m"
 
     assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
+
 
 def test_make_payload_no_tensors():
     _, eqn = make_basic()
@@ -614,6 +617,7 @@ def test_make_payload_conv_enum():
     hifiber = "q1_pos, (q1, (o_p, i_w0))"
 
     assert eqn.make_payload(*graph.pop_concord()).gen(parens=False) == hifiber
+
 
 def test_make_payload_metrics():
     graph, eqn = make_gamma()

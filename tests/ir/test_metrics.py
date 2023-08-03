@@ -98,12 +98,14 @@ def test_used_traffic_paths():
         "Multiple potential formats {'default0', 'default1'} for tensor A in Einsum Z",
         "Multiple potential formats {'default1', 'default0'} for tensor A in Einsum Z"}
 
+
 def test_get_coiter():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
     hardware = Hardware(arch, bindings, program)
     metrics = Metrics(program, hardware, format_)
 
     assert metrics.get_coiter("K") == hardware.get_component("Intersect")
+
 
 def test_get_collected_tensor_info():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
@@ -405,9 +407,9 @@ def test_get_fiber_trace_leader_follower():
       - component: LeaderFollower
         bindings:
         - rank: M
-          leader: A
+          leader: C
         - rank: K
-          leader: A
+          leader: B
     format:
       Z0:
         default:
@@ -422,13 +424,14 @@ def test_get_fiber_trace_leader_follower():
 
     assert metrics.get_fiber_trace("Z", "M", True) == "populate_read_0"
     assert metrics.get_fiber_trace("Z", "M", False) == "populate_write_0"
-    assert metrics.get_fiber_trace("A", "M", True) == "intersect_2"
-    assert metrics.get_fiber_trace("A", "K", True) == "intersect_0"
-    assert metrics.get_fiber_trace("B", "M", True) == "intersect_3"
-    assert metrics.get_fiber_trace("B", "K", True) == "intersect_1"
-    assert metrics.get_fiber_trace("C", "M", True) == "intersect_4"
-    assert metrics.get_fiber_trace("C", "K", True) == "intersect_2"
+    assert metrics.get_fiber_trace("C", "M", True) == "intersect_2"
+    assert metrics.get_fiber_trace("A", "M", True) == "intersect_3"
+    assert metrics.get_fiber_trace("B", "M", True) == "intersect_4"
     assert metrics.get_fiber_trace("D", "M", True) == "intersect_5"
+
+    assert metrics.get_fiber_trace("B", "K", True) == "intersect_0"
+    assert metrics.get_fiber_trace("A", "K", True) == "intersect_1"
+    assert metrics.get_fiber_trace("C", "K", True) == "intersect_2"
     assert metrics.get_fiber_trace("D", "K", True) == "intersect_3"
 
 

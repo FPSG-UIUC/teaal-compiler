@@ -632,7 +632,7 @@ def test_hifiber_hardware():
     bindings = Bindings.from_str(yaml)
     format_ = Format.from_str(yaml)
 
-    hifiber = "Z_M = Tensor(rank_ids=[\"M\"])\n" + \
+    hifiber = "Z_M = Tensor(rank_ids=[\"M\"], shape=[M])\n" + \
         "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
         "B_MK = B_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
         "z_m = Z_M.getRoot()\n" + \
@@ -651,13 +651,13 @@ def test_hifiber_hardware():
         "formats = {\"Z\": Format(Z_M, {\"rank-order\": [\"M\"], \"M\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
         "bindings = [{\"tensor\": \"Z\", \"rank\": \"M\", \"type\": \"elem\", \"format\": \"default\"}]\n" + \
         "traces = {(\"Z\", \"M\", \"elem\", \"read\"): \"tmp/Z-M-populate_read_0.csv\", (\"Z\", \"M\", \"elem\", \"write\"): \"tmp/Z-M-populate_write_0.csv\"}\n" + \
-        "traffic = Traffic.cacheTraffic(\"bindings\", \"formats\", \"traces\", 65536, 64)\n" + \
+        "traffic = Traffic.cacheTraffic(bindings, formats, traces, 65536, 64)\n" + \
         "metrics[\"Z\"][\"DRAM\"] = {}\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"] = {}\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] = 0\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] = 0\n" + \
-        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] += traffic[\"Z\"][\"read\"]\n" + \
-        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] += traffic[\"Z\"][\"write\"]"
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]"
 
     assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
 

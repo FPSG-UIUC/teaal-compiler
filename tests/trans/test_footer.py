@@ -28,7 +28,7 @@ def assert_make_footer(loop_order, partitioning, display, hifiber_options):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    graphics = Graphics(program)
+    graphics = Graphics(program, None)
     graphics.make_header()
 
     for tensor in program.get_equation().get_tensors():

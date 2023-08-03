@@ -218,6 +218,7 @@ class Metrics:
         self.fiber_traces: Dict[rank, Dict[tensor, Dict[is_read_trace, trace]]]
         """
         part_ir = self.program.get_partitioning()
+        einsum = self.program.get_equation().get_output().root_name()
 
         tensors = self.program.get_equation().get_tensors()
         final_ranks = []
@@ -272,25 +273,35 @@ class Metrics:
 
                 # Otherwise we have multiple tensors intersected together
                 else:
-                    for j, tensor in enumerate(term[:-1]):
-                        # Not clear which intersection should performed
-                        # with this component
-                        if rank in self.coiterators and len(inputs) > 1:
-                            raise NotImplementedError
+                    # Not clear which intersection should performed
+                    # with this component
+                    if rank in self.coiterators and len(inputs) > 1:
+                        raise NotImplementedError
 
+                    # Reorganize the leader to be first
+                    tensors = term.copy()
+                    if rank in self.coiterators and isinstance(
+                            self.coiterators[rank], LeaderFollowerComponent):
+                        for binding in self.coiterators[rank].get_bindings()[
+                                einsum]:
+                            if binding["rank"] == rank:
+                                leader = binding["leader"]
+                                break
+
+                        leader_tensor = self.program.get_equation().get_tensor(leader)
+                        tensors.remove(leader_tensor)
+                        tensors.insert(0, leader_tensor)
+                    for j, tensor in enumerate(tensors[:-1]):
                         self.fiber_traces[rank][tensor.root_name()] = {
                             True: "intersect_" + str(next_label)}
 
                         if rank in self.coiterators and isinstance(
-                                self.coiterators[rank], LeaderFollowerComponent) and j + 2 < len(term):
-                            # TODO: The inputs need to be reorganized so that
-                            # the leader is first
-
+                                self.coiterators[rank], LeaderFollowerComponent) and j + 2 < len(tensors):
                             next_label += 1
                         else:
                             next_label += 2
 
-                    self.fiber_traces[rank][term[-1].root_name()
+                    self.fiber_traces[rank][tensors[-1].root_name()
                                             ] = {True: "intersect_" + str(next_label - 1)}
 
                 if union_label is not None:

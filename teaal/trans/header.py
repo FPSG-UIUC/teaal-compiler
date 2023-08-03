@@ -42,7 +42,11 @@ class Header:
     Generate the HiFiber code for loop headers
     """
 
-    def __init__(self, program: Program, metrics: Optional[Metrics], partitioner: Partitioner) -> None:
+    def __init__(
+            self,
+            program: Program,
+            metrics: Optional[Metrics],
+            partitioner: Partitioner) -> None:
         """
         Construct a new Header object
         """

@@ -41,6 +41,7 @@ def create_spacetime(opt):
     program.add_einsum(0)
     return Graphics(program, None)
 
+
 def create_gamma():
     fname = "tests/integration/gamma.yaml"
     einsum = Einsum.from_file(fname)
@@ -56,6 +57,7 @@ def create_gamma():
     metrics = Metrics(program, hardware, format_)
 
     return Graphics(program, metrics)
+
 
 def test_make_body_none():
     graphics = create_default()
@@ -79,9 +81,11 @@ def test_make_body_slip():
         "canvas.addActivity((k, m), (k, n), (m, n), spacetime=((n_pos,), (timestamps[(n_pos,)] - 1,)))"
     assert graphics.make_body().gen(0) == hifiber
 
+
 def test_make_body_metrics():
     graphics = create_gamma()
     assert graphics.make_body().gen(0) == ""
+
 
 def test_make_footer_none():
     graphics = create_default()
@@ -93,6 +97,7 @@ def test_make_footer():
     graphics.make_header()
     hifiber = "displayCanvas(canvas)"
     assert graphics.make_footer().gen(0) == hifiber
+
 
 def test_make_footer_metrics():
     graphics = create_gamma()
@@ -116,8 +121,7 @@ def test_make_header_slip():
         "timestamps = {}"
     assert graphics.make_header().gen(0) == hifiber
 
+
 def test_make_header_metrics():
     graphics = create_gamma()
     assert graphics.make_header().gen(0) == ""
-
-
