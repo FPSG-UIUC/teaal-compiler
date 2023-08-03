@@ -105,11 +105,11 @@ def test_unspecified():
 
 def test_all_spec():
     regs = build_local("Registers", "Buffet", {})
-    mac = build_local("MAC", "compute", {})
+    mac = build_local("MAC", "compute", {"type": "mul"})
     subtree0 = build_subtree("PE", 8, {}, [regs, mac], [])
 
-    mac0 = build_local("MAC0", "compute", {})
-    mac1 = build_local("MAC1", "compute", {})
+    mac0 = build_local("MAC0", "compute", {"type": "mul"})
+    mac1 = build_local("MAC1", "compute", {"type": "add"})
     subtree1 = build_subtree("PE", 8, {}, [regs, mac0, mac1], [])
 
     mem = build_local("Memory", "DRAM", {"datawidth": 8, "bandwidth": 128})

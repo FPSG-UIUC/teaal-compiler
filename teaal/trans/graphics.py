@@ -25,6 +25,7 @@ Translate all relevant graphics information
 """
 
 from teaal.hifiber import *
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.spacetime import SpaceTime
 from teaal.trans.canvas import Canvas
@@ -35,11 +36,12 @@ class Graphics:
     Generate the HiFiber code for displaying tensors
     """
 
-    def __init__(self, program: Program) -> None:
+    def __init__(self, program: Program, metrics: Optional[Metrics]) -> None:
         """
         Construct a graphics object
         """
         self.program = program
+        self.metrics = metrics
         self.canvas = Canvas(program)
 
     def make_body(self) -> Statement:
@@ -49,7 +51,7 @@ class Graphics:
         body = SBlock([])
         spacetime = self.program.get_spacetime()
 
-        if spacetime is not None:
+        if spacetime is not None and self.metrics is None:
             # If we are using slip, increment the timestamp
             if spacetime.get_slip():
 
@@ -77,7 +79,7 @@ class Graphics:
         Create the loop footer for graphics
         """
         spacetime = self.program.get_spacetime()
-        if spacetime is not None:
+        if spacetime is not None and self.metrics is None:
             return self.canvas.display_canvas()
         else:
             return SBlock([])
@@ -90,7 +92,7 @@ class Graphics:
 
         # If displayable, add the graphics information
         spacetime = self.program.get_spacetime()
-        if spacetime is not None:
+        if spacetime is not None and self.metrics is None:
             header.add(self.canvas.create_canvas())
 
             # Create the timestamp dictionary if we want slip

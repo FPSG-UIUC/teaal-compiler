@@ -107,11 +107,11 @@ architecture:
           - name: FPMul
             class: compute
             attributes:
-              op: mul
+              type: mul
           - name: FPAdd
             class: compute
             attributes:
-              op: add
+              type: add
 bindings:
   T:
   - config: Accelerator

@@ -1,10 +1,11 @@
 import pytest
 
+from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
-from teaal.parse.einsum import Einsum
-from teaal.parse.mapping import Mapping
+from teaal.parse import *
 from teaal.trans.header import Header
 from teaal.trans.partitioner import Partitioner
 from teaal.trans.utils import TransUtils
@@ -26,7 +27,7 @@ def build_header(exprs, mapping):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    header = Header(program, Partitioner(program, TransUtils()))
+    header = Header(program, None, Partitioner(program, TransUtils()))
 
     return header
 
@@ -47,10 +48,26 @@ def build_header_conv(loop_order):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    header = Header(program, Partitioner(program, TransUtils()))
+    header = Header(program, None, Partitioner(program, TransUtils()))
 
     return header
 
+def build_header_gamma():
+    fname = "tests/integration/gamma.yaml"
+    einsum = Einsum.from_file(fname)
+    mapping = Mapping.from_file(fname)
+    arch = Architecture.from_file(fname)
+    bindings = Bindings.from_file(fname)
+    format_ = Format.from_file(fname)
+
+    program = Program(einsum, mapping)
+    hardware = Hardware(arch, bindings, program)
+
+    program.add_einsum(0)
+    metrics = Metrics(program, hardware, format_)
+
+    header = Header(program, metrics, Partitioner(program, TransUtils()))
+    return header
 
 def build_matmul_header(mapping):
     exprs = """
@@ -106,7 +123,6 @@ def test_make_output_shape():
     header = build_header(exprs, "")
     assert header.make_output().gen(depth=0) == hifiber
 
-
 def test_make_output_no_shape_flattening():
     exprs = """
             - Z[m, n] = C[m, n]
@@ -136,12 +152,17 @@ def test_make_output_conv_shape():
 
     assert header.make_output().gen(0) == hifiber
 
+def test_make_output_metrics_shape():
+    hifiber = "T_MKN = Tensor(rank_ids=[\"M\", \"K\", \"N\"], shape=[M, K, N])"
+    header = build_header_gamma()
+
+    assert header.make_output().gen(0) == hifiber
 
 def test_make_swizzle_bad():
     header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
     with pytest.raises(ValueError) as excinfo:
-        header.make_swizzle(tensor, "foo")
+        header.make_swizzle(tensor, [], "foo")
 
     assert str(
         excinfo.value) == "Unknown swizzling reason: foo"
@@ -152,7 +173,8 @@ def test_make_swizzle_loop_order():
 
     header = build_matmul_header("")
     tensor = Tensor("A", ["K", "M"])
-    assert header.make_swizzle(tensor, "loop-order").gen(depth=0) == hifiber
+    assert header.make_swizzle(
+        tensor, ["M", "K"], "loop-order").gen(depth=0) == hifiber
 
 
 def test_make_swizzle_none():
@@ -165,7 +187,8 @@ def test_make_swizzle_none():
 
     header = build_matmul_header(mapping)
     tensor = Tensor("A", ["M", "K"])
-    assert header.make_swizzle(tensor, "loop-order").gen(depth=0) == hifiber
+    assert header.make_swizzle(
+        tensor, ["M", "K"], "loop-order").gen(depth=0) == hifiber
 
 
 def test_make_swizzle_partitioning():
@@ -181,7 +204,21 @@ def test_make_swizzle_partitioning():
 
     header = build_matmul_header(mapping)
     tensor = Tensor("A", ["K1", "K0", "M"])
-    assert header.make_swizzle(tensor, "partitioning").gen(depth=0) == hifiber
+    assert header.make_swizzle(
+        tensor, [
+            "M", "K0"], "partitioning").gen(
+        depth=0) == hifiber
+
+
+def test_make_swizzle_metrics():
+    hifiber = "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])"
+
+    header = build_matmul_header("")
+    tensor = Tensor("A", ["M", "K"])
+    assert header.make_swizzle(
+        tensor, [
+            "K", "M"], "metrics").gen(
+        depth=0) == hifiber
 
 
 def test_make_tensor_from_fiber():

@@ -28,6 +28,7 @@ from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
 from teaal.hifiber import *
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -40,11 +41,12 @@ class Equation:
     equation at the bottom of the loop nest
     """
 
-    def __init__(self, program: Program) -> None:
+    def __init__(self, program: Program, metrics: Optional[Metrics]) -> None:
         """
         Construct a new Equation
         """
         self.program = program
+        self.metrics = metrics
 
     def make_eager_inputs(self, rank: str, inputs: List[str]) -> Statement:
         """
@@ -318,7 +320,9 @@ class Equation:
         spacetime = self.program.get_spacetime()
         enum_st = spacetime is not None and spacetime.emit_pos(rank)
 
-        return enum_int or enum_st
+        enum_metrics = self.metrics is None
+
+        return (enum_int or enum_st) and enum_metrics
 
     @staticmethod
     def __frac_coords(sexpr: Basic) -> bool:

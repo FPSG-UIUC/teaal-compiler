@@ -70,6 +70,9 @@ class Collector:
         # Track the merges
         block.add(self.__build_merges())
 
+        # Track the compute
+        block.add(self.__build_compute())
+
         return block
 
     @staticmethod
@@ -149,6 +152,38 @@ class Collector:
 
         return trace_fn, block
 
+    def __build_compute(self) -> Statement:
+        """
+        Add the code to count compute operations
+        """
+        block = SBlock([])
+        einsum = self.program.get_equation().get_output().root_name()
+
+        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+        metrics_dump = EAccess(
+            EMethod(
+                EVar("Metrics"),
+                "dump",
+                []),
+            EString("Compute"))
+        for fu in self.metrics.get_hardware().get_components(einsum, ComputeComponent):
+            block.add(
+                SAssign(
+                    AAccess(
+                        metrics_einsum, EString(
+                            fu.get_name())), EDict(
+                        {})))
+
+            metrics_fu = EAccess(metrics_einsum, EString(fu.get_name()))
+            for binding in fu.get_bindings()[einsum]:
+                op = binding["op"]
+                block.add(
+                    SAssign(
+                        AAccess(metrics_fu, EString(op)),
+                        EAccess(metrics_dump, EString("payload_" + op))))
+
+        return block
+
     def __build_formats(self) -> Statement:
         """
         Add the code to build the formats dictionary
@@ -188,15 +223,11 @@ class Collector:
                     init_ranks, final_ranks)].index(False))
 
                 # TODO: This is very bad; Need to first update the HiFiber
-                radix: Expression
+                radix = TransUtils.build_expr(merger.get_comparator_radix())
                 next_latency: Expression
                 if merger.get_inputs() < float("inf"):
-                    cradix = merger.get_comparator_radix()
-                    assert isinstance(cradix, int)
-                    radix = EInt(cradix)
                     next_latency = EInt(1)
                 else:
-                    radix = EString("N")
                     next_latency = EString("N")
 
                 args = [
@@ -259,14 +290,12 @@ class Collector:
             traces_dict = TransUtils.build_expr(traces)
             block.add(SAssign(AVar("traces"), traces_dict))
 
-            python_args = [
-                "bindings",
-                "formats",
-                "traces",
-                buffer_.get_width() *
-                buffer_.get_depth(),
-                buffer_.get_width()]
-            args = [AJust(TransUtils.build_expr(arg)) for arg in python_args]
+            args = [
+                AJust(EVar("bindings")),
+                AJust(EVar("formats")),
+                AJust(EVar("traces")),
+                AJust(TransUtils.build_expr(buffer_.get_width() * buffer_.get_depth())),
+                AJust(TransUtils.build_expr(buffer_.get_width()))]
 
             if isinstance(buffer_, BuffetComponent):
                 traffic_func = "buffetTraffic"
@@ -328,7 +357,7 @@ class Collector:
                                 EInt(0)))
 
                 if (src, tensor) not in added:
-                    traffic_access = EAccess(EVar("traffic"), EString(tensor))
+                    traffic_access = EAccess(EAccess(EVar("traffic"), EInt(0)), EString(tensor))
                     block.add(
                         SIAssign(
                             AAccess(

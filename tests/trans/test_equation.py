@@ -1,10 +1,11 @@
 import pytest
 from sympy import symbols
 
+from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
-from teaal.parse.einsum import Einsum
-from teaal.parse.mapping import Mapping
+from teaal.parse import *
 from teaal.trans.equation import Equation
 from tests.utils.parse_tree import make_plus
 
@@ -25,7 +26,7 @@ def make_basic():
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_output():
@@ -44,7 +45,7 @@ def make_output():
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_mult_terms():
@@ -65,7 +66,7 @@ def make_mult_terms():
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_take():
@@ -83,7 +84,7 @@ def make_take():
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_other(einsum, mapping):
@@ -130,7 +131,7 @@ def make_display(style, opt):
     program = Program(einsum, mapping)
     program.add_einsum(0)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_matmul(mapping):
@@ -155,7 +156,7 @@ def make_matmul(mapping):
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_conv(expr, loop_order):
@@ -181,7 +182,7 @@ def make_conv(expr, loop_order):
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
 
 
 def make_conv_part(expr, loop_order):
@@ -211,7 +212,24 @@ def make_conv_part(expr, loop_order):
         program.apply_all_partitioning(tensor)
         program.get_loop_order().apply(tensor)
 
-    return IterationGraph(program), Equation(program)
+    return IterationGraph(program), Equation(program, None)
+
+def make_gamma():
+    fname = "tests/integration/gamma.yaml"
+    einsum = Einsum.from_file(fname)
+    mapping = Mapping.from_file(fname)
+    arch = Architecture.from_file(fname)
+    bindings = Bindings.from_file(fname)
+    format_ = Format.from_file(fname)
+
+    program = Program(einsum, mapping)
+    hardware = Hardware(arch, bindings, program)
+
+    program.add_einsum(0)
+    metrics = Metrics(program, hardware, format_)
+
+    return IterationGraph(program), Equation(program, metrics)
+
 
 
 def test_eager_inputs_one_fiber():
@@ -352,7 +370,7 @@ def test_flattened_output_only_bad():
 def test_make_iter_expr_output_only():
     program = make_other("A[i] = b", "")
     graph = IterationGraph(program)
-    eqn = Equation(program)
+    eqn = Equation(program, None)
 
     rank, tensors = graph.peek_concord()
     iter_expr = "a_i.iterRangeShapeRef(0, I, 1)"
@@ -370,7 +388,7 @@ def test_make_iter_expr_output_only_display():
     program = make_other("A[i] = b", mapping)
 
     graph = IterationGraph(program)
-    eqn = Equation(program)
+    eqn = Equation(program, None)
 
     rank, tensors = graph.peek_concord()
     iter_expr = "enumerate(a_i.iterRangeShapeRef(0, I, 1))"
@@ -387,7 +405,7 @@ def test_make_iter_expr_output_only_partition():
     program = make_other("A[i] = b", mapping)
 
     graph = IterationGraph(program)
-    eqn = Equation(program)
+    eqn = Equation(program, None)
 
     rank, tensors = graph.peek_concord()
     iter_expr = "a_i2.iterRangeShapeRef(0, I, I1)"
@@ -471,6 +489,11 @@ def test_make_iter_expr_conv_part():
 
     assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 
+def test_make_iter_expr_metrics():
+    graph, eqn = make_gamma()
+    hifiber = "t_m << a_m"
+
+    assert eqn.make_iter_expr(*graph.peek_concord()).gen() == hifiber
 
 def test_make_payload_no_tensors():
     _, eqn = make_basic()
@@ -547,7 +570,7 @@ def test_make_payload_display_slip():
 def test_make_payload_output_only():
     program = make_other("A[i] = b", "")
     graph = IterationGraph(program)
-    eqn = Equation(program)
+    eqn = Equation(program, None)
 
     rank, tensors = graph.pop_concord()
     iter_expr = "i, a_ref"
@@ -584,6 +607,12 @@ def test_make_payload_conv_enum():
 
     assert eqn.make_payload(*graph.pop_concord()).gen(parens=False) == hifiber
 
+def test_make_payload_metrics():
+    graph, eqn = make_gamma()
+    hifiber = "m, (t_k, a_k)"
+
+    assert eqn.make_payload(*graph.pop_concord()).gen(parens=False) == hifiber
+
 
 def test_make_update():
     _, eqn = make_basic()
@@ -593,14 +622,14 @@ def test_make_update():
 
 def test_make_update_vars():
     program = make_other("A[i] = b * c * d", "")
-    eqn = Equation(program)
+    eqn = Equation(program, None)
     stmt = "a_ref += b * c * d"
     assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_mult_terms():
     program = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]", "")
-    eqn = Equation(program)
+    eqn = Equation(program, None)
     stmt = "a_ref += b * b_val + c * c_val + d * d_val"
     assert eqn.make_update().gen(depth=0) == stmt
 

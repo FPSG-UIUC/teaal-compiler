@@ -190,7 +190,7 @@ def test_get_component():
         - name: Compute
           class: Compute
           attributes:
-            op: mul
+            type: mul
 
         - name: Memory
           class: DRAM
@@ -314,7 +314,7 @@ def test_get_component():
     attrs = {"width": 64, "depth": 3145728}
     assert_component(CacheComponent, "FiberCache", attrs)
 
-    assert_component(FunctionalComponent, "Compute", {})
+    assert_component(ComputeComponent, "Compute", {"type": "mul"})
 
     attrs = {"datawidth": 8, "bandwidth": 128}
     assert_component(DRAMComponent, "Memory", attrs)
@@ -369,7 +369,7 @@ def test_get_components():
           - name: MAC
             class: compute
             attributes:
-              op: add
+              type: add
 
     bindings:
       Z:
@@ -399,7 +399,9 @@ def test_get_components():
 
     intersect = SkipAheadComponent(
         "Intersect0", {}, bindings.get_component("Intersect0"))
-    mac = FunctionalComponent("MAC", {}, bindings.get_component("MAC"))
+    mac = ComputeComponent("MAC",
+                           {"type": "add"},
+                           bindings.get_component("MAC"))
 
     assert hardware.get_components(
         "Z", FunctionalComponent) == [
@@ -428,6 +430,8 @@ def test_get_traffic_path_multiple_bindings():
 
         - name: Compute
           class: compute
+          attributes:
+            type: add
 
     bindings:
       Z:
@@ -500,6 +504,8 @@ def test_get_traffic_path():
 
             - name: MAC0
               class: compute
+              attributes:
+                type: mul
 
           - name: Stage1
             local:
@@ -508,6 +514,8 @@ def test_get_traffic_path():
 
             - name: MAC1
               class: compute
+              attributes:
+                type: mul
 
           - name: Stage2
             local:
@@ -516,6 +524,8 @@ def test_get_traffic_path():
 
             - name: MAC2
               class: compute
+              attributes:
+                type: mul
 
     bindings:
       Z:
@@ -628,7 +638,9 @@ def test_get_tree():
         "Registers",
         {},
         bindings.get_component("Registers"))
-    mac = FunctionalComponent("MAC", {}, bindings.get_component("MAC"))
+    mac = ComputeComponent("MAC",
+                           {"type": "mul"},
+                           bindings.get_component("MAC"))
     pe = Level("PE", 8, {}, [regs, mac], [])
 
     mem_attrs = {"datawidth": 8, "bandwidth": 128}

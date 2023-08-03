@@ -20,6 +20,8 @@ architecture:
 
       - name: MAC
         class: compute
+        attributes:
+          type: mul
 
   Config1:
   - name: System
@@ -42,6 +44,10 @@ architecture:
 
       - name: MAC0
         class: compute
+        attributes:
+          type: mul
 
       - name: MAC1
         class: compute
+        attributes:
+          type: add

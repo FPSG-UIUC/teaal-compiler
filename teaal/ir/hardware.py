@@ -154,7 +154,7 @@ class Hardware:
             class_ = CacheComponent
 
         elif local["class"].lower() == "compute":
-            class_ = FunctionalComponent
+            class_ = ComputeComponent
 
         elif local["class"].lower() == "dram":
             class_ = DRAMComponent

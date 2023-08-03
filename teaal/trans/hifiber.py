@@ -89,11 +89,11 @@ class HiFiber:
         nodes = flow_graph.get_sorted()
 
         # Create all relevant translator objects
-        self.graphics = Graphics(self.program)
+        self.graphics = Graphics(self.program, self.metrics)
         self.partitioner = Partitioner(self.program, self.trans_utils)
-        self.header = Header(self.program, self.partitioner)
+        self.header = Header(self.program, self.metrics, self.partitioner)
         self.graph = IterationGraph(self.program)
-        self.eqn = Equation(self.program)
+        self.eqn = Equation(self.program, self.metrics)
 
         if self.metrics:
             self.collector = Collector(self.program, self.metrics)
@@ -168,7 +168,11 @@ class HiFiber:
 
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(self.header.make_swizzle(tensor, node.get_type()))
+                code.add(
+                    self.header.make_swizzle(
+                        tensor,
+                        node.get_ranks(),
+                        node.get_type()))
 
             elif isinstance(node, GetRootNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())

@@ -116,9 +116,11 @@ architecture:
             class: Buffet
             attributes:
               width: 64 # Block size is not mentioned in the paper; minimum correct value
-              depth: 16 # 1kB / 8B = 16 lines
-          - name: ALU
+              depth: 128 # 1kB / 8B = 128 lines
+          - name: FPMul
             class: compute
+            attributes:
+              type: mul
   MergePhase:
   - name: System
     attributes:
@@ -144,7 +146,7 @@ architecture:
             class: Merger
             attributes:
               inputs: inf
-              comparator_radix: 2
+              comparator_radix: inf
               outputs: 1
               order: fifo
               reduce: False
@@ -152,9 +154,11 @@ architecture:
             class: Buffet
             attributes:
               width: 64 # Block size is not mentioned in the paper; minimum correct value
-              depth: 16 # 1kB / 8B = 16 lines
-          - name: ALU
+              depth: 128 # 1kB / 8B = 16 lines
+          - name: FPAdd
             class: compute
+            attributes:
+              type: add
 bindings:
   T0:
   - config: MultiplyPhase
@@ -217,7 +221,7 @@ bindings:
       type: payload
       evict-on: root
       format: default
-  - component: Compute
+  - component: FPMul
     bindings:
     - op: mul
   T1:
@@ -283,11 +287,11 @@ bindings:
       evict-on: K
   Z:
   - config: MergePhase
-    prefix: outerspace_Z
+    prefix: tmp/outerspace_Z
   - component: MainMemory
     bindings:
     - tensor: Z
-      rank: M0
+      rank: M
       type: payload
       format: default
     - tensor: Z
@@ -320,6 +324,6 @@ bindings:
       type: payload
       format: default
       evict-on: M
-  - component: ALU
+  - component: FPAdd
     bindings:
     - op: add
