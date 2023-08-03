@@ -28,6 +28,7 @@ from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
 from teaal.hifiber import *
+from teaal.ir.component import *
 from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
@@ -415,13 +416,48 @@ class Equation:
         """
         Make the iteration expression for the inputs
         """
+        leader_follower = False
+        leader = ""
+        if self.metrics is not None:
+            intersector =  self.metrics.get_coiter(rank)
+
+            # If this uses leader-follower intersection
+            if isinstance(intersector, LeaderFollowerComponent):
+                leader_follower = True
+
+                einsum = self.program.get_equation().get_output().root_name()
+                for binding in intersector.get_bindings()[einsum]:
+                    if binding["rank"] == rank:
+                        leader = binding["leader"]
+                        break
+
         # Combine terms with intersections
         intersections = []
         for term in tensors:
-            expr = self.__iter_fiber(rank, term[-1])
-            for factor in reversed(term[:-1]):
-                fiber = self.__iter_fiber(rank, factor)
-                expr = Equation.__add_operator(fiber, OAnd(), expr)
+            expr: Expression
+            if leader_follower:
+                # If there is more than one term, there is ambiguity we are
+                # not capturing
+                if len(tensors) > 1:
+                    raise NotImplementedError
+
+                leader_tensor = self.program.get_equation().get_tensor(leader)
+                fiber_args = [self.__iter_fiber(rank, leader_tensor)]
+
+                for factor in term:
+                    if factor.root_name() == leader:
+                        continue
+                    fiber_args.append(self.__iter_fiber(rank, factor))
+
+                args: List[Argument] = [AJust(fiber) for fiber in fiber_args]
+                args.append(AParam("style", EString("leader-follower")))
+                expr = EMethod(EVar("Fiber"), "intersection", args)
+
+            else:
+                expr = self.__iter_fiber(rank, term[-1])
+                for factor in reversed(term[:-1]):
+                    fiber = self.__iter_fiber(rank, factor)
+                    expr = Equation.__add_operator(fiber, OAnd(), expr)
             intersections.append(expr)
 
         # Combine intersections with a union

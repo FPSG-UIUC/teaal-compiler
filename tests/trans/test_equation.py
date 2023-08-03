@@ -349,6 +349,14 @@ def test_make_iter_expr_display_slip():
 
     assert eqn.make_iter_expr(rank, tensors).gen() == iter_expr
 
+def test_make_iter_expr_leader_follower():
+    graph, eqn = make_gamma()
+
+    graph.pop_concord()
+    iter_expr = "t_k << Fiber.intersection(a_k, b_k, style=\"leader-follower\")"
+
+    assert eqn.make_iter_expr(*graph.peek_concord()).gen() == iter_expr
+
 
 def test_flattened_output_only_bad():
     mapping = """

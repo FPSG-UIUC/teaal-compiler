@@ -98,6 +98,12 @@ def test_used_traffic_paths():
         "Multiple potential formats {'default0', 'default1'} for tensor A in Einsum Z",
         "Multiple potential formats {'default1', 'default0'} for tensor A in Einsum Z"}
 
+def test_get_coiter():
+    program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_coiter("K") == hardware.get_component("Intersect")
 
 def test_get_collected_tensor_info():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())

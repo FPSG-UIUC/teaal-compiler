@@ -55,6 +55,15 @@ class Metrics:
         self.__build_fiber_traces()
         self.__build_traffic_paths()
 
+    def get_coiter(self, rank: str) -> Optional[Component]:
+        """
+        Get the coiterator used for this rank
+        """
+        if rank not in self.coiterators:
+            return None
+
+        return self.coiterators[rank]
+
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
         """
@@ -196,7 +205,7 @@ class Metrics:
                 einsum, IntersectorComponent):
             for binding in intersector.get_bindings()[einsum]:
                 rank = binding["rank"]
-                # Not clear how to map co-iterators onto components
+                # Not clear how to map co-iterators onto multiple components
                 if rank in self.coiterators:
                     raise NotImplementedError
 
