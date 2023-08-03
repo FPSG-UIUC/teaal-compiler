@@ -112,9 +112,51 @@ class HiFiber:
         i = 0
         while i < len(nodes):
             node = nodes[i]
-            if isinstance(node, FromFiberNode):
+
+            if isinstance(node, CollectingNode):
+                code.add(
+                    self.collector.set_collecting(
+                        node.get_tensor(),
+                        node.get_rank(),
+                        node.get_type(),
+                        node.get_consumable(),
+                        node.get_is_read_trace()))
+
+            elif isinstance(node, ConsumeTraceNode):
+                code.add(
+                    self.collector.consume_traces(
+                        node.get_component(),
+                        node.get_rank()))
+
+            elif isinstance(node, CreateComponentNode):
+                code.add(
+                    self.collector.create_component(
+                        node.get_component(),
+                        node.get_rank()))
+
+            elif isinstance(node, EagerInputNode):
+                code.add(
+                    self.eqn.make_eager_inputs(
+                        node.get_rank(),
+                        node.get_tensors()))
+
+            elif isinstance(node, EndLoopNode):
+                return i + 1, code
+
+            elif isinstance(node, FromFiberNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(Header.make_tensor_from_fiber(tensor))
+
+            elif isinstance(node, GetPayloadNode):
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
+                code.add(Header.make_get_payload(tensor, node.get_ranks()))
+
+            elif isinstance(node, GetRootNode):
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
+                code.add(Header.make_get_root(tensor))
+
+            elif isinstance(node, IntervalNode):
+                code.add(self.eqn.make_interval(node.get_rank()))
 
             elif isinstance(node, LoopNode):
                 # Generate the for loop
@@ -127,6 +169,21 @@ class HiFiber:
                 j, body = self.__trans_nodes(nodes[(i + 1):])
                 code.add(SFor(payload, expr, body))
                 i += j
+
+            elif isinstance(node, MetricsNode):
+                if node.get_type() == "Dump":
+                    code.add(self.collector.dump())
+
+                elif node.get_type() == "End":
+                    code.add(self.collector.end())
+
+                elif node.get_type() == "Start":
+                    code.add(self.collector.start())
+
+                else:
+                    raise ValueError(
+                        "Unknown node: " +
+                        repr(node))  # pragma: no cover
 
             elif isinstance(node, OtherNode):
                 if node.get_type() == "Body":
@@ -165,50 +222,6 @@ class HiFiber:
                         tensor,
                         node.get_ranks(),
                         node.get_type()))
-
-            elif isinstance(node, GetRootNode):
-                tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(Header.make_get_root(tensor))
-
-            elif isinstance(node, EndLoopNode):
-                return i + 1, code
-
-            elif isinstance(node, EagerInputNode):
-                code.add(
-                    self.eqn.make_eager_inputs(
-                        node.get_rank(),
-                        node.get_tensors()))
-
-            elif isinstance(node, IntervalNode):
-                code.add(self.eqn.make_interval(node.get_rank()))
-
-            elif isinstance(node, MetricsNode):
-                if node.get_type() == "Dump":
-                    code.add(self.collector.dump())
-
-                elif node.get_type() == "End":
-                    code.add(self.collector.end())
-
-                elif node.get_type() == "Start":
-                    code.add(self.collector.start())
-
-                else:
-                    raise ValueError(
-                        "Unknown node: " +
-                        repr(node))  # pragma: no cover
-
-            elif isinstance(node, CollectingNode):
-                code.add(
-                    self.collector.set_collecting(
-                        node.get_tensor(),
-                        node.get_rank(),
-                        node.get_type(),
-                        node.get_consumable(),
-                        node.get_is_read_trace()))
-
-            elif isinstance(node, GetPayloadNode):
-                tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(Header.make_get_payload(tensor, node.get_ranks()))
 
             else:
                 raise ValueError(

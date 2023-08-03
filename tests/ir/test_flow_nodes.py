@@ -12,12 +12,32 @@ def test_collecting_node():
     assert CollectingNode("A", "K", "fiber", False, True).get_is_read_trace()
 
 
+def test_consume_trace_node():
+    assert repr(ConsumeTraceNode("K2Intersector", "K2")
+                ) == "(ConsumeTraceNode, K2Intersector, K2)"
+
+    assert ConsumeTraceNode("K2Intersector",
+                            "K2").get_component() == "K2Intersector"
+    assert ConsumeTraceNode("K2Intersector", "K2").get_rank() == "K2"
+
+
+def test_create_component_node():
+    assert repr(CreateComponentNode("K2Intersector", "K2")
+                ) == "(CreateComponentNode, K2Intersector, K2)"
+
+    assert CreateComponentNode(
+        "K2Intersector",
+        "K2").get_component() == "K2Intersector"
+    assert CreateComponentNode("K2Intersector", "K2").get_rank() == "K2"
+
+
 def test_eager_input_node():
     assert repr(EagerInputNode("Q1", ["I", "J"])
                 ) == "(EagerInputNode, Q1, ['I', 'J'])"
 
     assert EagerInputNode("Q1", ["I", "J"]).get_rank() == "Q1"
     assert EagerInputNode("Q1", ["I", "J"]).get_tensors() == ["I", "J"]
+
 
 def test_end_loop_node():
     assert repr(EndLoopNode("K1")) == "(EndLoopNode, K1)"

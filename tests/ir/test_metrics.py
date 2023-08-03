@@ -107,6 +107,90 @@ def test_get_coiter():
     assert metrics.get_coiter("K") == hardware.get_component("Intersect")
 
 
+def test_get_coiter_traces_leader_follower():
+    program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_coiter_traces("Intersect", "K") == ["intersect_2"]
+
+
+def test_get_coiter_traces_two_finger_more_than_two():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [K]
+        B: [K]
+        C: [K]
+      expressions:
+      - Z[] = A[k] * B[k] * C[k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Intersect
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: Intersect
+        bindings:
+        - rank: K
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+
+    with pytest.raises(NotImplementedError):
+        Metrics(program, hardware, format_)
+
+
+def test_get_coiter_traces_two_finger():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [K]
+        B: [K]
+      expressions:
+      - Z[] = A[k] * B[k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Intersect
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: Intersect
+        bindings:
+        - rank: K
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_coiter_traces("Intersect", "K") == [
+        "intersect_0", "intersect_1"]
+
+
 def test_get_collected_tensor_info():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
     hardware = Hardware(arch, bindings, program)

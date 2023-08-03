@@ -64,6 +64,12 @@ class Metrics:
 
         return self.coiterators[rank]
 
+    def get_coiter_traces(self, coiter: str, rank: str) -> List[str]:
+        """
+        Get the trace names used for this coiterator
+        """
+        return self.coiter_traces[coiter][rank]
+
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
         """
@@ -216,16 +222,19 @@ class Metrics:
         Build the fiber traces
 
         self.fiber_traces: Dict[rank, Dict[tensor, Dict[is_read_trace, trace]]]
+        self.coiter_traces: Dict[component, Dict[rank, List[trace]]]
         """
         part_ir = self.program.get_partitioning()
         einsum = self.program.get_equation().get_output().root_name()
 
+        # Get the ranks/rank order of tensors during the loop nest
         tensors = self.program.get_equation().get_tensors()
         final_ranks = []
         for tensor in tensors:
             final_ranks.append(set(part_ir.partition_ranks(
                 tensor.get_init_ranks(), part_ir.get_all_parts(), True, True)))
 
+        # Get the tensors iterated on for each rank
         coiters: Dict[str, List[Tensor]] = {}
         for rank in self.program.get_loop_order().get_ranks():
             coiters[rank] = []
@@ -233,7 +242,9 @@ class Metrics:
                 if rank in final:
                     coiters[rank].append(tensor)
 
+        # Get the corresponding traces
         self.fiber_traces: Dict[str, Dict[str, Dict[bool, str]]] = {}
+        self.coiter_traces: Dict[str, Dict[str, List[str]]] = {}
         for rank in self.program.get_loop_order().get_ranks():
             self.fiber_traces[rank] = {}
             output, inputs = self.program.get_equation().get_iter(
@@ -291,6 +302,7 @@ class Metrics:
                         leader_tensor = self.program.get_equation().get_tensor(leader)
                         tensors.remove(leader_tensor)
                         tensors.insert(0, leader_tensor)
+
                     for j, tensor in enumerate(tensors[:-1]):
                         self.fiber_traces[rank][tensor.root_name()] = {
                             True: "intersect_" + str(next_label)}
@@ -303,6 +315,34 @@ class Metrics:
 
                     self.fiber_traces[rank][tensors[-1].root_name()
                                             ] = {True: "intersect_" + str(next_label - 1)}
+
+                    if rank in self.coiterators:
+                        coiter = self.coiterators[rank]
+                        if coiter.get_name() not in self.coiter_traces:
+                            self.coiter_traces[coiter.get_name()] = {}
+                        self.coiter_traces[coiter.get_name()][rank] = []
+
+                        traces = self.coiter_traces[coiter.get_name()][rank]
+                        if isinstance(coiter, LeaderFollowerComponent):
+                            # TODO: Can the leader-follower component store
+                            # this info itself
+                            leader = ""
+                            for binding in coiter.get_bindings()[einsum]:
+                                if binding["rank"] == rank:
+                                    leader = binding["leader"]
+                                    break
+                            traces.append(
+                                self.fiber_traces[rank][leader][True])
+
+                        else:
+                            # Do not support tracing intersection of more than
+                            # two components
+                            if len(tensors) > 2:
+                                raise NotImplementedError
+
+                            for tensor in tensors:
+                                traces.append(
+                                    self.fiber_traces[rank][tensor.root_name()][True])
 
                 if union_label is not None:
                     parent = "union_" + str(union_label + 1)

@@ -29,6 +29,7 @@ import networkx as nx  # type: ignore
 from sympy import Symbol
 from typing import cast, Dict, List, Optional, Tuple
 
+from teaal.ir.component import *
 from teaal.ir.flow_nodes import *
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
@@ -94,7 +95,7 @@ class FlowGraph:
         self.graph = nx.DiGraph()
         self.iter_map: Dict[str, List[str]] = {}
 
-        self.__build_loop_nest()
+        chain = self.__build_loop_nest()
         self.__build_output()
 
         # Add Swizzle, GetRoot and FiberNodes for each tensor
@@ -116,9 +117,10 @@ class FlowGraph:
             # Get the root fiber
             self.__build_swizzle_root_fiber(tensor, True)
 
-        # Add CollectingNodes
+        # Add metrics collection
         for tensor in self.program.get_equation().get_tensors():
             self.__build_collecting(tensor)
+        self.__build_hw_components(chain)
 
         iter_graph = IterationGraph(self.program)
         while iter_graph.peek_concord()[0] is not None:
@@ -140,8 +142,7 @@ class FlowGraph:
         """
         Build a CollectingNode should it be required
         """
-        # None if there is no hardware
-        if not self.metrics:
+        if self.metrics is None:
             return
 
         loop_ranks = self.program.get_loop_order().get_ranks()
@@ -299,9 +300,33 @@ class FlowGraph:
                 get_payload_node, FiberNode(
                     tensor.fiber_name()))
 
-    def __build_loop_nest(self) -> None:
+    def __build_hw_components(self, chain: List[Node]) -> None:
         """
-        Build the loop nest
+        Build the creation of any necessary hardware components
+        """
+        if self.metrics is None:
+            return
+
+        einsum = self.program.get_equation().get_output().root_name()
+        for component in self.metrics.get_hardware().get_components(einsum,
+                                                                    IntersectorComponent):
+            name = component.get_name()
+
+            for binding in component.get_bindings()[einsum]:
+                rank = binding["rank"]
+                self.graph.add_edge(
+                    CreateComponentNode(
+                        name, rank), MetricsNode("Start"))
+
+                consume_node = ConsumeTraceNode(name, rank)
+                self.graph.add_edge(EndLoopNode(rank), consume_node)
+                self.graph.add_edge(consume_node,
+                                    chain[chain.index(EndLoopNode(rank)) + 1])
+                self.graph.add_edge(consume_node, MetricsNode("End"))
+
+    def __build_loop_nest(self) -> List[Node]:
+        """
+        Build the loop nest, returns the chain of nodes
         """
         loop_order = self.program.get_loop_order().get_ranks()
 
@@ -330,6 +355,8 @@ class FlowGraph:
             self.graph.add_edge(chain[-2], MetricsNode("End"))
             self.graph.add_edge(MetricsNode("End"), OtherNode("Footer"))
             self.graph.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+
+        return chain
 
     def __build_output(self) -> None:
         """

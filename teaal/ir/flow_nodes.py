@@ -85,9 +85,71 @@ class CollectingNode(Node):
 
     def _Node__key(self) -> Iterable[Any]:
         """
-        Iterable of fields of a Collecting
+        Iterable of fields of a CollectingNode
         """
         return self.tensor, self.rank, self.type, self.consumable, self.is_read_trace
+
+
+class ConsumeTraceNode(Node):
+    """
+    A node that consumes traces for a given component
+    """
+
+    def __init__(self, component: str, rank: str) -> None:
+        """
+        Construct a ConsumeTraceNode
+        """
+        self.component = component
+        self.rank = rank
+
+    def get_component(self) -> str:
+        """
+        Accessor for the component name
+        """
+        return self.component
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a ConsumeTraceNode
+        """
+        return self.component, self.rank
+
+
+class CreateComponentNode(Node):
+    """
+    A node that creates an object for tracking metrics for a given component
+    """
+
+    def __init__(self, component: str, rank: str) -> None:
+        """
+        Construct a CreateComponentNode
+        """
+        self.component = component
+        self.rank = rank
+
+    def get_component(self) -> str:
+        """
+        Accessor for the component name
+        """
+        return self.component
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a CreateComponentNode
+        """
+        return self.component, self.rank
 
 
 class EagerInputNode(Node):
@@ -120,6 +182,7 @@ class EagerInputNode(Node):
         """
         return self.rank, self.tensors
 
+
 class EndLoopNode(Node):
     """
     A Node representing the end of a loop
@@ -142,7 +205,6 @@ class EndLoopNode(Node):
         Iterable of fields of a EndLoopNode
         """
         return self.rank,
-
 
 
 class FiberNode(Node):

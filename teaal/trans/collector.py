@@ -44,6 +44,49 @@ class Collector:
         self.program = program
         self.metrics = metrics
 
+    def create_component(self, component: str, rank: str) -> Statement:
+        """
+        Create a component to track metrics
+        """
+        component_ir = self.metrics.get_hardware().get_component(component)
+
+        if isinstance(component_ir, LeaderFollowerComponent):
+            constructor = "LeaderFollowerIntersector"
+        elif isinstance(component_ir, SkipAheadComponent):
+            constructor = "SkipAheadIntersector"
+        elif isinstance(component_ir, TwoFingerComponent):
+            constructor = "TwoFingerIntersector"
+        else:
+            raise ValueError(
+                "Unable to create consumable metrics component for " +
+                component +
+                " of type " +
+                type(component_ir).__name__)
+
+        return SAssign(AVar(component + "_" + rank), EFunc(constructor, []))
+
+    def consume_traces(self, component: str, rank: str) -> Statement:
+        """
+        Consume the traces to track this component
+        """
+        component_ir = self.metrics.get_hardware().get_component(component)
+
+        if isinstance(component_ir, IntersectorComponent):
+            tracker_name = EVar(component + "_" + rank)
+            traces = self.metrics.get_coiter_traces(component, rank)
+            consume_args = [[AJust(EString(rank)),
+                             AJust(EString(trace))] for trace in traces]
+            args = [AJust(EMethod(EVar("Metrics"), "consumeTrace", arg))
+                    for arg in consume_args]
+            return SExpr(EMethod(tracker_name, "addTraces", args))
+
+        else:
+            raise ValueError(
+                "Unable to consume traces for component " +
+                component +
+                " of type " +
+                type(component_ir).__name__)
+
     def dump(self) -> Statement:
         """
         Dump metrics information
@@ -72,6 +115,9 @@ class Collector:
 
         # Track the compute
         block.add(self.__build_compute())
+
+        # Track the intersections
+        block.add(self.__build_intersections())
 
         return block
 
@@ -201,6 +247,32 @@ class Collector:
 
         return SAssign(AVar("formats"), EDict(formats_dict))
 
+    def __build_intersections(self) -> Statement:
+        """
+        Add the code to compute the intersection operations
+        """
+        block = SBlock([])
+        einsum = self.program.get_equation().get_output().root_name()
+
+        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+        for intersector in self.metrics.get_hardware().get_components(einsum,
+                                                                      IntersectorComponent):
+            isect_name = intersector.get_name()
+            metrics_isect = AAccess(metrics_einsum, EString(isect_name))
+            block.add(SAssign(metrics_isect, EInt(0)))
+
+            for binding in intersector.get_bindings()[einsum]:
+                isects = EMethod(
+                    EVar(
+                        isect_name +
+                        "_" +
+                        binding["rank"]),
+                    "getNumIntersects",
+                    [])
+                block.add(SIAssign(metrics_isect, OAdd(), isects))
+
+        return block
+
     def __build_merges(self) -> Statement:
         """
         Add the code to compute the merge operations
@@ -208,9 +280,16 @@ class Collector:
         block = SBlock([])
         einsum = self.program.get_equation().get_output().root_name()
 
-        mergers_set: Set[str] = set()
         metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
         for merger in self.metrics.get_hardware().get_components(einsum, MergerComponent):
+            merger_name = merger.get_name()
+            block.add(
+                SAssign(
+                    AAccess(
+                        metrics_einsum, EString(merger_name)), EDict(
+                        {})))
+            metrics_merger = EAccess(metrics_einsum, EString(merger_name))
+
             for binding in merger.get_bindings()[einsum]:
                 init_ranks = binding["init-ranks"]
                 final_ranks = binding["final-ranks"]
@@ -237,17 +316,6 @@ class Collector:
                         radix,
                         next_latency]]
                 swaps_call = EMethod(EVar("Compute"), "numSwaps", args)
-
-                merger_name = merger.get_name()
-                if merger_name not in mergers_set:
-                    mergers_set.add(merger_name)
-                    block.add(
-                        SAssign(
-                            AAccess(
-                                metrics_einsum, EString(merger_name)), EDict(
-                                {})))
-
-                metrics_merger = EAccess(metrics_einsum, EString(merger_name))
                 block.add(
                     SAssign(
                         AAccess(

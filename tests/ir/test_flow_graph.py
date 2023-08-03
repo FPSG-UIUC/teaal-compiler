@@ -936,6 +936,10 @@ def test_graph_metrics_T():
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
     corr.add_edge(OtherNode("Output"), GetRootNode("T", ['M', 'K', 'N']))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+    corr.add_edge(CreateComponentNode("Intersect", "K"), MetricsNode("Start"))
+    corr.add_edge(EndLoopNode("K"), ConsumeTraceNode("Intersect", "K"))
+    corr.add_edge(ConsumeTraceNode("Intersect", "K"), EndLoopNode("M"))
+    corr.add_edge(ConsumeTraceNode("Intersect", "K"), MetricsNode("End"))
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
     corr.add_edge(
         MetricsNode("Start"),

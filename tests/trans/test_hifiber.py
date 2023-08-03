@@ -571,7 +571,7 @@ def test_hifiber_dyn_flattening():
     assert str(HiFiber(einsum, mapping)) == hifiber
 
 
-def test_hifiber_hardware():
+def test_hifiber_traffic():
     yaml = """
     einsum:
       declaration:
@@ -581,7 +581,6 @@ def test_hifiber_hardware():
         Z: [M]
       expressions:
       - Z[m] = A[k, m] * B[k, m] * C[k]
-
     architecture:
       accel:
       - name: level0
@@ -590,7 +589,6 @@ def test_hifiber_hardware():
           class: DRAM
           attributes:
             bandwidth: 512
-
         subtree:
         - name: level1
           local:
@@ -599,8 +597,6 @@ def test_hifiber_hardware():
             attributes:
               width: 64
               depth: 1024
-              bandwidth: 2048
-
     bindings:
       Z:
       - config: accel
@@ -658,6 +654,65 @@ def test_hifiber_hardware():
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]"
+
+    assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
+
+
+def test_hifiber_intersect():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [I, J, K]
+        B: [I, J, K]
+      expressions:
+      - Z[] = A[i, j, k] * B[i, j, k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: TF
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: TF
+        bindings:
+        - rank: K
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    format_ = Format.from_str(yaml)
+
+    hifiber = "Z_ = Tensor(rank_ids=[], shape=[])\n" + \
+        "TF_K = TwoFingerIntersector()\n" + \
+        "z_ref = Z_.getRoot()\n" + \
+        "a_i = A_IJK.getRoot()\n" + \
+        "b_i = B_IJK.getRoot()\n" + \
+        "Metrics.beginCollect(\"tmp/Z\")\n" + \
+        "Metrics.trace(\"K\", type_=\"intersect_0\", consumable=True)\n" + \
+        "Metrics.trace(\"K\", type_=\"intersect_1\", consumable=True)\n" + \
+        "for i, (a_j, b_j) in a_i & b_i:\n" + \
+        "    for j, (a_k, b_k) in a_j & b_j:\n" + \
+        "        for k, (a_val, b_val) in a_k & b_k:\n" + \
+        "            z_ref += a_val * b_val\n" + \
+        "        TF_K.addTraces(Metrics.consumeTrace(\"K\", \"intersect_0\"), Metrics.consumeTrace(\"K\", \"intersect_1\"))\n" + \
+        "Metrics.endCollect()\n" + \
+        "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {}\n" + \
+        "metrics[\"Z\"][\"TF\"] = 0\n" + \
+        "metrics[\"Z\"][\"TF\"] += TF_K.getNumIntersects()"
 
     assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
 

@@ -33,6 +33,182 @@ def build_collector(yaml, i):
     return Collector(program, metrics)
 
 
+def test_create_component_unknown():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [K]
+        B: [K]
+      expressions:
+      - Z[] = A[k] * B[k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: DRAM
+          class: DRAM
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    collector = build_collector(yaml, 0)
+
+    with pytest.raises(ValueError) as excinfo:
+        collector.create_component("DRAM", "K")
+    assert str(
+        excinfo.value) == "Unable to create consumable metrics component for DRAM of type DRAMComponent"
+
+
+def test_create_component():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [I, J, K]
+        B: [I, J, K]
+      expressions:
+      - Z[] = A[i, j, k] * B[i, j, k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: LF
+          class: Intersector
+          attributes:
+            type: leader-follower
+        - name: SA
+          class: Intersector
+          attributes:
+            type: skip-ahead
+        - name: TF
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: LF
+        bindings:
+        - rank: I
+          leader: A
+      - component: SA
+        bindings:
+        - rank: J
+      - component: TF
+        bindings:
+        - rank: K
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    collector = build_collector(yaml, 0)
+
+    assert collector.create_component("LF", "I").gen(
+        0) == "LF_I = LeaderFollowerIntersector()"
+    assert collector.create_component("SA", "J").gen(
+        0) == "SA_J = SkipAheadIntersector()"
+    assert collector.create_component("TF", "K").gen(
+        0) == "TF_K = TwoFingerIntersector()"
+
+
+def test_consume_traces_unknown():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [K]
+        B: [K]
+      expressions:
+      - Z[] = A[k] * B[k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: DRAM
+          class: DRAM
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    collector = build_collector(yaml, 0)
+
+    with pytest.raises(ValueError) as excinfo:
+        collector.consume_traces("DRAM", "K")
+    assert str(
+        excinfo.value) == "Unable to consume traces for component DRAM of type DRAMComponent"
+
+
+def test_consume_traces():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [I, J, K]
+        B: [I, J, K]
+      expressions:
+      - Z[] = A[i, j, k] * B[i, j, k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: LF
+          class: Intersector
+          attributes:
+            type: leader-follower
+        - name: SA
+          class: Intersector
+          attributes:
+            type: skip-ahead
+        - name: TF
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: LF
+        bindings:
+        - rank: I
+          leader: A
+      - component: SA
+        bindings:
+        - rank: J
+      - component: TF
+        bindings:
+        - rank: K
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    collector = build_collector(yaml, 0)
+
+    assert collector.consume_traces("LF", "I").gen(
+        0) == "LF_I.addTraces(Metrics.consumeTrace(\"I\", \"intersect_0\"))"
+    assert collector.consume_traces("SA", "J").gen(
+        0) == "SA_J.addTraces(Metrics.consumeTrace(\"J\", \"intersect_0\"), Metrics.consumeTrace(\"J\", \"intersect_1\"))"
+    assert collector.consume_traces("TF", "K").gen(
+        0) == "TF_K.addTraces(Metrics.consumeTrace(\"K\", \"intersect_0\"), Metrics.consumeTrace(\"K\", \"intersect_1\"))"
+
+
 def test_dump_gamma_T():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
@@ -56,7 +232,9 @@ def test_dump_gamma_T():
         "traffic = Traffic.buffetTraffic(bindings, formats, traces, float(\"inf\"), 64)\n" + \
         "metrics[\"T\"][\"MainMemory\"][\"A\"] = {}\n" + \
         "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] = 0\n" + \
-        "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]"
+        "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"T\"][\"Intersect\"] = 0\n" + \
+        "metrics[\"T\"][\"Intersect\"] += Intersect_K.getNumIntersects()"
 
     assert collector.dump().gen(0) == hifiber
 
