@@ -120,6 +120,30 @@ class EagerInputNode(Node):
         """
         return self.rank, self.tensors
 
+class EndLoopNode(Node):
+    """
+    A Node representing the end of a loop
+    """
+
+    def __init__(self, rank: str) -> None:
+        """
+        Construct a EndLoopNode
+        """
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a EndLoopNode
+        """
+        return self.rank,
+
+
 
 class FiberNode(Node):
     """

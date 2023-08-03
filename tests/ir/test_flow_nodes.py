@@ -19,6 +19,11 @@ def test_eager_input_node():
     assert EagerInputNode("Q1", ["I", "J"]).get_rank() == "Q1"
     assert EagerInputNode("Q1", ["I", "J"]).get_tensors() == ["I", "J"]
 
+def test_end_loop_node():
+    assert repr(EndLoopNode("K1")) == "(EndLoopNode, K1)"
+
+    assert EndLoopNode("K1").get_rank() == "K1"
+
 
 def test_fiber_node():
     assert repr(FiberNode("a_k")) == "(FiberNode, a_k)"

@@ -310,22 +310,24 @@ class FlowGraph:
         for rank in loop_order:
             chain.append(LoopNode(rank))
         chain.append(OtherNode("Body"))
+        for rank in reversed(loop_order):
+            chain.append(EndLoopNode(rank))
+        chain.append(OtherNode("Footer"))
 
         # Note that the chain is guaranteed to have at least two nodes
         for i in range(len(chain) - 1):
             self.graph.add_edge(chain[i], chain[i + 1])
 
-        # Add the graphics generation, body, and footer
+        # Add the graphics generation
         self.graph.add_edge(OtherNode("Graphics"), OtherNode("StartLoop"))
         self.graph.add_edge(OtherNode("Output"), OtherNode("Graphics"))
-        self.graph.add_edge(OtherNode("Body"), OtherNode("Footer"))
 
         # If we have Metrics, we need to add the MetricsNodes
         if self.metrics:
             self.graph.add_edge(OtherNode("StartLoop"), MetricsNode("Start"))
             self.graph.add_edge(MetricsNode("Start"), chain[1])
 
-            self.graph.add_edge(OtherNode("Body"), MetricsNode("End"))
+            self.graph.add_edge(chain[-2], MetricsNode("End"))
             self.graph.add_edge(MetricsNode("End"), OtherNode("Footer"))
             self.graph.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
 

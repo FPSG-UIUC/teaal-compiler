@@ -98,15 +98,12 @@ class HiFiber:
         if self.metrics:
             self.collector = Collector(self.program, self.metrics)
 
-        stmt = self.__trans_nodes(nodes, 0)[1]
+        stmt = self.__trans_nodes(nodes)[1]
 
         self.program.reset()
         return stmt
 
-    def __trans_nodes(self,
-                      nodes: List[Node],
-                      depth: int) -> Tuple[int,
-                                           Statement]:
+    def __trans_nodes(self, nodes: List[Node]) -> Tuple[int, Statement]:
         """
         Recursive function to generate the actual HiFiber program
         """
@@ -127,7 +124,7 @@ class HiFiber:
                 payload = self.eqn.make_payload(cast(str, rank), tensors)
 
                 # Recurse for the for loop body
-                j, body = self.__trans_nodes(nodes[(i + 1):], depth + 1)
+                j, body = self.__trans_nodes(nodes[(i + 1):])
                 code.add(SFor(payload, expr, body))
                 i += j
 
@@ -137,16 +134,11 @@ class HiFiber:
                     code.add(self.graphics.make_body())
 
                 elif node.get_type() == "Footer":
-                    if depth == 0:
-                        code.add(
-                            Footer.make_footer(
-                                self.program,
-                                self.graphics,
-                                self.partitioner))
-
-                    else:
-                        # Pop back up a level and retry this node
-                        return i, code
+                    code.add(
+                        Footer.make_footer(
+                            self.program,
+                            self.graphics,
+                            self.partitioner))
 
                 elif node.get_type() == "Graphics":
                     code.add(self.graphics.make_header())
@@ -178,6 +170,9 @@ class HiFiber:
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(Header.make_get_root(tensor))
 
+            elif isinstance(node, EndLoopNode):
+                return i + 1, code
+
             elif isinstance(node, EagerInputNode):
                 code.add(
                     self.eqn.make_eager_inputs(
@@ -192,11 +187,7 @@ class HiFiber:
                     code.add(self.collector.dump())
 
                 elif node.get_type() == "End":
-                    if depth == 0:
-                        code.add(self.collector.end())
-                    else:
-                        # Pop back up a level and retry this node
-                        return i, code
+                    code.add(self.collector.end())
 
                 elif node.get_type() == "Start":
                     code.add(self.collector.start())
