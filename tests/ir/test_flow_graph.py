@@ -1142,6 +1142,54 @@ def test_graph_metrics_Z():
             "M",
             "iter",
             False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "A",
+            "M",
+            "fiber",
+            False,
+            True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            None,
+            "K",
+            "iter",
+            False,
+            True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(
+            "A",
+            "K",
+            "fiber",
+            False,
+            True))
+    corr.add_edge(
+        CollectingNode(
+            "A",
+            "M",
+            "fiber",
+            False,
+            True),
+        LoopNode("M"))
+    corr.add_edge(
+        CollectingNode(
+            None,
+            "K",
+            "iter",
+            False,
+            True),
+        LoopNode("M"))
+    corr.add_edge(
+        CollectingNode(
+            "A",
+            "K",
+            "fiber",
+            False,
+            True),
+        LoopNode("M"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", ['M', 'N']), LoopNode("M"))
     corr.add_edge(SwizzleNode(

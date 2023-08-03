@@ -84,12 +84,12 @@ class Metrics:
         einsum = self.program.get_equation().get_output().root_name()
         if tensor in self.traffic_paths:
             for rank, paths in self.traffic_paths[tensor][1].items():
-                if any(len(path) > 1 for path in paths):
+                if any(len(path) > 0 for path in paths):
                     info.add((rank, "fiber", False))
 
                 # We only want to load the payload if we actually make it into
                 # the loop
-                if paths[1] and len(paths[1]) > 1:
+                if paths[1]:
                     info.add((rank, "iter", False))
 
         # Collect traces for intersection

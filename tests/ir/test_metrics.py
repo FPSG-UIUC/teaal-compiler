@@ -207,7 +207,8 @@ def test_get_collected_tensor_info():
     hardware = Hardware(arch, bindings, program)
     metrics = Metrics(program, hardware, format_)
 
-    assert metrics.get_collected_tensor_info("A") == set()
+    assert metrics.get_collected_tensor_info("A") == {(
+        "K", "fiber", False), ("M", "iter", False), ("M", "fiber", False), ("K", "iter", False)}
     assert metrics.get_collected_tensor_info("T") == set()
     assert metrics.get_collected_tensor_info("Z") == {(
         "M", "iter", False), ("N", "iter", False), ("M", "fiber", False), ("N", "fiber", False)}
