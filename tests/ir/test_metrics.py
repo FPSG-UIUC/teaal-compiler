@@ -8,6 +8,11 @@ from teaal.ir.tensor import Tensor
 from teaal.parse import *
 
 
+def build_extensor_yaml():
+    with open("tests/integration/extensor.yaml", "r") as f:
+        return f.read()
+
+
 def build_gamma_yaml():
     with open("tests/integration/gamma.yaml", "r") as f:
         return f.read()
@@ -98,6 +103,28 @@ def test_used_traffic_paths():
         "Multiple potential formats {'default0', 'default1'} for tensor A in Einsum Z",
         "Multiple potential formats {'default1', 'default0'} for tensor A in Einsum Z"}
 
+
+def test_expand_eager():
+    program, arch, bindings, format_ = parse_yamls(build_extensor_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    bindings = {'Z': [
+        {'tensor': 'A', 'rank': 'K1', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'eager'},
+        {'tensor': 'B', 'rank': 'K1', 'type': 'coord', 'evict-on': 'K2', 'format': 'default', 'style': 'eager'},
+        {'tensor': 'Z', 'rank': 'N0', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'eager'},
+        {'tensor': 'Z', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'N0', 'type': 'payload'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'M0', 'type': 'coord'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'M0', 'type': 'payload'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'coord'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'payload'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'K1', 'type': 'payload'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'N0', 'type': 'coord'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'N0', 'type': 'payload'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'coord'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'payload'}]}
+
+    assert hardware.get_component("LLB").get_bindings() == bindings
 
 def test_get_coiter():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())

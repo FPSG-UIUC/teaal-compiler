@@ -216,6 +216,29 @@ def test_buffet_component():
         "payload",
         "default") == bindings_corr
 
+def test_buffet_component_expand_eager():
+    attrs = {"width": 8, "depth": 3 * 2 ** 20}
+    bindings = {"Z": [{"tensor": "A",
+                       "rank": "M",
+                       "type": "coord",
+                       "format": "default",
+                       "style": "eager",
+                       "evict-on": "N"}]}
+    buffet = BuffetComponent("LLB", attrs, bindings)
+
+    buffet.expand_eager("Z", "A", "default": ["J", "M", "K", "O"], [["elem"], ["coord", "payload"], ["coord", "payload"], ["elem"]])
+
+    expanded_bindings = {"Z": [
+        {"tensor": "A", "rank": "M", "type": "coord", "format": "default", "style": "eager", "evict-on": "N"},
+        {"tensor": "A", "rank": "M", "type": "payload", "format": "default", "style": "eager", "evict-on": "N"},
+        {"tensor": "A", "rank": "K", "type": "coord", "format": "default", "style": "eager", "evict-on": "N"},
+        {"tensor": "A", "rank": "K", "type": "payload", "format": "default", "style": "eager", "evict-on": "N"},
+        {"tensor": "A", "rank": "O", "type": "elem", "format": "default", "style": "eager", "evict-on": "N"}
+    ]}
+    assert buffet.get_bindings() == expanded_bindings
+
+    buffet.expand_eager("Z", "B", "default", ["N", "K"], [[], []])
+    assert buffet.get_bindings() == expanded_bindings
 
 def test_cache_component():
     attrs = {"width": 8, "depth": 3 * 2 ** 20}

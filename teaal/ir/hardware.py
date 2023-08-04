@@ -99,7 +99,6 @@ class Hardware:
 
     def get_traffic_path(
             self,
-            einsum: str,
             tensor: str,
             rank: str,
             type_: str,
@@ -107,6 +106,8 @@ class Hardware:
         """
         Get a list of components this tensor will be loaded into
         """
+        einsum = self.program.get_equation().get_output().root_name()
+
         components = []
 
         levels = [(self.tree[self.configs[einsum]], 0)]

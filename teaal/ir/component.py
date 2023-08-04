@@ -381,6 +381,36 @@ class BuffetComponent(BufferComponent):
                                          " not one of " +
                                          str(styles))
 
+    def expand_eager(self, einsum: str, tensor: str, format_: str, ranks: List[str], types: List[List[str]]) -> None:
+        """
+        Expand eager bindings to have separate bindings for each rank
+        """
+        if tensor not in self.tensor_bindings[einsum]:
+            return
+
+        for binding in self.tensor_bindings[einsum][tensor].copy():
+            if binding["style"] != "eager":
+                continue
+
+            if binding["format"] != format_:
+                continue
+
+            root_rank = binding["rank"]
+
+            new_binding_template = {"tensor": tensor, "evict-on": binding["evict-on"], "style": "eager", "format": binding["format"]}
+            start_i = ranks.index(root_rank)
+            if binding["type"] == "coord" and "payload" in types[start_i]:
+                new_binding = {**new_binding_template, **{"rank": root_rank, "type": "payload"}}
+                self.tensor_bindings[einsum][tensor].append(new_binding)
+                self.bindings[einsum].append(new_binding)
+
+            for rank, rank_types in zip(ranks[start_i + 1:], types[start_i + 1:]):
+                for type_ in rank_types:
+                    new_binding = {**new_binding_template, **{"rank": rank, "type": type_}}
+                    self.tensor_bindings[einsum][tensor].append(new_binding)
+                    self.bindings[einsum].append(new_binding)
+
+
 
 class CacheComponent(BufferComponent):
     """

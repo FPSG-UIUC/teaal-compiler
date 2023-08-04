@@ -459,10 +459,11 @@ def test_get_traffic_path_multiple_bindings():
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(0)
     hardware = Hardware(arch, bindings, program)
 
     with pytest.raises(ValueError) as excinfo:
-        hardware.get_traffic_path("Z", "A", "M", "payload", "default")
+        hardware.get_traffic_path("A", "M", "payload", "default")
     assert str(excinfo.value) == "Multiple traffic paths for tensor A in Einsum Z"
 
 
@@ -593,6 +594,7 @@ def test_get_traffic_path():
     arch = Architecture.from_str(yaml)
     bindings = Bindings.from_str(yaml)
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    program.add_einsum(1)
     hardware = Hardware(arch, bindings, program)
 
     mem = DRAMComponent("Memory", {}, bindings.get_component("Memory"))
@@ -601,12 +603,14 @@ def test_get_traffic_path():
     s2b = BuffetComponent("S2B", {}, bindings.get_component("S2B"))
 
     assert hardware.get_traffic_path(
-        "Z", "A", "M", "payload", "default") == [mem, s0b]
+        "A", "M", "payload", "default") == [mem, s0b]
     assert hardware.get_traffic_path(
-        "Z", "Z", "M", "payload", "default") == [mem, s0b]
+        "Z", "M", "payload", "default") == [mem, s0b]
     assert hardware.get_traffic_path(
-        "Z", "Z", "M", "coord", "default") == [s1b]
-    assert hardware.get_traffic_path("X", "B", "M", "payload", "default") == []
+        "Z", "M", "coord", "default") == [s1b]
+
+    program.add_einsum(0)
+    assert hardware.get_traffic_path("B", "M", "payload", "default") == []
 
 
 def test_get_prefix():

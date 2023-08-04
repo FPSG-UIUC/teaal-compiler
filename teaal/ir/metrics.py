@@ -51,6 +51,9 @@ class Metrics:
         self.hardware = hardware
         self.format = format_
 
+        self.__build_format_options()
+        self.__expand_eager()
+
         self.__build_coiter_ranks()
         self.__build_fiber_traces()
         self.__build_traffic_paths()
@@ -349,6 +352,31 @@ class Metrics:
                     union_label = next_label
                     next_label += 2
 
+    def __build_format_options(self) -> None:
+        """
+        Build a set of possible formats for each tensor
+
+        self.format_options: Dict[tensor, List[format]]
+        """
+        self.format_options: Dict[str, List[str]] = {}
+        for tensor_ir in self.program.get_equation().get_tensors():
+            tensor = tensor_ir.root_name()
+            self.format_options[tensor] = []
+
+            spec = self.format.get_spec(tensor)
+
+            # Identify the formats that can correspond to the iteration of this
+            # loop nest
+            loop_order = self.program.get_loop_order()
+            for format_ in spec:
+                format_ranks = spec[format_]["rank-order"]
+
+                temp_tensor = Tensor(tensor, format_ranks)
+                loop_order.apply(temp_tensor)
+
+                if temp_tensor.get_ranks() == format_ranks:
+                    self.format_options[tensor].append(format_)
+
     def __build_traffic_paths(self) -> None:
         """
         Build a dictionary of used loop formats:
@@ -364,34 +392,21 @@ class Metrics:
             tensor = tensor_ir.root_name()
             spec = self.format.get_spec(tensor)
 
-            # Identify the formats that can correspond to the iteration of this
-            # loop nest
-            formats = []
-            loop_order = self.program.get_loop_order()
-            for format_ in spec:
-                format_ranks = spec[format_]["rank-order"]
-
-                temp_tensor = Tensor(tensor, format_ranks)
-                loop_order.apply(temp_tensor)
-
-                if temp_tensor.get_ranks() == format_ranks:
-                    formats.append(format_)
-
             # Build the set of specs to collect
             einsum = self.program.get_equation().get_output().root_name()
 
             # TODO: What about eager binding?
-            for format_ in formats:
+            for format_ in self.format_options[tensor]:
                 for rank in spec[format_]:
                     if rank == "rank-order":
                         continue
 
                     coord_path = self.hardware.get_traffic_path(
-                        einsum, tensor, rank, "coord", format_)
+                        tensor, rank, "coord", format_)
                     payload_path = self.hardware.get_traffic_path(
-                        einsum, tensor, rank, "payload", format_)
+                        tensor, rank, "payload", format_)
                     elem_path = self.hardware.get_traffic_path(
-                        einsum, tensor, rank, "elem", format_)
+                        tensor, rank, "elem", format_)
 
                     if tensor in self.traffic_paths and self.traffic_paths[
                             tensor][0] != format_:
@@ -407,3 +422,33 @@ class Metrics:
 
                     self.traffic_paths[tensor][1][rank] = (
                         coord_path, payload_path, elem_path)
+
+    def __expand_eager(self):
+        """
+        Expand all eager bindings
+        """
+        einsum = self.program.get_equation().get_output().root_name()
+
+        for tensor_ir in self.program.get_equation().get_tensors():
+            tensor = tensor_ir.root_name()
+            spec = self.format.get_spec(tensor)
+
+            for format_ in self.format_options[tensor]:
+                types = []
+                for rank in spec[format_]["rank-order"]:
+                    types.append([])
+                    if "layout" in spec[format_][rank] and \
+                            spec[format_][rank]["layout"] == "interleaved":
+                        types[-1].append("elem")
+                        continue
+
+                    if "cbits" in spec[format_][rank] and \
+                            spec[format_][rank]["cbits"] > 0:
+                        types[-1].append("coord")
+
+                    if "pbits" in spec[format_][rank] and \
+                            spec[format_][rank]["pbits"] > 0:
+                        types[-1].append("payload")
+
+                for component in self.hardware.get_components(einsum, BuffetComponent):
+                    component.expand_eager(einsum, tensor, format_, spec[format_]["rank-order"], types)
