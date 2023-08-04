@@ -215,9 +215,39 @@ bindings:
       type: coord
       evict-on: M2
       format: default
+      style: lazy
+    - tensor: A
+      rank: M0
+      type: coord
+      evict-on: M2
+      format: default
       style: eager
     - tensor: B
+      rank: N1
+      type: coord
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: N1
+      type: payload
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
       rank: K1
+      type: coord
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: K1
+      type: payload
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: N0
       type: coord
       evict-on: K2
       format: default

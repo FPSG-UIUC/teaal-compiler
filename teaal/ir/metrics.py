@@ -80,6 +80,7 @@ class Metrics:
         collected in the form {(rank, type, consumable)}, where type is one of
             - "fiber" - corresponding to iteration over that fiber
             - "iter" - corresponding to the iteration of the loop nest
+            - rank - the rank that the eager iteration starts at
         """
         # TODO: What about eager binding?
         # Collect traces for data traffic
@@ -87,13 +88,18 @@ class Metrics:
         einsum = self.program.get_equation().get_output().root_name()
         if tensor in self.traffic_paths:
             for rank, paths in self.traffic_paths[tensor][1].items():
-                if any(len(path) > 0 for path in paths):
-                    info.add((rank, "fiber", False))
+                for i, path in enumerate(paths):
+                    for component, style in path:
+                        if isinstance(component, DRAMComponent):
+                            continue
 
-                # We only want to load the payload if we actually make it into
-                # the loop
-                if paths[1]:
-                    info.add((rank, "iter", False))
+                        if style == "lazy":
+                            info.add((rank, "fiber", False))
+                            if i == 1:
+                                info.add((rank, "iter", False))
+
+                        else:
+                            info.add((rank, style, False))
 
         # Collect traces for intersection
         if not tensor == einsum:
@@ -195,14 +201,14 @@ class Metrics:
                 component +
                 " not a memory")
 
-        if component_ir not in path:
+        inds = [i for i, (comp, _) in enumerate(path) if comp == component_ir]
+        if not inds:
             return None
 
-        i = path.index(component_ir)
-        if i == 0:
+        if inds[0] == 0:
             return None
 
-        return path[i - 1]
+        return path[inds[0] - 1][0]
 
     def __build_coiter_ranks(self) -> None:
         """
@@ -385,9 +391,9 @@ class Metrics:
         self.traffic_paths: Dict[str,
                                  Tuple[str,
                                        Dict[str,
-                                            Tuple[List[MemoryComponent],
-                                                  List[MemoryComponent],
-                                                  List[MemoryComponent]]]]] = {}
+                                            Tuple[List[Tuple[MemoryComponent, str]],
+                                                  List[Tuple[MemoryComponent, str]],
+                                                  List[Tuple[MemoryComponent, str]]]]]] = {}
         for tensor_ir in self.program.get_equation().get_tensors():
             tensor = tensor_ir.root_name()
             spec = self.format.get_spec(tensor)
@@ -450,5 +456,7 @@ class Metrics:
                             spec[format_][rank]["pbits"] > 0:
                         types[-1].append("payload")
 
-                for component in self.hardware.get_components(einsum, BuffetComponent):
-                    component.expand_eager(einsum, tensor, format_, spec[format_]["rank-order"], types)
+                for component in self.hardware.get_components(
+                        einsum, BuffetComponent):
+                    component.expand_eager(
+                        einsum, tensor, format_, spec[format_]["rank-order"], types)

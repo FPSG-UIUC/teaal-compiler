@@ -110,21 +110,86 @@ def test_expand_eager():
     metrics = Metrics(program, hardware, format_)
 
     bindings = {'Z': [
-        {'tensor': 'A', 'rank': 'K1', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'eager'},
-        {'tensor': 'B', 'rank': 'K1', 'type': 'coord', 'evict-on': 'K2', 'format': 'default', 'style': 'eager'},
-        {'tensor': 'Z', 'rank': 'N0', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'eager'},
-        {'tensor': 'Z', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'N0', 'type': 'payload'},
-        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'M0', 'type': 'coord'},
-        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'M0', 'type': 'payload'},
-        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'coord'},
-        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'payload'},
-        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'K1', 'type': 'payload'},
-        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'N0', 'type': 'coord'},
-        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'N0', 'type': 'payload'},
-        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'coord'},
-        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'rank': 'K0', 'type': 'payload'}]}
+        {'tensor': 'A', 'rank': 'K1', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'lazy'},
+        {'tensor': 'A', 'rank': 'M0', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'eager', 'root': 'M0'},
+        {'tensor': 'B', 'rank': 'N1', 'type': 'coord', 'evict-on': 'K2', 'format': 'default', 'style': 'lazy'},
+        {'tensor': 'B', 'rank': 'N1', 'type': 'payload', 'evict-on': 'K2', 'format': 'default', 'style': 'lazy'},
+        {'tensor': 'B', 'rank': 'K1', 'type': 'coord', 'evict-on': 'K2', 'format': 'default', 'style': 'lazy'},
+        {'tensor': 'B', 'rank': 'K1', 'type': 'payload', 'evict-on': 'K2', 'format': 'default', 'style': 'lazy'},
+        {'tensor': 'B', 'rank': 'N0', 'type': 'coord', 'evict-on': 'K2', 'format': 'default', 'style': 'eager', 'root': 'N0'},
+        {'tensor': 'Z', 'rank': 'N0', 'type': 'coord', 'evict-on': 'M2', 'format': 'default', 'style': 'eager', 'root': 'N0'},
+        {'tensor': 'Z', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'root': 'N0', 'rank': 'N0', 'type': 'payload'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'root': 'M0', 'rank': 'M0', 'type': 'payload'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'root': 'M0', 'rank': 'K0', 'type': 'coord'},
+        {'tensor': 'A', 'evict-on': 'M2', 'style': 'eager', 'format': 'default', 'root': 'M0', 'rank': 'K0', 'type': 'payload'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'root': 'N0', 'rank': 'N0', 'type': 'payload'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'root': 'N0', 'rank': 'K0', 'type': 'coord'},
+        {'tensor': 'B', 'evict-on': 'K2', 'style': 'eager', 'format': 'default', 'root': 'N0', 'rank': 'K0', 'type': 'payload'}]}
 
     assert hardware.get_component("LLB").get_bindings() == bindings
+
+
+def test_expand_eager_elem():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [K, M]
+        B: [K]
+      expressions:
+      - Z[] = A[k, m] * B[k]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Buffer
+          class: Buffet
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: Buffer
+        bindings:
+        - tensor: A
+          rank: K
+          type: payload
+          evict-on: root
+          format: default
+          style: eager
+    format:
+      A:
+        default:
+          rank-order: [K, M]
+          K:
+            format: C
+            pbits: 32
+          M:
+            format: C
+            cbits: 32
+            pbits: 32
+            layout: interleaved
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    bindings = {'Z': [{'tensor': 'A',
+                       'rank': 'K',
+                       'type': 'payload',
+                       'evict-on': 'root',
+                       'format': 'default',
+                       'style': 'eager',
+                       'root': 'K'},
+                      {'tensor': 'A',
+                       'evict-on': 'root',
+                       'style': 'eager',
+                       'format': 'default',
+                       'root': 'K',
+                       'rank': 'M',
+                       'type': 'elem'}]}
+
+    assert hardware.get_component("Buffer").get_bindings() == bindings
+
 
 def test_get_coiter():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
@@ -239,6 +304,45 @@ def test_get_collected_tensor_info():
     assert metrics.get_collected_tensor_info("T") == set()
     assert metrics.get_collected_tensor_info("Z") == {(
         "M", "iter", False), ("N", "iter", False), ("M", "fiber", False), ("N", "fiber", False)}
+
+
+def test_get_collected_tensor_info_eager():
+    program, arch, bindings, format_ = parse_yamls(build_extensor_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_collected_tensor_info("A") == {('M0', 'M0', False), ('K1', 'fiber', True), (
+        'K2', 'fiber', True), ('K1', 'fiber', False), ('K0', 'M0', False), ('K0', 'fiber', True)}
+    assert metrics.get_collected_tensor_info("B") == {
+        (
+            'N1',
+            'fiber',
+            False),
+        ('K0',
+         'N0',
+         False),
+        ('N1',
+         'iter',
+         False),
+        ('N0',
+         'N0',
+         False),
+        ('K1',
+         'fiber',
+         True),
+        ('K2',
+         'fiber',
+         True),
+        ('K1',
+         'fiber',
+         False),
+        ('K1',
+         'iter',
+         False),
+        ('K0',
+         'fiber',
+         True)}
+    assert metrics.get_collected_tensor_info("Z") == {('N0', 'N0', False)}
 
 
 def test_get_collected_tensor_info_extra_intersection_test():

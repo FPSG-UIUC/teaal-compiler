@@ -102,13 +102,14 @@ class Hardware:
             tensor: str,
             rank: str,
             type_: str,
-            format_: str) -> List[MemoryComponent]:
+            format_: str) -> List[Tuple[MemoryComponent, str]]:
         """
-        Get a list of components this tensor will be loaded into
+        Get a list of components  this tensor will be loaded into and either
+        a lazy style or the source rank of the eager load
         """
         einsum = self.program.get_equation().get_output().root_name()
 
-        components = []
+        components: List[Tuple[MemoryComponent, str]] = []
 
         levels = [(self.tree[self.configs[einsum]], 0)]
         depths_covered = set()
@@ -122,7 +123,12 @@ class Hardware:
                 binding = component.get_binding(
                     einsum, tensor, rank, type_, format_)
                 if binding:
-                    components.append(component)
+                    if isinstance(
+                            component,
+                            BuffetComponent) and binding["style"] == "eager":
+                        components.append((component, binding["root"]))
+                    else:
+                        components.append((component, "lazy"))
 
                     if depth in depths_covered:
                         raise ValueError(

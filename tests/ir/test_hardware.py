@@ -603,14 +603,37 @@ def test_get_traffic_path():
     s2b = BuffetComponent("S2B", {}, bindings.get_component("S2B"))
 
     assert hardware.get_traffic_path(
-        "A", "M", "payload", "default") == [mem, s0b]
+        "A", "M", "payload", "default") == [(mem, "lazy"), (s0b, "lazy")]
     assert hardware.get_traffic_path(
-        "Z", "M", "payload", "default") == [mem, s0b]
+        "Z", "M", "payload", "default") == [(mem, "lazy"), (s0b, "lazy")]
     assert hardware.get_traffic_path(
-        "Z", "M", "coord", "default") == [s1b]
+        "Z", "M", "coord", "default") == [(s1b, "lazy")]
 
     program.add_einsum(0)
     assert hardware.get_traffic_path("B", "M", "payload", "default") == []
+
+
+def test_get_traffic_eager():
+    extensor = "tests/integration/extensor.yaml"
+    arch = Architecture.from_file(extensor)
+    bindings = Bindings.from_file(extensor)
+    program = Program(Einsum.from_file(extensor), Mapping.from_file(extensor))
+    program.add_einsum(0)
+    hardware = Hardware(arch, bindings, program)
+
+    dram = hardware.get_component("MainMemory")
+    llb = hardware.get_component("LLB")
+
+    ranks = ["K2", "M2", "M1", "K1", "M0", "K0"]
+    types = [[], [], [], ["coord"], ["coord", "payload"], ["coord", "payload"]]
+    llb.expand_eager("Z", "A", "default", ranks, types)
+
+    assert hardware.get_traffic_path(
+        "A", "K1", "coord", "default") == [
+        (dram, "lazy"), (llb, "lazy")]
+    assert hardware.get_traffic_path(
+        "A", "K0", "coord", "default") == [
+        (dram, "lazy"), (llb, "M0")]
 
 
 def test_get_prefix():
