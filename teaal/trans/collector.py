@@ -132,18 +132,13 @@ class Collector:
         """
         Make the body of the loop
         """
-        block = SBlock([])
-        if self.metrics.get_eager_write():
-            iter_num = EMethod(
-                EMethod(
-                    EVar("Metrics"),
-                    "getIter",
-                    []),
-                "copy",
-                [])
-            block.add(SAssign(AVar("iteration_num"), iter_num))
+        return self.__make_iter_num("body")
 
-        return block
+    def make_loop_footer(self, rank: str) -> Statement:
+        """
+        Make a footer for the loop
+        """
+        return self.__make_iter_num(rank)
 
     def make_loop_header(self, rank: str) -> Statement:
         """
@@ -206,7 +201,9 @@ class Collector:
             else:
                 trace += "_write"
                 # TODO: Add a separate None type
-                block.add(SAssign(AVar("iteration_num"), EVar("None")))
+                output = self.program.get_equation().get_tensor(tensor)
+                iter_var = output.get_ranks()[-1].lower() + "_iter_num"
+                block.add(SAssign(AVar(iter_var), EVar("None")))
 
         args: List[Argument] = [
             AJust(
@@ -248,7 +245,9 @@ class Collector:
 
         args: List[Argument] = [AJust(EString(trace))]
         if not is_read_trace:
-            args.append(AParam("iteration_num", EVar("iteration_num")))
+            output = self.program.get_equation().get_tensor(tensor)
+            iter_var = output.get_ranks()[-1].lower() + "_iter_num"
+            args.append(AParam("iteration_num", EVar(iter_var)))
 
         trace_stmt = SExpr(EMethod(EVar(fiber), "trace", args))
         if not is_read_trace:
@@ -607,3 +606,29 @@ class Collector:
                     added.add((src, tensor))
 
         return block
+
+    def __make_iter_num(self, rank: str) -> Statement:
+        """
+        Save the iteration number if necessary
+        """
+        # We don't need the iteration number if we are not doing an eager write
+        if not self.metrics.get_eager_write():
+            return SBlock([])
+
+        loop_order = self.program.get_loop_order().get_ranks() + ["body"]
+        output = self.program.get_equation().get_output()
+
+        # We don't need the iteration number of this rank if it is the top rank
+        # since we can never eager access a 0-tensor
+        i = loop_order.index(rank)
+        if i == 0:
+            return SBlock([])
+
+        # We only want the iteration number of the output's bottom rank
+        if loop_order[i - 1] != output.get_ranks()[-1]:
+            return SBlock([])
+
+        iter_var = AVar(output.get_ranks()[-1].lower() + "_iter_num")
+        iter_num = EMethod(EMethod(EVar("Metrics"), "getIter", []), "copy", [])
+
+        return SAssign(iter_var, iter_num)

@@ -929,6 +929,10 @@ def test_graph_metrics_no_loops():
     corr.add_edge(MetricsNode("Start"), OtherNode("Body"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", []), OtherNode("Body"))
+    corr.add_edge(OtherNode('Graphics'), MetricsNode('Body'))
+    corr.add_edge(MetricsNode('Start'), MetricsNode('Body'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsNode('Body'), MetricsNode('End'))
 
     print_errs(graph, corr)
 
@@ -951,7 +955,6 @@ def test_graph_metrics_T():
     corr.add_edge(EndLoopNode("N"), EndLoopNode("K"))
     corr.add_edge(EndLoopNode("K"), EndLoopNode("M"))
     corr.add_edge(EndLoopNode("M"), OtherNode("Footer"))
-    corr.add_edge(EndLoopNode("M"), MetricsNode("End"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("M"))
     corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
@@ -1027,6 +1030,16 @@ def test_graph_metrics_T():
     corr.add_edge(MetricsHeaderNode('M'), LoopNode('M'))
     corr.add_edge(MetricsHeaderNode('K'), LoopNode('K'))
     corr.add_edge(MetricsHeaderNode('N'), LoopNode('N'))
+    corr.add_edge(LoopNode('N'), MetricsNode('Body'))
+    corr.add_edge(EndLoopNode('N'), MetricsFooterNode('N'))
+    corr.add_edge(EndLoopNode('K'), MetricsFooterNode('K'))
+    corr.add_edge(EndLoopNode('M'), MetricsFooterNode('M'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsFooterNode('N'), EndLoopNode('K'))
+    corr.add_edge(MetricsFooterNode('K'), EndLoopNode('M'))
+    corr.add_edge(MetricsFooterNode('M'), OtherNode('Footer'))
+    corr.add_edge(MetricsFooterNode('M'), MetricsNode('End'))
+    corr.add_edge(EndLoopNode("M"), MetricsNode("End"))
 
     print_errs(graph, corr)
 
@@ -1050,7 +1063,6 @@ def test_graph_metrics_Z():
     corr.add_edge(EndLoopNode("K"), EndLoopNode("N"))
     corr.add_edge(EndLoopNode("N"), EndLoopNode("M"))
     corr.add_edge(EndLoopNode("M"), OtherNode("Footer"))
-    corr.add_edge(EndLoopNode("M"), MetricsNode("End"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("M"))
     corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
@@ -1140,6 +1152,16 @@ def test_graph_metrics_Z():
     corr.add_edge(MetricsHeaderNode('M'), LoopNode('M'))
     corr.add_edge(MetricsHeaderNode('N'), LoopNode('N'))
     corr.add_edge(MetricsHeaderNode('K'), LoopNode('K'))
+    corr.add_edge(LoopNode('K'), MetricsNode('Body'))
+    corr.add_edge(EndLoopNode('K'), MetricsFooterNode('K'))
+    corr.add_edge(EndLoopNode('N'), MetricsFooterNode('N'))
+    corr.add_edge(EndLoopNode('M'), MetricsFooterNode('M'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsFooterNode('K'), EndLoopNode('N'))
+    corr.add_edge(MetricsFooterNode('N'), EndLoopNode('M'))
+    corr.add_edge(MetricsFooterNode('M'), OtherNode('Footer'))
+    corr.add_edge(MetricsFooterNode('M'), MetricsNode('End'))
+    corr.add_edge(EndLoopNode("M"), MetricsNode("End"))
 
     print_errs(graph, corr)
 
@@ -1189,7 +1211,6 @@ def test_graph_metrics_extensor():
     corr.add_edge(EndLoopNode("K2"), EndLoopNode("N2"))
     corr.add_edge(EndLoopNode("K2"), ConsumeTraceNode("K2Intersect", "K2"))
     corr.add_edge(EndLoopNode("N2"), OtherNode("Footer"))
-    corr.add_edge(EndLoopNode("N2"), MetricsNode("End"))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("N2"))
     corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
@@ -1450,6 +1471,28 @@ def test_graph_metrics_extensor():
     corr.add_edge(MetricsHeaderNode('M0'), LoopNode('M0'))
     corr.add_edge(MetricsHeaderNode('N0'), LoopNode('N0'))
     corr.add_edge(MetricsHeaderNode('K0'), LoopNode('K0'))
+    corr.add_edge(LoopNode('K0'), MetricsNode('Body'))
+    corr.add_edge(EndLoopNode('K0'), MetricsFooterNode('K0'))
+    corr.add_edge(EndLoopNode('N0'), MetricsFooterNode('N0'))
+    corr.add_edge(EndLoopNode('M0'), MetricsFooterNode('M0'))
+    corr.add_edge(EndLoopNode('K1'), MetricsFooterNode('K1'))
+    corr.add_edge(EndLoopNode('N1'), MetricsFooterNode('N1'))
+    corr.add_edge(EndLoopNode('M1'), MetricsFooterNode('M1'))
+    corr.add_edge(EndLoopNode('M2'), MetricsFooterNode('M2'))
+    corr.add_edge(EndLoopNode('K2'), MetricsFooterNode('K2'))
+    corr.add_edge(EndLoopNode('N2'), MetricsFooterNode('N2'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsFooterNode('K0'), EndLoopNode('N0'))
+    corr.add_edge(MetricsFooterNode('N0'), EndLoopNode('M0'))
+    corr.add_edge(MetricsFooterNode('M0'), EndLoopNode('K1'))
+    corr.add_edge(MetricsFooterNode('K1'), EndLoopNode('N1'))
+    corr.add_edge(MetricsFooterNode('N1'), EndLoopNode('M1'))
+    corr.add_edge(MetricsFooterNode('M1'), EndLoopNode('M2'))
+    corr.add_edge(MetricsFooterNode('M2'), EndLoopNode('K2'))
+    corr.add_edge(MetricsFooterNode('K2'), EndLoopNode('N2'))
+    corr.add_edge(MetricsFooterNode('N2'), OtherNode('Footer'))
+    corr.add_edge(MetricsFooterNode('N2'), MetricsNode('End'))
+    corr.add_edge(EndLoopNode("N2"), MetricsNode("End"))
 
     print_errs(graph, corr)
 
@@ -1516,7 +1559,6 @@ def test_graph_metrics_swizzle_for_part():
     corr.add_edge(LoopNode("MK"), OtherNode("Body"))
     corr.add_edge(OtherNode("Body"), EndLoopNode("MK"))
     corr.add_edge(EndLoopNode("MK"), OtherNode("Footer"))
-    corr.add_edge(EndLoopNode("MK"), MetricsNode("End"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("MK"))
     corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
@@ -1526,39 +1568,31 @@ def test_graph_metrics_swizzle_for_part():
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", []), OtherNode("Body"))
     corr.add_edge(
-        SwizzleNode(
-            "A", [
-                'M', 'K'], "partitioning"), PartNode(
-            "A", ('M', 'K')))
+        SwizzleNode("A", ['M', 'K'], "partitioning"),
+        PartNode("A", ('M', 'K')))
     corr.add_edge(PartNode("A", ('M', 'K')), OtherNode("Graphics"))
     corr.add_edge(
-        PartNode(
-            "A", ('M', 'K')), SwizzleNode(
-            "A", ['MK'], "loop-order"))
+        PartNode("A", ('M', 'K')),
+        SwizzleNode("A", ['MK'], "loop-order"))
     corr.add_edge(
-        SwizzleNode(
-            "A", [
-                'K', 'M'], "metrics"), SwizzleNode(
-            "A", [
-                'M', 'K'], "partitioning"))
+        SwizzleNode("A", ['K', 'M'], "metrics"),
+        SwizzleNode("A", ['M', 'K'], "partitioning"))
     corr.add_edge(
-        SwizzleNode(
-            "A",
-            ['MK'],
-            "loop-order"),
-        GetRootNode(
-            "A",
-            ['MK']))
+        SwizzleNode("A", ['MK'], "loop-order"),
+        GetRootNode("A", ['MK']))
     corr.add_edge(
-        SwizzleNode(
-            "A",
-            ['MK'],
-            "loop-order"),
+        SwizzleNode("A", ['MK'], "loop-order"),
         OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['MK']), LoopNode("MK"))
     corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('MK'))
     corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('MK'))
     corr.add_edge(MetricsHeaderNode('MK'), LoopNode('MK'))
+    corr.add_edge(LoopNode('MK'), MetricsNode('Body'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsFooterNode('MK'), MetricsNode('End'))
+    corr.add_edge(EndLoopNode('MK'), MetricsFooterNode('MK'))
+    corr.add_edge(MetricsFooterNode('MK'), OtherNode('Footer'))
+    corr.add_edge(EndLoopNode("MK"), MetricsNode("End"))
 
     print_errs(graph, corr)
 
@@ -1624,7 +1658,6 @@ def test_graph_metrics_trace_output():
     corr.add_edge(OtherNode("Body"), EndLoopNode("M"))
     corr.add_edge(EndLoopNode("M"), EndLoopNode("K"))
     corr.add_edge(EndLoopNode("K"), OtherNode("Footer"))
-    corr.add_edge(EndLoopNode("K"), MetricsNode("End"))
     corr.add_edge(EndLoopNode("K"), TraceTreeNode("Z", "K", False))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("K"))
@@ -1675,6 +1708,14 @@ def test_graph_metrics_trace_output():
     corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('K'))
     corr.add_edge(MetricsHeaderNode('K'), LoopNode('K'))
     corr.add_edge(MetricsHeaderNode('M'), LoopNode('M'))
+    corr.add_edge(LoopNode('M'), MetricsNode('Body'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsFooterNode('K'), MetricsNode('End'))
+    corr.add_edge(EndLoopNode('M'), MetricsFooterNode('M'))
+    corr.add_edge(EndLoopNode('K'), MetricsFooterNode('K'))
+    corr.add_edge(MetricsFooterNode('M'), EndLoopNode('K'))
+    corr.add_edge(MetricsFooterNode('K'), OtherNode('Footer'))
+    corr.add_edge(EndLoopNode("K"), MetricsNode("End"))
 
     print_errs(graph, corr)
 

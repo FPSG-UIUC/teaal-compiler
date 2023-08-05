@@ -418,17 +418,23 @@ class FlowGraph:
             self.graph.add_edge(OtherNode("StartLoop"), MetricsNode("Start"))
             self.graph.add_edge(MetricsNode("Start"), chain[1])
 
-            metrics_chain = []
+            metrics_chain: List[Node] = []
             for rank in loop_order:
                 metrics_chain.append(MetricsHeaderNode(rank))
+            metrics_chain.append(MetricsNode("Body"))
+            for rank in reversed(loop_order):
+                metrics_chain.append(MetricsFooterNode(rank))
 
+            j = 0
             for i, metrics_node in enumerate(metrics_chain):
-                self.graph.add_edge(chain[i], metrics_chain[i])
-                self.graph.add_edge(metrics_chain[i], chain[i + 1])
+                self.graph.add_edge(chain[i + j], metrics_chain[i])
+                self.graph.add_edge(metrics_chain[i], chain[i + j + 1])
 
-            if metrics_chain:
-                self.graph.add_edge(MetricsNode("Start"), metrics_chain[0])
+                if metrics_node == MetricsNode("Body"):
+                    j = 1
 
+            self.graph.add_edge(MetricsNode("Start"), metrics_chain[0])
+            self.graph.add_edge(metrics_chain[-1], MetricsNode("End"))
             self.graph.add_edge(chain[-2], MetricsNode("End"))
             self.graph.add_edge(MetricsNode("End"), OtherNode("Footer"))
             self.graph.add_edge(OtherNode("Footer"), MetricsNode("Dump"))

@@ -422,20 +422,84 @@ def test_end():
     assert Collector.end().gen(0) == hifiber
 
 
-def test_make_body():
-    yaml = build_gamma_yaml()
+def test_make_body_none():
+    yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
 
     hifiber = ""
 
     assert collector.make_body().gen(0) == hifiber
 
+
+def test_make_body_iter_num():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [K, M]
+        A: [K, M]
+      expressions:
+        - Z[k, m] = A[k, m]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Buffer
+          class: Buffet
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: Buffer
+        bindings:
+        - tensor: Z
+          rank: K
+          type: payload
+          style: eager
+          evict-on: root
+          format: default
+    format:
+      Z:
+        default:
+          rank-order: [K, M]
+          K:
+            format: C
+            pbits: 32
+          M:
+            format: C
+            cbits: 32
+            pbits: 64
+    """
+    collector = build_collector(yaml, 0)
+
+    hifiber = "m_iter_num = Metrics.getIter().copy()"
+
+    assert collector.make_body().gen(0) == hifiber
+
+
+def test_make_loop_footer():
+    yaml = build_gamma_yaml()
+    collector = build_collector(yaml, 0)
+
+    assert collector.make_loop_footer("K").gen(0) == ""
+
     yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
 
-    hifiber = "iteration_num = Metrics.getIter().copy()"
+    program = collector.program
+    part_ir = program.get_partitioning()
+    for tensor in program.get_equation().get_tensors():
+        tensor.update_ranks(
+            part_ir.partition_ranks(
+                tensor.get_ranks(),
+                part_ir.get_all_parts(),
+                True,
+                True))
+        program.get_loop_order().apply(tensor)
 
-    assert collector.make_body().gen(0) == hifiber
+    hifiber = "n0_iter_num = Metrics.getIter().copy()"
+
+    assert collector.make_loop_footer("M2").gen(0) == ""
+    assert collector.make_loop_footer("K0").gen(0) == hifiber
 
 
 def test_make_loop_header():
@@ -488,11 +552,22 @@ def test_set_collecting_eager():
     yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
 
+    program = collector.program
+    part_ir = program.get_partitioning()
+    for tensor in program.get_equation().get_tensors():
+        tensor.update_ranks(
+            part_ir.partition_ranks(
+                tensor.get_ranks(),
+                part_ir.get_all_parts(),
+                True,
+                True))
+        program.get_loop_order().apply(tensor)
+
     hifiber = "Metrics.trace(\"N0\", type_=\"eager_a_m0_read\", consumable=False)"
     assert collector.set_collecting(
         "A", "N0", "M0", False, True).gen(0) == hifiber
 
-    hifiber = "iteration_num = None\n" + \
+    hifiber = "n0_iter_num = None\n" + \
         "Metrics.trace(\"N0\", type_=\"eager_z_m0_write\", consumable=False)"
     assert collector.set_collecting(
         "Z", "N0", "M0", False, False).gen(0) == hifiber
@@ -526,5 +601,5 @@ def test_trace_tree():
         "    a_m0.trace(\"eager_a_m0_read\")"
     assert collector.trace_tree("A", "M0", True).gen(0) == hifiber
 
-    hifiber = "z_m0.trace(\"eager_z_m0_write\", iteration_num=iteration_num)"
+    hifiber = "z_m0.trace(\"eager_z_m0_write\", iteration_num=n0_iter_num)"
     assert collector.trace_tree("Z", "M0", False).gen(0) == hifiber

@@ -84,6 +84,12 @@ def test_loop_node():
     assert LoopNode("K1").get_rank() == "K1"
 
 
+def test_metrics_footer_node():
+    assert repr(MetricsFooterNode("K1")) == "(MetricsFooterNode, K1)"
+
+    assert MetricsFooterNode("K1").get_rank() == "K1"
+
+
 def test_metrics_header_node():
     assert repr(MetricsHeaderNode("K1")) == "(MetricsHeaderNode, K1)"
 

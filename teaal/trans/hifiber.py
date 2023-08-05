@@ -171,7 +171,10 @@ class HiFiber:
                 i += j
 
             elif isinstance(node, MetricsNode):
-                if node.get_type() == "Dump":
+                if node.get_type() == "Body":
+                    code.add(self.collector.make_body())
+
+                elif node.get_type() == "Dump":
                     code.add(self.collector.dump())
 
                 elif node.get_type() == "End":
@@ -185,6 +188,9 @@ class HiFiber:
                         "Unknown node: " +
                         repr(node))  # pragma: no cover
 
+            elif isinstance(node, MetricsFooterNode):
+                code.add(self.collector.make_loop_footer(node.get_rank()))
+
             elif isinstance(node, MetricsHeaderNode):
                 code.add(self.collector.make_loop_header(node.get_rank()))
 
@@ -192,8 +198,6 @@ class HiFiber:
                 if node.get_type() == "Body":
                     code.add(self.eqn.make_update())
                     code.add(self.graphics.make_body())
-                    if self.metrics:
-                        code.add(self.collector.make_body())
 
                 elif node.get_type() == "Footer":
                     code.add(
