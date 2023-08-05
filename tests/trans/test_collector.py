@@ -7,6 +7,11 @@ from teaal.parse import *
 from teaal.trans.collector import Collector
 
 
+def build_extensor_yaml():
+    with open("tests/integration/extensor.yaml", "r") as f:
+        return f.read()
+
+
 def build_gamma_yaml():
     with open("tests/integration/gamma.yaml", "r") as f:
         return f.read()
@@ -306,10 +311,142 @@ def test_dump_outerspace_Z():
     assert collector.dump().gen(0) == hifiber
 
 
+def test_dump_extensor():
+    yaml = build_extensor_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"Z\": Format(Z_N2M2M1N1M0N0, {\"rank-order\": [\"N2\", \"M2\", \"M1\", \"N1\", \"M0\", \"N0\"], \"N2\": {\"format\": \"U\"}, \"M2\": {\"format\": \"U\"}, \"M1\": {\"format\": \"U\"}, \"N1\": {\"format\": \"U\"}, \"M0\": {\"format\": \"U\"}, \"N0\": {\"format\": \"C\", \"cbits\": 64, \"pbits\": 64}}), \"A\": Format(A_K2M2M1K1M0K0, {\"rank-order\": [\"K2\", \"M2\", \"M1\", \"K1\", \"M0\", \"K0\"], \"K2\": {\"format\": \"C\"}, \"M2\": {\"format\": \"C\"}, \"M1\": {\"format\": \"C\"}, \"K1\": {\"format\": \"C\", \"cbits\": 64}, \"M0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"K0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"B\": Format(B_N2K2N1K1N0K0, {\"rank-order\": [\"N2\", \"K2\", \"N1\", \"K1\", \"N0\", \"K0\"], \"N2\": {\"format\": \"C\"}, \"K2\": {\"format\": \"C\"}, \"N1\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"K1\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"N0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"K0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"K1\", \"type\": \"coord\", \"evict-on\": \"M2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"A\", \"rank\": \"M0\", \"type\": \"coord\", \"evict-on\": \"M2\", \"format\": \"default\", \"style\": \"eager\", \"root\": \"M0\"}, {\"tensor\": \"B\", \"rank\": \"N1\", \"type\": \"coord\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"N1\", \"type\": \"payload\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K1\", \"type\": \"coord\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K1\", \"type\": \"payload\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"N0\", \"type\": \"coord\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"eager\", \"root\": \"N0\"}, {\"tensor\": \"Z\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"N0\", \"type\": \"coord\"}, {\"tensor\": \"Z\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"N0\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"M0\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"K0\", \"type\": \"coord\"}, {\"tensor\": \"A\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"K0\", \"type\": \"payload\"}, {\"tensor\": \"B\", \"evict-on\": \"K2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"N0\", \"type\": \"payload\"}, {\"tensor\": \"B\", \"evict-on\": \"K2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"K0\", \"type\": \"coord\"}, {\"tensor\": \"B\", \"evict-on\": \"K2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"K0\", \"type\": \"payload\"}]\n" + \
+        "Traffic.filterTrace(\"tmp/extensor-N1-populate_1.csv\", \"tmp/extensor-N1-iter.csv\", \"tmp/extensor-N1-populate_1_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"tmp/extensor-K1-intersect_1.csv\", \"tmp/extensor-K1-iter.csv\", \"tmp/extensor-K1-intersect_1_payload.csv\")\n" + \
+        "traces = {(\"A\", \"K1\", \"coord\", \"read\"): \"tmp/extensor-K1-intersect_0.csv\", (\"A\", \"M0\", \"coord\", \"read\"): \"tmp/extensor-M0-eager_a_m0_read.csv\", (\"B\", \"N1\", \"coord\", \"read\"): \"tmp/extensor-N1-populate_1.csv\", (\"B\", \"N1\", \"payload\", \"read\"): \"tmp/extensor-N1-populate_1_payload.csv\", (\"B\", \"K1\", \"coord\", \"read\"): \"tmp/extensor-K1-intersect_1.csv\", (\"B\", \"K1\", \"payload\", \"read\"): \"tmp/extensor-K1-intersect_1_payload.csv\", (\"B\", \"N0\", \"coord\", \"read\"): \"tmp/extensor-N0-eager_b_n0_read.csv\", (\"Z\", \"N0\", \"coord\", \"read\"): \"tmp/extensor-N0-eager_z_m0_read.csv\", (\"Z\", \"N0\", \"coord\", \"write\"): \"tmp/extensor-N0-eager_z_m0_write.csv\", (\"Z\", \"N0\", \"payload\", \"read\"): \"tmp/extensor-N0-eager_z_m0_read.csv\", (\"Z\", \"N0\", \"payload\", \"write\"): \"tmp/extensor-N0-eager_z_m0_write.csv\", (\"A\", \"M0\", \"payload\", \"read\"): \"tmp/extensor-M0-eager_a_m0_read.csv\", (\"A\", \"K0\", \"coord\", \"read\"): \"tmp/extensor-K0-eager_a_m0_read.csv\", (\"A\", \"K0\", \"payload\", \"read\"): \"tmp/extensor-K0-eager_a_m0_read.csv\", (\"B\", \"N0\", \"payload\", \"read\"): \"tmp/extensor-N0-eager_b_n0_read.csv\", (\"B\", \"K0\", \"coord\", \"read\"): \"tmp/extensor-K0-eager_b_n0_read.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/extensor-K0-eager_b_n0_read.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 251658240, 64)\n" + \
+        "metrics[\"Z\"][\"MainMemory\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"A\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"A\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"B\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"B\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"FPMul\"] = {}\n" + \
+        "metrics[\"Z\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
+        "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()"
+
+    assert collector.dump().gen(0) == hifiber
+
+
+def test_dump_skip_zero_bits():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [K, M]
+        A: [K, M]
+      expressions:
+        - Z[k, m] = A[k, m]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Buffer
+          class: Buffet
+          attributes:
+            width: 64
+            depth: 1024
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: Buffer
+        bindings:
+        - tensor: Z
+          rank: K
+          type: payload
+          style: eager
+          evict-on: root
+          format: default
+        - tensor: A
+          rank: K
+          type: coord
+          style: eager
+          evict-on: root
+          format: default
+    format:
+      Z:
+        default:
+          rank-order: [K, M]
+          K:
+            format: C
+            cbits: 0
+          M:
+            format: C
+            pbits: 32
+      A:
+        default:
+          rank-order: [K, M]
+          K:
+            format: C
+            pbits: 0
+          M:
+            format: C
+            pbits: 32
+    """
+    collector = build_collector(yaml, 0)
+
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"Z\": Format(Z_KM, {\"rank-order\": [\"K\", \"M\"], \"K\": {\"format\": \"C\", \"cbits\": 0}, \"M\": {\"format\": \"C\", \"pbits\": 32}}), \"A\": Format(A_KM, {\"rank-order\": [\"K\", \"M\"], \"K\": {\"format\": \"C\", \"pbits\": 0}, \"M\": {\"format\": \"C\", \"pbits\": 32}})}\n" + \
+        "bindings = [{\"tensor\": \"Z\", \"evict-on\": \"root\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"K\", \"rank\": \"M\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"root\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"K\", \"rank\": \"M\", \"type\": \"payload\"}]\n" + \
+        "traces = {(\"Z\", \"M\", \"payload\", \"read\"): \"tmp/Z-M-eager_z_k_read.csv\", (\"Z\", \"M\", \"payload\", \"write\"): \"tmp/Z-M-eager_z_k_write.csv\", (\"A\", \"M\", \"payload\", \"read\"): \"tmp/Z-M-eager_a_k_read.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 65536, 64)"
+
+    assert collector.dump().gen(0) == hifiber
+
+
 def test_end():
     hifiber = "Metrics.endCollect()"
 
     assert Collector.end().gen(0) == hifiber
+
+
+def test_make_body():
+    yaml = build_gamma_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = ""
+
+    assert collector.make_body().gen(0) == hifiber
+
+    yaml = build_extensor_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "iteration_num = Metrics.getIter().copy()"
+
+    assert collector.make_body().gen(0) == hifiber
+
+
+def test_register_ranks():
+    yaml = build_gamma_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "Metrics.registerRank(\"M\")\n" + \
+        "Metrics.registerRank(\"K\")\n" + \
+        "Metrics.registerRank(\"N\")"
+
+    assert collector.register_ranks(["M", "K", "N"]).gen(0) == hifiber
 
 
 def test_set_collecting_type_err():
@@ -320,11 +457,6 @@ def test_set_collecting_type_err():
         collector.set_collecting(None, "K", "fiber", False, True)
     assert str(
         excinfo.value) == "Tensor must be specified for trace type fiber"
-
-    with pytest.raises(ValueError) as excinfo:
-        collector.set_collecting("A", "K", "iter", False, True)
-    assert str(
-        excinfo.value) == "Unable to collect iter traces for a specific tensor A"
 
 
 def test_set_collecting():
@@ -340,9 +472,34 @@ def test_set_collecting():
         None, "K", "iter", False, True).gen(0) == hifiber
 
 
+def test_set_collecting_eager():
+    yaml = build_extensor_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "Metrics.trace(\"N0\", type_=\"eager_a_m0_read\", consumable=False)"
+    assert collector.set_collecting(
+        "A", "N0", "M0", False, True).gen(0) == hifiber
+
+    hifiber = "iteration_num = None\n" + \
+        "Metrics.trace(\"N0\", type_=\"eager_z_m0_write\", consumable=False)"
+    assert collector.set_collecting(
+        "Z", "N0", "M0", False, False).gen(0) == hifiber
+
+
 def test_start():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
     hifiber = "Metrics.beginCollect(\"tmp/gamma_T\")"
 
     assert collector.start().gen(0) == hifiber
+
+
+def test_trace_tree():
+    yaml = build_extensor_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "a_m0.trace(\"eager_a_m0_read\")"
+    assert collector.trace_tree("A", "M0", True).gen(0) == hifiber
+
+    hifiber = "z_m0.trace(\"eager_z_m0_write\", iteration_num=iteration_num)"
+    assert collector.trace_tree("Z", "M0", False).gen(0) == hifiber

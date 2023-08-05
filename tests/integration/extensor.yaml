@@ -253,7 +253,7 @@ bindings:
       format: default
       style: eager
     - tensor: Z
-      rank: N0
+      rank: M0
       type: coord
       evict-on: M2
       format: default

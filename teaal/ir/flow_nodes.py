@@ -484,6 +484,30 @@ class RankNode(Node):
         return self.tensor, self.rank
 
 
+class RegisterRanksNode(Node):
+    """
+    A node representing explicit rank registration
+    """
+
+    def __init__(self, ranks: List[str]) -> None:
+        """
+        Construct a node representing the explicit rank registration
+        """
+        self.ranks = ranks
+
+    def get_ranks(self) -> List[str]:
+        """
+        Accessor for the ranks
+        """
+        return self.ranks
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a RegisterRanksNode
+        """
+        return self.ranks,
+
+
 class SwizzleNode(Node):
     """
     A Node representing a swizzleRanks call
@@ -546,3 +570,41 @@ class TensorNode(Node):
         Iterable of fields of a TensorNode
         """
         return self.tensor,
+
+
+class TraceTreeNode(Node):
+    """
+    A Node representing the trace of a subtree
+    """
+
+    def __init__(self, tensor: str, rank: str, is_read_trace: bool):
+        """
+        Construct a TraceTreeNode
+        """
+        self.tensor = tensor
+        self.rank = rank
+        self.is_read_trace = is_read_trace
+
+    def get_is_read_trace(self) -> bool:
+        """
+        Accessor for the is_read_trace property
+        """
+        return self.is_read_trace
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def get_tensor(self) -> str:
+        """
+        Accessor for the tensor
+        """
+        return self.tensor
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields fo a TraceTreeNode
+        """
+        return self.tensor, self.rank, self.is_read_trace

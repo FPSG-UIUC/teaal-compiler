@@ -189,6 +189,8 @@ class HiFiber:
                 if node.get_type() == "Body":
                     code.add(self.eqn.make_update())
                     code.add(self.graphics.make_body())
+                    if self.metrics:
+                        code.add(self.collector.make_body())
 
                 elif node.get_type() == "Footer":
                     code.add(
@@ -215,6 +217,9 @@ class HiFiber:
                 tensor.from_fiber()
                 code.add(self.partitioner.partition(tensor, ranks))
 
+            elif isinstance(node, RegisterRanksNode):
+                code.add(self.collector.register_ranks(node.get_ranks()))
+
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(
@@ -223,6 +228,12 @@ class HiFiber:
                         node.get_ranks(),
                         node.get_type()))
 
+            elif isinstance(node, TraceTreeNode):
+                code.add(
+                    self.collector.trace_tree(
+                        node.get_tensor(),
+                        node.get_rank(),
+                        node.get_is_read_trace()))
             else:
                 raise ValueError(
                     "Unknown node: " +

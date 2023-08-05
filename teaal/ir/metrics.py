@@ -122,6 +122,12 @@ class Metrics:
 
         return info
 
+    def get_eager_write(self) -> bool:
+        """
+        Returns True if the kernel perfoms an eager write
+        """
+        return self.eager_write
+
     def get_fiber_trace(
             self,
             tensor: str,
@@ -435,6 +441,7 @@ class Metrics:
         """
         einsum = self.program.get_equation().get_output().root_name()
 
+        self.eager_write = False
         for tensor_ir in self.program.get_equation().get_tensors():
             tensor = tensor_ir.root_name()
             spec = self.format.get_spec(tensor)
@@ -458,5 +465,11 @@ class Metrics:
 
                 for component in self.hardware.get_components(
                         einsum, BuffetComponent):
+
+                    if tensor_ir.get_is_output():
+                        for binding in component.get_bindings()[einsum]:
+                            if binding["style"] == "eager":
+                                self.eager_write = True
+
                     component.expand_eager(
                         einsum, tensor, format_, spec[format_]["rank-order"], types)

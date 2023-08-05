@@ -720,7 +720,25 @@ def test_hifiber_intersect():
 def test_hifiber_gamma_no_errors():
     # There is too much variation in the Gamma spec to test if the HiFiber
     # remains unchanged
+    # TODO: If stuff gets swallowed into the MetricsNode("Start") this may be
+    # possoble
     fname = "tests/integration/gamma.yaml"
+    einsum = Einsum.from_file(fname)
+    mapping = Mapping.from_file(fname)
+    arch = Architecture.from_file(fname)
+    bindings = Bindings.from_file(fname)
+    format_ = Format.from_file(fname)
+
+    print(HiFiber(einsum, mapping, arch, bindings, format_))
+
+
+def test_hifiber_extensor_no_errors():
+    # There is too much variation in the ExTensor spec to test if the HiFiber
+    # remains unchanged
+    # TODO: If stuff gets swallowed into the MetricsNode("Start") this may be
+    # possoble
+
+    fname = "tests/integration/extensor.yaml"
     einsum = Einsum.from_file(fname)
     mapping = Mapping.from_file(fname)
     arch = Architecture.from_file(fname)

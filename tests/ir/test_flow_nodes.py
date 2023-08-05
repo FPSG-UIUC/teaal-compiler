@@ -110,6 +110,13 @@ def test_rank_node():
     assert RankNode("A", "K").get_rank() == "K"
 
 
+def test_register_ranks_node():
+    assert repr(RegisterRanksNode(["K", "M", "N"])
+                ) == "(RegisterRanksNode, ['K', 'M', 'N'])"
+
+    assert RegisterRanksNode(["K", "M", "N"]).get_ranks() == ["K", "M", "N"]
+
+
 def test_swizzle_root_node():
     assert repr(SwizzleNode("A", ["K"], "loop-order")
                 ) == "(SwizzleNode, A, ['K'], loop-order)"
@@ -123,3 +130,11 @@ def test_tensor_node():
     assert repr(TensorNode("A")) == "(TensorNode, A)"
 
     assert TensorNode("A").get_tensor() == "A"
+
+
+def test_trace_tree_node():
+    assert repr(TraceTreeNode("A", "K", True)) == "(TraceTreeNode, A, K, True)"
+
+    assert TraceTreeNode("A", "K", True).get_tensor() == "A"
+    assert TraceTreeNode("A", "K", True).get_rank() == "K"
+    assert TraceTreeNode("A", "K", True).get_is_read_trace()

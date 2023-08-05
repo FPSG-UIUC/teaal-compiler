@@ -118,8 +118,7 @@ class FlowGraph:
             self.__build_swizzle_root_fiber(tensor, True)
 
         # Add metrics collection
-        for tensor in self.program.get_equation().get_tensors():
-            self.__build_collecting(tensor)
+        self.__build_collecting(chain)
         self.__build_hw_components(chain)
 
         iter_graph = IterationGraph(self.program)
@@ -138,7 +137,7 @@ class FlowGraph:
             tensor.reset()
             tensor.set_is_output(is_output)
 
-    def __build_collecting(self, tensor: Tensor) -> None:
+    def __build_collecting(self, chain: List[Node]) -> None:
         """
         Build a CollectingNode should it be required
         """
@@ -149,37 +148,104 @@ class FlowGraph:
         if not loop_ranks:
             return
 
-        loop_node = LoopNode(loop_ranks[0])
-        tensor_name = tensor.root_name()
         collecting_nodes = []
-        for rank, type_, consumable in self.metrics.get_collected_tensor_info(
-                tensor_name):
-            if type_ == "fiber":
-                collecting_nodes.append(
-                    CollectingNode(
-                        tensor_name,
-                        rank,
-                        type_,
-                        consumable,
-                        True))
+        register_ranks_node: Optional[Node] = None
+        for tensor in self.program.get_equation().get_tensors():
+            tensor_name = tensor.root_name()
+            part_ir = self.program.get_partitioning()
+            part_ranks = part_ir.partition_ranks(
+                tensor.get_init_ranks(), part_ir.get_all_parts(), True, True)
+            final_tensor = Tensor(tensor_name, part_ranks)
+            self.program.get_loop_order().apply(final_tensor)
 
-                if self.program.get_equation().get_output().root_name() == tensor_name:
+            loop_node = LoopNode(loop_ranks[0])
+            for rank, type_, consumable in self.metrics.get_collected_tensor_info(
+                    tensor_name):
+                if type_ == "fiber":
                     collecting_nodes.append(
                         CollectingNode(
                             tensor_name,
                             rank,
                             type_,
                             consumable,
-                            False))
+                            True))
 
-            # type_ == "iter"
-            else:
-                collecting_nodes.append(CollectingNode(
-                    None, rank, type_, consumable, True))
+                    if tensor.get_is_output():
+                        collecting_nodes.append(
+                            CollectingNode(
+                                tensor_name,
+                                rank,
+                                type_,
+                                consumable,
+                                False))
+
+                elif type_ == "iter":
+                    collecting_nodes.append(CollectingNode(
+                        None, rank, type_, consumable, True))
+
+                # Type is a rank name for eager iteration
+                else:
+                    collecting_nodes.append(
+                        CollectingNode(
+                            tensor_name,
+                            rank,
+                            type_,
+                            consumable,
+                            True))
+
+                    trace_tree_node = TraceTreeNode(tensor_name, type_, True)
+                    self.graph.add_edge(MetricsNode("Start"), trace_tree_node)
+
+                    # Load right before use
+                    self.graph.add_edge(
+                        chain[chain.index(LoopNode(type_)) - 1], trace_tree_node)
+                    self.graph.add_edge(
+                        FiberNode(
+                            tensor_name.lower() +
+                            "_" +
+                            type_.lower()),
+                        trace_tree_node)
+
+                    # If we are doing this, we need to also register the rank
+                    # order explicitly
+                    if register_ranks_node is None:
+                        register_ranks_node = RegisterRanksNode(
+                            self.program.get_loop_order().get_ranks())
+
+                    self.graph.add_edge(
+                        MetricsNode("Start"), register_ranks_node)
+
+                    if tensor.get_is_output():
+                        collecting_nodes.append(
+                            CollectingNode(
+                                tensor_name,
+                                rank,
+                                type_,
+                                consumable,
+                                False))
+
+                        # Store at the last moment
+                        i = final_tensor.get_ranks().index(type_)
+
+                        last: Node
+                        if i == 0:
+                            last = OtherNode("Footer")
+                        else:
+                            last = EndLoopNode(final_tensor.get_ranks()[i - 1])
+                        j = chain.index(last)
+
+                        trace_tree_node = TraceTreeNode(
+                            tensor_name, type_, False)
+                        self.graph.add_edge(chain[j - 1], trace_tree_node)
+                        self.graph.add_edge(trace_tree_node, chain[j])
+                        self.graph.add_edge(
+                            trace_tree_node, MetricsNode("End"))
 
         for collecting_node in collecting_nodes:
             self.graph.add_edge(MetricsNode("Start"), collecting_node)
             self.graph.add_edge(collecting_node, loop_node)
+            if register_ranks_node is not None:
+                self.graph.add_edge(collecting_node, register_ranks_node)
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
