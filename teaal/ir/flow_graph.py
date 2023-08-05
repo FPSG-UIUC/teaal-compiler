@@ -357,7 +357,8 @@ class FlowGraph:
                 get_payload_node)
 
             for rank in ranks:
-                loop_rank = part.get_final_rank_id(tensor, rank)
+                loop_rank = part.get_final_rank_id(
+                    tensor.get_init_ranks(), rank)
                 self.graph.add_edge(LoopNode(loop_rank), get_payload_node)
 
         for ranks, tensor in iter_graph.pop_discord():

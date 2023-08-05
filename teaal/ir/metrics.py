@@ -159,6 +159,10 @@ class Metrics:
         """
         Get the name of the fiber trace for this fiber
         """
+        # If the rank is not in the set of fiber_traces (not in the loop
+        # order), it must be being iterated with a get payload
+        if rank not in self.fiber_traces:
+            return "get_payload_" + tensor
         return self.fiber_traces[rank][tensor][is_read_trace]
 
     def get_format(self) -> Format:

@@ -159,7 +159,7 @@ class Header:
 
             if loop_order.is_ready(
                 part.get_final_rank_id(
-                    output, ranks[i]), pos):
+                    output.get_init_ranks(), ranks[i]), pos):
                 final_pos[ranks[i]] = pos
 
                 i += 1

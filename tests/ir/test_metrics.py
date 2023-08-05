@@ -18,6 +18,11 @@ def build_gamma_yaml():
         return f.read()
 
 
+def build_sigma_yaml():
+    with open("tests/integration/sigma.yaml", "r") as f:
+        return f.read()
+
+
 def parse_yamls(yaml):
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -666,6 +671,14 @@ def test_get_fiber_trace_leader_follower():
     assert metrics.get_fiber_trace("A", "K", True) == "intersect_1"
     assert metrics.get_fiber_trace("C", "K", True) == "intersect_2"
     assert metrics.get_fiber_trace("D", "K", True) == "intersect_3"
+
+
+def test_get_fiber_trace_get_payload():
+    program, arch, bindings, format_ = parse_yamls(build_sigma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("B", "K0", True) == "get_payload_B"
 
 
 def test_get_format():

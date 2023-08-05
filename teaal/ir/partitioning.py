@@ -146,7 +146,7 @@ class Partitioning:
         """
         return self.dyn_parts
 
-    def get_final_rank_id(self, tensor: Tensor, rank: str) -> str:
+    def get_final_rank_id(self, init_ranks: Iterable[str], rank: str) -> str:
         """
         Get the name of this rank in the final loop order
         """
@@ -165,7 +165,7 @@ class Partitioning:
                 # If all flattened ranks do not appear in the tensor, the final
                 # rank ID is the bottom flattened rank
                 for rank in node.get_ranks():
-                    if self.get_root_name(rank) not in tensor.get_init_ranks():
+                    if self.get_root_name(rank) not in init_ranks:
                         comp = min
             else:
                 node = comp(
