@@ -148,6 +148,18 @@ class OMul(Operator):
         return "*"
 
 
+class ONotIn(Operator):
+    """
+    The HiFiber not in operator
+    """
+
+    def gen(self) -> str:
+        """
+        Generate the HiFiber code for the ONotIn operator
+        """
+        return "not in"
+
+
 class OOr(Operator):
     """
     The HiFiber or operator

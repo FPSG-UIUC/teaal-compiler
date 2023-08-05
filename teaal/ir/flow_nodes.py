@@ -373,6 +373,33 @@ class LoopNode(Node):
         return self.rank,
 
 
+class MetricsHeaderNode(Node):
+    """
+    A Node for collecting metrics before the start of the given loop
+
+    TODO: Swallow everything necessary into this
+    TODO: Make a corresponding metrics footer node
+    """
+
+    def __init__(self, rank: str) -> None:
+        """
+        Construct a MetricsHeaderNode
+        """
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a MetricsHeaderNode
+        """
+        return self.rank,
+
+
 class MetricsNode(Node):
     """
     A Node for metrics collection

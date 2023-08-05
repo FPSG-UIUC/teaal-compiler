@@ -52,6 +52,7 @@ class Metrics:
         self.format = format_
 
         self.__build_format_options()
+        self.__build_eager_evicts()
         self.__expand_eager()
 
         self.__build_coiter_ranks()
@@ -121,6 +122,28 @@ class Metrics:
                     info.add((binding["rank"], "fiber", True))
 
         return info
+
+    def get_eager_evict_on(self, tensor: str, rank: str) -> List[str]:
+        """
+        Get the ranks eager load should be evicted on in loop order
+
+        TODO: Test that they are in loop order
+        """
+        ranks = []
+        for loop_rank, evicts in self.eager_evicts.items():
+            if (tensor, rank) in evicts:
+                ranks.append(loop_rank)
+        return ranks
+
+    def get_eager_evicts(self, rank: str) -> List[Tuple[str, str]]:
+        """
+        Get the subtrees that were eager loaded and should be evicted on this
+        rank
+        """
+        if rank not in self.eager_evicts:
+            return []
+
+        return self.eager_evicts[rank]
 
     def get_eager_write(self) -> bool:
         """
@@ -231,6 +254,27 @@ class Metrics:
                     raise NotImplementedError
 
                 self.coiterators[rank] = intersector
+
+    def __build_eager_evicts(self) -> None:
+        """
+        Build a dictionary describing the ranks eager accesses will be evicted on
+
+        self.eager_evicts: Dict[evict_rank, List[Tuple[tensor, root_rank]]]
+        """
+        einsum = self.program.get_equation().get_output().root_name()
+
+        self.eager_evicts: Dict[str, List[Tuple[str, str]]] = {}
+        for buffet in self.hardware.get_components(einsum, BuffetComponent):
+            for binding in buffet.get_bindings()[einsum]:
+                if binding["style"] != "eager":
+                    continue
+
+                evict_on = binding["evict-on"]
+                if evict_on not in self.eager_evicts:
+                    self.eager_evicts[evict_on] = []
+
+                self.eager_evicts[evict_on].append(
+                    (binding["tensor"], binding["root"]))
 
     def __build_fiber_traces(self) -> None:
         """

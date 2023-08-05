@@ -185,6 +185,9 @@ class HiFiber:
                         "Unknown node: " +
                         repr(node))  # pragma: no cover
 
+            elif isinstance(node, MetricsHeaderNode):
+                code.add(self.collector.make_loop_header(node.get_rank()))
+
             elif isinstance(node, OtherNode):
                 if node.get_type() == "Body":
                     code.add(self.eqn.make_update())

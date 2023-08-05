@@ -14,7 +14,11 @@ def print_errs(graph, corr):
     print("In Graph")
     for edge in graph.edges:
         if edge not in corr.edges:
-            print(edge)
+            print("    corr.add_edge", end="(")
+            print(type(edge[0]).__name__, end="(")
+            print(str(list(edge[0]._Node__key()))[1:-1], end="), ")
+            print(type(edge[1]).__name__, end="(")
+            print(str(list(edge[1]._Node__key()))[1:-1], end="))\n")
 
     print("In Corr")
     for edge in corr.edges:
@@ -960,133 +964,69 @@ def test_graph_metrics_T():
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            None,
-            "K",
-            "iter",
-            False, True))
+        CollectingNode(None, "K", "iter", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "A",
-            "M",
-            "fiber",
-            False, True))
+        CollectingNode("A", "M", "fiber", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            None,
-            "M",
-            "iter",
-            False, True))
+        CollectingNode(None, "M", "iter", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "A",
-            "K",
-            "fiber",
-            False, True))
+        CollectingNode("A", "K", "fiber", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "B",
-            "N",
-            "fiber",
-            False, True))
+        CollectingNode("B", "N", "fiber", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            None,
-            "N",
-            "iter",
-            False, True))
+        CollectingNode(None, "N", "iter", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "B",
-            "K",
-            "fiber",
-            False, True))
+        CollectingNode("B", "K", "fiber", False, True))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("T", ['M', 'K', 'N']), LoopNode("M"))
-    corr.add_edge(SwizzleNode(
-        "A", ['M', 'K'], "loop-order"), GetRootNode("A", ['M', 'K']))
     corr.add_edge(
-        SwizzleNode(
-            "A", [
-                'M', 'K'], "loop-order"), OtherNode("Graphics"))
+        SwizzleNode("A", ['M', 'K'], "loop-order"),
+        GetRootNode("A", ['M', 'K']))
+    corr.add_edge(
+        SwizzleNode("A", ['M', 'K'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['M', 'K']), LoopNode("M"))
     corr.add_edge(SwizzleNode(
         "B", ['K', 'N'], "loop-order"), GetRootNode("B", ['K', 'N']))
     corr.add_edge(
-        SwizzleNode(
-            "B", [
-                'K', 'N'], "loop-order"), OtherNode("Graphics"))
+        SwizzleNode("B", ['K', 'N'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("B", ['K', 'N']), LoopNode("K"))
     corr.add_edge(
-        CollectingNode(
-            None,
-            "K",
-            "iter",
-            False,
-            True),
+        CollectingNode(None, "K", "iter", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "A",
-            "M",
-            "fiber",
-            False,
-            True),
+        CollectingNode("A", "M", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            None,
-            "M",
-            "iter",
-            False,
-            True),
+        CollectingNode(None, "M", "iter", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "A",
-            "K",
-            "fiber",
-            False,
-            True),
+        CollectingNode("A", "K", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "B",
-            "N",
-            "fiber",
-            False,
-            True),
+        CollectingNode("B", "N", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            None,
-            "N",
-            "iter",
-            False,
-            True),
+        CollectingNode(None, "N", "iter", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "B",
-            "K",
-            "fiber",
-            False,
-            True),
+        CollectingNode("B", "K", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        MetricsNode("Start"),
-        CollectingNode(
-            "A",
-            "K",
-            "fiber",
-            True, True))
+        MetricsNode("Start"), CollectingNode("A", "K", "fiber", True, True))
     corr.add_edge(CollectingNode("A", "K", "fiber", True, True), LoopNode("M"))
+    corr.add_edge(LoopNode('M'), MetricsHeaderNode('K'))
+    corr.add_edge(LoopNode('K'), MetricsHeaderNode('N'))
+    corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('M'))
+    corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('M'))
+    corr.add_edge(MetricsHeaderNode('M'), LoopNode('M'))
+    corr.add_edge(MetricsHeaderNode('K'), LoopNode('K'))
+    corr.add_edge(MetricsHeaderNode('N'), LoopNode('N'))
 
     print_errs(graph, corr)
 
@@ -1119,93 +1059,39 @@ def test_graph_metrics_Z():
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "M",
-            "fiber",
-            False, True))
+        CollectingNode("Z", "M", "fiber", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "M",
-            "fiber",
-            False, False))
+        CollectingNode("Z", "M", "fiber", False, False))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            None,
-            "N",
-            "iter",
-            False, True))
+        CollectingNode(None, "N", "iter", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "N",
-            "fiber",
-            False, True))
+        CollectingNode("Z", "N", "fiber", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "N",
-            "fiber",
-            False, False))
+        CollectingNode("Z", "N", "fiber", False, False))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            None,
-            "M",
-            "iter",
-            False, True))
+        CollectingNode(None, "M", "iter", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "A",
-            "M",
-            "fiber",
-            False,
-            True))
+        CollectingNode("A", "M", "fiber", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            None,
-            "K",
-            "iter",
-            False,
-            True))
+        CollectingNode(None, "K", "iter", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "A",
-            "K",
-            "fiber",
-            False,
-            True))
+        CollectingNode("A", "K", "fiber", False, True))
     corr.add_edge(
-        CollectingNode(
-            "A",
-            "M",
-            "fiber",
-            False,
-            True),
+        CollectingNode("A", "M", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            None,
-            "K",
-            "iter",
-            False,
-            True),
+        CollectingNode(None, "K", "iter", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "A",
-            "K",
-            "fiber",
-            False,
-            True),
+        CollectingNode("A", "K", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", ['M', 'N']), LoopNode("M"))
@@ -1230,53 +1116,30 @@ def test_graph_metrics_Z():
                 'M', 'K'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['M', 'K']), LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "Z",
-            "M",
-            "fiber",
-            False,
-            True),
+        CollectingNode("Z", "M", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "Z",
-            "M",
-            "fiber",
-            False,
-            False),
+        CollectingNode("Z", "M", "fiber", False, False),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            None,
-            "N",
-            "iter",
-            False,
-            True),
+        CollectingNode(None, "N", "iter", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "Z",
-            "N",
-            "fiber",
-            False,
-            True),
+        CollectingNode("Z", "N", "fiber", False, True),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            "Z",
-            "N",
-            "fiber",
-            False,
-            False),
+        CollectingNode("Z", "N", "fiber", False, False),
         LoopNode("M"))
     corr.add_edge(
-        CollectingNode(
-            None,
-            "M",
-            "iter",
-            False,
-            True),
+        CollectingNode(None, "M", "iter", False, True),
         LoopNode("M"))
+    corr.add_edge(LoopNode('M'), MetricsHeaderNode('N'))
+    corr.add_edge(LoopNode('N'), MetricsHeaderNode('K'))
+    corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('M'))
+    corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('M'))
+    corr.add_edge(MetricsHeaderNode('M'), LoopNode('M'))
+    corr.add_edge(MetricsHeaderNode('N'), LoopNode('N'))
+    corr.add_edge(MetricsHeaderNode('K'), LoopNode('K'))
 
     print_errs(graph, corr)
 
@@ -1435,20 +1298,10 @@ def test_graph_metrics_extensor():
             "B", [
                 'N2', 'K2', 'N1', 'K1', 'N0', 'K0'], "loop-order"))
     corr.add_edge(SwizzleNode("B",
-                              ['N2',
-                               'K2',
-                               'N1',
-                               'K1',
-                               'N0',
-                               'K0'],
+                              ['N2', 'K2', 'N1', 'K1', 'N0', 'K0'],
                               "loop-order"),
                   GetRootNode("B",
-                              ['N2',
-                               'K2',
-                               'N1',
-                               'K1',
-                               'N0',
-                               'K0']))
+                              ['N2', 'K2', 'N1', 'K1', 'N0', 'K0']))
     corr.add_edge(
         SwizzleNode(
             "B", [
@@ -1578,6 +1431,25 @@ def test_graph_metrics_extensor():
     corr.add_edge(
         CollectingNode("B", "K2", "fiber", True, True),
         RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(LoopNode('N2'), MetricsHeaderNode('K2'))
+    corr.add_edge(LoopNode('K2'), MetricsHeaderNode('M2'))
+    corr.add_edge(LoopNode('M2'), MetricsHeaderNode('M1'))
+    corr.add_edge(LoopNode('M1'), MetricsHeaderNode('N1'))
+    corr.add_edge(LoopNode('N1'), MetricsHeaderNode('K1'))
+    corr.add_edge(LoopNode('K1'), MetricsHeaderNode('M0'))
+    corr.add_edge(LoopNode('M0'), MetricsHeaderNode('N0'))
+    corr.add_edge(LoopNode('N0'), MetricsHeaderNode('K0'))
+    corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('N2'))
+    corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('N2'))
+    corr.add_edge(MetricsHeaderNode('N2'), LoopNode('N2'))
+    corr.add_edge(MetricsHeaderNode('K2'), LoopNode('K2'))
+    corr.add_edge(MetricsHeaderNode('M2'), LoopNode('M2'))
+    corr.add_edge(MetricsHeaderNode('M1'), LoopNode('M1'))
+    corr.add_edge(MetricsHeaderNode('N1'), LoopNode('N1'))
+    corr.add_edge(MetricsHeaderNode('K1'), LoopNode('K1'))
+    corr.add_edge(MetricsHeaderNode('M0'), LoopNode('M0'))
+    corr.add_edge(MetricsHeaderNode('N0'), LoopNode('N0'))
+    corr.add_edge(MetricsHeaderNode('K0'), LoopNode('K0'))
 
     print_errs(graph, corr)
 
@@ -1684,6 +1556,9 @@ def test_graph_metrics_swizzle_for_part():
             "loop-order"),
         OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['MK']), LoopNode("MK"))
+    corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('MK'))
+    corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('MK'))
+    corr.add_edge(MetricsHeaderNode('MK'), LoopNode('MK'))
 
     print_errs(graph, corr)
 
@@ -1762,36 +1637,16 @@ def test_graph_metrics_trace_output():
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(['K', 'M']))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "M",
-            "K",
-            False,
-            True))
+        CollectingNode("Z", "M", "K", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "M",
-            "K",
-            False,
-            False))
+        CollectingNode("Z", "M", "K", False, False))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "K",
-            "K",
-            False,
-            True))
+        CollectingNode("Z", "K", "K", False, True))
     corr.add_edge(
         MetricsNode("Start"),
-        CollectingNode(
-            "Z",
-            "K",
-            "K",
-            False,
-            False))
+        CollectingNode("Z", "K", "K", False, False))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("Z", ['K', 'M']), TraceTreeNode("Z", "K", True))
     corr.add_edge(GetRootNode("Z", ['K', 'M']), LoopNode("K"))
@@ -1799,8 +1654,7 @@ def test_graph_metrics_trace_output():
         "A", ['K', 'M'], "loop-order"), GetRootNode("A", ['K', 'M']))
     corr.add_edge(
         SwizzleNode(
-            "A", [
-                'K', 'M'], "loop-order"), OtherNode("Graphics"))
+            "A", ['K', 'M'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['K', 'M']), LoopNode("K"))
     corr.add_edge(TraceTreeNode("Z", "K", False), OtherNode("Footer"))
     corr.add_edge(TraceTreeNode("Z", "K", False), MetricsNode("End"))
@@ -1816,6 +1670,11 @@ def test_graph_metrics_trace_output():
     corr.add_edge(CollectingNode("Z", "K", "K", False, False), LoopNode("K"))
     corr.add_edge(CollectingNode("Z", "K", "K", False, False),
                   RegisterRanksNode(['K', 'M']))
+    corr.add_edge(LoopNode('K'), MetricsHeaderNode('M'))
+    corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('K'))
+    corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('K'))
+    corr.add_edge(MetricsHeaderNode('K'), LoopNode('K'))
+    corr.add_edge(MetricsHeaderNode('M'), LoopNode('M'))
 
     print_errs(graph, corr)
 

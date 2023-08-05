@@ -145,6 +145,24 @@ class Collector:
 
         return block
 
+    def make_loop_header(self, rank: str) -> Statement:
+        """
+        Make a header for a loop
+
+        TODO: Swallow other metrics counting into here
+        """
+        block = SBlock([])
+
+        loop_ranks = ["root"] + self.program.get_loop_order().get_ranks()
+        i = loop_ranks.index(rank)
+
+        eager_evicts = self.metrics.get_eager_evicts(loop_ranks[i - 1])
+        for tensor, root in eager_evicts:
+            tracker = "eager_" + tensor.lower() + "_" + root.lower() + "_read"
+            block.add(SAssign(AVar(tracker), EFunc("set", ())))
+
+        return block
+
     def register_ranks(self, ranks: List[str]) -> Statement:
         """
         Register the given ranks
@@ -232,7 +250,27 @@ class Collector:
         if not is_read_trace:
             args.append(AParam("iteration_num", EVar("iteration_num")))
 
-        return SExpr(EMethod(EVar(fiber), "trace", args))
+        trace_stmt = SExpr(EMethod(EVar(fiber), "trace", args))
+        if not is_read_trace:
+            return trace_stmt
+
+        # If read, only read the first time
+        loop_ranks = self.program.get_loop_order().get_ranks()
+        tensor_ir = self.program.get_equation().get_tensor(tensor)
+
+        evict_rank = self.metrics.get_eager_evict_on(tensor, rank)[-1]
+        er_ind = loop_ranks.index(evict_rank)
+        tree_ind = loop_ranks.index(rank)
+
+        key = []
+        for loop_rank in loop_ranks[er_ind + 1:tree_ind]:
+            if loop_rank in tensor_ir.get_ranks():
+                key.append(EVar(loop_rank.lower()))
+        key_tuple = ETuple(tuple(key))
+
+        cond = EBinOp(key_tuple, ONotIn(), EVar(trace))
+        add_key = SExpr(EMethod(EVar(trace), "add", [AJust(key_tuple)]))
+        return SIf((cond, SBlock([add_key, trace_stmt])), [], None)
 
     def __get_trace(self, binding: dict,
                     is_read: bool) -> Tuple[str, Statement]:

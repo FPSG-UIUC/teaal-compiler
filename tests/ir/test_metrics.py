@@ -373,6 +373,26 @@ def test_get_collected_tensor_info_extra_intersection_test():
     assert metrics.get_collected_tensor_info("Z") == set()
 
 
+def test_get_eager_evict_on():
+    program, arch, bindings, format_ = parse_yamls(build_extensor_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_eager_evict_on("A", "K2") == []
+    assert metrics.get_eager_evict_on("A", "M0") == ["M2"]
+    assert metrics.get_eager_evict_on("B", "N0") == ["K2"]
+
+
+def test_get_eager_evicts():
+    program, arch, bindings, format_ = parse_yamls(build_extensor_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_eager_evicts("N2") == []
+    assert metrics.get_eager_evicts("K2") == [("B", "N0")]
+    assert metrics.get_eager_evicts("M2") == [("A", "M0"), ("Z", "M0")]
+
+
 def test_get_eager_write():
     program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
     hardware = Hardware(arch, bindings, program)
