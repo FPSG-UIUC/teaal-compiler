@@ -57,10 +57,6 @@ architecture:
             class: Compute
             attributes:
               type: mul
-          - name: Reduction
-            class: Compute
-            attributes:
-              type: add
 format:
   A:
     flattened:
@@ -101,9 +97,6 @@ bindings:
       type: payload
       evict-on: root
       format: partitioned
-  - component: Reduction
-    bindings:
-    - op: add
   - component: RegFile
     bindings:
     - tensor: A
