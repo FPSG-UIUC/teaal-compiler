@@ -83,7 +83,6 @@ class Metrics:
             - "iter" - corresponding to the iteration of the loop nest
             - rank - the rank that the eager iteration starts at
         """
-        # TODO: What about eager binding?
         # Collect traces for data traffic
         info = set()
         einsum = self.program.get_equation().get_output().root_name()
@@ -96,7 +95,9 @@ class Metrics:
 
                         if style == "lazy":
                             info.add((rank, "fiber", False))
-                            if i == 1:
+                            fiber_trace = self.get_fiber_trace(
+                                tensor, rank, True)
+                            if i == 1 and fiber_trace != "iter" and fiber_trace[:11] != "get_payload":
                                 info.add((rank, "iter", False))
 
                         else:

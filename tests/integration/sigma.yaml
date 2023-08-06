@@ -23,7 +23,7 @@ mapping:
   spacetime:
     Z:
       space: [MK00]
-      time: [K1, MK01, M]
+      time: [K1, MK01, N]
 architecture:
   Accelerator:
   - name: System

@@ -79,18 +79,28 @@ def build_matmul_header(mapping):
 
 
 def test_make_get_payload():
-    hifiber = "a_val = a_m.getPayload(m, k)"
-
+    header = build_matmul_header("")
     tensor = Tensor("A", ["M", "K"])
-    assert Header.make_get_payload(tensor, ["M", "K"]).gen(0) == hifiber
+
+    hifiber = "a_val = a_m.getPayload(m, k)"
+    assert header.make_get_payload(tensor, ["M", "K"]).gen(0) == hifiber
 
 
 def test_make_get_payload_output():
-    hifiber = "z_n = z_m.getPayloadRef(m)"
-
+    header = build_matmul_header("")
     tensor = Tensor("Z", ["M", "N"])
     tensor.set_is_output(True)
-    assert Header.make_get_payload(tensor, ["M"]).gen(0) == hifiber
+
+    hifiber = "z_n = z_m.getPayloadRef(m)"
+    assert header.make_get_payload(tensor, ["M"]).gen(0) == hifiber
+
+
+def test_make_get_payload_metrics():
+    header = build_header_gamma()
+    tensor = Tensor("A", ["M", "K"])
+
+    hifiber = "a_k = a_m.getPayload(m, trace=\"get_payload_A\")"
+    assert header.make_get_payload(tensor, ["M"]).gen(0) == hifiber
 
 
 def test_make_get_root():

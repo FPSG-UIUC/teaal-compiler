@@ -149,7 +149,9 @@ class HiFiber:
 
             elif isinstance(node, GetPayloadNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(Header.make_get_payload(tensor, node.get_ranks()))
+                code.add(
+                    self.header.make_get_payload(
+                        tensor, node.get_ranks()))
 
             elif isinstance(node, GetRootNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())

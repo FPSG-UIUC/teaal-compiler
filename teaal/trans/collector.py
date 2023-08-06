@@ -221,11 +221,40 @@ class Collector:
         TODO: Maybe the CollectingNodes, RegisterRanksNode, etc. can just be
         swallowed up in this
         """
+        block = SBlock([])
+
         einsum = self.program.get_equation().get_output().root_name()
         prefix = EString(self.metrics.get_hardware().get_prefix(einsum))
         call = EMethod(EVar("Metrics"), "beginCollect", [AJust(prefix)])
 
-        return SExpr(call)
+        block.add(SExpr(call))
+
+        # If we have flattening, associate the shapes and match the relevant
+        # ranks
+        part_ir = self.program.get_partitioning()
+        for rank in self.program.get_loop_order().get_ranks():
+            if not part_ir.is_flattened(rank):
+                continue
+
+            unpacked = part_ir.unpack(rank)
+            roots = []
+            for unpack_rank in unpacked:
+                if part_ir.get_final_rank_id(
+                        [unpack_rank], unpack_rank) == rank:
+                    args = [AJust(EString(rank)), AJust(EString(unpack_rank))]
+                    block.add(
+                        SExpr(
+                            EMethod(
+                                EVar("Metrics"),
+                                "matchRanks",
+                                args)))
+
+                roots.append(EVar(part_ir.get_root_name(unpack_rank)))
+
+            args = [AJust(EString(rank)), AJust(ETuple(tuple(roots)))]
+            block.add(SExpr(EMethod(EVar("Metrics"), "associateShape", args)))
+
+        return block
 
     def trace_tree(
             self,

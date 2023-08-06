@@ -124,7 +124,8 @@ class SpaceTime:
         """
         Get the style of display for the given rank
         """
-        return self.styles[rank]
+        final = self.partitioning.get_final_rank_id([rank], rank)
+        return self.styles[final]
 
     def get_time(self) -> List[str]:
         """

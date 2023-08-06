@@ -378,6 +378,15 @@ def test_get_collected_tensor_info_extra_intersection_test():
     assert metrics.get_collected_tensor_info("Z") == set()
 
 
+def test_get_collected_tensor_info_flattening():
+    program, arch, bindings, format_ = parse_yamls(build_sigma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_collected_tensor_info("A") == {("MK00", "fiber", False)}
+    assert metrics.get_collected_tensor_info("B") == {("K0", "fiber", False)}
+
+
 def test_get_eager_evict_on():
     program, arch, bindings, format_ = parse_yamls(build_extensor_yaml())
     hardware = Hardware(arch, bindings, program)

@@ -22,6 +22,11 @@ def build_outerspace_yaml():
         return f.read()
 
 
+def build_sigma_yaml():
+    with open("tests/integration/sigma.yaml", "r") as f:
+        return f.read()
+
+
 def build_collector(yaml, i):
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -577,6 +582,19 @@ def test_start():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
     hifiber = "Metrics.beginCollect(\"tmp/gamma_T\")"
+
+    assert collector.start().gen(0) == hifiber
+
+
+def test_start_flattening():
+    yaml = build_sigma_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "Metrics.beginCollect(\"tmp/sigma\")\n" + \
+        "Metrics.associateShape(\"MK01\", (M, K))\n" + \
+        "Metrics.matchRanks(\"MK00\", \"M\")\n" + \
+        "Metrics.matchRanks(\"MK00\", \"K0\")\n" + \
+        "Metrics.associateShape(\"MK00\", (M, K))"
 
     assert collector.start().gen(0) == hifiber
 

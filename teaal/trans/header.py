@@ -54,8 +54,10 @@ class Header:
         self.metrics = metrics
         self.partitioner = partitioner
 
-    @staticmethod
-    def make_get_payload(tensor: Tensor, ranks: Iterable[str]) -> Statement:
+    def make_get_payload(
+            self,
+            tensor: Tensor,
+            ranks: Iterable[str]) -> Statement:
         """
         Make a call to getPayload() or getPayloadRef()
         """
@@ -64,8 +66,15 @@ class Header:
         else:
             func = "getPayload"
 
-        rank_arg = [AJust(EVar(rank.lower())) for rank in ranks]
-        call = EMethod(EVar(tensor.fiber_name()), func, rank_arg)
+        args: List[Argument] = [AJust(EVar(rank.lower())) for rank in ranks]
+        if self.metrics:
+            args.append(
+                AParam(
+                    "trace",
+                    EString(
+                        "get_payload_" +
+                        tensor.root_name())))
+        call = EMethod(EVar(tensor.fiber_name()), func, args)
 
         for _ in ranks:
             tensor.pop()
