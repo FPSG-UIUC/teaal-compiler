@@ -354,6 +354,32 @@ def test_dump_extensor():
     assert collector.dump().gen(0) == hifiber
 
 
+def test_dump_sigma():
+    yaml = build_sigma_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"A\": Format(A_K1MK01MK00, {\"rank-order\": [\"K1\", \"MK01\", \"MK00\"], \"K1\": {\"format\": \"U\"}, \"MK01\": {\"format\": \"U\"}, \"MK00\": {\"format\": \"B\", \"cbits\": 1, \"pbits\": 16}}), \"B\": Format(B_K1NK0, {\"rank-order\": [\"K1\", \"N\", \"K0\"], \"K1\": {\"format\": \"U\"}, \"N\": {\"format\": \"U\"}, \"K0\": {\"format\": \"U\", \"pbits\": 16}})}\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"MK00\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"flattened\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K0\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"partitioned\", \"style\": \"lazy\"}]\n" + \
+        "traces = {(\"A\", \"MK00\", \"payload\", \"read\"): \"tmp/sigma-MK00-iter.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/sigma-K0-get_payload_B.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 268435456, 32)\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"MK00\", \"format\": \"flattened\", \"type\": \"payload\", \"evict-on\": \"MK01\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K0\", \"format\": \"partitioned\", \"type\": \"payload\", \"evict-on\": \"N\", \"style\": \"lazy\"}]\n" + \
+        "traces = {(\"A\", \"MK00\", \"payload\", \"read\"): \"tmp/sigma-MK00-iter.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/sigma-K0-get_payload_B.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 524288, 2048)\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"] = {}\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"] = {}\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"] = {}\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"Multiplier\"] = {}\n" + \
+        "metrics[\"Z\"][\"Multiplier\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]"
+
+    assert collector.dump().gen(0) == hifiber
+
+
 def test_dump_skip_zero_bits():
     yaml = """
     einsum:

@@ -324,7 +324,7 @@ class Collector:
             fiber_trace = self.metrics.get_fiber_trace(
                 binding["tensor"], binding["rank"], is_read)
 
-            if binding["type"] == "payload":
+            if binding["type"] == "payload" and fiber_trace != "iter" and fiber_trace[:11] != "get_payload":
                 input_fn = prefix + fiber_trace + ".csv"
                 filter_fn = prefix + "iter.csv"
                 trace_fn = prefix + fiber_trace + "_payload.csv"
