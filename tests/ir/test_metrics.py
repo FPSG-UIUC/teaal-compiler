@@ -383,8 +383,8 @@ def test_get_collected_tensor_info_flattening():
     hardware = Hardware(arch, bindings, program)
     metrics = Metrics(program, hardware, format_)
 
-    assert metrics.get_collected_tensor_info("A") == {("MK00", "fiber", False)}
-    assert metrics.get_collected_tensor_info("B") == {("K0", "fiber", False)}
+    assert metrics.get_collected_tensor_info("A") == {("MK00", "MK00", False)}
+    assert metrics.get_collected_tensor_info("B") == {("K0", "K0", False)}
 
 
 def test_get_eager_evict_on():

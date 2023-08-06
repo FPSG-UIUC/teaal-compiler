@@ -51,8 +51,8 @@ architecture:
           - name: RegFile
             class: Buffet
             attributes:
-              width: 2048 # Distribution network width: 128 * 16 bits
-              depth: 256 # 128 FlexDPEs * 2 inputs
+              width: 4096 # Distribution network width: 128 * 32 bits
+              depth: 256 # 128 * 128 PEs * 32 bits * 2 inputs / width
           - name: Multiplier
             class: Compute
             attributes:
@@ -67,9 +67,8 @@ format:
         format: U
       MK00:
         # TODO: Support B format
-        format: B
-        cbits: 1
-        pbits: 16
+        format: C
+        pbits: 32
   B:
     partitioned:
       rank-order: [K1, N, K0]
@@ -79,7 +78,7 @@ format:
         format: U
       K0:
         format: U
-        pbits: 16
+        pbits: 32
 
 bindings:
   Z:
@@ -92,11 +91,13 @@ bindings:
       type: payload
       evict-on: root
       format: flattened
+      style: eager
     - tensor: B
       rank: K0
       type: payload
       evict-on: root
       format: partitioned
+      style: eager
   - component: RegFile
     bindings:
     - tensor: A
@@ -104,11 +105,13 @@ bindings:
       format: flattened
       type: payload
       evict-on: MK01
+      style: eager
     - tensor: B
       rank: K0
       format: partitioned
       type: payload
       evict-on: N
+      style: eager
   - component: Multiplier
     bindings:
     - op: mul

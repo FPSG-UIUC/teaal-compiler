@@ -37,7 +37,7 @@ def assert_make_footer(loop_order, partitioning, display, hifiber_options):
 
     hifiber = Footer.make_footer(
         program, graphics, Partitioner(
-            program, TransUtils())).gen(
+            program, TransUtils(program))).gen(
         depth=0)
     assert hifiber in hifiber_options
 

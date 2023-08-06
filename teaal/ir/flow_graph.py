@@ -197,8 +197,10 @@ class FlowGraph:
                     self.graph.add_edge(MetricsNode("Start"), trace_tree_node)
 
                     # Load right before use
+                    loop_rank = self.program.get_partitioning(
+                    ).get_final_rank_id([type_], type_)
                     self.graph.add_edge(
-                        chain[chain.index(LoopNode(type_)) - 1], trace_tree_node)
+                        chain[chain.index(LoopNode(loop_rank)) - 1], trace_tree_node)
                     self.graph.add_edge(
                         FiberNode(
                             tensor_name.lower() +

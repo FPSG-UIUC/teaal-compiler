@@ -286,9 +286,10 @@ class Collector:
         loop_ranks = self.program.get_loop_order().get_ranks()
         tensor_ir = self.program.get_equation().get_tensor(tensor)
 
+        get_final = self.program.get_partitioning().get_final_rank_id
         evict_rank = self.metrics.get_eager_evict_on(tensor, rank)[-1]
-        er_ind = loop_ranks.index(evict_rank)
-        tree_ind = loop_ranks.index(rank)
+        er_ind = loop_ranks.index(get_final([evict_rank], evict_rank))
+        tree_ind = loop_ranks.index(get_final([rank], rank))
 
         key = []
         for loop_rank in loop_ranks[er_ind + 1:tree_ind]:
@@ -375,15 +376,64 @@ class Collector:
         Add the code to build the formats dictionary
         """
         formats_dict: Dict[Expression, Expression] = {}
+        part_ir = self.program.get_partitioning()
         for tensor, format_ in self.metrics.get_loop_formats().items():
             loop_format = self.metrics.get_format().get_spec(tensor)[format_]
-            tensor_var = EVar(
-                tensor + "_" + "".join(loop_format["rank-order"]))
+            rank_order = loop_format["rank-order"]
+
+            # If there is dynamic partitioning applied we cannot use the
+            # existing tensor
+            build_new = False
+
+            # TODO: This should be in teaal.ir.partitioning
+            tensor_ir = self.program.get_equation().get_tensor(tensor)
+            old_ranks: List[str] = []
+            new_ranks = tensor_ir.get_init_ranks()
+            while old_ranks != new_ranks:
+                old_ranks = new_ranks
+                new_ranks = part_ir.partition_ranks(
+                    new_ranks, part_ir.get_static_parts(), False, True)
+
+            for static_rank in new_ranks:
+                if (static_rank,) in part_ir.get_dyn_parts():
+                    build_new = True
+                    break
+
+                if part_ir.is_flattened(static_rank):
+                    build_new = True
+                    break
+
+            tensor_expr: Expression
+            if build_new:
+                rank_ids = TransUtils.build_expr(rank_order)
+
+                shape: List[Expression] = []
+                for rank in rank_order:
+                    if not part_ir.is_flattened(rank):
+                        shape.append(EVar(part_ir.get_root_name(rank)))
+                        continue
+
+                    unpacked = part_ir.unpack(rank)
+                    roots = [part_ir.get_root_name(src) for src in unpacked]
+                    rank_shape: Expression = EVar(roots[0])
+                    for root in roots[1:]:
+                        rank_shape = EBinOp(rank_shape, OMul(), EVar(root))
+                    shape.append(rank_shape)
+
+                args = [
+                    AParam(
+                        "rank_ids", rank_ids), AParam(
+                        "shape", EList(shape))]
+                tensor_expr = EFunc("Tensor", args)
+
+            else:
+                tensor_expr = EVar(
+                    tensor + "_" + "".join(rank_order))
 
             format_yaml = TransUtils.build_expr(loop_format)
 
             formats_dict[EString(tensor)] = EFunc(
-                "Format", [AJust(tensor_var), AJust(format_yaml)])
+                "Format", [AJust(tensor_expr), AJust(format_yaml)])
 
         return SAssign(AVar("formats"), EDict(formats_dict))
 
@@ -511,10 +561,12 @@ class Collector:
             # Create the traces for each buffer
             # TODO: What if the binding is for an unswizzled tensor
             traces = {}
+            ranks = set()
             for binding in active_bindings[buffer_.get_name()]:
                 format_ = self.metrics.get_format().get_spec(
                     binding["tensor"])[binding["format"]]
                 rank = binding["rank"]
+                ranks.add(rank)
                 type_ = binding["type"]
 
                 # Now add the trace
@@ -527,6 +579,11 @@ class Collector:
                     trace, create_trace = self.__get_trace(binding, False)
                     block.add(create_trace)
                     traces[(binding["tensor"], rank, type_, "write")] = trace
+
+                # Also need to add the evict-on rank to the set of ranks if one
+                # exists
+                if "evict-on" in binding:
+                    ranks.add(binding["evict-on"])
 
             traces_dict = TransUtils.build_expr(traces)
             block.add(SAssign(AVar("traces"), traces_dict))
@@ -545,6 +602,21 @@ class Collector:
                 AJust(
                     TransUtils.build_expr(
                         buffer_.get_width()))]
+
+            # Match ranks not in the loop order to their corresponding rank in
+            # the loop order
+            rank_map = {}
+            for rank in ranks:
+                if rank == "root":
+                    continue
+
+                final_rank = self.program.get_partitioning(
+                ).get_final_rank_id([rank], rank)
+                if final_rank != rank:
+                    rank_map[rank] = final_rank
+
+            if rank_map:
+                args.append(AJust(TransUtils.build_expr(rank_map)))
 
             if isinstance(buffer_, BuffetComponent):
                 traffic_func = "buffetTraffic"

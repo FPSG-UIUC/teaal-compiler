@@ -29,6 +29,7 @@ from copy import deepcopy
 from typing import Any
 
 from teaal.hifiber import *
+from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 
 
@@ -37,8 +38,9 @@ class TransUtils:
     Different utilities for generating HiFiber programs
     """
 
-    def __init__(self) -> None:
+    def __init__(self, program: Program) -> None:
         self.count = -1
+        self.program = program
 
     @staticmethod
     def build_expr(obj: Any) -> Expression:

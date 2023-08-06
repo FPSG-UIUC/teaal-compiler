@@ -360,13 +360,13 @@ def test_dump_sigma():
 
     hifiber = "metrics = {}\n" + \
         "metrics[\"Z\"] = {}\n" + \
-        "formats = {\"A\": Format(A_K1MK01MK00, {\"rank-order\": [\"K1\", \"MK01\", \"MK00\"], \"K1\": {\"format\": \"U\"}, \"MK01\": {\"format\": \"U\"}, \"MK00\": {\"format\": \"B\", \"cbits\": 1, \"pbits\": 16}}), \"B\": Format(B_K1NK0, {\"rank-order\": [\"K1\", \"N\", \"K0\"], \"K1\": {\"format\": \"U\"}, \"N\": {\"format\": \"U\"}, \"K0\": {\"format\": \"U\", \"pbits\": 16}})}\n" + \
-        "bindings = [{\"tensor\": \"A\", \"rank\": \"MK00\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"flattened\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K0\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"partitioned\", \"style\": \"lazy\"}]\n" + \
-        "traces = {(\"A\", \"MK00\", \"payload\", \"read\"): \"tmp/sigma-MK00-iter.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/sigma-K0-get_payload_B.csv\"}\n" + \
-        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 268435456, 32)\n" + \
-        "bindings = [{\"tensor\": \"A\", \"rank\": \"MK00\", \"format\": \"flattened\", \"type\": \"payload\", \"evict-on\": \"MK01\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K0\", \"format\": \"partitioned\", \"type\": \"payload\", \"evict-on\": \"N\", \"style\": \"lazy\"}]\n" + \
-        "traces = {(\"A\", \"MK00\", \"payload\", \"read\"): \"tmp/sigma-MK00-iter.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/sigma-K0-get_payload_B.csv\"}\n" + \
-        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 524288, 2048)\n" + \
+        "formats = {\"A\": Format(Tensor(rank_ids=[\"K1\", \"MK01\", \"MK00\"], shape=[K, M * K, M * K]), {\"rank-order\": [\"K1\", \"MK01\", \"MK00\"], \"K1\": {\"format\": \"U\"}, \"MK01\": {\"format\": \"U\"}, \"MK00\": {\"format\": \"C\", \"pbits\": 32}}), \"B\": Format(B_K1NK0, {\"rank-order\": [\"K1\", \"N\", \"K0\"], \"K1\": {\"format\": \"U\"}, \"N\": {\"format\": \"U\"}, \"K0\": {\"format\": \"U\", \"pbits\": 32}})}\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"MK00\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"flattened\", \"style\": \"eager\", \"root\": \"MK00\"}, {\"tensor\": \"B\", \"rank\": \"K0\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"partitioned\", \"style\": \"eager\", \"root\": \"K0\"}]\n" + \
+        "traces = {(\"A\", \"MK00\", \"payload\", \"read\"): \"tmp/sigma-MK00-eager_a_mk00_read.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/sigma-K0-eager_b_k0_read.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 268435456, 32, {\"K0\": \"MK00\"})\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"MK00\", \"format\": \"flattened\", \"type\": \"payload\", \"evict-on\": \"MK01\", \"style\": \"eager\", \"root\": \"MK00\"}, {\"tensor\": \"B\", \"rank\": \"K0\", \"format\": \"partitioned\", \"type\": \"payload\", \"evict-on\": \"N\", \"style\": \"eager\", \"root\": \"K0\"}]\n" + \
+        "traces = {(\"A\", \"MK00\", \"payload\", \"read\"): \"tmp/sigma-MK00-eager_a_mk00_read.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/sigma-K0-eager_b_k0_read.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 1048576, 4096, {\"K0\": \"MK00\"})\n" + \
         "metrics[\"Z\"][\"DataSRAMBanks\"] = {}\n" + \
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"] = {}\n" + \
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"][\"read\"] = 0\n" + \
@@ -376,6 +376,59 @@ def test_dump_sigma():
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
         "metrics[\"Z\"][\"Multiplier\"] = {}\n" + \
         "metrics[\"Z\"][\"Multiplier\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]"
+
+    assert collector.dump().gen(0) == hifiber
+
+
+def test_dump_new_flattened_tensor_for_format():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [K, M]
+        A: [K, M]
+      expressions:
+        - Z[k, m] = A[k, m]
+    mapping:
+      partitioning:
+        Z:
+          (K, M): [flatten()]
+    architecture:
+      accel:
+      - name: level0
+        local:
+        - name: Buffer
+          class: Buffet
+          attributes:
+            width: 64
+            depth: 1024
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: Buffer
+        bindings:
+        - tensor: A
+          rank: KM
+          type: payload
+          evict-on: root
+          format: default
+    format:
+      A:
+        default:
+          rank-order: [KM]
+          KM:
+            format: C
+            pbits: 32
+    """
+    collector = build_collector(yaml, 0)
+
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"A\": Format(Tensor(rank_ids=[\"KM\"], shape=[K * M]), {\"rank-order\": [\"KM\"], \"KM\": {\"format\": \"C\", \"pbits\": 32}})}\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"KM\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"default\", \"style\": \"lazy\"}]\n" + \
+        "Traffic.filterTrace(\"tmp/Z-KM-populate_1.csv\", \"tmp/Z-KM-iter.csv\", \"tmp/Z-KM-populate_1_payload.csv\")\n" + \
+        "traces = {(\"A\", \"KM\", \"payload\", \"read\"): \"tmp/Z-KM-populate_1_payload.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 65536, 64)"
 
     assert collector.dump().gen(0) == hifiber
 

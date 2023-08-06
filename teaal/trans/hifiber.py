@@ -66,7 +66,7 @@ class HiFiber:
         if arch and bindings and arch.get_spec():
             self.hardware = Hardware(arch, bindings, self.program)
 
-        self.trans_utils = TransUtils()
+        self.trans_utils = TransUtils(self.program)
 
         self.hifiber = SBlock([])
         for i in range(len(einsum.get_expressions())):

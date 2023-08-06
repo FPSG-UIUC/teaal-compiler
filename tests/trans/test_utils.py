@@ -1,8 +1,23 @@
 import pytest
 
 from teaal.hifiber import *
+from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
+from teaal.parse import *
 from teaal.trans.utils import TransUtils
+
+
+def make_program():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K, M]
+        B: [K, N]
+        Z: [M, N]
+      expressions:
+        - Z[m, n] = A[k, m] * B[k, n]
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def test_build_expr_bad():
@@ -45,14 +60,16 @@ def test_build_swizzle():
 
 
 def test_next_tmp():
-    utils = TransUtils()
+    program = make_program()
+    utils = TransUtils(program)
     assert utils.next_tmp() == "tmp0"
     assert utils.next_tmp() == "tmp1"
     assert utils.next_tmp() == "tmp2"
 
 
 def test_curr_tmp():
-    utils = TransUtils()
+    program = make_program()
+    utils = TransUtils(program)
 
     with pytest.raises(ValueError) as excinfo:
         utils.curr_tmp()

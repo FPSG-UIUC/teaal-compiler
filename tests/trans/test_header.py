@@ -27,7 +27,7 @@ def build_header(exprs, mapping):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    header = Header(program, None, Partitioner(program, TransUtils()))
+    header = Header(program, None, Partitioner(program, TransUtils(program)))
 
     return header
 
@@ -48,7 +48,7 @@ def build_header_conv(loop_order):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    header = Header(program, None, Partitioner(program, TransUtils()))
+    header = Header(program, None, Partitioner(program, TransUtils(program)))
 
     return header
 
@@ -67,7 +67,12 @@ def build_header_gamma():
     program.add_einsum(0)
     metrics = Metrics(program, hardware, format_)
 
-    header = Header(program, metrics, Partitioner(program, TransUtils()))
+    header = Header(
+        program,
+        metrics,
+        Partitioner(
+            program,
+            TransUtils(program)))
     return header
 
 
