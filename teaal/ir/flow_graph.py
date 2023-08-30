@@ -339,7 +339,7 @@ class FlowGraph:
         # We need a EagerInputNode and an IntervalNode if at least one tensor
         # will be projected and it is a partitioned rank (so we don't know the
         # bounds)
-        if any(tensor.peek() != rank.lower() for tensor in tensors) and \
+        if any(tensor.peek_clean() != rank for tensor in tensors) and \
                 self.program.get_partitioning().split_rank_name(rank)[1] == "0":
             self.__build_project_interval(rank)
 

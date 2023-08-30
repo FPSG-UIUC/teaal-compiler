@@ -534,6 +534,68 @@ def test_get_fiber_trace():
     assert metrics.get_fiber_trace("G", "K", True) == "union_9"
 
 
+def test_get_fiber_trace_coord_math():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K]
+        B: [M]
+        Z0: [M]
+        Z1: [M]
+        Z2: [M]
+      expressions:
+      - Z0[m] = A[2 * m]
+      - Z1[m] = A[2 * m] + B[m]
+      - Z2[m] = A[2 * m] * B[m]
+    architecture:
+      accel:
+      - name: empty
+    bindings:
+      Z0:
+      - config: accel
+        prefix: tmp/Z0
+      Z1:
+      - config: accel
+        prefix: tmp/Z1
+      Z2:
+      - config: accel
+        prefix: tmp/Z2
+    format:
+      Z0:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+    """
+    program, arch, bindings, format_ = parse_yamls(yaml)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("A", "K", True) == "populate_1"
+    assert metrics.get_fiber_trace("Z0", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z0", "M", False) == "populate_write_0"
+
+    program.reset()
+    program.add_einsum(1)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("A", "K", True) == "union_2"
+    assert metrics.get_fiber_trace("B", "M", True) == "union_3"
+    assert metrics.get_fiber_trace("Z1", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z1", "M", False) == "populate_write_0"
+
+    program.reset()
+    program.add_einsum(2)
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_fiber_trace("A", "K", True) == "intersect_2"
+    assert metrics.get_fiber_trace("B", "M", True) == "intersect_3"
+    assert metrics.get_fiber_trace("Z2", "M", True) == "populate_read_0"
+    assert metrics.get_fiber_trace("Z2", "M", False) == "populate_write_0"
+
+
 def test_get_fiber_trace_leader_follower_multiple_intersectors():
     yaml = """
     einsum:

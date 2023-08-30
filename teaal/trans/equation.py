@@ -123,10 +123,7 @@ class Equation:
 
         # Finally, add in the output
         if output:
-            trank = output.peek()
-            if trank is not None:
-                trank = trank.upper()
-
+            trank = output.peek_clean()
             if trank != rank:
                 raise ValueError(
                     "Cannot project into the output tensor. Replace " +
@@ -346,23 +343,18 @@ class Equation:
         """
         Get fiber for iteration (may involve projection)
         """
-        trank = tensor.peek()
-        if trank is None:
-            raise ValueError(
-                "Cannot iterate over payload " +
-                tensor.fiber_name())
+        trank = tensor.peek_clean()
 
         # If this fiber is already over the correct rank, we can iterate over
         # it directly
-        rank = rank.lower()
         if trank == rank:
             return EVar(tensor.fiber_name())
 
         # Otherwise, we need to project
         partitioning = self.program.get_partitioning()
-        root, suffix = partitioning.split_rank_name(rank.upper())
+        root, suffix = partitioning.split_rank_name(rank)
         root = root.lower()
-        troot = partitioning.get_root_name(trank.upper()).lower()
+        troot = partitioning.get_root_name(trank).lower()
 
         # If we are going to project, get the iteration rank in terms of the
         # tensor rank
@@ -380,19 +372,20 @@ class Equation:
         # If not, we do not need to translate the halo
         else:
             sexpr = CoordAccess.isolate_rank(sexpr, troot)
-            sexpr = sexpr.subs(troot, trank)
+            sexpr = sexpr.subs(troot, trank.lower())
 
-        lambda_ = ELambda([trank], CoordAccess.build_expr(sexpr))
+        lambda_ = ELambda([trank.lower()], CoordAccess.build_expr(sexpr))
         args = [AParam("trans_fn", lambda_)]
 
         # Build the interval if we need to make sure that the halo does not
         # add extra computation
         if suffix == "":
-            interval = ETuple([EInt(0), EVar(rank.upper())])
+            interval = ETuple([EInt(0), EVar(rank)])
             args.append(AParam("interval", interval))
 
         elif suffix == "0":
-            interval = ETuple([EVar(rank + "_start"), EVar(rank + "_end")])
+            interval = ETuple([EVar(rank.lower() + "_start"),
+                              EVar(rank.lower() + "_end")])
             args.append(AParam("interval", interval))
 
         project = EMethod(EVar(tensor.fiber_name()), "project", args)

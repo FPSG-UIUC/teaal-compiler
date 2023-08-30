@@ -28,6 +28,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from teaal.ir.component import *
 from teaal.ir.hardware import Hardware
+from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.format import Format
@@ -281,6 +282,30 @@ class Metrics:
                 self.eager_evicts[evict_on].append(
                     (binding["tensor"], binding["root"]))
 
+#     def __build_coiters(self) -> Dict[str, List[Tensor]]:
+#         """
+#         Build the set of tensors that will be coiterated together
+#
+#         coiters: Dict[rank, List[Tensor]]
+#         """
+#         # Go through the iteration graph, saving only the concordantly
+#         # iterated tensors
+#         coiters: Dict[str, List[Tensor]] = {}
+#         opt_rank, tensors = iter_graph.peek_concord()
+#         while opt_rank:
+#             coiters[opt_rank] = tensors
+#             iter_graph.pop_concord()
+#             iter_graph.pop_discord()
+#             opt_rank, tensors = iter_graph.peek_concord()
+#
+#         # Reset all tensors
+#         for tensor in self.program.get_equation().get_tensors():
+#             is_output = tensor.get_is_output()
+#             tensor.reset()
+#             tensor.set_is_output(is_output)
+#
+#         return coiters
+
     def __build_fiber_traces(self) -> None:
         """
         Build the fiber traces
@@ -291,28 +316,24 @@ class Metrics:
         part_ir = self.program.get_partitioning()
         einsum = self.program.get_equation().get_output().root_name()
 
-        # Get the ranks/rank order of tensors during the loop nest
-        tensors = self.program.get_equation().get_tensors()
-        final_ranks = []
-        for tensor in tensors:
-            final_ranks.append(set(part_ir.partition_ranks(
-                tensor.get_init_ranks(), part_ir.get_all_parts(), True, True)))
-
-        # Get the tensors iterated on for each rank
-        coiters: Dict[str, List[Tensor]] = {}
-        for rank in self.program.get_loop_order().get_ranks():
-            coiters[rank] = []
-            for tensor, final in zip(tensors, final_ranks):
-                if rank in final:
-                    coiters[rank].append(tensor)
+        iter_graph = IterationGraph(self.program)
+        for tensor in self.program.get_equation().get_tensors():
+            self.program.apply_all_partitioning(tensor)
+            self.program.get_loop_order().apply(tensor)
 
         # Get the corresponding traces
         self.fiber_traces: Dict[str, Dict[str, Dict[bool, str]]] = {}
         self.coiter_traces: Dict[str, Dict[str, List[str]]] = {}
-        for rank in self.program.get_loop_order().get_ranks():
-            self.fiber_traces[rank] = {}
-            output, inputs = self.program.get_equation().get_iter(
-                coiters[rank])
+
+        rank, tensors = iter_graph.peek_concord()
+        while rank:
+            # Create empty dictionaries for new ranks
+            for tensor in tensors:
+                trank = tensor.peek_clean()
+                if trank not in self.fiber_traces:
+                    self.fiber_traces[trank] = {}
+
+            output, inputs = self.program.get_equation().get_iter(tensors)
 
             parent = "iter"
             next_label = 0
@@ -321,6 +342,11 @@ class Metrics:
                 # write trace
                 self.fiber_traces[rank][output.root_name()] = {
                     True: parent, False: parent}
+
+                # Advance the iteration graph
+                iter_graph.pop_concord()
+                iter_graph.pop_discord()
+                rank, tensors = iter_graph.peek_concord()
                 continue
 
             if output:
@@ -338,12 +364,14 @@ class Metrics:
 
             for i, term in enumerate(inputs):
                 if len(term) == 1:
+                    trank = term[0].peek_clean()
+
                     if i + 1 < len(inputs):
-                        self.fiber_traces[rank][term[0].root_name()] = {
+                        self.fiber_traces[trank][term[0].root_name()] = {
                             True: "union_" + str(union_label)}
                     # i + 1 == len(inputs)
                     else:
-                        self.fiber_traces[rank][term[0].root_name()] = {
+                        self.fiber_traces[trank][term[0].root_name()] = {
                             True: parent}
 
                 # Otherwise we have multiple tensors intersected together
@@ -368,7 +396,8 @@ class Metrics:
                         tensors.insert(0, leader_tensor)
 
                     for j, tensor in enumerate(tensors[:-1]):
-                        self.fiber_traces[rank][tensor.root_name()] = {
+                        trank = tensor.peek_clean()
+                        self.fiber_traces[trank][tensor.root_name()] = {
                             True: "intersect_" + str(next_label)}
 
                         if rank in self.coiterators and isinstance(
@@ -377,8 +406,10 @@ class Metrics:
                         else:
                             next_label += 2
 
-                    self.fiber_traces[rank][tensors[-1].root_name()
-                                            ] = {True: "intersect_" + str(next_label - 1)}
+                    trank = tensors[-1].peek_clean()
+
+                    self.fiber_traces[trank][tensors[-1].root_name()
+                                             ] = {True: "intersect_" + str(next_label - 1)}
 
                     if rank in self.coiterators:
                         coiter = self.coiterators[rank]
@@ -405,6 +436,7 @@ class Metrics:
                                 raise NotImplementedError
 
                             for tensor in tensors:
+                                trank = tensor.peek_clean()
                                 traces.append(
                                     self.fiber_traces[rank][tensor.root_name()][True])
 
@@ -412,6 +444,17 @@ class Metrics:
                     parent = "union_" + str(union_label + 1)
                     union_label = next_label
                     next_label += 2
+
+            # Advance the iteration graph
+            iter_graph.pop_concord()
+            iter_graph.pop_discord()
+            rank, tensors = iter_graph.peek_concord()
+
+        # Reset all tensors
+        for tensor in self.program.get_equation().get_tensors():
+            is_output = tensor.get_is_output()
+            tensor.reset()
+            tensor.set_is_output(is_output)
 
     def __build_format_options(self) -> None:
         """

@@ -650,17 +650,3 @@ def test_make_update_take():
     _, eqn = make_take()
     stmt = "z_ref += b"
     assert eqn.make_update().gen(depth=0) == stmt
-
-
-def test_iter_fiber_not_fiber():
-    expr = "O[p, q] = I[q + s] * F[s]"
-    graph, eqn = make_conv(expr, "[P, W, Q]")
-    graph.pop_concord()
-    graph.pop_concord()
-    graph.pop_concord()
-    _, tensors = graph.peek_concord()
-
-    with pytest.raises(ValueError) as excinfo:
-        eqn._Equation__iter_fiber(None, tensors[0])
-
-    assert str(excinfo.value) == "Cannot iterate over payload o_ref"
