@@ -635,6 +635,22 @@ def test_get_traffic_eager():
         "A", "K0", "coord", "default") == [
         (dram, "lazy"), (llb, "M0")]
 
+def test_get_energy():
+    gamma = "tests/integration/gamma.yaml"
+    arch = Architecture.from_file(gamma)
+    bindings = Bindings.from_file(gamma)
+    program = Program(Einsum.from_file(gamma), Mapping.from_file(gamma))
+    hardware = Hardware(arch, bindings, program)
+
+    assert not hardware.get_energy("Z")
+
+    extensor = "tests/integration/extensor-energy.yaml"
+    arch = Architecture.from_file(extensor)
+    bindings = Bindings.from_file(extensor)
+    program = Program(Einsum.from_file(extensor), Mapping.from_file(extensor))
+    hardware = Hardware(arch, bindings, program)
+
+    assert hardware.get_energy("Z")
 
 def test_get_prefix():
     gamma = "tests/integration/gamma.yaml"

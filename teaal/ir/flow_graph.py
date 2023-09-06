@@ -150,6 +150,11 @@ class FlowGraph:
 
         collecting_nodes = []
         register_ranks_node: Optional[Node] = None
+        einsum = self.program.get_equation().get_output().root_name()
+        if self.metrics.get_hardware().get_energy(einsum):
+            for rank in self.program.get_loop_order().get_ranks():
+                collecting_nodes.append(CollectingNode(None, rank, "iter", False, True))
+
         for tensor in self.program.get_equation().get_tensors():
             tensor_name = tensor.root_name()
             part_ir = self.program.get_partitioning()

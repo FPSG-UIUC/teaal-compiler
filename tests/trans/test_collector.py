@@ -11,6 +11,9 @@ def build_extensor_yaml():
     with open("tests/integration/extensor.yaml", "r") as f:
         return f.read()
 
+def build_extensor_energy_yaml():
+    with open("tests/integration/extensor-energy.yaml", "r") as f:
+        return f.read()
 
 def build_gamma_yaml():
     with open("tests/integration/gamma.yaml", "r") as f:
@@ -353,7 +356,66 @@ def test_dump_extensor():
 
     assert collector.dump().gen(0) == hifiber
 
+def test_dump_extensor_energy():
+    yaml = build_extensor_energy_yaml()
+    collector = build_collector(yaml, 0)
 
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"Z\": Format(Z_N2M2M1N1M0N0, {\"rank-order\": [\"N2\", \"M2\", \"M1\", \"N1\", \"M0\", \"N0\"], \"N2\": {\"format\": \"U\"}, \"M2\": {\"format\": \"U\"}, \"M1\": {\"format\": \"U\"}, \"N1\": {\"format\": \"U\"}, \"M0\": {\"format\": \"U\"}, \"N0\": {\"format\": \"C\", \"cbits\": 64, \"pbits\": 64}}), \"A\": Format(A_K2M2M1K1M0K0, {\"rank-order\": [\"K2\", \"M2\", \"M1\", \"K1\", \"M0\", \"K0\"], \"K2\": {\"format\": \"C\"}, \"M2\": {\"format\": \"C\"}, \"M1\": {\"format\": \"C\"}, \"K1\": {\"format\": \"C\", \"cbits\": 64}, \"M0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"K0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"B\": Format(B_N2K2N1K1N0K0, {\"rank-order\": [\"N2\", \"K2\", \"N1\", \"K1\", \"N0\", \"K0\"], \"N2\": {\"format\": \"C\"}, \"K2\": {\"format\": \"C\"}, \"N1\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"K1\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"N0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 32}, \"K0\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"K1\", \"type\": \"coord\", \"evict-on\": \"M2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"A\", \"rank\": \"M0\", \"type\": \"coord\", \"evict-on\": \"M2\", \"format\": \"default\", \"style\": \"eager\", \"root\": \"M0\"}, {\"tensor\": \"B\", \"rank\": \"N1\", \"type\": \"coord\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"N1\", \"type\": \"payload\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K1\", \"type\": \"coord\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K1\", \"type\": \"payload\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"N0\", \"type\": \"coord\", \"evict-on\": \"K2\", \"format\": \"default\", \"style\": \"eager\", \"root\": \"N0\"}, {\"tensor\": \"Z\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"N0\", \"type\": \"coord\"}, {\"tensor\": \"Z\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"N0\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"M0\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"K0\", \"type\": \"coord\"}, {\"tensor\": \"A\", \"evict-on\": \"M2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"K0\", \"type\": \"payload\"}, {\"tensor\": \"B\", \"evict-on\": \"K2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"N0\", \"type\": \"payload\"}, {\"tensor\": \"B\", \"evict-on\": \"K2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"K0\", \"type\": \"coord\"}, {\"tensor\": \"B\", \"evict-on\": \"K2\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"K0\", \"type\": \"payload\"}]\n" + \
+        "Traffic.filterTrace(\"tmp/extensor-N1-populate_1.csv\", \"tmp/extensor-N1-iter.csv\", \"tmp/extensor-N1-populate_1_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"tmp/extensor-K1-intersect_1.csv\", \"tmp/extensor-K1-iter.csv\", \"tmp/extensor-K1-intersect_1_payload.csv\")\n" + \
+        "traces = {(\"A\", \"K1\", \"coord\", \"read\"): \"tmp/extensor-K1-intersect_0.csv\", (\"A\", \"M0\", \"coord\", \"read\"): \"tmp/extensor-M0-eager_a_m0_read.csv\", (\"B\", \"N1\", \"coord\", \"read\"): \"tmp/extensor-N1-populate_1.csv\", (\"B\", \"N1\", \"payload\", \"read\"): \"tmp/extensor-N1-populate_1_payload.csv\", (\"B\", \"K1\", \"coord\", \"read\"): \"tmp/extensor-K1-intersect_1.csv\", (\"B\", \"K1\", \"payload\", \"read\"): \"tmp/extensor-K1-intersect_1_payload.csv\", (\"B\", \"N0\", \"coord\", \"read\"): \"tmp/extensor-N0-eager_b_n0_read.csv\", (\"Z\", \"N0\", \"coord\", \"read\"): \"tmp/extensor-N0-eager_z_m0_read.csv\", (\"Z\", \"N0\", \"coord\", \"write\"): \"tmp/extensor-N0-eager_z_m0_write.csv\", (\"Z\", \"N0\", \"payload\", \"read\"): \"tmp/extensor-N0-eager_z_m0_read.csv\", (\"Z\", \"N0\", \"payload\", \"write\"): \"tmp/extensor-N0-eager_z_m0_write.csv\", (\"A\", \"M0\", \"payload\", \"read\"): \"tmp/extensor-M0-eager_a_m0_read.csv\", (\"A\", \"K0\", \"coord\", \"read\"): \"tmp/extensor-K0-eager_a_m0_read.csv\", (\"A\", \"K0\", \"payload\", \"read\"): \"tmp/extensor-K0-eager_a_m0_read.csv\", (\"B\", \"N0\", \"payload\", \"read\"): \"tmp/extensor-N0-eager_b_n0_read.csv\", (\"B\", \"K0\", \"coord\", \"read\"): \"tmp/extensor-K0-eager_b_n0_read.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/extensor-K0-eager_b_n0_read.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 251658240, 64)\n" + \
+        "metrics[\"Z\"][\"MainMemory\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"A\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"A\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"B\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"B\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"M0\", \"type\": \"coord\", \"evict-on\": \"K1\", \"format\": \"default\", \"style\": \"eager\", \"root\": \"M0\"}, {\"tensor\": \"B\", \"rank\": \"N0\", \"type\": \"coord\", \"evict-on\": \"K1\", \"format\": \"default\", \"style\": \"eager\", \"root\": \"N0\"}, {\"tensor\": \"Z\", \"evict-on\": \"N1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"N0\", \"type\": \"coord\"}, {\"tensor\": \"Z\", \"evict-on\": \"N1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"N0\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"K1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"M0\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"K1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"K0\", \"type\": \"coord\"}, {\"tensor\": \"A\", \"evict-on\": \"K1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"M0\", \"rank\": \"K0\", \"type\": \"payload\"}, {\"tensor\": \"B\", \"evict-on\": \"K1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"N0\", \"type\": \"payload\"}, {\"tensor\": \"B\", \"evict-on\": \"K1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"K0\", \"type\": \"coord\"}, {\"tensor\": \"B\", \"evict-on\": \"K1\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"N0\", \"rank\": \"K0\", \"type\": \"payload\"}]\n" + \
+        "traces = {(\"A\", \"M0\", \"coord\", \"read\"): \"tmp/extensor-M0-eager_a_m0_read.csv\", (\"B\", \"N0\", \"coord\", \"read\"): \"tmp/extensor-N0-eager_b_n0_read.csv\", (\"Z\", \"N0\", \"coord\", \"read\"): \"tmp/extensor-N0-eager_z_m0_read.csv\", (\"Z\", \"N0\", \"coord\", \"write\"): \"tmp/extensor-N0-eager_z_m0_write.csv\", (\"Z\", \"N0\", \"payload\", \"read\"): \"tmp/extensor-N0-eager_z_m0_read.csv\", (\"Z\", \"N0\", \"payload\", \"write\"): \"tmp/extensor-N0-eager_z_m0_write.csv\", (\"A\", \"M0\", \"payload\", \"read\"): \"tmp/extensor-M0-eager_a_m0_read.csv\", (\"A\", \"K0\", \"coord\", \"read\"): \"tmp/extensor-K0-eager_a_m0_read.csv\", (\"A\", \"K0\", \"payload\", \"read\"): \"tmp/extensor-K0-eager_a_m0_read.csv\", (\"B\", \"N0\", \"payload\", \"read\"): \"tmp/extensor-N0-eager_b_n0_read.csv\", (\"B\", \"K0\", \"coord\", \"read\"): \"tmp/extensor-K0-eager_b_n0_read.csv\", (\"B\", \"K0\", \"payload\", \"read\"): \"tmp/extensor-K0-eager_b_n0_read.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 524288, 64)\n" + \
+        "metrics[\"Z\"][\"LLB\"] = {}\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"A\"] = {}\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"A\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"B\"] = {}\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"B\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"Z\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"Z\"][\"write\"] = 0\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"FPMul\"] = {}\n" + \
+        "metrics[\"Z\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
+        "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"iter\"][\"N2\"] = Compute.numIters(\"tmp/extensor-N2-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"K2\"] = Compute.numIters(\"tmp/extensor-K2-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"M2\"] = Compute.numIters(\"tmp/extensor-M2-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"M1\"] = Compute.numIters(\"tmp/extensor-M1-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"N1\"] = Compute.numIters(\"tmp/extensor-N1-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"K1\"] = Compute.numIters(\"tmp/extensor-K1-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"M0\"] = Compute.numIters(\"tmp/extensor-M0-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"N0\"] = Compute.numIters(\"tmp/extensor-N0-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"iter\"][\"K0\"] = Compute.numIters(\"tmp/extensor-K0-iter.csv\")"
+
+    assert collector.dump().gen(0) == hifiber
 def test_dump_sigma():
     yaml = build_sigma_yaml()
     collector = build_collector(yaml, 0)

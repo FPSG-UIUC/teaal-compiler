@@ -325,6 +325,9 @@ class Metrics:
         self.fiber_traces: Dict[str, Dict[str, Dict[bool, str]]] = {}
         self.coiter_traces: Dict[str, Dict[str, List[str]]] = {}
 
+        # TODO: Think about when we want the pre-projected and when we want the
+        # post-projected traces
+
         rank, tensors = iter_graph.peek_concord()
         while rank:
             # Create empty dictionaries for new ranks

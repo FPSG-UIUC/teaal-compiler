@@ -91,7 +91,13 @@ class Hardware:
                 components.append(component)
         return components
 
-    def get_prefix(self, einsum: str):
+    def get_energy(self, einsum: str) -> bool:
+        """
+        Get whether or not the energy metrics should be collected
+        """
+        return self.bindings.get_energy(einsum)
+
+    def get_prefix(self, einsum: str) -> str:
         """
         Get the prefix for collected metrics for the given Einsum
         """

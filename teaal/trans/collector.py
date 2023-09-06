@@ -119,6 +119,10 @@ class Collector:
         # Track the intersections
         block.add(self.__build_intersections())
 
+        # If energy, add the loop iterations
+        if self.metrics.get_hardware().get_energy(einsum):
+            block.add(self.__build_energy())
+
         return block
 
     @staticmethod
@@ -369,6 +373,24 @@ class Collector:
                     SAssign(
                         AAccess(metrics_fu, EString(op)),
                         EAccess(metrics_dump, EString("payload_" + op))))
+
+        return block
+
+    def __build_energy(self) -> Statement:
+        """
+        Add a block to track the metrics only needed when calculating energy
+        """
+        block = SBlock([])
+
+        einsum = self.program.get_equation().get_output().root_name()
+        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+        metrics_iter = EAccess(metrics_einsum, EString("iter"))
+
+        for rank in self.program.get_loop_order().get_ranks():
+            trace = self.metrics.get_hardware().get_prefix(einsum) + "-" + rank + "-iter.csv"
+            num_iters = EMethod(EVar("Compute"), "numIters", [AJust(EString(trace))])
+            metrics_rank = AAccess(metrics_iter, EString(rank))
+            block.add(SAssign(metrics_rank, num_iters))
 
         return block
 

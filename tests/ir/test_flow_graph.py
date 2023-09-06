@@ -106,6 +106,22 @@ def build_extensor():
 
     return program, hardware, format_
 
+def build_extensor_energy():
+    with open("tests/integration/extensor-energy.yaml", "r") as f:
+        yaml = f.read()
+
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    hardware = Hardware(arch, bindings, program)
+
+    format_ = Format.from_str(yaml)
+
+    return program, hardware, format_
+
 
 def test_graph_no_loops():
     program = build_program_no_loops()
@@ -1493,6 +1509,358 @@ def test_graph_metrics_extensor():
     corr.add_edge(MetricsFooterNode('N2'), OtherNode('Footer'))
     corr.add_edge(MetricsFooterNode('N2'), MetricsNode('End'))
     corr.add_edge(EndLoopNode("N2"), MetricsNode("End"))
+
+    print_errs(graph, corr)
+
+    assert nx.is_isomorphic(graph, corr)
+
+
+def test_graph_metrics_extensor_energy():
+    program, hardware, format_ = build_extensor_energy()
+    program.add_einsum(0)
+    metrics = Metrics(program, hardware, format_)
+    graph = FlowGraph(program, metrics, []).get_graph()
+
+    corr = nx.DiGraph()
+
+    corr.add_edge(LoopNode("N2"), LoopNode("K2"))
+    corr.add_edge(LoopNode("N2"), LoopNode("M2"))
+    corr.add_edge(LoopNode("K2"), LoopNode("M2"))
+    corr.add_edge(LoopNode("K2"), LoopNode("N1"))
+    corr.add_edge(LoopNode("M2"), LoopNode("M1"))
+    corr.add_edge(LoopNode("M1"), LoopNode("N1"))
+    corr.add_edge(LoopNode("M1"), LoopNode("K1"))
+    corr.add_edge(LoopNode("N1"), LoopNode("K1"))
+    corr.add_edge(LoopNode("N1"), TraceTreeNode("Z", "M0", True))
+    corr.add_edge(LoopNode("N1"), LoopNode("M0"))
+    corr.add_edge(LoopNode("K1"), LoopNode("M0"))
+    corr.add_edge(LoopNode("K1"), TraceTreeNode("Z", "M0", True))
+    corr.add_edge(LoopNode("K1"), TraceTreeNode("A", "M0", True))
+    corr.add_edge(LoopNode("K1"), TraceTreeNode("B", "N0", True))
+    corr.add_edge(LoopNode("K1"), LoopNode("N0"))
+    corr.add_edge(LoopNode("M0"), LoopNode("N0"))
+    corr.add_edge(LoopNode("M0"), TraceTreeNode("B", "N0", True))
+    corr.add_edge(LoopNode("M0"), LoopNode("K0"))
+    corr.add_edge(LoopNode("N0"), LoopNode("K0"))
+    corr.add_edge(LoopNode("N0"), OtherNode("Body"))
+    corr.add_edge(LoopNode("K0"), OtherNode("Body"))
+    corr.add_edge(OtherNode("Body"), EndLoopNode("K0"))
+    corr.add_edge(EndLoopNode("K0"), EndLoopNode("N0"))
+    corr.add_edge(EndLoopNode("K0"), ConsumeTraceNode("K0Intersection", "K0"))
+    corr.add_edge(EndLoopNode("N0"), EndLoopNode("M0"))
+    corr.add_edge(EndLoopNode("M0"), EndLoopNode("K1"))
+    corr.add_edge(EndLoopNode("K1"), EndLoopNode("N1"))
+    corr.add_edge(EndLoopNode("K1"), TraceTreeNode("Z", "M0", False))
+    corr.add_edge(EndLoopNode("K1"), ConsumeTraceNode("K1Intersect", "K1"))
+    corr.add_edge(EndLoopNode("N1"), EndLoopNode("M1"))
+    corr.add_edge(EndLoopNode("M1"), EndLoopNode("M2"))
+    corr.add_edge(EndLoopNode("M2"), EndLoopNode("K2"))
+    corr.add_edge(EndLoopNode("K2"), EndLoopNode("N2"))
+    corr.add_edge(EndLoopNode("K2"), ConsumeTraceNode("K2Intersect", "K2"))
+    corr.add_edge(EndLoopNode("N2"), OtherNode("Footer"))
+    corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+    corr.add_edge(OtherNode("Graphics"), LoopNode("N2"))
+    corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
+    corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
+    corr.add_edge(OtherNode("Output"), GetRootNode(
+        "Z", ['N2', 'M2', 'M1', 'N1', 'M0', 'N0']))
+    corr.add_edge(MetricsNode("Start"), LoopNode("N2"))
+    corr.add_edge(MetricsNode("Start"), TraceTreeNode("Z", "M0", True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("Z", "M0", "M0", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("Z", "M0", "M0", False, False))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("Z", "N0", "M0", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("Z", "N0", "M0", False, False))
+    corr.add_edge(MetricsNode("Start"), TraceTreeNode("A", "M0", True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("A", "K1", "fiber", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("A", "K2", "fiber", True, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("A", "K0", "M0", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("A", "K0", "fiber", True, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("A", "M0", "M0", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("A", "K1", "fiber", True, True))
+    corr.add_edge(MetricsNode("Start"), TraceTreeNode("B", "N0", True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "K1", "fiber", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "N1", "fiber", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "N0", "N0", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "K2", "fiber", True, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "K0", "fiber", True, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "K0", "N0", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(None, "K1", "iter", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode(None, "N1", "iter", False, True))
+    corr.add_edge(
+        MetricsNode("Start"),
+        CollectingNode("B", "K1", "fiber", True, True))
+    corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
+    corr.add_edge(
+        GetRootNode(
+            "Z", [
+                'N2', 'M2', 'M1', 'N1', 'M0', 'N0']), LoopNode("N2"))
+    corr.add_edge(PartNode("A", ('M',)), OtherNode("Graphics"))
+    corr.add_edge(
+        PartNode(
+            "A", ('M',)), SwizzleNode(
+            "A", [
+                'K2', 'M2', 'M1', 'K1', 'M0', 'K0'], "loop-order"))
+    corr.add_edge(PartNode("A", ('K',)), OtherNode("Graphics"))
+    corr.add_edge(
+        PartNode(
+            "A", ('K',)), SwizzleNode(
+            "A", [
+                'K2', 'M2', 'M1', 'K1', 'M0', 'K0'], "loop-order"))
+    corr.add_edge(SwizzleNode("A",
+                              ['K2', 'M2', 'M1', 'K1', 'M0', 'K0'], "loop-order"),
+                  GetRootNode("A", ['K2', 'M2', 'M1', 'K1', 'M0', 'K0']))
+    corr.add_edge(
+        SwizzleNode(
+            "A", [
+                'K2', 'M2', 'M1', 'K1', 'M0', 'K0'], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(
+        GetRootNode(
+            "A", [
+                'K2', 'M2', 'M1', 'K1', 'M0', 'K0']), LoopNode("K2"))
+    corr.add_edge(PartNode("B", ('K',)), OtherNode("Graphics"))
+    corr.add_edge(
+        PartNode(
+            "B", ('K',)), SwizzleNode(
+            "B", [
+                'N2', 'K2', 'N1', 'K1', 'N0', 'K0'], "loop-order"))
+    corr.add_edge(PartNode("B", ('N',)), OtherNode("Graphics"))
+    corr.add_edge(
+        PartNode(
+            "B", ('N',)), SwizzleNode(
+            "B", [
+                'N2', 'K2', 'N1', 'K1', 'N0', 'K0'], "loop-order"))
+    corr.add_edge(SwizzleNode("B",
+                              ['N2', 'K2', 'N1', 'K1', 'N0', 'K0'],
+                              "loop-order"),
+                  GetRootNode("B",
+                              ['N2', 'K2', 'N1', 'K1', 'N0', 'K0']))
+    corr.add_edge(
+        SwizzleNode(
+            "B", [
+                'N2', 'K2', 'N1', 'K1', 'N0', 'K0'], "loop-order"), OtherNode("Graphics"))
+    corr.add_edge(
+        GetRootNode(
+            "B", [
+                'N2', 'K2', 'N1', 'K1', 'N0', 'K0']), LoopNode("N2"))
+    corr.add_edge(TraceTreeNode("Z", "M0", False), EndLoopNode("N1"))
+    corr.add_edge(TraceTreeNode("Z", "M0", False), MetricsNode("End"))
+    corr.add_edge(CollectingNode("Z", "M0", "M0", False, True), LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("Z", "M0", "M0", False, False),
+        LoopNode("N2"))
+    corr.add_edge(CollectingNode("Z", "N0", "M0", False, True), LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("Z", "N0", "M0", False, False),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("A", "K1", "fiber", False, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("A", "K2", "fiber", True, True),
+        LoopNode("N2"))
+    corr.add_edge(CollectingNode("A", "K0", "M0", False, True), LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("A", "K0", "fiber", True, True),
+        LoopNode("N2"))
+    corr.add_edge(CollectingNode("A", "M0", "M0", False, True), LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("A", "K1", "fiber", True, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("B", "K1", "fiber", False, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("B", "N1", "fiber", False, True),
+        LoopNode("N2"))
+    corr.add_edge(CollectingNode("B", "N0", "N0", False, True), LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("B", "K2", "fiber", True, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("B", "K0", "fiber", True, True),
+        LoopNode("N2"))
+    corr.add_edge(CollectingNode("B", "K0", "N0", False, True), LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode(None, "K1", "iter", False, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode(None, "N1", "iter", False, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CollectingNode("B", "K1", "fiber", True, True),
+        LoopNode("N2"))
+    corr.add_edge(
+        CreateComponentNode("K2Intersect", "K2"),
+        MetricsNode("Start"))
+    corr.add_edge(ConsumeTraceNode("K2Intersect", "K2"), EndLoopNode("N2"))
+    corr.add_edge(ConsumeTraceNode("K2Intersect", "K2"), MetricsNode("End"))
+    corr.add_edge(
+        CreateComponentNode("K1Intersect", "K1"),
+        MetricsNode("Start"))
+    corr.add_edge(ConsumeTraceNode("K1Intersect", "K1"), EndLoopNode("N1"))
+    corr.add_edge(ConsumeTraceNode("K1Intersect", "K1"), MetricsNode("End"))
+    corr.add_edge(
+        CreateComponentNode("K0Intersection", "K0"),
+        MetricsNode("Start"))
+    corr.add_edge(ConsumeTraceNode("K0Intersection", "K0"), EndLoopNode("N0"))
+    corr.add_edge(ConsumeTraceNode("K0Intersection", "K0"), MetricsNode("End"))
+    corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
+        ["N2", "K2", "M2", "M1", "N1", "K1", "M0", "N0", "K0"]))
+    corr.add_edge(
+        CollectingNode("Z", "M0", "M0", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("Z", "M0", "M0", False, False),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("Z", "N0", "M0", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("Z", "N0", "M0", False, False),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("A", "K0", "fiber", True, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("A", "K1", "fiber", True, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("A", "M0", "M0", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("A", "K1", "fiber", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("A", "K0", "M0", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("A", "K2", "fiber", True, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode(None, "N1", "iter", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "K0", "fiber", True, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "K1", "fiber", True, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode(None, "K1", "iter", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "K1", "fiber", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "K0", "N0", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "N1", "fiber", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "N0", "N0", False, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(
+        CollectingNode("B", "K2", "fiber", True, True),
+        RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(LoopNode('N2'), MetricsHeaderNode('K2'))
+    corr.add_edge(LoopNode('K2'), MetricsHeaderNode('M2'))
+    corr.add_edge(LoopNode('M2'), MetricsHeaderNode('M1'))
+    corr.add_edge(LoopNode('M1'), MetricsHeaderNode('N1'))
+    corr.add_edge(LoopNode('N1'), MetricsHeaderNode('K1'))
+    corr.add_edge(LoopNode('K1'), MetricsHeaderNode('M0'))
+    corr.add_edge(LoopNode('M0'), MetricsHeaderNode('N0'))
+    corr.add_edge(LoopNode('N0'), MetricsHeaderNode('K0'))
+    corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('N2'))
+    corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('N2'))
+    corr.add_edge(MetricsHeaderNode('N2'), LoopNode('N2'))
+    corr.add_edge(MetricsHeaderNode('K2'), LoopNode('K2'))
+    corr.add_edge(MetricsHeaderNode('M2'), LoopNode('M2'))
+    corr.add_edge(MetricsHeaderNode('M1'), LoopNode('M1'))
+    corr.add_edge(MetricsHeaderNode('N1'), LoopNode('N1'))
+    corr.add_edge(MetricsHeaderNode('K1'), LoopNode('K1'))
+    corr.add_edge(MetricsHeaderNode('M0'), LoopNode('M0'))
+    corr.add_edge(MetricsHeaderNode('N0'), LoopNode('N0'))
+    corr.add_edge(MetricsHeaderNode('K0'), LoopNode('K0'))
+    corr.add_edge(LoopNode('K0'), MetricsNode('Body'))
+    corr.add_edge(EndLoopNode('K0'), MetricsFooterNode('K0'))
+    corr.add_edge(EndLoopNode('N0'), MetricsFooterNode('N0'))
+    corr.add_edge(EndLoopNode('M0'), MetricsFooterNode('M0'))
+    corr.add_edge(EndLoopNode('K1'), MetricsFooterNode('K1'))
+    corr.add_edge(EndLoopNode('N1'), MetricsFooterNode('N1'))
+    corr.add_edge(EndLoopNode('M1'), MetricsFooterNode('M1'))
+    corr.add_edge(EndLoopNode('M2'), MetricsFooterNode('M2'))
+    corr.add_edge(EndLoopNode('K2'), MetricsFooterNode('K2'))
+    corr.add_edge(EndLoopNode('N2'), MetricsFooterNode('N2'))
+    corr.add_edge(MetricsNode('Body'), OtherNode('Body'))
+    corr.add_edge(MetricsFooterNode('K0'), EndLoopNode('N0'))
+    corr.add_edge(MetricsFooterNode('N0'), EndLoopNode('M0'))
+    corr.add_edge(MetricsFooterNode('M0'), EndLoopNode('K1'))
+    corr.add_edge(MetricsFooterNode('K1'), EndLoopNode('N1'))
+    corr.add_edge(MetricsFooterNode('N1'), EndLoopNode('M1'))
+    corr.add_edge(MetricsFooterNode('M1'), EndLoopNode('M2'))
+    corr.add_edge(MetricsFooterNode('M2'), EndLoopNode('K2'))
+    corr.add_edge(MetricsFooterNode('K2'), EndLoopNode('N2'))
+    corr.add_edge(MetricsFooterNode('N2'), OtherNode('Footer'))
+    corr.add_edge(MetricsFooterNode('N2'), MetricsNode('End'))
+    corr.add_edge(EndLoopNode("N2"), MetricsNode("End"))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'N2', 'iter', False, True))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'K2', 'iter', False, True))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'M2', 'iter', False, True))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'M1', 'iter', False, True))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'M0', 'iter', False, True))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'N0', 'iter', False, True))
+    corr.add_edge(MetricsNode('Start'), CollectingNode(None, 'K0', 'iter', False, True))
+    corr.add_edge(CollectingNode(None, 'N2', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'N2', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(CollectingNode(None, 'K2', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'K2', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(CollectingNode(None, 'M2', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'M2', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(CollectingNode(None, 'M1', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'M1', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(CollectingNode(None, 'M0', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'M0', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(CollectingNode(None, 'N0', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'N0', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
+    corr.add_edge(CollectingNode(None, 'K0', 'iter', False, True), LoopNode('N2'))
+    corr.add_edge(CollectingNode(None, 'K0', 'iter', False, True), RegisterRanksNode(['N2', 'K2', 'M2', 'M1', 'N1', 'K1', 'M0', 'N0', 'K0']))
 
     print_errs(graph, corr)
 
