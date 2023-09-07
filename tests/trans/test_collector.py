@@ -405,6 +405,7 @@ def test_dump_extensor_energy():
         "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"iter\"] = {}\n" + \
         "metrics[\"Z\"][\"iter\"][\"N2\"] = Compute.numIters(\"tmp/extensor-N2-iter.csv\")\n" + \
         "metrics[\"Z\"][\"iter\"][\"K2\"] = Compute.numIters(\"tmp/extensor-K2-iter.csv\")\n" + \
         "metrics[\"Z\"][\"iter\"][\"M2\"] = Compute.numIters(\"tmp/extensor-M2-iter.csv\")\n" + \

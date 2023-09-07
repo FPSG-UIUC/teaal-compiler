@@ -384,6 +384,9 @@ class Collector:
 
         einsum = self.program.get_equation().get_output().root_name()
         metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+
+        metrics_iter_assn = AAccess(metrics_einsum, EString("iter"))
+        block.add(SAssign(metrics_iter_assn, EDict({})))
         metrics_iter = EAccess(metrics_einsum, EString("iter"))
 
         for rank in self.program.get_loop_order().get_ranks():
