@@ -150,7 +150,6 @@ class FlowGraph:
             return
 
         collecting_nodes: List[Node] = []
-        register_ranks_node: Optional[Node] = None
         einsum = self.program.get_equation().get_output().root_name()
         for tensor in self.program.get_equation().get_tensors():
             tensor_name = tensor.root_name()
@@ -187,15 +186,6 @@ class FlowGraph:
                             type_.lower()),
                         trace_tree_node)
 
-                    # If we are doing this, we need to also register the rank
-                    # order explicitly
-                    if register_ranks_node is None:
-                        register_ranks_node = RegisterRanksNode(
-                            self.program.get_loop_order().get_ranks())
-
-                    self.graph.add_edge(
-                        MetricsNode("Start"), register_ranks_node)
-
                     if tensor.get_is_output():
 
                         # Store at the last moment
@@ -214,9 +204,6 @@ class FlowGraph:
                         self.graph.add_edge(trace_tree_node, chain[j])
                         self.graph.add_edge(
                             trace_tree_node, MetricsNode("End"))
-
-        if register_ranks_node is not None:
-            self.graph.add_edge(MetricsNode("Start"), register_ranks_node)
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:

@@ -168,12 +168,12 @@ class Collector:
 
         return block
 
-    def register_ranks(self, ranks: List[str]) -> Statement:
+    def register_ranks(self) -> Statement:
         """
         Register the given ranks
         """
         block = SBlock([])
-        for rank in ranks:
+        for rank in self.program.get_loop_order().get_ranks():
             block.add(
                 SExpr(
                     EMethod(
@@ -234,9 +234,6 @@ class Collector:
     def start(self) -> Statement:
         """
         Start metrics collection
-
-        TODO: Maybe the RegisterRanksNode, etc. can just be
-        swallowed up in this
         """
         block = SBlock([])
 
@@ -250,7 +247,11 @@ class Collector:
 
         block.add(self.__build_match_ranks())
 
-        block.add(self.__build_trace_ranks())
+        stmt, register = self.__build_trace_ranks()
+        block.add(stmt)
+
+        if register:
+            block.add(self.register_ranks())
 
         return block
 
@@ -612,15 +613,20 @@ class Collector:
 
         return block
 
-    def __build_trace_ranks(self) -> Statement:
+    def __build_trace_ranks(self) -> Tuple[Statement, bool]:
         """
         Add code to trace all necessary ranks
+        Returns (new code, need to register ranks explicitly)
+
+        Note: explicit rank registration is necessary if we have eager loading
+        of fibers
         """
         block = SBlock([])
         einsum = self.program.get_equation().get_output().root_name()
 
         traces: Set[Tuple[Optional[str], str, str, bool, bool]] = set()
         trace: Tuple[Optional[str], str, str, bool, bool]
+        register = False
         for sequencer in self.metrics.get_hardware().get_components(einsum,
                                                                     SequencerComponent):
             for rank in sequencer.get_ranks(einsum):
@@ -648,7 +654,11 @@ class Collector:
                         trace = (tensor_name, rank, type_, consumable, False)
                         block.add(self.__add_collection(trace, traces))
 
-        return block
+                    # It is eager if the type is not "fiber"
+                    if type_ != "fiber":
+                        register = True
+
+        return block, register
 
     def __build_traffic(self) -> Statement:
         """

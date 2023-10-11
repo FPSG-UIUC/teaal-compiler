@@ -92,13 +92,6 @@ def test_rank_node():
     assert RankNode("A", "K").get_rank() == "K"
 
 
-def test_register_ranks_node():
-    assert repr(RegisterRanksNode(["K", "M", "N"])
-                ) == "(RegisterRanksNode, ['K', 'M', 'N'])"
-
-    assert RegisterRanksNode(["K", "M", "N"]).get_ranks() == ["K", "M", "N"]
-
-
 def test_swizzle_root_node():
     assert repr(SwizzleNode("A", ["K"], "loop-order")
                 ) == "(SwizzleNode, A, ['K'], loop-order)"

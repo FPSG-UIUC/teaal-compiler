@@ -697,7 +697,7 @@ def test_register_ranks():
         "Metrics.registerRank(\"K\")\n" + \
         "Metrics.registerRank(\"N\")"
 
-    assert collector.register_ranks(["M", "K", "N"]).gen(0) == hifiber
+    assert collector.register_ranks().gen(0) == hifiber
 
 
 def test_set_collecting_type_err():
@@ -785,35 +785,47 @@ def test_start_sequencer():
             "K0Intersection_K0 = SkipAheadIntersector()"]
     check_hifiber_lines(generated[1:4], corr)
 
-    corr = ['Metrics.trace("N2", type_="iter", consumable=False)',
-            'Metrics.trace("K2", type_="iter", consumable=False)',
-            'Metrics.trace("M2", type_="iter", consumable=False)',
-            'Metrics.trace("M1", type_="iter", consumable=False)',
-            'Metrics.trace("N1", type_="iter", consumable=False)',
-            'Metrics.trace("K1", type_="iter", consumable=False)',
-            'Metrics.trace("M0", type_="iter", consumable=False)',
-            'Metrics.trace("N0", type_="iter", consumable=False)',
-            'Metrics.trace("K0", type_="iter", consumable=False)',
-            'Metrics.trace("N0", type_="eager_z_m0_read", consumable=False)',
-            'n0_iter_num = None',
-            'Metrics.trace("N0", type_="eager_z_m0_write", consumable=False)',
-            'Metrics.trace("M0", type_="eager_z_m0_read", consumable=False)',
-            'n0_iter_num = None',
-            'Metrics.trace("M0", type_="eager_z_m0_write", consumable=False)',
-            'Metrics.trace("K0", type_="eager_a_m0_read", consumable=False)',
-            'Metrics.trace("K1", type_="intersect_0", consumable=True)',
-            'Metrics.trace("M0", type_="eager_a_m0_read", consumable=False)',
-            'Metrics.trace("K0", type_="intersect_0", consumable=True)',
-            'Metrics.trace("K1", type_="intersect_0", consumable=False)',
-            'Metrics.trace("K2", type_="intersect_0", consumable=True)',
-            'Metrics.trace("N1", type_="populate_1", consumable=False)',
-            'Metrics.trace("K1", type_="intersect_1", consumable=True)',
-            'Metrics.trace("N0", type_="eager_b_n0_read", consumable=False)',
-            'Metrics.trace("K0", type_="intersect_1", consumable=True)',
-            'Metrics.trace("K1", type_="intersect_1", consumable=False)',
-            'Metrics.trace("K2", type_="intersect_1", consumable=True)',
-            'Metrics.trace("K0", type_="eager_b_n0_read", consumable=False)']
-    check_hifiber_lines(generated[4:], corr)
+    corr = [
+        "Metrics.trace(\"N2\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"K2\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"M2\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"M1\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"N1\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"K1\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"M0\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"N0\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"K0\", type_=\"iter\", consumable=False)",
+        "Metrics.trace(\"N0\", type_=\"eager_z_m0_read\", consumable=False)",
+        "n0_iter_num = None",
+        "Metrics.trace(\"N0\", type_=\"eager_z_m0_write\", consumable=False)",
+        "Metrics.trace(\"M0\", type_=\"eager_z_m0_read\", consumable=False)",
+        "n0_iter_num = None",
+        "Metrics.trace(\"M0\", type_=\"eager_z_m0_write\", consumable=False)",
+        "Metrics.trace(\"K0\", type_=\"eager_a_m0_read\", consumable=False)",
+        "Metrics.trace(\"K1\", type_=\"intersect_0\", consumable=True)",
+        "Metrics.trace(\"M0\", type_=\"eager_a_m0_read\", consumable=False)",
+        "Metrics.trace(\"K0\", type_=\"intersect_0\", consumable=True)",
+        "Metrics.trace(\"K1\", type_=\"intersect_0\", consumable=False)",
+        "Metrics.trace(\"K2\", type_=\"intersect_0\", consumable=True)",
+        "Metrics.trace(\"N1\", type_=\"populate_1\", consumable=False)",
+        "Metrics.trace(\"K1\", type_=\"intersect_1\", consumable=True)",
+        "Metrics.trace(\"N0\", type_=\"eager_b_n0_read\", consumable=False)",
+        "Metrics.trace(\"K0\", type_=\"intersect_1\", consumable=True)",
+        "Metrics.trace(\"K1\", type_=\"intersect_1\", consumable=False)",
+        "Metrics.trace(\"K2\", type_=\"intersect_1\", consumable=True)",
+        "Metrics.trace(\"K0\", type_=\"eager_b_n0_read\", consumable=False)"]
+    check_hifiber_lines(generated[4:32], corr)
+
+    corr = ["Metrics.registerRank(\"N2\")",
+            "Metrics.registerRank(\"K2\")",
+            "Metrics.registerRank(\"M2\")",
+            "Metrics.registerRank(\"M1\")",
+            "Metrics.registerRank(\"N1\")",
+            "Metrics.registerRank(\"K1\")",
+            "Metrics.registerRank(\"M0\")",
+            "Metrics.registerRank(\"N0\")",
+            "Metrics.registerRank(\"K0\")"]
+    check_hifiber_lines(generated[32:], corr)
 
 
 def test_start_flattening():
@@ -830,9 +842,15 @@ def test_start_flattening():
     check_hifiber_lines(generated[:5], corr)
 
     corr = [
-        'Metrics.trace("MK00", type_="eager_a_mk00_read", consumable=False)',
-        'Metrics.trace("K0", type_="eager_b_k0_read", consumable=False)']
-    check_hifiber_lines(generated[5:], corr)
+        "Metrics.trace(\"MK00\", type_=\"eager_a_mk00_read\", consumable=False)",
+        "Metrics.trace(\"K0\", type_=\"eager_b_k0_read\", consumable=False)"]
+    check_hifiber_lines(generated[5:7], corr)
+
+    corr = ["Metrics.registerRank(\"K1\")",
+            "Metrics.registerRank(\"MK01\")",
+            "Metrics.registerRank(\"N\")",
+            "Metrics.registerRank(\"MK00\")"]
+    check_hifiber_lines(generated[7:], corr)
 
 
 def test_trace_tree():

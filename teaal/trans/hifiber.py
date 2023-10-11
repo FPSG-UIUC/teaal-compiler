@@ -205,9 +205,6 @@ class HiFiber:
                 tensor.from_fiber()
                 code.add(self.partitioner.partition(tensor, ranks))
 
-            elif isinstance(node, RegisterRanksNode):
-                code.add(self.collector.register_ranks(node.get_ranks()))
-
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(

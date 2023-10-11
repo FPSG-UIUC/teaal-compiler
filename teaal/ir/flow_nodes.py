@@ -414,30 +414,6 @@ class RankNode(Node):
         return self.tensor, self.rank
 
 
-class RegisterRanksNode(Node):
-    """
-    A node representing explicit rank registration
-    """
-
-    def __init__(self, ranks: List[str]) -> None:
-        """
-        Construct a node representing the explicit rank registration
-        """
-        self.ranks = ranks
-
-    def get_ranks(self) -> List[str]:
-        """
-        Accessor for the ranks
-        """
-        return self.ranks
-
-    def _Node__key(self) -> Iterable[Any]:
-        """
-        Iterable of fields of a RegisterRanksNode
-        """
-        return self.ranks,
-
-
 class SwizzleNode(Node):
     """
     A Node representing a swizzleRanks call
