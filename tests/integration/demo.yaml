@@ -1,57 +1,66 @@
 einsum:
   declaration:
-    A: [S]
-    Z: [T]
+    SOB: [UA, UB]
+    T: [UA, UB, K]
+    I: [K]
+    OB: []
   expressions:
-    - Z[t] = A[2 * t]
-format:
-  A:
-    default:
-      rank-order: [S]
-      S:
-        format: C
-        pbits: 32
-  Z:
-    default:
-      rank-order: [T]
-      T:
-        format: C
-        pbits: 32
-architecture:
-  accel:
-  - name: System
-    local:
-    - name: MainMemory
-      class: DRAM
-    subtree:
-    - name: Chip
-      local:
-      - name: LLB
-        class: Cache
-        attributes:
-          width: 32
-          depth: 1024
-bindings:
-  Z:
-  - config: accel
-    prefix: tmp/demo
-  - component: MainMemory
-    bindings:
-    - tensor: A
-      rank: S
-      type: payload
-      format: default
-    - tensor: Z
-      rank: T
-      type: payload
-      format: default
-  - component: LLB
-    bindings:
-    - tensor: A
-      rank: S
-      type: payload
-      format: default
-    - tensor: Z
-      rank: T
-      type: payload
-      format: default
+    - SOB[ua, ub] = T[ua, ub, k] * I[k]
+    - OB[] = SOB[ua, ub]
+# einsum:
+#   declaration:
+#     A: [S]
+#     Z: [T]
+#   expressions:
+#     - Z[t] = A[2 * t]
+# format:
+#   A:
+#     default:
+#       rank-order: [S]
+#       S:
+#         format: C
+#         pbits: 32
+#   Z:
+#     default:
+#       rank-order: [T]
+#       T:
+#         format: C
+#         pbits: 32
+# architecture:
+#   accel:
+#   - name: System
+#     local:
+#     - name: MainMemory
+#       class: DRAM
+#     subtree:
+#     - name: Chip
+#       local:
+#       - name: LLB
+#         class: Cache
+#         attributes:
+#           width: 32
+#           depth: 1024
+# bindings:
+#   Z:
+#   - config: accel
+#     prefix: tmp/demo
+#   - component: MainMemory
+#     bindings:
+#     - tensor: A
+#       rank: S
+#       type: payload
+#       format: default
+#     - tensor: Z
+#       rank: T
+#       type: payload
+#       format: default
+#   - component: LLB
+#     bindings:
+#     - tensor: A
+#       rank: S
+#       type: payload
+#       format: default
+#     - tensor: Z
+#       rank: T
+#       type: payload
+#       format: default

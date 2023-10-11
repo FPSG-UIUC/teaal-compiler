@@ -140,6 +140,8 @@ class FlowGraph:
     def __build_collecting(self, chain: List[Node]) -> None:
         """
         Build a CollectingNode should it be required
+
+        TODO: Update this header
         """
         if self.metrics is None:
             return
@@ -148,13 +150,9 @@ class FlowGraph:
         if not loop_ranks:
             return
 
-        collecting_nodes = []
+        collecting_nodes: List[Node] = []
         register_ranks_node: Optional[Node] = None
         einsum = self.program.get_equation().get_output().root_name()
-        if self.metrics.get_hardware().get_energy(einsum):
-            for rank in self.program.get_loop_order().get_ranks():
-                collecting_nodes.append(CollectingNode(None, rank, "iter", False, True))
-
         for tensor in self.program.get_equation().get_tensors():
             tensor_name = tensor.root_name()
             part_ir = self.program.get_partitioning()
@@ -167,37 +165,14 @@ class FlowGraph:
             for rank, type_, consumable in self.metrics.get_collected_tensor_info(
                     tensor_name):
                 if type_ == "fiber":
-                    collecting_nodes.append(
-                        CollectingNode(
-                            tensor_name,
-                            rank,
-                            type_,
-                            consumable,
-                            True))
-
-                    if tensor.get_is_output():
-                        collecting_nodes.append(
-                            CollectingNode(
-                                tensor_name,
-                                rank,
-                                type_,
-                                consumable,
-                                False))
+                    continue
 
                 elif type_ == "iter":
-                    collecting_nodes.append(CollectingNode(
-                        None, rank, type_, consumable, True))
+                    continue
 
                 # Type is a rank name for eager iteration
                 else:
-                    collecting_nodes.append(
-                        CollectingNode(
-                            tensor_name,
-                            rank,
-                            type_,
-                            consumable,
-                            True))
-
+                    # TODO: Move to loop header/footer
                     trace_tree_node = TraceTreeNode(tensor_name, type_, True)
                     self.graph.add_edge(MetricsNode("Start"), trace_tree_node)
 
@@ -223,13 +198,6 @@ class FlowGraph:
                         MetricsNode("Start"), register_ranks_node)
 
                     if tensor.get_is_output():
-                        collecting_nodes.append(
-                            CollectingNode(
-                                tensor_name,
-                                rank,
-                                type_,
-                                consumable,
-                                False))
 
                         # Store at the last moment
                         i = final_tensor.get_ranks().index(type_)
@@ -248,11 +216,8 @@ class FlowGraph:
                         self.graph.add_edge(
                             trace_tree_node, MetricsNode("End"))
 
-        for collecting_node in collecting_nodes:
-            self.graph.add_edge(MetricsNode("Start"), collecting_node)
-            self.graph.add_edge(collecting_node, loop_node)
-            if register_ranks_node is not None:
-                self.graph.add_edge(collecting_node, register_ranks_node)
+        if register_ranks_node is not None:
+            self.graph.add_edge(MetricsNode("Start"), register_ranks_node)
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:

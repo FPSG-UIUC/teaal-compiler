@@ -282,30 +282,6 @@ class Metrics:
                 self.eager_evicts[evict_on].append(
                     (binding["tensor"], binding["root"]))
 
-#     def __build_coiters(self) -> Dict[str, List[Tensor]]:
-#         """
-#         Build the set of tensors that will be coiterated together
-#
-#         coiters: Dict[rank, List[Tensor]]
-#         """
-#         # Go through the iteration graph, saving only the concordantly
-#         # iterated tensors
-#         coiters: Dict[str, List[Tensor]] = {}
-#         opt_rank, tensors = iter_graph.peek_concord()
-#         while opt_rank:
-#             coiters[opt_rank] = tensors
-#             iter_graph.pop_concord()
-#             iter_graph.pop_discord()
-#             opt_rank, tensors = iter_graph.peek_concord()
-#
-#         # Reset all tensors
-#         for tensor in self.program.get_equation().get_tensors():
-#             is_output = tensor.get_is_output()
-#             tensor.reset()
-#             tensor.set_is_output(is_output)
-#
-#         return coiters
-
     def __build_fiber_traces(self) -> None:
         """
         Build the fiber traces

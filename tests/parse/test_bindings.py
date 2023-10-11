@@ -64,13 +64,14 @@ def test_defined():
             "Registers": regs["Z"],
             "MAC": mac["Z"]}}
 
+
 def test_get_energy():
-  yaml = """
+    yaml = """
   bindings:
     Z:
     - config: default
       prefix: tmp/Z
       energy: True
   """
-  bindings = Bindings.from_str(yaml)
-  assert bindings.get_energy("Z")
+    bindings = Bindings.from_str(yaml)
+    assert bindings.get_energy("Z")

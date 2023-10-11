@@ -1,17 +1,6 @@
 from teaal.ir.flow_nodes import *
 
 
-def test_collecting_node():
-    assert repr(CollectingNode("A", "K", "fiber", False, True)
-                ) == "(CollectingNode, A, K, fiber, False, True)"
-
-    assert CollectingNode("A", "K", "fiber", False, True).get_tensor() == "A"
-    assert CollectingNode("A", "K", "fiber", False, True).get_rank() == "K"
-    assert CollectingNode("A", "K", "fiber", False, True).get_type() == "fiber"
-    assert not CollectingNode("A", "K", "fiber", False, True).get_consumable()
-    assert CollectingNode("A", "K", "fiber", False, True).get_is_read_trace()
-
-
 def test_consume_trace_node():
     assert repr(ConsumeTraceNode("K2Intersector", "K2")
                 ) == "(ConsumeTraceNode, K2Intersector, K2)"

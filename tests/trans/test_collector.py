@@ -11,9 +11,11 @@ def build_extensor_yaml():
     with open("tests/integration/extensor.yaml", "r") as f:
         return f.read()
 
+
 def build_extensor_energy_yaml():
     with open("tests/integration/extensor-energy.yaml", "r") as f:
         return f.read()
+
 
 def build_gamma_yaml():
     with open("tests/integration/gamma.yaml", "r") as f:
@@ -44,6 +46,23 @@ def build_collector(yaml, i):
     program.add_einsum(i)
     metrics = Metrics(program, hardware, format_)
     return Collector(program, metrics)
+
+
+def check_hifiber_lines(gen_lines, corr_lines):
+    gen_set = set(gen_lines)
+    corr_set = set(corr_lines)
+
+    print("In generated")
+    for line in gen_lines:
+        if line not in corr_set:
+            print(line)
+
+    print("In corr")
+    for line in corr_lines:
+        if line not in gen_set:
+            print(line)
+
+    assert gen_set == corr_set
 
 
 def test_create_component_unknown():
@@ -356,6 +375,7 @@ def test_dump_extensor():
 
     assert collector.dump().gen(0) == hifiber
 
+
 def test_dump_extensor_energy():
     yaml = build_extensor_energy_yaml()
     collector = build_collector(yaml, 0)
@@ -417,6 +437,8 @@ def test_dump_extensor_energy():
         "metrics[\"Z\"][\"iter\"][\"K0\"] = Compute.numIters(\"tmp/extensor-K0-iter.csv\")"
 
     assert collector.dump().gen(0) == hifiber
+
+
 def test_dump_sigma():
     yaml = build_sigma_yaml()
     collector = build_collector(yaml, 0)
@@ -723,22 +745,42 @@ def test_set_collecting_eager():
 def test_start():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
-    hifiber = "Metrics.beginCollect(\"tmp/gamma_T\")"
 
-    assert collector.start().gen(0) == hifiber
+    generated = collector.start().gen(0).split("\n")
+    assert len(generated) == 9
+
+    corr = ["Metrics.beginCollect(\"tmp/gamma_T\")"]
+    check_hifiber_lines(generated[:1], corr)
+
+    corr = ["Metrics.trace(\"K\", type_=\"iter\", consumable=False)",
+            "Metrics.trace(\"K\", type_=\"intersect_2\", consumable=True)",
+            "Metrics.trace(\"M\", type_=\"iter\", consumable=False)",
+            "Metrics.trace(\"M\", type_=\"populate_1\", consumable=False)",
+            "Metrics.trace(\"K\", type_=\"intersect_2\", consumable=False)",
+            "Metrics.trace(\"K\", type_=\"intersect_3\", consumable=False)",
+            "Metrics.trace(\"N\", type_=\"iter\", consumable=False)",
+            "Metrics.trace(\"N\", type_=\"populate_1\", consumable=False)"]
+    check_hifiber_lines(generated[1:], corr)
 
 
 def test_start_flattening():
     yaml = build_sigma_yaml()
     collector = build_collector(yaml, 0)
 
-    hifiber = "Metrics.beginCollect(\"tmp/sigma\")\n" + \
-        "Metrics.associateShape(\"MK01\", (M, K))\n" + \
-        "Metrics.matchRanks(\"MK00\", \"M\")\n" + \
-        "Metrics.matchRanks(\"MK00\", \"K0\")\n" + \
-        "Metrics.associateShape(\"MK00\", (M, K))"
+    generated = collector.start().gen(0).split("\n")
+    assert len(generated) == 7
 
-    assert collector.start().gen(0) == hifiber
+    corr = ["Metrics.beginCollect(\"tmp/sigma\")",
+            "Metrics.associateShape(\"MK01\", (M, K))",
+            "Metrics.matchRanks(\"MK00\", \"M\")",
+            "Metrics.matchRanks(\"MK00\", \"K0\")",
+            "Metrics.associateShape(\"MK00\", (M, K))"]
+    check_hifiber_lines(generated[:5], corr)
+
+    corr = [
+        'Metrics.trace("MK00", type_="eager_a_mk00_read", consumable=False)',
+        'Metrics.trace("K0", type_="eager_b_k0_read", consumable=False)']
+    check_hifiber_lines(generated[5:], corr)
 
 
 def test_trace_tree():

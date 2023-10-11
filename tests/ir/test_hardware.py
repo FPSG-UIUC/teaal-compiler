@@ -635,6 +635,7 @@ def test_get_traffic_eager():
         "A", "K0", "coord", "default") == [
         (dram, "lazy"), (llb, "M0")]
 
+
 def test_get_energy():
     gamma = "tests/integration/gamma.yaml"
     arch = Architecture.from_file(gamma)
@@ -651,6 +652,7 @@ def test_get_energy():
     hardware = Hardware(arch, bindings, program)
 
     assert hardware.get_energy("Z")
+
 
 def test_get_prefix():
     gamma = "tests/integration/gamma.yaml"

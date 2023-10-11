@@ -222,7 +222,7 @@ class Collector:
         """
         Start metrics collection
 
-        TODO: Maybe the CollectingNodes, RegisterRanksNode, etc. can just be
+        TODO: Maybe the RegisterRanksNode, etc. can just be
         swallowed up in this
         """
         block = SBlock([])
@@ -257,6 +257,35 @@ class Collector:
 
             args = [AJust(EString(rank)), AJust(ETuple(tuple(roots)))]
             block.add(SExpr(EMethod(EVar("Metrics"), "associateShape", args)))
+
+        traces: Set[Tuple[Optional[str], str, str, bool, bool]] = set()
+        trace: Tuple[Optional[str], str, str, bool, bool]
+        # TODO: Switch this to the sequencer
+        if self.metrics.get_hardware().get_energy(einsum):
+            for rank in self.program.get_loop_order().get_ranks():
+                trace = (None, rank, "iter", False, True)
+                block.add(self.__add_collection(trace, traces))
+
+        for tensor in self.program.get_equation().get_tensors():
+            tensor_name = tensor.root_name()
+
+            # Collect the necessary traces for each tensor
+            for rank, type_, consumable in self.metrics.get_collected_tensor_info(
+                    tensor_name):
+
+                # If we are collecting the loop's trace
+                if type_ == "iter":
+                    trace = (None, rank, type_, consumable, True)
+                    block.add(self.__add_collection(trace, traces))
+
+                # Otherwise, get the fiber's read (and maybe write)
+                else:
+                    trace = (tensor_name, rank, type_, consumable, True)
+                    block.add(self.__add_collection(trace, traces))
+
+                    if tensor.get_is_output():
+                        trace = (tensor_name, rank, type_, consumable, False)
+                        block.add(self.__add_collection(trace, traces))
 
         return block
 
@@ -304,6 +333,26 @@ class Collector:
         cond = EBinOp(key_tuple, ONotIn(), EVar(trace))
         add_key = SExpr(EMethod(EVar(trace), "add", [AJust(key_tuple)]))
         return SIf((cond, SBlock([add_key, trace_stmt])), [], None)
+
+    def __add_collection(self,
+                         trace: Tuple[Optional[str],
+                                      str,
+                                      str,
+                                      bool,
+                                      bool],
+                         traces: Set[Tuple[Optional[str],
+                                           str,
+                                           str,
+                                           bool,
+                                           bool]]) -> Statement:
+        """
+        Add a collection and update the set of traces
+        """
+        if trace not in traces:
+            traces.add(trace)
+            return self.set_collecting(*trace)
+
+        return SBlock([])
 
     def __get_trace(self, binding: dict,
                     is_read: bool) -> Tuple[str, Statement]:
@@ -390,8 +439,12 @@ class Collector:
         metrics_iter = EAccess(metrics_einsum, EString("iter"))
 
         for rank in self.program.get_loop_order().get_ranks():
-            trace = self.metrics.get_hardware().get_prefix(einsum) + "-" + rank + "-iter.csv"
-            num_iters = EMethod(EVar("Compute"), "numIters", [AJust(EString(trace))])
+            trace = self.metrics.get_hardware().get_prefix(einsum) + \
+                "-" + rank + "-iter.csv"
+            num_iters = EMethod(
+                EVar("Compute"), "numIters", [
+                    AJust(
+                        EString(trace))])
             metrics_rank = AAccess(metrics_iter, EString(rank))
             block.add(SAssign(metrics_rank, num_iters))
 
