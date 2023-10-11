@@ -213,12 +213,6 @@ class HiFiber:
                         node.get_ranks(),
                         node.get_type()))
 
-            elif isinstance(node, TraceTreeNode):
-                code.add(
-                    self.collector.trace_tree(
-                        node.get_tensor(),
-                        node.get_rank(),
-                        node.get_is_read_trace()))
             else:
                 raise ValueError(
                     "Unknown node: " +

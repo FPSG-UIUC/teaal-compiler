@@ -1098,15 +1098,10 @@ def test_graph_metrics_extensor():
     corr.add_edge(LoopNode("M1"), LoopNode("N1"))
     corr.add_edge(LoopNode("M1"), LoopNode("K1"))
     corr.add_edge(LoopNode("N1"), LoopNode("K1"))
-    corr.add_edge(LoopNode("N1"), TraceTreeNode("Z", "M0", True))
     corr.add_edge(LoopNode("N1"), LoopNode("M0"))
     corr.add_edge(LoopNode("K1"), LoopNode("M0"))
-    corr.add_edge(LoopNode("K1"), TraceTreeNode("Z", "M0", True))
-    corr.add_edge(LoopNode("K1"), TraceTreeNode("A", "M0", True))
-    corr.add_edge(LoopNode("K1"), TraceTreeNode("B", "N0", True))
     corr.add_edge(LoopNode("K1"), LoopNode("N0"))
     corr.add_edge(LoopNode("M0"), LoopNode("N0"))
-    corr.add_edge(LoopNode("M0"), TraceTreeNode("B", "N0", True))
     corr.add_edge(LoopNode("M0"), LoopNode("K0"))
     corr.add_edge(LoopNode("N0"), LoopNode("K0"))
     corr.add_edge(LoopNode("N0"), OtherNode("Body"))
@@ -1116,7 +1111,6 @@ def test_graph_metrics_extensor():
     corr.add_edge(EndLoopNode("N0"), EndLoopNode("M0"))
     corr.add_edge(EndLoopNode("M0"), EndLoopNode("K1"))
     corr.add_edge(EndLoopNode("K1"), EndLoopNode("N1"))
-    corr.add_edge(EndLoopNode("K1"), TraceTreeNode("Z", "M0", False))
     corr.add_edge(EndLoopNode("N1"), EndLoopNode("M1"))
     corr.add_edge(EndLoopNode("M1"), EndLoopNode("M2"))
     corr.add_edge(EndLoopNode("M2"), EndLoopNode("K2"))
@@ -1129,9 +1123,6 @@ def test_graph_metrics_extensor():
     corr.add_edge(OtherNode("Output"), GetRootNode(
         "Z", ['N2', 'M2', 'M1', 'N1', 'M0', 'N0']))
     corr.add_edge(MetricsNode("Start"), LoopNode("N2"))
-    corr.add_edge(MetricsNode("Start"), TraceTreeNode("Z", "M0", True))
-    corr.add_edge(MetricsNode("Start"), TraceTreeNode("A", "M0", True))
-    corr.add_edge(MetricsNode('Start'), TraceTreeNode('B', 'N0', True))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(
         GetRootNode(
@@ -1185,8 +1176,6 @@ def test_graph_metrics_extensor():
         GetRootNode(
             "B", [
                 'N2', 'K2', 'N1', 'K1', 'N0', 'K0']), LoopNode("N2"))
-    corr.add_edge(TraceTreeNode("Z", "M0", False), EndLoopNode("N1"))
-    corr.add_edge(TraceTreeNode("Z", "M0", False), MetricsNode("End"))
     corr.add_edge(LoopNode('N2'), MetricsHeaderNode('K2'))
     corr.add_edge(LoopNode('K2'), MetricsHeaderNode('M2'))
     corr.add_edge(LoopNode('M2'), MetricsHeaderNode('M1'))
@@ -1250,15 +1239,10 @@ def test_graph_metrics_extensor_energy():
     corr.add_edge(LoopNode("M1"), LoopNode("N1"))
     corr.add_edge(LoopNode("M1"), LoopNode("K1"))
     corr.add_edge(LoopNode("N1"), LoopNode("K1"))
-    corr.add_edge(LoopNode("N1"), TraceTreeNode("Z", "M0", True))
     corr.add_edge(LoopNode("N1"), LoopNode("M0"))
     corr.add_edge(LoopNode("K1"), LoopNode("M0"))
-    corr.add_edge(LoopNode("K1"), TraceTreeNode("Z", "M0", True))
-    corr.add_edge(LoopNode("K1"), TraceTreeNode("A", "M0", True))
-    corr.add_edge(LoopNode("K1"), TraceTreeNode("B", "N0", True))
     corr.add_edge(LoopNode("K1"), LoopNode("N0"))
     corr.add_edge(LoopNode("M0"), LoopNode("N0"))
-    corr.add_edge(LoopNode("M0"), TraceTreeNode("B", "N0", True))
     corr.add_edge(LoopNode("M0"), LoopNode("K0"))
     corr.add_edge(LoopNode("N0"), LoopNode("K0"))
     corr.add_edge(LoopNode("N0"), OtherNode("Body"))
@@ -1268,7 +1252,6 @@ def test_graph_metrics_extensor_energy():
     corr.add_edge(EndLoopNode("N0"), EndLoopNode("M0"))
     corr.add_edge(EndLoopNode("M0"), EndLoopNode("K1"))
     corr.add_edge(EndLoopNode("K1"), EndLoopNode("N1"))
-    corr.add_edge(EndLoopNode("K1"), TraceTreeNode("Z", "M0", False))
     corr.add_edge(EndLoopNode("N1"), EndLoopNode("M1"))
     corr.add_edge(EndLoopNode("M1"), EndLoopNode("M2"))
     corr.add_edge(EndLoopNode("M2"), EndLoopNode("K2"))
@@ -1281,9 +1264,6 @@ def test_graph_metrics_extensor_energy():
     corr.add_edge(OtherNode("Output"), GetRootNode(
         "Z", ['N2', 'M2', 'M1', 'N1', 'M0', 'N0']))
     corr.add_edge(MetricsNode("Start"), LoopNode("N2"))
-    corr.add_edge(MetricsNode("Start"), TraceTreeNode("Z", "M0", True))
-    corr.add_edge(MetricsNode('Start'), TraceTreeNode('A', 'M0', True))
-    corr.add_edge(MetricsNode('Start'), TraceTreeNode('B', 'N0', True))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(
         GetRootNode(
@@ -1337,8 +1317,6 @@ def test_graph_metrics_extensor_energy():
         GetRootNode(
             "B", [
                 'N2', 'K2', 'N1', 'K1', 'N0', 'K0']), LoopNode("N2"))
-    corr.add_edge(TraceTreeNode("Z", "M0", False), EndLoopNode("N1"))
-    corr.add_edge(TraceTreeNode("Z", "M0", False), MetricsNode("End"))
     corr.add_edge(LoopNode('N2'), MetricsHeaderNode('K2'))
     corr.add_edge(LoopNode('K2'), MetricsHeaderNode('M2'))
     corr.add_edge(LoopNode('M2'), MetricsHeaderNode('M1'))
@@ -1545,17 +1523,13 @@ def test_graph_metrics_trace_output():
     corr.add_edge(OtherNode("Body"), EndLoopNode("M"))
     corr.add_edge(EndLoopNode("M"), EndLoopNode("K"))
     corr.add_edge(EndLoopNode("K"), OtherNode("Footer"))
-    corr.add_edge(EndLoopNode("K"), TraceTreeNode("Z", "K", False))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("K"))
     corr.add_edge(OtherNode("Graphics"), MetricsNode("Start"))
-    corr.add_edge(OtherNode("Graphics"), TraceTreeNode("Z", "K", True))
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
     corr.add_edge(OtherNode("Output"), GetRootNode("Z", ['K', 'M']))
     corr.add_edge(MetricsNode("Start"), LoopNode("K"))
-    corr.add_edge(MetricsNode("Start"), TraceTreeNode("Z", "K", True))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
-    corr.add_edge(GetRootNode("Z", ['K', 'M']), TraceTreeNode("Z", "K", True))
     corr.add_edge(GetRootNode("Z", ['K', 'M']), LoopNode("K"))
     corr.add_edge(SwizzleNode(
         "A", ['K', 'M'], "loop-order"), GetRootNode("A", ['K', 'M']))
@@ -1563,8 +1537,6 @@ def test_graph_metrics_trace_output():
         SwizzleNode(
             "A", ['K', 'M'], "loop-order"), OtherNode("Graphics"))
     corr.add_edge(GetRootNode("A", ['K', 'M']), LoopNode("K"))
-    corr.add_edge(TraceTreeNode("Z", "K", False), OtherNode("Footer"))
-    corr.add_edge(TraceTreeNode("Z", "K", False), MetricsNode("End"))
     corr.add_edge(LoopNode('K'), MetricsHeaderNode('M'))
     corr.add_edge(OtherNode('Graphics'), MetricsHeaderNode('K'))
     corr.add_edge(MetricsNode('Start'), MetricsHeaderNode('K'))

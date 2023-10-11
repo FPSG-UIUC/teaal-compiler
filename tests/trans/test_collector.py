@@ -649,15 +649,27 @@ def test_make_body_iter_num():
     assert collector.make_body().gen(0) == hifiber
 
 
+def test_make_loop_footer_unconfigured():
+    yaml = build_gamma_yaml()
+    collector = build_collector(yaml, 0)
+
+    with pytest.raises(ValueError) as excinfo:
+        collector.make_loop_footer("K")
+    assert str(
+        excinfo.value) == "Unconfigured collector. Make sure to first call start()"
+
+
 def test_make_loop_footer():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
+    collector.start()
 
     hifiber = "Intersect_K.addTraces(Metrics.consumeTrace(\"K\", \"intersect_2\"))"
     assert collector.make_loop_footer("K").gen(0) == hifiber
 
     yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
+    collector.start()
 
     program = collector.program
     part_ir = program.get_partitioning()
@@ -670,16 +682,33 @@ def test_make_loop_footer():
                 True))
         program.get_loop_order().apply(tensor)
 
+    assert collector.make_loop_footer("M2").gen(0) == ""
+
     hifiber = "n0_iter_num = Metrics.getIter().copy()\n" + \
         "K0Intersection_K0.addTraces(Metrics.consumeTrace(\"K0\", \"intersect_0\"), Metrics.consumeTrace(\"K0\", \"intersect_1\"))"
 
-    assert collector.make_loop_footer("M2").gen(0) == ""
     assert collector.make_loop_footer("K0").gen(0) == hifiber
+
+    hifiber = "K1Intersect_K1.addTraces(Metrics.consumeTrace(\"K1\", \"intersect_0\"), Metrics.consumeTrace(\"K1\", \"intersect_1\"))\n" + \
+        "z_k1.trace(\"eager_z_k1_write\", iteration_num=n0_iter_num)"
+
+    assert collector.make_loop_footer("K1").gen(0) == hifiber
+
+
+def test_make_loop_header_unconfigured():
+    yaml = build_gamma_yaml()
+    collector = build_collector(yaml, 0)
+
+    with pytest.raises(ValueError) as excinfo:
+        collector.make_loop_header("K")
+    assert str(
+        excinfo.value) == "Unconfigured collector. Make sure to first call start()"
 
 
 def test_make_loop_header():
     yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
+    collector.start()
 
     assert collector.make_loop_header("N2").gen(0) == ""
 
@@ -687,6 +716,88 @@ def test_make_loop_header():
         "eager_z_m0_read = set()"
 
     assert collector.make_loop_header("M1").gen(0) == hifiber
+
+    hifiber_option1 = "if () not in eager_z_m0_read:\n" + \
+        "    eager_z_m0_read.add(())\n" + \
+        "    z_m0.trace(\"eager_z_m0_read\")\n" + \
+        "if () not in eager_a_m0_read:\n" + \
+        "    eager_a_m0_read.add(())\n" + \
+        "    a_m0.trace(\"eager_a_m0_read\")"
+
+    hifiber_option2 = "if () not in eager_a_m0_read:\n" + \
+        "    eager_a_m0_read.add(())\n" + \
+        "    a_m0.trace(\"eager_a_m0_read\")\n" + \
+        "if () not in eager_z_m0_read:\n" + \
+        "    eager_z_m0_read.add(())\n" + \
+        "    z_m0.trace(\"eager_z_m0_read\")"
+
+    assert collector.make_loop_header("M0").gen(
+        0) in {hifiber_option1, hifiber_option2}
+
+# TODO: Actually compute the exectution time in TeAAL
+# TODO: Multiply buffer size by number of instances
+
+
+def test_make_loop_header_eager_root():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K]
+        Z: [M]
+      expressions:
+      - Z[M] = A[k]
+    mapping:
+      loop-order:
+        Z: [K, M]
+    format:
+      Z:
+        default:
+          rank-order: [M]
+          M:
+            format: U
+            pbits: 32
+    architecture:
+      Accelerator:
+      - name: System
+        attributes:
+          clock_frequency: 1000
+        local:
+        - name: MainMemory
+          class: DRAM
+          attributes:
+            bandwidth: 2048
+        subtree:
+        - name: Chip
+          local:
+          - name: Buffer
+            class: Buffet
+            attributes:
+              width: 32
+              depth: 128
+    bindings:
+      Z:
+      - config: Accelerator
+        prefix: tmp/eager_root
+      - component: MainMemory
+        bindings:
+        - tensor: Z
+          rank: M
+          type: payload
+          format: default
+      - component: Buffer
+        bindings:
+        - tensor: Z
+          rank: M
+          type: payload
+          format: default
+          style: eager
+          evict-on: root
+    """
+    collector = build_collector(yaml, 0)
+    collector.start()
+
+    hifiber = "z_k.trace(\"eager_z_k_write\", iteration_num=m_iter_num)"
+    assert collector.make_loop_footer("K").gen(0) == hifiber
 
 
 def test_register_ranks():

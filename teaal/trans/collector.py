@@ -44,6 +44,9 @@ class Collector:
         self.program = program
         self.metrics = metrics
 
+        # tree_traces: Optional[Dict[rank, Dict[is_read, Set[tensor]]]]
+        self.tree_traces: Optional[Dict[str, Dict[bool, Set[str]]]] = None
+
     def create_component(self, component: Component, rank: str) -> Statement:
         """
         Create a component to track metrics
@@ -140,6 +143,10 @@ class Collector:
         """
         block = SBlock([])
 
+        if self.tree_traces is None:
+            raise ValueError(
+                "Unconfigured collector. Make sure to first call start()")
+
         # Collect the iteration number if necessary
         block.add(self.__make_iter_num(rank))
 
@@ -148,23 +155,34 @@ class Collector:
         if coiter is not None:
             block.add(self.consume_traces(coiter.get_name(), rank))
 
+        # Eagerly store subtrees as necessary
+        for tensor in self.tree_traces[rank][False]:
+            block.add(self.trace_tree(tensor, rank, False))
+
         return block
 
     def make_loop_header(self, rank: str) -> Statement:
         """
         Make a header for a loop
-
-        TODO: Swallow other metrics counting into here
         """
         block = SBlock([])
+
+        if self.tree_traces is None:
+            raise ValueError(
+                "Unconfigured collector. Make sure to first call start()")
 
         loop_ranks = ["root"] + self.program.get_loop_order().get_ranks()
         i = loop_ranks.index(rank)
 
+        # Save the set of subtrees already eagerly loaded
         eager_evicts = self.metrics.get_eager_evicts(loop_ranks[i - 1])
         for tensor, root in eager_evicts:
             tracker = "eager_" + tensor.lower() + "_" + root.lower() + "_read"
             block.add(SAssign(AVar(tracker), EFunc("set", ())))
+
+        # Eagerly load new subtrees as necessary
+        for tensor in self.tree_traces[rank][True]:
+            block.add(self.trace_tree(tensor, rank, True))
 
         return block
 
@@ -214,11 +232,12 @@ class Collector:
                 # We want to collect the iteration number for the last loop
                 # rank
                 output = self.program.get_equation().get_tensor(tensor)
-                dummy = Tensor("dummy", output.get_init_ranks())
-                self.program.apply_all_partitioning(dummy)
-                self.program.get_loop_order().apply(dummy)
+                final_tensor = Tensor(
+                    output.root_name(), output.get_init_ranks())
+                self.program.apply_all_partitioning(final_tensor)
+                self.program.get_loop_order().apply(final_tensor)
 
-                iter_var = dummy.get_ranks()[-1].lower() + "_iter_num"
+                iter_var = final_tensor.get_ranks()[-1].lower() + "_iter_num"
                 # TODO: Add a separate None type
                 block.add(SAssign(AVar(iter_var), EVar("None")))
 
@@ -275,11 +294,11 @@ class Collector:
         if not is_read_trace:
             # We want to use the iteration number for the last loop rank
             output = self.program.get_equation().get_tensor(tensor)
-            dummy = Tensor("dummy", output.get_init_ranks())
-            self.program.apply_all_partitioning(dummy)
-            self.program.get_loop_order().apply(dummy)
+            final_tensor = Tensor(output.root_name(), output.get_init_ranks())
+            self.program.apply_all_partitioning(final_tensor)
+            self.program.get_loop_order().apply(final_tensor)
 
-            iter_var = dummy.get_ranks()[-1].lower() + "_iter_num"
+            iter_var = final_tensor.get_ranks()[-1].lower() + "_iter_num"
             args.append(AParam("iteration_num", EVar(iter_var)))
 
         trace_stmt = SExpr(EMethod(EVar(fiber), "trace", args))
@@ -623,10 +642,17 @@ class Collector:
         """
         block = SBlock([])
         einsum = self.program.get_equation().get_output().root_name()
+        loop_order = self.program.get_loop_order().get_ranks()
 
         traces: Set[Tuple[Optional[str], str, str, bool, bool]] = set()
         trace: Tuple[Optional[str], str, str, bool, bool]
+
         register = False
+        self.tree_traces = {rank: {True: set(), False: set()}
+                            for rank in loop_order}
+        available = [(rank, self.program.get_partitioning().get_available(rank))
+                     for rank in reversed(loop_order)]
+
         for sequencer in self.metrics.get_hardware().get_components(einsum,
                                                                     SequencerComponent):
             for rank in sequencer.get_ranks(einsum):
@@ -654,9 +680,53 @@ class Collector:
                         trace = (tensor_name, rank, type_, consumable, False)
                         block.add(self.__add_collection(trace, traces))
 
-                    # It is eager if the type is not "fiber"
+                    # Type is fiber if lazy and root of the eager access if
+                    # lazy
                     if type_ != "fiber":
+
+                        # Register the rank order explicitly
                         register = True
+
+                        # Eagerly load a subtree right before the given loop
+                        loaded = False
+                        for loop_rank, avail in available:
+                            if type_ in avail:
+                                self.tree_traces[loop_rank][True].add(
+                                    tensor_name)
+                                loaded = True
+                                break
+                        assert loaded
+
+                        # Eagerly store a subtree right before we move onto the
+                        # next subtree
+                        if tensor.get_is_output():
+                            final_tensor = Tensor(
+                                tensor.root_name(), tensor.get_init_ranks())
+                            self.program.apply_all_partitioning(final_tensor)
+                            self.program.get_loop_order().apply(final_tensor)
+
+                            i = final_tensor.get_ranks().index(type_)
+                            if i == 0:
+                                store_rank = loop_order[0]
+                            else:
+                                one_above_rank = final_tensor.get_ranks()[
+                                    i - 1]
+
+                                stored = False
+                                for j, (loop_rank, avail) in enumerate(
+                                        available):
+                                    if one_above_rank in avail:
+                                        stored = True
+                                        break
+                                assert stored
+
+                                # Unreversed index -> len(loop_order) - j - 1
+                                # Store rank is one below -> + 1
+                                store_rank = loop_order[len(loop_order) - j]
+
+                            # Trace the eager tree
+                            self.tree_traces[store_rank][False].add(
+                                tensor_name)
 
         return block, register
 
@@ -865,9 +935,9 @@ class Collector:
         output = self.program.get_equation().get_output()
 
         # We want to collect the iteration number for the last loop rank
-        dummy = Tensor("dummy", output.get_init_ranks())
-        self.program.apply_all_partitioning(dummy)
-        self.program.get_loop_order().apply(dummy)
+        final_tensor = Tensor(output.root_name(), output.get_init_ranks())
+        self.program.apply_all_partitioning(final_tensor)
+        self.program.get_loop_order().apply(final_tensor)
 
         # We don't need the iteration number of this rank if it is the top rank
         # since we can never eager access a 0-tensor
@@ -876,10 +946,10 @@ class Collector:
             return SBlock([])
 
         # We only want the iteration number of the output's bottom rank
-        if loop_order[i - 1] != dummy.get_ranks()[-1]:
+        if loop_order[i - 1] != final_tensor.get_ranks()[-1]:
             return SBlock([])
 
-        iter_var = AVar(dummy.get_ranks()[-1].lower() + "_iter_num")
+        iter_var = AVar(final_tensor.get_ranks()[-1].lower() + "_iter_num")
         iter_num = EMethod(EMethod(EVar("Metrics"), "getIter", []), "copy", [])
 
         return SAssign(iter_var, iter_num)

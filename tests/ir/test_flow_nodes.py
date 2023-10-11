@@ -105,11 +105,3 @@ def test_tensor_node():
     assert repr(TensorNode("A")) == "(TensorNode, A)"
 
     assert TensorNode("A").get_tensor() == "A"
-
-
-def test_trace_tree_node():
-    assert repr(TraceTreeNode("A", "K", True)) == "(TraceTreeNode, A, K, True)"
-
-    assert TraceTreeNode("A", "K", True).get_tensor() == "A"
-    assert TraceTreeNode("A", "K", True).get_rank() == "K"
-    assert TraceTreeNode("A", "K", True).get_is_read_trace()
