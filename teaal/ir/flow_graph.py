@@ -357,12 +357,6 @@ class FlowGraph:
                     CreateComponentNode(
                         name, rank), MetricsNode("Start"))
 
-                consume_node = ConsumeTraceNode(name, rank)
-                self.graph.add_edge(EndLoopNode(rank), consume_node)
-                self.graph.add_edge(consume_node,
-                                    chain[chain.index(EndLoopNode(rank)) + 1])
-                self.graph.add_edge(consume_node, MetricsNode("End"))
-
     def __build_loop_nest(self) -> List[Node]:
         """
         Build the loop nest, returns the chain of nodes

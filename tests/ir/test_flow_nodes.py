@@ -1,15 +1,6 @@
 from teaal.ir.flow_nodes import *
 
 
-def test_consume_trace_node():
-    assert repr(ConsumeTraceNode("K2Intersector", "K2")
-                ) == "(ConsumeTraceNode, K2Intersector, K2)"
-
-    assert ConsumeTraceNode("K2Intersector",
-                            "K2").get_component() == "K2Intersector"
-    assert ConsumeTraceNode("K2Intersector", "K2").get_rank() == "K2"
-
-
 def test_create_component_node():
     assert repr(CreateComponentNode("K2Intersector", "K2")
                 ) == "(CreateComponentNode, K2Intersector, K2)"

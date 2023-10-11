@@ -978,9 +978,6 @@ def test_graph_metrics_T():
     corr.add_edge(OtherNode("Output"), GetRootNode("T", ['M', 'K', 'N']))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(CreateComponentNode("Intersect", "K"), MetricsNode("Start"))
-    corr.add_edge(EndLoopNode("K"), ConsumeTraceNode("Intersect", "K"))
-    corr.add_edge(ConsumeTraceNode("Intersect", "K"), EndLoopNode("M"))
-    corr.add_edge(ConsumeTraceNode("Intersect", "K"), MetricsNode("End"))
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("T", ['M', 'K', 'N']), LoopNode("M"))
@@ -1117,17 +1114,14 @@ def test_graph_metrics_extensor():
     corr.add_edge(LoopNode("K0"), OtherNode("Body"))
     corr.add_edge(OtherNode("Body"), EndLoopNode("K0"))
     corr.add_edge(EndLoopNode("K0"), EndLoopNode("N0"))
-    corr.add_edge(EndLoopNode("K0"), ConsumeTraceNode("K0Intersection", "K0"))
     corr.add_edge(EndLoopNode("N0"), EndLoopNode("M0"))
     corr.add_edge(EndLoopNode("M0"), EndLoopNode("K1"))
     corr.add_edge(EndLoopNode("K1"), EndLoopNode("N1"))
     corr.add_edge(EndLoopNode("K1"), TraceTreeNode("Z", "M0", False))
-    corr.add_edge(EndLoopNode("K1"), ConsumeTraceNode("K1Intersect", "K1"))
     corr.add_edge(EndLoopNode("N1"), EndLoopNode("M1"))
     corr.add_edge(EndLoopNode("M1"), EndLoopNode("M2"))
     corr.add_edge(EndLoopNode("M2"), EndLoopNode("K2"))
     corr.add_edge(EndLoopNode("K2"), EndLoopNode("N2"))
-    corr.add_edge(EndLoopNode("K2"), ConsumeTraceNode("K2Intersect", "K2"))
     corr.add_edge(EndLoopNode("N2"), OtherNode("Footer"))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("N2"))
@@ -1197,18 +1191,12 @@ def test_graph_metrics_extensor():
     corr.add_edge(
         CreateComponentNode("K2Intersect", "K2"),
         MetricsNode("Start"))
-    corr.add_edge(ConsumeTraceNode("K2Intersect", "K2"), EndLoopNode("N2"))
-    corr.add_edge(ConsumeTraceNode("K2Intersect", "K2"), MetricsNode("End"))
     corr.add_edge(
         CreateComponentNode("K1Intersect", "K1"),
         MetricsNode("Start"))
-    corr.add_edge(ConsumeTraceNode("K1Intersect", "K1"), EndLoopNode("N1"))
-    corr.add_edge(ConsumeTraceNode("K1Intersect", "K1"), MetricsNode("End"))
     corr.add_edge(
         CreateComponentNode("K0Intersection", "K0"),
         MetricsNode("Start"))
-    corr.add_edge(ConsumeTraceNode("K0Intersection", "K0"), EndLoopNode("N0"))
-    corr.add_edge(ConsumeTraceNode("K0Intersection", "K0"), MetricsNode("End"))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
         ["N2", "K2", "M2", "M1", "N1", "K1", "M0", "N0", "K0"]))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
@@ -1291,17 +1279,14 @@ def test_graph_metrics_extensor_energy():
     corr.add_edge(LoopNode("K0"), OtherNode("Body"))
     corr.add_edge(OtherNode("Body"), EndLoopNode("K0"))
     corr.add_edge(EndLoopNode("K0"), EndLoopNode("N0"))
-    corr.add_edge(EndLoopNode("K0"), ConsumeTraceNode("K0Intersection", "K0"))
     corr.add_edge(EndLoopNode("N0"), EndLoopNode("M0"))
     corr.add_edge(EndLoopNode("M0"), EndLoopNode("K1"))
     corr.add_edge(EndLoopNode("K1"), EndLoopNode("N1"))
     corr.add_edge(EndLoopNode("K1"), TraceTreeNode("Z", "M0", False))
-    corr.add_edge(EndLoopNode("K1"), ConsumeTraceNode("K1Intersect", "K1"))
     corr.add_edge(EndLoopNode("N1"), EndLoopNode("M1"))
     corr.add_edge(EndLoopNode("M1"), EndLoopNode("M2"))
     corr.add_edge(EndLoopNode("M2"), EndLoopNode("K2"))
     corr.add_edge(EndLoopNode("K2"), EndLoopNode("N2"))
-    corr.add_edge(EndLoopNode("K2"), ConsumeTraceNode("K2Intersect", "K2"))
     corr.add_edge(EndLoopNode("N2"), OtherNode("Footer"))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
     corr.add_edge(OtherNode("Graphics"), LoopNode("N2"))
@@ -1371,18 +1356,12 @@ def test_graph_metrics_extensor_energy():
     corr.add_edge(
         CreateComponentNode("K2Intersect", "K2"),
         MetricsNode("Start"))
-    corr.add_edge(ConsumeTraceNode("K2Intersect", "K2"), EndLoopNode("N2"))
-    corr.add_edge(ConsumeTraceNode("K2Intersect", "K2"), MetricsNode("End"))
     corr.add_edge(
         CreateComponentNode("K1Intersect", "K1"),
         MetricsNode("Start"))
-    corr.add_edge(ConsumeTraceNode("K1Intersect", "K1"), EndLoopNode("N1"))
-    corr.add_edge(ConsumeTraceNode("K1Intersect", "K1"), MetricsNode("End"))
     corr.add_edge(
         CreateComponentNode("K0Intersection", "K0"),
         MetricsNode("Start"))
-    corr.add_edge(ConsumeTraceNode("K0Intersection", "K0"), EndLoopNode("N0"))
-    corr.add_edge(ConsumeTraceNode("K0Intersection", "K0"), MetricsNode("End"))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
         ["N2", "K2", "M2", "M1", "N1", "K1", "M0", "N0", "K0"]))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(

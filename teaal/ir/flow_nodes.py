@@ -30,37 +30,6 @@ from typing import Any, Iterable, List, Optional, Tuple
 from teaal.ir.node import Node
 
 
-class ConsumeTraceNode(Node):
-    """
-    A node that consumes traces for a given component
-    """
-
-    def __init__(self, component: str, rank: str) -> None:
-        """
-        Construct a ConsumeTraceNode
-        """
-        self.component = component
-        self.rank = rank
-
-    def get_component(self) -> str:
-        """
-        Accessor for the component name
-        """
-        return self.component
-
-    def get_rank(self) -> str:
-        """
-        Accessor for the rank
-        """
-        return self.rank
-
-    def _Node__key(self) -> Iterable[Any]:
-        """
-        Iterable of fields of a ConsumeTraceNode
-        """
-        return self.component, self.rank
-
-
 class CreateComponentNode(Node):
     """
     A node that creates an object for tracking metrics for a given component

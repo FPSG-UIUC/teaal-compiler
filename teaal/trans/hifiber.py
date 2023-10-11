@@ -113,13 +113,7 @@ class HiFiber:
         while i < len(nodes):
             node = nodes[i]
 
-            if isinstance(node, ConsumeTraceNode):
-                code.add(
-                    self.collector.consume_traces(
-                        node.get_component(),
-                        node.get_rank()))
-
-            elif isinstance(node, CreateComponentNode):
+            if isinstance(node, CreateComponentNode):
                 code.add(
                     self.collector.create_component(
                         node.get_component(),

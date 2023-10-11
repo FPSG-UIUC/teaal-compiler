@@ -141,7 +141,17 @@ class Collector:
         """
         Make a footer for the loop
         """
-        return self.__make_iter_num(rank)
+        block = SBlock([])
+
+        # Collect the iteration number if necessary
+        block.add(self.__make_iter_num(rank))
+
+        # Consume a trace if necessary
+        coiter = self.metrics.get_coiter(rank)
+        if coiter is not None:
+            block.add(self.consume_traces(coiter.get_name(), rank))
+
+        return block
 
     def make_loop_header(self, rank: str) -> Statement:
         """

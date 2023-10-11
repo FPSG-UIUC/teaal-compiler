@@ -210,4 +210,3 @@ class Hardware:
                     for subtree in tree["subtree"]]
 
         return Level(tree["name"], tree["num"], attrs, local, subtrees)
-

@@ -651,7 +651,8 @@ def test_make_loop_footer():
     yaml = build_gamma_yaml()
     collector = build_collector(yaml, 0)
 
-    assert collector.make_loop_footer("K").gen(0) == ""
+    hifiber = "Intersect_K.addTraces(Metrics.consumeTrace(\"K\", \"intersect_2\"))"
+    assert collector.make_loop_footer("K").gen(0) == hifiber
 
     yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
@@ -667,7 +668,8 @@ def test_make_loop_footer():
                 True))
         program.get_loop_order().apply(tensor)
 
-    hifiber = "n0_iter_num = Metrics.getIter().copy()"
+    hifiber = "n0_iter_num = Metrics.getIter().copy()\n" + \
+        "K0Intersection_K0.addTraces(Metrics.consumeTrace(\"K0\", \"intersect_0\"), Metrics.consumeTrace(\"K0\", \"intersect_1\"))"
 
     assert collector.make_loop_footer("M2").gen(0) == ""
     assert collector.make_loop_footer("K0").gen(0) == hifiber
