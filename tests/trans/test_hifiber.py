@@ -695,11 +695,11 @@ def test_hifiber_intersect():
     format_ = Format.from_str(yaml)
 
     hifiber = "Z_ = Tensor(rank_ids=[], shape=[])\n" + \
-        "TF_K = TwoFingerIntersector()\n" + \
         "z_ref = Z_.getRoot()\n" + \
         "a_i = A_IJK.getRoot()\n" + \
         "b_i = B_IJK.getRoot()\n" + \
         "Metrics.beginCollect(\"tmp/Z\")\n" + \
+        "TF_K = TwoFingerIntersector()\n" + \
         "Metrics.trace(\"K\", type_=\"intersect_0\", consumable=True)\n" + \
         "Metrics.trace(\"K\", type_=\"intersect_1\", consumable=True)\n" + \
         "for i, (a_j, b_j) in a_i & b_i:\n" + \

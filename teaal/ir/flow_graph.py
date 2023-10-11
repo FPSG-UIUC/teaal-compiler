@@ -119,7 +119,6 @@ class FlowGraph:
 
         # Add metrics collection
         self.__build_collecting(chain)
-        self.__build_hw_components(chain)
 
         iter_graph = IterationGraph(self.program)
         while iter_graph.peek_concord()[0] is not None:
@@ -338,24 +337,6 @@ class FlowGraph:
             self.graph.add_edge(
                 get_payload_node, FiberNode(
                     tensor.fiber_name()))
-
-    def __build_hw_components(self, chain: List[Node]) -> None:
-        """
-        Build the creation of any necessary hardware components
-        """
-        if self.metrics is None:
-            return
-
-        einsum = self.program.get_equation().get_output().root_name()
-        for component in self.metrics.get_hardware().get_components(einsum,
-                                                                    IntersectorComponent):
-            name = component.get_name()
-
-            for binding in component.get_bindings()[einsum]:
-                rank = binding["rank"]
-                self.graph.add_edge(
-                    CreateComponentNode(
-                        name, rank), MetricsNode("Start"))
 
     def __build_loop_nest(self) -> List[Node]:
         """

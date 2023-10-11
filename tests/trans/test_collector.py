@@ -92,8 +92,9 @@ def test_create_component_unknown():
     """
     collector = build_collector(yaml, 0)
 
+    dram = collector.metrics.get_hardware().get_component("DRAM")
     with pytest.raises(ValueError) as excinfo:
-        collector.create_component("DRAM", "K")
+        collector.create_component(dram, "K")
     assert str(
         excinfo.value) == "Unable to create consumable metrics component for DRAM of type DRAMComponent"
 
@@ -144,12 +145,13 @@ def test_create_component():
           rank-order: []
     """
     collector = build_collector(yaml, 0)
+    get_comp = collector.metrics.get_hardware().get_component
 
-    assert collector.create_component("LF", "I").gen(
+    assert collector.create_component(get_comp("LF"), "I").gen(
         0) == "LF_I = LeaderFollowerIntersector()"
-    assert collector.create_component("SA", "J").gen(
+    assert collector.create_component(get_comp("SA"), "J").gen(
         0) == "SA_J = SkipAheadIntersector()"
-    assert collector.create_component("TF", "K").gen(
+    assert collector.create_component(get_comp("TF"), "K").gen(
         0) == "TF_K = TwoFingerIntersector()"
 
 
@@ -751,10 +753,12 @@ def test_start():
     collector = build_collector(yaml, 0)
 
     generated = collector.start().gen(0).split("\n")
-    assert len(generated) == 9
 
     corr = ["Metrics.beginCollect(\"tmp/gamma_T\")"]
     check_hifiber_lines(generated[:1], corr)
+
+    corr = ["Intersect_K = LeaderFollowerIntersector()"]
+    check_hifiber_lines(generated[1:2], corr)
 
     corr = ["Metrics.trace(\"K\", type_=\"iter\", consumable=False)",
             "Metrics.trace(\"K\", type_=\"intersect_2\", consumable=True)",
@@ -764,16 +768,22 @@ def test_start():
             "Metrics.trace(\"K\", type_=\"intersect_3\", consumable=False)",
             "Metrics.trace(\"N\", type_=\"iter\", consumable=False)",
             "Metrics.trace(\"N\", type_=\"populate_1\", consumable=False)"]
-    check_hifiber_lines(generated[1:], corr)
+    check_hifiber_lines(generated[2:], corr)
 
 
 def test_start_sequencer():
     yaml = build_extensor_energy_yaml()
     collector = build_collector(yaml, 0)
+
     generated = collector.start().gen(0).split("\n")
 
     corr = ['Metrics.beginCollect("tmp/extensor_energy")']
     check_hifiber_lines(generated[:1], corr)
+
+    corr = ["K2Intersect_K2 = SkipAheadIntersector()",
+            "K1Intersect_K1 = SkipAheadIntersector()",
+            "K0Intersection_K0 = SkipAheadIntersector()"]
+    check_hifiber_lines(generated[1:4], corr)
 
     corr = ['Metrics.trace("N2", type_="iter", consumable=False)',
             'Metrics.trace("K2", type_="iter", consumable=False)',
@@ -803,7 +813,7 @@ def test_start_sequencer():
             'Metrics.trace("K1", type_="intersect_1", consumable=False)',
             'Metrics.trace("K2", type_="intersect_1", consumable=True)',
             'Metrics.trace("K0", type_="eager_b_n0_read", consumable=False)']
-    check_hifiber_lines(generated[1:], corr)
+    check_hifiber_lines(generated[4:], corr)
 
 
 def test_start_flattening():
@@ -811,7 +821,6 @@ def test_start_flattening():
     collector = build_collector(yaml, 0)
 
     generated = collector.start().gen(0).split("\n")
-    assert len(generated) == 7
 
     corr = ["Metrics.beginCollect(\"tmp/sigma\")",
             "Metrics.associateShape(\"MK01\", (M, K))",

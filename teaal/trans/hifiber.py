@@ -113,13 +113,7 @@ class HiFiber:
         while i < len(nodes):
             node = nodes[i]
 
-            if isinstance(node, CreateComponentNode):
-                code.add(
-                    self.collector.create_component(
-                        node.get_component(),
-                        node.get_rank()))
-
-            elif isinstance(node, EagerInputNode):
+            if isinstance(node, EagerInputNode):
                 code.add(
                     self.eqn.make_eager_inputs(
                         node.get_rank(),

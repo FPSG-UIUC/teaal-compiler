@@ -977,7 +977,6 @@ def test_graph_metrics_T():
     corr.add_edge(OtherNode("Output"), OtherNode("Graphics"))
     corr.add_edge(OtherNode("Output"), GetRootNode("T", ['M', 'K', 'N']))
     corr.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
-    corr.add_edge(CreateComponentNode("Intersect", "K"), MetricsNode("Start"))
     corr.add_edge(MetricsNode("Start"), LoopNode("M"))
     corr.add_edge(MetricsNode("End"), OtherNode("Footer"))
     corr.add_edge(GetRootNode("T", ['M', 'K', 'N']), LoopNode("M"))
@@ -1188,15 +1187,6 @@ def test_graph_metrics_extensor():
                 'N2', 'K2', 'N1', 'K1', 'N0', 'K0']), LoopNode("N2"))
     corr.add_edge(TraceTreeNode("Z", "M0", False), EndLoopNode("N1"))
     corr.add_edge(TraceTreeNode("Z", "M0", False), MetricsNode("End"))
-    corr.add_edge(
-        CreateComponentNode("K2Intersect", "K2"),
-        MetricsNode("Start"))
-    corr.add_edge(
-        CreateComponentNode("K1Intersect", "K1"),
-        MetricsNode("Start"))
-    corr.add_edge(
-        CreateComponentNode("K0Intersection", "K0"),
-        MetricsNode("Start"))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
         ["N2", "K2", "M2", "M1", "N1", "K1", "M0", "N0", "K0"]))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
@@ -1353,15 +1343,6 @@ def test_graph_metrics_extensor_energy():
                 'N2', 'K2', 'N1', 'K1', 'N0', 'K0']), LoopNode("N2"))
     corr.add_edge(TraceTreeNode("Z", "M0", False), EndLoopNode("N1"))
     corr.add_edge(TraceTreeNode("Z", "M0", False), MetricsNode("End"))
-    corr.add_edge(
-        CreateComponentNode("K2Intersect", "K2"),
-        MetricsNode("Start"))
-    corr.add_edge(
-        CreateComponentNode("K1Intersect", "K1"),
-        MetricsNode("Start"))
-    corr.add_edge(
-        CreateComponentNode("K0Intersection", "K0"),
-        MetricsNode("Start"))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(
         ["N2", "K2", "M2", "M1", "N1", "K1", "M0", "N0", "K0"]))
     corr.add_edge(MetricsNode("Start"), RegisterRanksNode(

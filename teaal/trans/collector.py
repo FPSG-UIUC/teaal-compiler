@@ -44,26 +44,23 @@ class Collector:
         self.program = program
         self.metrics = metrics
 
-    def create_component(self, component: str, rank: str) -> Statement:
+    def create_component(self, component: Component, rank: str) -> Statement:
         """
         Create a component to track metrics
         """
-        component_ir = self.metrics.get_hardware().get_component(component)
-
-        if isinstance(component_ir, LeaderFollowerComponent):
+        name = component.get_name()
+        if isinstance(component, LeaderFollowerComponent):
             constructor = "LeaderFollowerIntersector"
-        elif isinstance(component_ir, SkipAheadComponent):
+        elif isinstance(component, SkipAheadComponent):
             constructor = "SkipAheadIntersector"
-        elif isinstance(component_ir, TwoFingerComponent):
+        elif isinstance(component, TwoFingerComponent):
             constructor = "TwoFingerIntersector"
         else:
             raise ValueError(
                 "Unable to create consumable metrics component for " +
-                component +
-                " of type " +
-                type(component_ir).__name__)
+                name + " of type " + type(component).__name__)
 
-        return SAssign(AVar(component + "_" + rank), EFunc(constructor, []))
+        return SAssign(AVar(name + "_" + rank), EFunc(constructor, []))
 
     def consume_traces(self, component: str, rank: str) -> Statement:
         """
@@ -249,59 +246,11 @@ class Collector:
 
         block.add(SExpr(call))
 
-        # If we have flattening, associate the shapes and match the relevant
-        # ranks
-        part_ir = self.program.get_partitioning()
-        for rank in self.program.get_loop_order().get_ranks():
-            if not part_ir.is_flattened(rank):
-                continue
+        block.add(self.__build_components())
 
-            unpacked = part_ir.unpack(rank)
-            roots = []
-            for unpack_rank in unpacked:
-                if part_ir.get_final_rank_id(
-                        [unpack_rank], unpack_rank) == rank:
-                    args = [AJust(EString(rank)), AJust(EString(unpack_rank))]
-                    block.add(
-                        SExpr(
-                            EMethod(
-                                EVar("Metrics"),
-                                "matchRanks",
-                                args)))
+        block.add(self.__build_match_ranks())
 
-                roots.append(EVar(part_ir.get_root_name(unpack_rank)))
-
-            args = [AJust(EString(rank)), AJust(ETuple(tuple(roots)))]
-            block.add(SExpr(EMethod(EVar("Metrics"), "associateShape", args)))
-
-        traces: Set[Tuple[Optional[str], str, str, bool, bool]] = set()
-        trace: Tuple[Optional[str], str, str, bool, bool]
-        for sequencer in self.metrics.get_hardware().get_components(einsum,
-                                                                    SequencerComponent):
-            for rank in sequencer.get_ranks(einsum):
-                trace = (None, rank, "iter", False, True)
-                block.add(self.__add_collection(trace, traces))
-
-        for tensor in self.program.get_equation().get_tensors():
-            tensor_name = tensor.root_name()
-
-            # Collect the necessary traces for each tensor
-            for rank, type_, consumable in self.metrics.get_collected_tensor_info(
-                    tensor_name):
-
-                # If we are collecting the loop's trace
-                if type_ == "iter":
-                    trace = (None, rank, type_, consumable, True)
-                    block.add(self.__add_collection(trace, traces))
-
-                # Otherwise, get the fiber's read (and maybe write)
-                else:
-                    trace = (tensor_name, rank, type_, consumable, True)
-                    block.add(self.__add_collection(trace, traces))
-
-                    if tensor.get_is_output():
-                        trace = (tensor_name, rank, type_, consumable, False)
-                        block.add(self.__add_collection(trace, traces))
+        block.add(self.__build_trace_ranks())
 
         return block
 
@@ -414,6 +363,22 @@ class Collector:
 
         return trace_fn, block
 
+    def __build_components(self) -> Statement:
+        """
+        Build the creation of any necessary hardware components
+        """
+        block = SBlock([])
+        einsum = self.program.get_equation().get_output().root_name()
+
+        for component in self.metrics.get_hardware().get_components(einsum,
+                                                                    IntersectorComponent):
+            name = component.get_name()
+
+            for binding in component.get_bindings()[einsum]:
+                block.add(self.create_component(component, binding["rank"]))
+
+        return block
+
     def __build_compute(self) -> Statement:
         """
         Add the code to count compute operations
@@ -443,32 +408,6 @@ class Collector:
                     SAssign(
                         AAccess(metrics_fu, EString(op)),
                         EAccess(metrics_dump, EString("payload_" + op))))
-
-        return block
-
-    def __build_sequencers(self) -> Statement:
-        """
-        Add a block to track the sequencers
-        """
-        block = SBlock([])
-
-        einsum = self.program.get_equation().get_output().root_name()
-        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
-
-        for seq in self.metrics.get_hardware().get_components(einsum, SequencerComponent):
-            seq_assn = AAccess(metrics_einsum, EString(seq.get_name()))
-            block.add(SAssign(seq_assn, EDict({})))
-            seq_expr = EAccess(metrics_einsum, EString(seq.get_name()))
-
-            for rank in seq.get_ranks(einsum):
-                trace = self.metrics.get_hardware().get_prefix(einsum) + \
-                    "-" + rank + "-iter.csv"
-                num_iters = EMethod(
-                    EVar("Compute"), "numIters", [
-                        AJust(
-                            EString(trace))])
-                seq_rank = AAccess(seq_expr, EString(rank))
-                block.add(SAssign(seq_rank, num_iters))
 
         return block
 
@@ -564,6 +503,37 @@ class Collector:
 
         return block
 
+    def __build_match_ranks(self) -> Statement:
+        """
+        Add the code to match ranks, e.g., if we have flattening
+        """
+        block = SBlock([])
+
+        part_ir = self.program.get_partitioning()
+        for rank in self.program.get_loop_order().get_ranks():
+            if not part_ir.is_flattened(rank):
+                continue
+
+            unpacked = part_ir.unpack(rank)
+            roots = []
+            for unpack_rank in unpacked:
+                if part_ir.get_final_rank_id(
+                        [unpack_rank], unpack_rank) == rank:
+                    args = [AJust(EString(rank)), AJust(EString(unpack_rank))]
+                    block.add(
+                        SExpr(
+                            EMethod(
+                                EVar("Metrics"),
+                                "matchRanks",
+                                args)))
+
+                roots.append(EVar(part_ir.get_root_name(unpack_rank)))
+
+            args = [AJust(EString(rank)), AJust(ETuple(tuple(roots)))]
+            block.add(SExpr(EMethod(EVar("Metrics"), "associateShape", args)))
+
+        return block
+
     def __build_merges(self) -> Statement:
         """
         Add the code to compute the merge operations
@@ -613,6 +583,70 @@ class Collector:
                             metrics_merger,
                             EString(input_)),
                         swaps_call))
+
+        return block
+
+    def __build_sequencers(self) -> Statement:
+        """
+        Add a block to track the sequencers
+        """
+        block = SBlock([])
+
+        einsum = self.program.get_equation().get_output().root_name()
+        metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
+
+        for seq in self.metrics.get_hardware().get_components(einsum, SequencerComponent):
+            seq_assn = AAccess(metrics_einsum, EString(seq.get_name()))
+            block.add(SAssign(seq_assn, EDict({})))
+            seq_expr = EAccess(metrics_einsum, EString(seq.get_name()))
+
+            for rank in seq.get_ranks(einsum):
+                trace = self.metrics.get_hardware().get_prefix(einsum) + \
+                    "-" + rank + "-iter.csv"
+                num_iters = EMethod(
+                    EVar("Compute"), "numIters", [
+                        AJust(
+                            EString(trace))])
+                seq_rank = AAccess(seq_expr, EString(rank))
+                block.add(SAssign(seq_rank, num_iters))
+
+        return block
+
+    def __build_trace_ranks(self) -> Statement:
+        """
+        Add code to trace all necessary ranks
+        """
+        block = SBlock([])
+        einsum = self.program.get_equation().get_output().root_name()
+
+        traces: Set[Tuple[Optional[str], str, str, bool, bool]] = set()
+        trace: Tuple[Optional[str], str, str, bool, bool]
+        for sequencer in self.metrics.get_hardware().get_components(einsum,
+                                                                    SequencerComponent):
+            for rank in sequencer.get_ranks(einsum):
+                trace = (None, rank, "iter", False, True)
+                block.add(self.__add_collection(trace, traces))
+
+        for tensor in self.program.get_equation().get_tensors():
+            tensor_name = tensor.root_name()
+
+            # Collect the necessary traces for each tensor
+            for rank, type_, consumable in self.metrics.get_collected_tensor_info(
+                    tensor_name):
+
+                # If we are collecting the loop's trace
+                if type_ == "iter":
+                    trace = (None, rank, type_, consumable, True)
+                    block.add(self.__add_collection(trace, traces))
+
+                # Otherwise, get the fiber's read (and maybe write)
+                else:
+                    trace = (tensor_name, rank, type_, consumable, True)
+                    block.add(self.__add_collection(trace, traces))
+
+                    if tensor.get_is_output():
+                        trace = (tensor_name, rank, type_, consumable, False)
+                        block.add(self.__add_collection(trace, traces))
 
         return block
 
