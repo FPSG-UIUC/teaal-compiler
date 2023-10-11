@@ -207,7 +207,7 @@ class Collector:
                 # We want to collect the iteration number for the last loop
                 # rank
                 output = self.program.get_equation().get_tensor(tensor)
-                dummy = Tensor("dummy", output.get_ranks())
+                dummy = Tensor("dummy", output.get_init_ranks())
                 self.program.apply_all_partitioning(dummy)
                 self.program.get_loop_order().apply(dummy)
 
@@ -315,7 +315,7 @@ class Collector:
         if not is_read_trace:
             # We want to use the iteration number for the last loop rank
             output = self.program.get_equation().get_tensor(tensor)
-            dummy = Tensor("dummy", output.get_ranks())
+            dummy = Tensor("dummy", output.get_init_ranks())
             self.program.apply_all_partitioning(dummy)
             self.program.get_loop_order().apply(dummy)
 
@@ -811,7 +811,7 @@ class Collector:
         output = self.program.get_equation().get_output()
 
         # We want to collect the iteration number for the last loop rank
-        dummy = Tensor("dummy", output.get_ranks())
+        dummy = Tensor("dummy", output.get_init_ranks())
         self.program.apply_all_partitioning(dummy)
         self.program.get_loop_order().apply(dummy)
 

@@ -211,30 +211,3 @@ class Hardware:
 
         return Level(tree["name"], tree["num"], attrs, local, subtrees)
 
-    # TODO: Delete
-    # def __compute_helper(self, einsum: str, level: Level) -> List[Level]:
-    #     """
-    #     Recursive implementation to find the dataflow to compute for a given
-    #     einsum
-    #     """
-    #     # Recurse down the tree
-    #     paths = []
-    #     for subtree in level.get_subtrees():
-    #         sub_path = self.__compute_helper(einsum, subtree)
-    #         if sub_path:
-    #             paths.append(sub_path)
-
-    #     if len(paths) > 1:
-    #         raise ValueError("Only one compute path allowed per einsum")
-
-    #     if paths:
-    #         return [level] + paths[0]
-
-    #     # Check if a local component performs compute for this einsum
-    #     root = False
-    #     for comp in level.get_local():
-    #         if isinstance(comp, FunctionalComponent) and \
-    #                 comp.get_bindings()[einsum]:
-    #             return [level]
-
-    #     return []
