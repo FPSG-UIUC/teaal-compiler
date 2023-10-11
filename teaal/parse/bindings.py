@@ -42,7 +42,6 @@ class Bindings:
         self.components: Dict[str, Dict[str, List[dict]]] = {}
         self.configs = {}
         self.prefixes = {}
-        self.energy = {}
         if yaml is None or "bindings" not in yaml.keys():
             return
 
@@ -54,11 +53,6 @@ class Bindings:
                 if "config" in binding:
                     self.configs[einsum] = binding["config"]
                     self.prefixes[einsum] = binding["prefix"]
-
-                    if "energy" in binding:
-                        self.energy[einsum] = binding["energy"]
-                    else:
-                        self.energy[einsum] = False
 
                     configured = True
 
@@ -107,12 +101,6 @@ class Bindings:
         Get the hardware configuration for a given Einsum
         """
         return self.configs[einsum]
-
-    def get_energy(self, einsum: str) -> bool:
-        """
-        Get whether or not energy should be tracked for the given Einsum
-        """
-        return self.energy[einsum]
 
     def get_prefix(self, einsum: str) -> str:
         """

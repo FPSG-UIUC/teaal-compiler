@@ -524,6 +524,31 @@ def test_merger_component():
     assert merger.get_reduce() == False
 
 
+def test_sequencer_component_no_num_ranks():
+    with pytest.raises(ValueError) as excinfo:
+        SequencerComponent("Seq", {}, {})
+
+    assert str(excinfo.value) == "Number of ranks unspecified for sequencer Seq"
+
+
+def test_sequencer_component_too_many_ranks():
+    attrs = {"num_ranks": 1}
+    bindings = {"Z": [{"rank": "K"}, {"rank": "M"}]}
+    with pytest.raises(ValueError) as excinfo:
+        SequencerComponent("Seq", attrs, bindings)
+
+    assert str(
+        excinfo.value) == "Too many ranks bound to sequencer Seq during Einsum Z"
+
+
+def test_sequencer_component():
+    attrs = {"num_ranks": 2}
+    bindings = {"Z": [{"rank": "K"}, {"rank": "M"}]}
+    sequencer = SequencerComponent("Seq", attrs, bindings)
+
+    assert sequencer.get_ranks("Z") == ["K", "M"]
+
+
 def test_skip_ahead_component():
     bindings = {"Z": [{"rank": "K2"}]}
     skip_ahead = SkipAheadComponent("K2Intersection", {}, bindings)

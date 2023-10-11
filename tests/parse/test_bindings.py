@@ -51,7 +51,6 @@ def test_defined():
 
     assert bindings.get_config("Z") == "Config0"
     assert bindings.get_prefix("Z") == "tmp/Z"
-    assert not bindings.get_energy("Z")
 
     assert bindings.get_component("Memory") == mem
     assert bindings.get_component("Registers") == regs
@@ -63,15 +62,3 @@ def test_defined():
             "Memory": mem["Z"],
             "Registers": regs["Z"],
             "MAC": mac["Z"]}}
-
-
-def test_get_energy():
-    yaml = """
-  bindings:
-    Z:
-    - config: default
-      prefix: tmp/Z
-      energy: True
-  """
-    bindings = Bindings.from_str(yaml)
-    assert bindings.get_energy("Z")

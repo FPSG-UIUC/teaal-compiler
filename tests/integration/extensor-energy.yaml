@@ -107,6 +107,10 @@ architecture:
       class: Intersector
       attributes:
         type: skip-ahead
+    - name: TopSequencer
+      class: Sequencer
+      attributes:
+        num_ranks: 3
     subtree:
     - name: Chip
       local:
@@ -119,6 +123,10 @@ architecture:
         class: Intersector
         attributes:
           type: skip-ahead
+      - name: MiddleSequencer
+        class: Sequencer
+        attributes:
+          num_ranks: 3
       subtree:
       - name: PE[0..127] # 128 PEs
         local:
@@ -131,6 +139,10 @@ architecture:
           class: Intersector
           attributes:
             type: skip-ahead
+        - name: BottomSequencer
+          class: Sequencer
+          attributes:
+            num_ranks: 3
         - name: FPMul
           class: Compute
           attributes:
@@ -142,8 +154,7 @@ architecture:
 bindings:
   Z:
   - config: Accelerator
-    prefix: tmp/extensor
-    energy: True
+    prefix: tmp/extensor_energy
   - component: MainMemory
     bindings:
     - tensor: A
@@ -209,6 +220,11 @@ bindings:
   - component: K2Intersect
     bindings:
     - rank: K2
+  - component: TopSequencer
+    bindings:
+    - rank: N2
+    - rank: K2
+    - rank: M2
   - component: LLB
     bindings:
     - tensor: A
@@ -262,6 +278,11 @@ bindings:
   - component: K1Intersect
     bindings:
     - rank: K1
+  - component: MiddleSequencer
+    bindings:
+    - rank: M1
+    - rank: N1
+    - rank: K1
   - component: PEB
     bindings:
     - tensor: A
@@ -284,6 +305,11 @@ bindings:
       style: eager
   - component: K0Intersection
     bindings:
+    - rank: K0
+  - component: BottomSequencer
+    bindings:
+    - rank: M0
+    - rank: N0
     - rank: K0
   - component: FPMul
     bindings:

@@ -181,6 +181,7 @@ class FunctionalComponent(Component):
         """
         Construct a functional component
         """
+        # TODO: This can just be "pass"
         super().__init__(name, attrs, bindings)
 
 
@@ -662,6 +663,44 @@ class MergerComponent(Component):
             self.outputs,
             self.order,
             self.reduce)
+
+
+class SequencerComponent(FunctionalComponent):
+    """
+    A Component for a sequencer
+    """
+
+    def __init__(self, name: str, attrs: dict,
+                 bindings: Dict[str, List[dict]]) -> None:
+        """
+        Construct a sequencer component
+        """
+        super().__init__(name, attrs, bindings)
+
+        num_ranks = self._check_attr(attrs, "num_ranks", int)
+        if num_ranks is None:
+            raise ValueError(
+                "Number of ranks unspecified for sequencer " +
+                self.name)
+
+        self.ranks: Dict[str, List[str]] = {}
+        for einsum, ebindings in self.bindings.items():
+            if len(ebindings) > num_ranks:
+                raise ValueError(
+                    "Too many ranks bound to sequencer " +
+                    self.name +
+                    " during Einsum " +
+                    einsum)
+
+            self.ranks[einsum] = []
+            for binding in ebindings:
+                self.ranks[einsum].append(binding["rank"])
+
+    def get_ranks(self, einsum: str) -> List[str]:
+        """
+        Get the ranks sequenced by this sequencer
+        """
+        return self.ranks[einsum]
 
 
 class SkipAheadComponent(IntersectorComponent):

@@ -211,6 +211,11 @@ def test_get_component():
             order: fifo
             reduce: False
 
+        - name: TopSequencer
+          class: Sequencer
+          attributes:
+            num_ranks: 3
+
         - name: SAIntersect
           class: Intersector
           attributes:
@@ -289,6 +294,12 @@ def test_get_component():
           init-ranks: [M, K, N]
           final-ranks: [M, N, K]
 
+      - component: TopSequencer
+        bindings:
+        - rank: M2
+        - rank: K2
+        - rank: N1
+
       - component: SAIntersect
         bindings:
         - rank: K2
@@ -329,6 +340,9 @@ def test_get_component():
         "reduce": False
     }
     assert_component(MergerComponent, "HighRadixMerger", attrs)
+
+    attrs = {"num_ranks": 3}
+    assert_component(SequencerComponent, "TopSequencer", attrs)
 
     assert_component(SkipAheadComponent, "SAIntersect", {})
 
@@ -634,24 +648,6 @@ def test_get_traffic_eager():
     assert hardware.get_traffic_path(
         "A", "K0", "coord", "default") == [
         (dram, "lazy"), (llb, "M0")]
-
-
-def test_get_energy():
-    gamma = "tests/integration/gamma.yaml"
-    arch = Architecture.from_file(gamma)
-    bindings = Bindings.from_file(gamma)
-    program = Program(Einsum.from_file(gamma), Mapping.from_file(gamma))
-    hardware = Hardware(arch, bindings, program)
-
-    assert not hardware.get_energy("Z")
-
-    extensor = "tests/integration/extensor-energy.yaml"
-    arch = Architecture.from_file(extensor)
-    bindings = Bindings.from_file(extensor)
-    program = Program(Einsum.from_file(extensor), Mapping.from_file(extensor))
-    hardware = Hardware(arch, bindings, program)
-
-    assert hardware.get_energy("Z")
 
 
 def test_get_prefix():

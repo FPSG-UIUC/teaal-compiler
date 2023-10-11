@@ -119,9 +119,8 @@ class Collector:
         # Track the intersections
         block.add(self.__build_intersections())
 
-        # If energy, add the loop iterations
-        if self.metrics.get_hardware().get_energy(einsum):
-            block.add(self.__build_energy())
+        # Track the sequences
+        block.add(self.__build_sequencers())
 
         return block
 
@@ -204,9 +203,16 @@ class Collector:
                 trace += "_read"
             else:
                 trace += "_write"
-                # TODO: Add a separate None type
+
+                # We want to collect the iteration number for the last loop
+                # rank
                 output = self.program.get_equation().get_tensor(tensor)
-                iter_var = output.get_ranks()[-1].lower() + "_iter_num"
+                dummy = Tensor("dummy", output.get_ranks())
+                self.program.apply_all_partitioning(dummy)
+                self.program.get_loop_order().apply(dummy)
+
+                iter_var = dummy.get_ranks()[-1].lower() + "_iter_num"
+                # TODO: Add a separate None type
                 block.add(SAssign(AVar(iter_var), EVar("None")))
 
         args: List[Argument] = [
@@ -260,9 +266,9 @@ class Collector:
 
         traces: Set[Tuple[Optional[str], str, str, bool, bool]] = set()
         trace: Tuple[Optional[str], str, str, bool, bool]
-        # TODO: Switch this to the sequencer
-        if self.metrics.get_hardware().get_energy(einsum):
-            for rank in self.program.get_loop_order().get_ranks():
+        for sequencer in self.metrics.get_hardware().get_components(einsum,
+                                                                    SequencerComponent):
+            for rank in sequencer.get_ranks(einsum):
                 trace = (None, rank, "iter", False, True)
                 block.add(self.__add_collection(trace, traces))
 
@@ -307,8 +313,13 @@ class Collector:
 
         args: List[Argument] = [AJust(EString(trace))]
         if not is_read_trace:
+            # We want to use the iteration number for the last loop rank
             output = self.program.get_equation().get_tensor(tensor)
-            iter_var = output.get_ranks()[-1].lower() + "_iter_num"
+            dummy = Tensor("dummy", output.get_ranks())
+            self.program.apply_all_partitioning(dummy)
+            self.program.get_loop_order().apply(dummy)
+
+            iter_var = dummy.get_ranks()[-1].lower() + "_iter_num"
             args.append(AParam("iteration_num", EVar(iter_var)))
 
         trace_stmt = SExpr(EMethod(EVar(fiber), "trace", args))
@@ -425,28 +436,29 @@ class Collector:
 
         return block
 
-    def __build_energy(self) -> Statement:
+    def __build_sequencers(self) -> Statement:
         """
-        Add a block to track the metrics only needed when calculating energy
+        Add a block to track the sequencers
         """
         block = SBlock([])
 
         einsum = self.program.get_equation().get_output().root_name()
         metrics_einsum = EAccess(EVar("metrics"), EString(einsum))
 
-        metrics_iter_assn = AAccess(metrics_einsum, EString("iter"))
-        block.add(SAssign(metrics_iter_assn, EDict({})))
-        metrics_iter = EAccess(metrics_einsum, EString("iter"))
+        for seq in self.metrics.get_hardware().get_components(einsum, SequencerComponent):
+            seq_assn = AAccess(metrics_einsum, EString(seq.get_name()))
+            block.add(SAssign(seq_assn, EDict({})))
+            seq_expr = EAccess(metrics_einsum, EString(seq.get_name()))
 
-        for rank in self.program.get_loop_order().get_ranks():
-            trace = self.metrics.get_hardware().get_prefix(einsum) + \
-                "-" + rank + "-iter.csv"
-            num_iters = EMethod(
-                EVar("Compute"), "numIters", [
-                    AJust(
-                        EString(trace))])
-            metrics_rank = AAccess(metrics_iter, EString(rank))
-            block.add(SAssign(metrics_rank, num_iters))
+            for rank in seq.get_ranks(einsum):
+                trace = self.metrics.get_hardware().get_prefix(einsum) + \
+                    "-" + rank + "-iter.csv"
+                num_iters = EMethod(
+                    EVar("Compute"), "numIters", [
+                        AJust(
+                            EString(trace))])
+                seq_rank = AAccess(seq_expr, EString(rank))
+                block.add(SAssign(seq_rank, num_iters))
 
         return block
 
@@ -798,6 +810,11 @@ class Collector:
         loop_order = self.program.get_loop_order().get_ranks() + ["body"]
         output = self.program.get_equation().get_output()
 
+        # We want to collect the iteration number for the last loop rank
+        dummy = Tensor("dummy", output.get_ranks())
+        self.program.apply_all_partitioning(dummy)
+        self.program.get_loop_order().apply(dummy)
+
         # We don't need the iteration number of this rank if it is the top rank
         # since we can never eager access a 0-tensor
         i = loop_order.index(rank)
@@ -805,10 +822,10 @@ class Collector:
             return SBlock([])
 
         # We only want the iteration number of the output's bottom rank
-        if loop_order[i - 1] != output.get_ranks()[-1]:
+        if loop_order[i - 1] != dummy.get_ranks()[-1]:
             return SBlock([])
 
-        iter_var = AVar(output.get_ranks()[-1].lower() + "_iter_num")
+        iter_var = AVar(dummy.get_ranks()[-1].lower() + "_iter_num")
         iter_num = EMethod(EMethod(EVar("Metrics"), "getIter", []), "copy", [])
 
         return SAssign(iter_var, iter_num)

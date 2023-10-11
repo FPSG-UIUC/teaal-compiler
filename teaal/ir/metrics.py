@@ -75,11 +75,23 @@ class Metrics:
         """
         return self.coiter_traces[coiter][rank]
 
+    def get_collected_iter_info(self) -> Set[str]:
+        """
+        Get the specification for which ranks iteration needs to be traced
+        """
+        ranks = set()
+        einsum = self.program.get_equation().get_output().root_name()
+        for sequencer in self.hardware.get_components(
+                einsum, SequencerComponent):
+            ranks.update(sequencer.get_ranks(einsum))
+
+        return ranks
+
     def get_collected_tensor_info(
             self, tensor: str) -> Set[Tuple[str, str, bool]]:
         """
-        Get a specification for which ranks in the loop order need to be
-        collected in the form {(rank, type, consumable)}, where type is one of
+        Get a specification for which ranks need to be collected in the form
+        {(rank, type, consumable)}, where type is one of
             - "fiber" - corresponding to iteration over that fiber
             - "iter" - corresponding to the iteration of the loop nest
             - rank - the rank that the eager iteration starts at

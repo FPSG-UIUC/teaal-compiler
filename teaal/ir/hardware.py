@@ -91,12 +91,6 @@ class Hardware:
                 components.append(component)
         return components
 
-    def get_energy(self, einsum: str) -> bool:
-        """
-        Get whether or not the energy metrics should be collected
-        """
-        return self.bindings.get_energy(einsum)
-
     def get_prefix(self, einsum: str) -> str:
         """
         Get the prefix for collected metrics for the given Einsum
@@ -160,20 +154,21 @@ class Hardware:
         Build a component
         """
         class_: Type[Component]
-        if local["class"].lower() == "buffet":
+        class_name = local["class"].lower()
+        if class_name == "buffet":
             class_ = BuffetComponent
 
-        elif local["class"].lower() == "cache":
+        elif class_name == "cache":
             class_ = CacheComponent
 
-        elif local["class"].lower() == "compute":
+        elif class_name == "compute":
             class_ = ComputeComponent
 
-        elif local["class"].lower() == "dram":
+        elif class_name == "dram":
             class_ = DRAMComponent
 
         # TODO: Support two-finger intersection
-        elif local["class"].lower() == "intersector":
+        elif class_name == "intersector":
             type_ = local["attributes"]["type"].lower()
             if type_ == "leader-follower":
                 class_ = LeaderFollowerComponent
@@ -187,8 +182,11 @@ class Hardware:
             else:
                 raise ValueError("Unknown intersection type: " + type_)
 
-        elif local["class"].lower() == "merger":
+        elif class_name == "merger":
             class_ = MergerComponent
+
+        elif class_name == "sequencer":
+            class_ = SequencerComponent
 
         else:
             raise ValueError("Unknown class: " + local["class"])

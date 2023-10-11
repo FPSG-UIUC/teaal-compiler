@@ -13,6 +13,11 @@ def build_extensor_yaml():
         return f.read()
 
 
+def build_extensor_energy_yaml():
+    with open("tests/integration/extensor-energy.yaml", "r") as f:
+        return f.read()
+
+
 def build_gamma_yaml():
     with open("tests/integration/gamma.yaml", "r") as f:
         return f.read()
@@ -287,6 +292,22 @@ def test_get_coiter_traces_two_finger():
 
     assert metrics.get_coiter_traces("Intersect", "K") == [
         "intersect_0", "intersect_1"]
+
+
+def test_get_collected_iter_info():
+    program, arch, bindings, format_ = parse_yamls(build_gamma_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_collected_iter_info() == set()
+
+    program, arch, bindings, format_ = parse_yamls(
+        build_extensor_energy_yaml())
+    hardware = Hardware(arch, bindings, program)
+    metrics = Metrics(program, hardware, format_)
+
+    assert metrics.get_collected_iter_info() == {
+        "N2", "K2", "M2", "M1", "N1", "K1", "M0", "N0", "K0"}
 
 
 def test_get_collected_tensor_info():
