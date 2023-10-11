@@ -254,8 +254,6 @@ class LoopNode(Node):
 class MetricsFooterNode(Node):
     """
     A Node for collecting metrics before the start of the given loop
-
-    TODO: Swallow everything necessary into this
     """
 
     def __init__(self, rank: str) -> None:
@@ -280,8 +278,6 @@ class MetricsFooterNode(Node):
 class MetricsHeaderNode(Node):
     """
     A Node for collecting metrics before the start of the given loop
-
-    TODO: Swallow everything necessary into this
     """
 
     def __init__(self, rank: str) -> None:

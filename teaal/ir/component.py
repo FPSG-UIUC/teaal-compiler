@@ -175,14 +175,7 @@ class FunctionalComponent(Component):
     """
     Superclass for all functional unit components (compute, intersection, mergers, etc.)
     """
-
-    def __init__(self, name: str, attrs: dict,
-                 bindings: Dict[str, List[dict]]) -> None:
-        """
-        Construct a functional component
-        """
-        # TODO: This can just be "pass"
-        super().__init__(name, attrs, bindings)
+    pass
 
 
 class MemoryComponent(Component):
