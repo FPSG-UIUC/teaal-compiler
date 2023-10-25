@@ -29,6 +29,7 @@ from typing import cast, List, Optional
 from teaal.hifiber import *
 from teaal.ir.flow_graph import FlowGraph
 from teaal.ir.flow_nodes import *
+from teaal.ir.fusion import Fusion
 from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
@@ -65,6 +66,7 @@ class HiFiber:
         self.format = format_
         if arch and bindings and arch.get_spec():
             self.hardware = Hardware(arch, bindings, self.program)
+            self.fusion = Fusion()
 
         self.trans_utils = TransUtils(self.program)
 
@@ -83,6 +85,7 @@ class HiFiber:
         self.metrics: Optional[Metrics] = None
         if self.hardware and self.format:
             self.metrics = Metrics(self.program, self.hardware, self.format)
+            self.fusion.add_einsum(self.program, self.metrics)
 
         # Create the flow graph and get the relevant nodes
         flow_graph = FlowGraph(self.program, self.metrics, ["hoist"])

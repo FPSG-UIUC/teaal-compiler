@@ -86,13 +86,13 @@ architecture:
             width: 64
             depth: inf # Not specified by Gamma
         subtree:
-        - name: Stage0
+        - name: Stage0[0..31]
           local:
           - name: Intersect
             class: Intersector
             attributes:
               type: leader-follower
-        - name: Stage0to1
+        - name: Stage0to1[0..31]
           local:
           - name: HighRadixMerger
             class: Merger
@@ -102,7 +102,7 @@ architecture:
               outputs: 1
               order: fifo
               reduce: False
-        - name: Stage1
+        - name: Stage1[0..31]
           local:
           - name: FPMul
             class: compute

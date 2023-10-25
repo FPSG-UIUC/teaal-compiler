@@ -267,8 +267,10 @@ def test_dump_gamma_T():
         "metrics[\"T\"][\"MainMemory\"][\"A\"] = {}\n" + \
         "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] = 0\n" + \
         "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"T\"][\"MainMemory\"][\"time\"] = (metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] + metrics[\"T\"][\"MainMemory\"][\"B\"][\"read\"]) / 1099511627776\n" + \
         "metrics[\"T\"][\"Intersect\"] = 0\n" + \
-        "metrics[\"T\"][\"Intersect\"] += Intersect_K.getNumIntersects()"
+        "metrics[\"T\"][\"Intersect\"] += Intersect_K.getNumIntersects()\n" + \
+        "metrics[\"T\"][\"Intersect\"][\"time\"] = metrics[\"T\"][\"Intersect\"] / 32000000000"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -297,12 +299,16 @@ def test_dump_gamma_Z():
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"time\"] = (metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"]) / 1099511627776\n" + \
         "metrics[\"Z\"][\"HighRadixMerger\"] = {}\n" + \
         "metrics[\"Z\"][\"HighRadixMerger\"][\"T_MKN\"] = Compute.numSwaps(T_MKN, 1, 64, 1)\n" + \
+        "metrics[\"Z\"][\"HighRadixMerger\"][\"time\"] = metrics[\"Z\"][\"HighRadixMerger\"][T_MKN] / 32000000000\n" + \
         "metrics[\"Z\"][\"FPMul\"] = {}\n" + \
         "metrics[\"Z\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"Z\"][\"FPMul\"][\"time\"] = metrics[\"Z\"][\"FPMul\"][\"mul\"] / 32000000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
-        "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]"
+        "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
+        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 32000000000"
 
     # print(collector.dump().gen(0))
     # assert False
@@ -329,13 +335,13 @@ def test_dump_outerspace_Z():
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"time\"] = (metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"]) / 1099511627776\n" + \
         "metrics[\"Z\"][\"SortHW\"] = {}\n" + \
         "metrics[\"Z\"][\"SortHW\"][\"T1_MKN\"] = Compute.numSwaps(T1_MKN, 1, float(\"inf\"), \"N\")\n" + \
+        "metrics[\"Z\"][\"SortHW\"][\"time\"] = metrics[\"Z\"][\"SortHW\"][T1_MKN] / 193500000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
-        "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]"
-
-    # print(collector.dump().gen(0))
-    # assert False
+        "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
+        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 193500000000"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -364,16 +370,23 @@ def test_dump_extensor():
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
         "metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"time\"] = (metrics[\"Z\"][\"MainMemory\"][\"A\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"B\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"]) / 586314575512\n" + \
         "metrics[\"Z\"][\"FPMul\"] = {}\n" + \
         "metrics[\"Z\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"Z\"][\"FPMul\"][\"time\"] = metrics[\"Z\"][\"FPMul\"][\"mul\"] / 128000000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
+        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 128000000000\n" + \
         "metrics[\"Z\"][\"K2Intersect\"] = 0\n" + \
         "metrics[\"Z\"][\"K2Intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"time\"] = metrics[\"Z\"][\"K2Intersect\"] / 1000000000\n" + \
         "metrics[\"Z\"][\"K1Intersect\"] = 0\n" + \
         "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"] / 1000000000\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()"
+        "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"] / 128000000000"
+
 
     assert collector.dump().gen(0) == hifiber
 
@@ -417,28 +430,39 @@ def test_dump_extensor_energy():
         "metrics[\"Z\"][\"LLB\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"LLB\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
         "metrics[\"Z\"][\"LLB\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"MainMemory\"][\"time\"] = (metrics[\"Z\"][\"MainMemory\"][\"A\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"B\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"]) / 586314575512\n" + \
+        "metrics[\"Z\"][\"LLB\"][\"time\"] = (metrics[\"Z\"][\"LLB\"][\"A\"][\"read\"] + metrics[\"Z\"][\"LLB\"][\"B\"][\"read\"] + metrics[\"Z\"][\"LLB\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"LLB\"][\"Z\"][\"write\"]) / 9223372036854775807\n" + \
         "metrics[\"Z\"][\"FPMul\"] = {}\n" + \
         "metrics[\"Z\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"Z\"][\"FPMul\"][\"time\"] = metrics[\"Z\"][\"FPMul\"][\"mul\"] / 128000000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
+        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 128000000000\n" + \
         "metrics[\"Z\"][\"K2Intersect\"] = 0\n" + \
         "metrics[\"Z\"][\"K2Intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"time\"] = metrics[\"Z\"][\"K2Intersect\"] / 1000000000\n" + \
         "metrics[\"Z\"][\"K1Intersect\"] = 0\n" + \
         "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"] / 1000000000\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"] / 128000000000\n" + \
         "metrics[\"Z\"][\"TopSequencer\"] = {}\n" + \
         "metrics[\"Z\"][\"TopSequencer\"][\"N2\"] = Compute.numIters(\"tmp/extensor_energy-N2-iter.csv\")\n" + \
         "metrics[\"Z\"][\"TopSequencer\"][\"K2\"] = Compute.numIters(\"tmp/extensor_energy-K2-iter.csv\")\n" + \
         "metrics[\"Z\"][\"TopSequencer\"][\"M2\"] = Compute.numIters(\"tmp/extensor_energy-M2-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"TopSequencer\"][\"time\"] = (metrics[\"Z\"][\"TopSequencer\"][\"N2\"] + metrics[\"Z\"][\"TopSequencer\"][\"K2\"] + metrics[\"Z\"][\"TopSequencer\"][\"M2\"]) / 1000000000\n" + \
         "metrics[\"Z\"][\"MiddleSequencer\"] = {}\n" + \
         "metrics[\"Z\"][\"MiddleSequencer\"][\"M1\"] = Compute.numIters(\"tmp/extensor_energy-M1-iter.csv\")\n" + \
         "metrics[\"Z\"][\"MiddleSequencer\"][\"N1\"] = Compute.numIters(\"tmp/extensor_energy-N1-iter.csv\")\n" + \
         "metrics[\"Z\"][\"MiddleSequencer\"][\"K1\"] = Compute.numIters(\"tmp/extensor_energy-K1-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"MiddleSequencer\"][\"time\"] = (metrics[\"Z\"][\"MiddleSequencer\"][\"M1\"] + metrics[\"Z\"][\"MiddleSequencer\"][\"N1\"] + metrics[\"Z\"][\"MiddleSequencer\"][\"K1\"]) / 1000000000\n" + \
         "metrics[\"Z\"][\"BottomSequencer\"] = {}\n" + \
         "metrics[\"Z\"][\"BottomSequencer\"][\"M0\"] = Compute.numIters(\"tmp/extensor_energy-M0-iter.csv\")\n" + \
         "metrics[\"Z\"][\"BottomSequencer\"][\"N0\"] = Compute.numIters(\"tmp/extensor_energy-N0-iter.csv\")\n" + \
-        "metrics[\"Z\"][\"BottomSequencer\"][\"K0\"] = Compute.numIters(\"tmp/extensor_energy-K0-iter.csv\")"
+        "metrics[\"Z\"][\"BottomSequencer\"][\"K0\"] = Compute.numIters(\"tmp/extensor_energy-K0-iter.csv\")\n" + \
+        "metrics[\"Z\"][\"BottomSequencer\"][\"time\"] = (metrics[\"Z\"][\"BottomSequencer\"][\"M0\"] + metrics[\"Z\"][\"BottomSequencer\"][\"N0\"] + metrics[\"Z\"][\"BottomSequencer\"][\"K0\"]) / 128000000000"
+
 
     assert collector.dump().gen(0) == hifiber
 
@@ -463,8 +487,10 @@ def test_dump_sigma():
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"] = {}\n" + \
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"] = 0\n" + \
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"DataSRAMBanks\"][\"time\"] = (metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"][\"read\"] + metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"]) / 8246337208320\n" + \
         "metrics[\"Z\"][\"Multiplier\"] = {}\n" + \
-        "metrics[\"Z\"][\"Multiplier\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]"
+        "metrics[\"Z\"][\"Multiplier\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"Z\"][\"Multiplier\"][\"time\"] = metrics[\"Z\"][\"Multiplier\"][\"mul\"] / 8192000000000"
 
     assert collector.dump().gen(0) == hifiber
 

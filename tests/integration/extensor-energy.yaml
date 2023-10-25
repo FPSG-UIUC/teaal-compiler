@@ -119,6 +119,7 @@ architecture:
         attributes:
           width: 64
           depth: 3932160 # 30 MB / 8B/line
+          bandwidth: 9223372036854775807 # Max int64 (i.e., inf)
       - name: K1Intersect
         class: Intersector
         attributes:
