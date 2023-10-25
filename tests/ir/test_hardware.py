@@ -6,6 +6,20 @@ from teaal.ir.level import Level
 from teaal.ir.program import Program
 from teaal.parse import *
 
+def build_outerspace_yaml():
+    with open("tests/integration/outerspace.yaml", "r") as f:
+        return f.read()
+
+def parse_yamls(yaml):
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    program = Program(einsum, mapping)
+    program.add_einsum(0)
+
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+
+    return Hardware(arch, bindings, program)
 
 def test_no_arch():
     yaml = """
@@ -421,6 +435,13 @@ def test_get_components():
         "Z", FunctionalComponent) == [
         intersect, mac]
 
+def test_get_config():
+    yaml = build_outerspace_yaml()
+    hardware = parse_yamls(yaml)
+
+    assert hardware.get_config("T0") == "MultiplyPhase"
+    assert hardware.get_config("T1") == "MergePhase"
+    assert hardware.get_config("Z") == "MergePhase"
 
 def test_get_traffic_path_multiple_bindings():
     yaml = """

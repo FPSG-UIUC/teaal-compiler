@@ -46,7 +46,7 @@ class Metrics:
             hardware: Hardware,
             format_: Format) -> None:
         """
-        Construct a new metrics object
+        Construct a new Metrics object
         """
         self.program = program
         self.hardware = hardware

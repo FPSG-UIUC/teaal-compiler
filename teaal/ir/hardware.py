@@ -47,6 +47,9 @@ class Hardware:
             program: Program) -> None:
         """
         Construct the hardware
+
+        TODO: The program is only used to get the Einsum name; standardize
+        so all use program or all take it as an argument
         """
         self.bindings = bindings
         self.program = program
@@ -90,6 +93,12 @@ class Hardware:
             if isinstance(component, class_):
                 components.append(component)
         return components
+
+    def get_config(self, einsum: str) -> str:
+        """
+        Get the name of the hardware configuration for this Einsum
+        """
+        return self.configs[einsum]
 
     def get_prefix(self, einsum: str) -> str:
         """
