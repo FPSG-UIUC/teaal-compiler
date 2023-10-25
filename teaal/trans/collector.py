@@ -422,12 +422,25 @@ class Collector:
                         {})))
 
             metrics_fu = EAccess(metrics_einsum, EString(fu.get_name()))
+            ops = []
             for binding in fu.get_bindings()[einsum]:
                 op = binding["op"]
+                ops.append(EString(op))
                 block.add(
                     SAssign(
                         AAccess(metrics_fu, EString(op)),
                         EAccess(metrics_dump, EString("payload_" + op))))
+
+            # TODO: Handle multi-op functional units
+            assert len(ops) == 1
+
+            # op_freq = cycles / s * ops / cycle
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * fu.get_num_instances()
+            time = EBinOp(EAccess(metrics_fu, ops[0]), ODiv(), EInt(op_freq))
+
+            metrics_time = AAccess(metrics_fu, EString("time"))
+            block.add(SAssign(metrics_time, time))
+
 
         return block
 
@@ -521,6 +534,14 @@ class Collector:
                     [])
                 block.add(SIAssign(metrics_isect, OAdd(), isects))
 
+            # op_freq = cycles / s * ops / cycle
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * intersector.get_num_instances()
+            metrics_isect_expr = EAccess(metrics_einsum, EString(isect_name))
+            time = EBinOp(metrics_isect_expr, ODiv(), EInt(op_freq))
+
+            metrics_time = AAccess(metrics_isect_expr, EString("time"))
+            block.add(SAssign(metrics_time, time))
+
         return block
 
     def __build_match_ranks(self) -> Statement:
@@ -570,13 +591,15 @@ class Collector:
                         metrics_einsum, EString(merger_name)), EDict(
                         {})))
             metrics_merger = EAccess(metrics_einsum, EString(merger_name))
-
+            tensors = []
             for binding in merger.get_bindings()[einsum]:
                 init_ranks = binding["init-ranks"]
                 final_ranks = binding["final-ranks"]
 
                 input_ = binding["tensor"] + "_" + "".join(init_ranks)
                 tensor_name = EVar(input_)
+                tensors.append(tensor_name)
+
                 # TODO: Way more complicated merges are possible than a single
                 # swap
                 depth = EInt([i == f for i, f in zip(
@@ -605,6 +628,17 @@ class Collector:
                             EString(input_)),
                         swaps_call))
 
+            # Compute the time required
+            # TODO: Support more than one tensor per merger
+            assert len(tensors) == 1
+
+            # op_freq = cycles / s * ops / cycle
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * merger.get_num_instances()
+            time = EBinOp(EAccess(metrics_merger, tensors[0]), ODiv(), EInt(op_freq))
+
+            metrics_time = AAccess(metrics_merger, EString("time"))
+            block.add(SAssign(metrics_time, time))
+
         return block
 
     def __build_sequencers(self) -> Statement:
@@ -621,7 +655,9 @@ class Collector:
             block.add(SAssign(seq_assn, EDict({})))
             seq_expr = EAccess(metrics_einsum, EString(seq.get_name()))
 
+            ranks = []
             for rank in seq.get_ranks(einsum):
+                ranks.append(rank)
                 trace = self.metrics.get_hardware().get_prefix(einsum) + \
                     "-" + rank + "-iter.csv"
                 num_iters = EMethod(
@@ -630,6 +666,24 @@ class Collector:
                             EString(trace))])
                 seq_rank = AAccess(seq_expr, EString(rank))
                 block.add(SAssign(seq_rank, num_iters))
+
+            # Compute time
+            steps: Optional[Expression] = None
+            for rank in ranks:
+                new_steps = EAccess(seq_expr, EString(rank))
+                if steps:
+                    steps = EBinOp(steps, OAdd(), new_steps)
+                else:
+                    steps = new_steps
+
+            assert steps is not None
+
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * seq.get_num_instances()
+            time = EBinOp(EParens(steps), ODiv(), EInt(op_freq))
+
+            metrics_time = AAccess(seq_expr, EString("time"))
+            block.add(SAssign(metrics_time, time))
+            print(SAssign(metrics_time, time).gen(0))
 
         return block
 
@@ -921,6 +975,40 @@ class Collector:
                                 EAccess(traffic_access, EString("write"))))
 
                     added.add((src, tensor))
+
+        # Compute the time it took to perform this traffic
+        for src, tensors in traffic_dict.items():
+            bits: Optional[Expression] = None
+            metrics_src = EAccess(metrics_einsum, EString(src))
+
+            # Note: not technically necessary, just to make the testing deterministic
+            sorted_tensors = list(tensors)
+            sorted_tensors.sort()
+
+            for tensor in sorted_tensors:
+                metrics_tensor = EAccess(metrics_src, EString(tensor))
+                new_bits: Expression = EAccess(metrics_tensor, EString("read"))
+
+                if tensor == einsum:
+                    new_bits = EBinOp(new_bits, OAdd(), EAccess(metrics_tensor, EString("write")))
+
+                if bits:
+                    bits = EBinOp(bits, OAdd(), new_bits)
+                else:
+                    bits = new_bits
+
+            # Should always have at least some traffic (error above if not)
+            assert bits is not None
+            bits = EParens(bits)
+
+            component = self.metrics.get_hardware().get_component(src)
+            assert isinstance(component, MemoryComponent)
+
+            metrics_time = AAccess(metrics_src, EString("time"))
+            # Note: the current model assumes perfect load balance
+            time = EBinOp(bits, ODiv(), EInt(component.get_bandwidth() * component.get_num_instances()))
+
+            block.add(SAssign(metrics_time, time))
 
         return block
 

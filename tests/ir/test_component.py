@@ -4,13 +4,18 @@ from teaal.ir.component import *
 
 
 def test_component_get_name():
-    component = Component("Test", {}, {})
+    component = Component("Test", 1, {}, {})
     assert component.get_name() == "Test"
+
+def test_component_get_num_instances():
+    component = Component("Test", 5, {}, {})
+    assert component.get_num_instances() == 5
+
 
 
 def test_component_eq():
-    component0 = Component("Test", {"attr0": 5}, {})
-    component1 = Component("Test", {"attr0": 5}, {})
+    component0 = Component("Test", 1, {"attr0": 5}, {})
+    component1 = Component("Test", 1, {"attr0": 5}, {})
 
     assert component0 == component1
     assert component0 != "foo"
@@ -18,40 +23,40 @@ def test_component_eq():
 
 def test_component_hash():
     set_ = set()
-    set_.add(Component("foo", {}, {"Z": [{"foo": "bar"}]}))
+    set_.add(Component("foo", 1, {}, {"Z": [{"foo": "bar"}]}))
 
-    assert Component("foo", {}, {"Z": [{"foo": "bar"}]}) in set_
+    assert Component("foo", 1, {}, {"Z": [{"foo": "bar"}]}) in set_
     assert "" not in set_
 
 
 def test_component_repr():
-    component = Component("Test", {"attrs0": 5}, {"Z": [{"foo": "bar"}]})
-    assert repr(component) == "(Component, Test, {'Z': [{'foo': 'bar'}]})"
+    component = Component("Test", 1, {"attrs0": 5}, {"Z": [{"foo": "bar"}]})
+    assert repr(component) == "(Component, Test, 1, {'Z': [{'foo': 'bar'}]})"
 
 
 def test_component_get_bindings():
-    component = Component("Test", {"attrs0": 5}, {"Z": [{"foo": "bar"}]})
+    component = Component("Test", 1, {"attrs0": 5}, {"Z": [{"foo": "bar"}]})
 
     assert component.get_bindings() == {"Z": [{"foo": "bar"}]}
 
 
 def test_functional_component():
     bindings = {"Z": [{"op": "add"}], "T": [{"op": "mul"}]}
-    compute = FunctionalComponent("MAC", {}, bindings)
+    compute = FunctionalComponent("MAC", 1, {}, bindings)
 
     assert compute.get_bindings() == bindings
 
     assert repr(compute) in {
-        "(FunctionalComponent, MAC, {'T': [{'op': 'mul'}], 'Z': [{'op': 'add'}]})",
-        "(FunctionalComponent, MAC, {'Z': [{'op': 'add'}], 'T': [{'op': 'mul'}]})"}
+        "(FunctionalComponent, MAC, 1, {'T': [{'op': 'mul'}], 'Z': [{'op': 'add'}]})",
+        "(FunctionalComponent, MAC, 1, {'Z': [{'op': 'add'}], 'T': [{'op': 'mul'}]})"}
 
 
 def test_memory_attr_errs():
     with pytest.raises(ValueError) as excinfo:
-        MemoryComponent("Mem", {"bandwidth": "foo"}, {})
+        MemoryComponent("Mem", 1, {"bandwidth": "foo"}, {})
     assert str(excinfo.value) == "Bad bandwidth foo for Memory Mem"
 
-    memory = MemoryComponent("Mem", {}, {})
+    memory = MemoryComponent("Mem", 1, {}, {})
     with pytest.raises(ValueError) as excinfo:
         memory.get_bandwidth()
     assert str(excinfo.value) == "Bandwidth unspecified for component Mem"
@@ -60,26 +65,26 @@ def test_memory_attr_errs():
 def test_memory_binding_errs():
     binding = {"Z": [{"rank": "M", "type": "elem", "format": "default"}]}
     with pytest.raises(ValueError) as excinfo:
-        MemoryComponent("Mem", {"bandwidth": 256}, binding)
+        MemoryComponent("Mem", 1, {"bandwidth": 256}, binding)
     assert str(
         excinfo.value) == "Tensor not specified for Einsum Z in binding to Mem"
 
     binding = {"Z": [{"tensor": "A", "type": "elem", "format": "default"}]}
     with pytest.raises(ValueError) as excinfo:
-        MemoryComponent("Mem", {"bandwidth": 256}, binding)
+        MemoryComponent("Mem", 1, {"bandwidth": 256}, binding)
     assert str(
         excinfo.value) == "Rank not specified for tensor A in Einsum Z in binding to Mem"
 
     binding = {"Z": [{"tensor": "A", "rank": "M", "format": "default"}]}
     with pytest.raises(ValueError) as excinfo:
-        MemoryComponent("Mem", {"bandwidth": 256}, binding)
+        MemoryComponent("Mem", 1, {"bandwidth": 256}, binding)
     assert str(
         excinfo.value) == "Type not specified for tensor A in Einsum Z in binding to Mem"
 
     binding = {"Z": [{"tensor": "A", "rank": "M",
                       "type": "foo", "format": "default"}]}
     with pytest.raises(ValueError) as excinfo:
-        MemoryComponent("Mem", {"bandwidth": 256}, binding)
+        MemoryComponent("Mem", 1, {"bandwidth": 256}, binding)
     assert str(
         excinfo.value) in {
         "Type foo for Mem on tensor A in Einsum Z not one of {'coord', 'elem', 'payload'}",
@@ -91,13 +96,13 @@ def test_memory_binding_errs():
 
     binding = {"Z": [{"tensor": "A", "rank": "M", "type": "elem"}]}
     with pytest.raises(ValueError) as excinfo:
-        MemoryComponent("Mem", {"bandwidth": 256}, binding)
+        MemoryComponent("Mem", 1, {"bandwidth": 256}, binding)
     assert str(
         excinfo.value) == "Format not specified for tensor A in Einsum Z in binding to Mem"
 
     bindings = {"Z": [{"tensor": "A", "rank": "M", "type": "payload", "format": "default"},
                       {"tensor": "A", "rank": "M", "type": "payload", "format": "default"}]}
-    memory = MemoryComponent("Memory", {"bandwidth": 256}, bindings)
+    memory = MemoryComponent("Memory", 1, {"bandwidth": 256}, bindings)
     with pytest.raises(ValueError) as excinfo:
         memory.get_binding("Z", "A", "M", "payload", "default")
     assert str(
@@ -107,7 +112,7 @@ def test_memory_binding_errs():
 def test_memory_component():
     bindings = {"Z": [{"tensor": "A", "rank": "M",
                        "type": "payload", "format": "default"}]}
-    memory = MemoryComponent("Memory", {"bandwidth": 256}, bindings)
+    memory = MemoryComponent("Memory", 1, {"bandwidth": 256}, bindings)
 
     assert memory.get_bandwidth() == 256
 
@@ -121,37 +126,37 @@ def test_memory_component():
     assert memory.get_binding("T", "A", "M", "payload", "default") is None
 
     assert repr(
-        memory) == "(MemoryComponent, Memory, {'Z': [{'tensor': 'A', 'rank': 'M', 'type': 'payload', 'format': 'default'}]}, 256)"
+        memory) == "(MemoryComponent, Memory, 1, {'Z': [{'tensor': 'A', 'rank': 'M', 'type': 'payload', 'format': 'default'}]}, 256)"
 
 
 def test_buffer_attr_errs():
-    buffer_ = BufferComponent("Buf", {"width": 8}, {})
+    buffer_ = BufferComponent("Buf", 1, {"width": 8}, {})
     with pytest.raises(ValueError) as excinfo:
         buffer_.get_depth()
     assert str(excinfo.value) == "Depth unspecified for component Buf"
 
     with pytest.raises(ValueError) as excinfo:
-        BufferComponent("Buf", {"depth": "foo", "width": 8}, {})
+        BufferComponent("Buf", 1, {"depth": "foo", "width": 8}, {})
     assert str(excinfo.value) == "Bad depth foo for Buffer Buf"
 
-    buffer_ = BufferComponent("Buf", {"depth": 256}, {})
+    buffer_ = BufferComponent("Buf", 1, {"depth": 256}, {})
     with pytest.raises(ValueError) as excinfo:
         buffer_.get_width()
     assert str(excinfo.value) == "Width unspecified for component Buf"
 
     with pytest.raises(ValueError) as excinfo:
-        BufferComponent("Buf", {"depth": 256, "width": "foo"}, {})
+        BufferComponent("Buf", 1, {"depth": 256, "width": "foo"}, {})
     assert str(excinfo.value) == "Bad width foo for Buffer Buf"
 
 
 def test_buffer_component():
     attrs = {"width": 8, "depth": 3 * 2 ** 20}
-    buffer_ = BufferComponent("Buf", attrs, {})
+    buffer_ = BufferComponent("Buf", 1, attrs, {})
 
     assert buffer_.get_width() == 8
     assert buffer_.get_depth() == 3 * 2 ** 20
 
-    assert repr(buffer_) == "(BufferComponent, Buf, {}, None, 3145728, 8)"
+    assert repr(buffer_) == "(BufferComponent, Buf, 1, {}, None, 3145728, 8)"
 
 
 def test_buffet_binding_errs():
@@ -160,7 +165,7 @@ def test_buffet_binding_errs():
     bindings = {"Z": [{"tensor": "A", "rank": "M",
                        "type": "payload", "format": "default", "style": "foo"}]}
     with pytest.raises(ValueError) as excinfo:
-        BuffetComponent("LLB", attrs, bindings)
+        BuffetComponent("LLB", 1, attrs, bindings)
     assert str(
         excinfo.value) == "Evict-on not specified for tensor A in Einsum Z in binding to LLB"
 
@@ -171,7 +176,7 @@ def test_buffet_binding_errs():
                        "style": "foo",
                        "evict-on": "root"}]}
     with pytest.raises(ValueError) as excinfo:
-        BuffetComponent("LLB", attrs, bindings)
+        BuffetComponent("LLB", 1, attrs, bindings)
     assert str(
         excinfo.value) in {
         "Style foo for LLB on tensor A in Einsum Z not one of {'eager', 'lazy'}",
@@ -186,7 +191,7 @@ def test_buffet_component():
                        "format": "default",
                        "style": "eager",
                        "evict-on": "root"}]}
-    buffet = BuffetComponent("LLB", attrs, bindings)
+    buffet = BuffetComponent("LLB", 1, attrs, bindings)
 
     assert buffet.get_binding(
         "Z",
@@ -200,7 +205,7 @@ def test_buffet_component():
                        "type": "payload",
                        "format": "default",
                        "evict-on": "root"}]}
-    buffet = BuffetComponent("LLB", attrs, bindings)
+    buffet = BuffetComponent("LLB", 1, attrs, bindings)
 
     bindings_corr = {"tensor": "A",
                      "rank": "M",
@@ -225,7 +230,7 @@ def test_buffet_component_expand_eager():
                        "format": "default",
                        "style": "eager",
                        "evict-on": "N"}]}
-    buffet = BuffetComponent("LLB", attrs, bindings)
+    buffet = BuffetComponent("LLB", 1, attrs, bindings)
 
     ranks = ["J", "M", "K", "O"]
     types = [["elem"], ["coord", "payload"], ["coord", "payload"], ["elem"]]
@@ -282,20 +287,20 @@ def test_cache_component():
     attrs = {"width": 8, "depth": 3 * 2 ** 20}
     bindings = {"Z": [{"tensor": "A", "rank": "M",
                        "type": "payload", "format": "default"}]}
-    cache = CacheComponent("FiberCache", attrs, bindings)
+    cache = CacheComponent("FiberCache", 1, attrs, bindings)
 
 
 def test_compute_attr_errs():
     with pytest.raises(ValueError) as excinfo:
-        ComputeComponent("FU", {}, [])
+        ComputeComponent("FU", 1, {}, [])
     assert str(excinfo.value) == "Type unspecified for component FU"
 
     with pytest.raises(ValueError) as excinfo:
-        ComputeComponent("FU", {"type": None}, [])
+        ComputeComponent("FU", 1, {"type": None}, [])
     assert str(excinfo.value) == "Bad type None for Compute FU"
 
     with pytest.raises(ValueError) as excinfo:
-        ComputeComponent("FU", {"type": "foo"}, [])
+        ComputeComponent("FU", 1, {"type": "foo"}, [])
     assert str(
         excinfo.value) in {
         "foo is not a valid value for attribute type of class Compute. Choose one of {'mul', 'add'}",
@@ -304,43 +309,43 @@ def test_compute_attr_errs():
 
 def test_compute_component():
     attrs = {"type": "mul"}
-    compute = ComputeComponent("FU", attrs, {})
+    compute = ComputeComponent("FU", 1, attrs, {})
 
     assert compute.get_type() == "mul"
 
-    assert repr(compute) == "(ComputeComponent, FU, {}, mul)"
+    assert repr(compute) == "(ComputeComponent, FU, 1, {}, mul)"
 
 
 def test_dram_component():
     bindings = {"Z": [{"tensor": "A", "rank": "M",
                        "type": "payload", "format": "default"}]}
-    dram = DRAMComponent("DRAM", {"datawidth": 8, "bandwidth": 128}, bindings)
+    dram = DRAMComponent("DRAM", 1, {"datawidth": 8, "bandwidth": 128}, bindings)
 
 
 def test_intersector_component_binding_errs():
     bindings = {"Z": [{"foo": "bar"}]}
     with pytest.raises(ValueError) as excinfo:
-        IntersectorComponent("Intersection", {}, bindings)
+        IntersectorComponent("Intersection", 1, {}, bindings)
     assert str(
         excinfo.value) == "Rank unspecified in Einsum Z in binding to Intersection"
 
 
 def test_intersector_component():
     bindings = {"Z": [{"rank": "K"}]}
-    intersector = IntersectorComponent("Intersection", {}, bindings)
+    intersector = IntersectorComponent("Intersection", 1, {}, bindings)
 
 
 def test_leader_follower_component_binding_errs():
     bindings = {"Z": [{"rank": "K"}]}
     with pytest.raises(ValueError) as excinfo:
-        LeaderFollowerComponent("Intersection", {}, bindings)
+        LeaderFollowerComponent("Intersection", 1, {}, bindings)
     assert str(
         excinfo.value) == "Leader unspecified in Einsum Z in binding to Intersection"
 
 
 def test_leader_follower_component():
     bindings = {"Z": [{"rank": "K", "leader": "A"}]}
-    leader_follower = LeaderFollowerComponent("Intersection", {}, bindings)
+    leader_follower = LeaderFollowerComponent("Intersection", 1, {}, bindings)
 
 
 def test_merger_attr_errs():
@@ -350,7 +355,7 @@ def test_merger_attr_errs():
         "order": "opt",
         "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger0", attrs, [])
+        MergerComponent("Merger0", 1, attrs, [])
     assert str(excinfo.value) == "Inputs unspecified for component Merger0"
 
     attrs = {
@@ -360,12 +365,12 @@ def test_merger_attr_errs():
         "order": "opt",
         "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(excinfo.value) == "Bad inputs foo for Merger Merger1"
 
     attrs = {"inputs": 64, "outputs": 2, "order": "opt", "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger0", attrs, [])
+        MergerComponent("Merger0", 1, attrs, [])
     assert str(
         excinfo.value) == "Comparator radix unspecified for component Merger0"
 
@@ -376,7 +381,7 @@ def test_merger_attr_errs():
         "order": "opt",
         "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(excinfo.value) == "Bad comparator_radix foo for Merger Merger1"
 
     attrs = {
@@ -386,7 +391,7 @@ def test_merger_attr_errs():
         "order": "opt",
         "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(excinfo.value) == "Bad outputs foo for Merger Merger1"
 
     attrs = {
@@ -396,7 +401,7 @@ def test_merger_attr_errs():
         "order": None,
         "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(excinfo.value) == "Bad order None for Merger Merger1"
 
     attrs = {
@@ -406,7 +411,7 @@ def test_merger_attr_errs():
         "order": "foo",
         "reduce": False}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(
         excinfo.value) in {
         "foo is not a valid value for attribute order of class Merger. Choose one of {'opt', 'fifo'}",
@@ -419,7 +424,7 @@ def test_merger_attr_errs():
         "order": "opt",
         "reduce": 2}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(excinfo.value) == "Bad reduce 2 for Merger Merger1"
 
     attrs = {
@@ -429,7 +434,7 @@ def test_merger_attr_errs():
         "order": "opt",
         "reduce": True}
     with pytest.raises(NotImplementedError) as excinfo:
-        MergerComponent("Merger1", attrs, [])
+        MergerComponent("Merger1", 1, attrs, [])
     assert str(excinfo.value) == "Concurrent merge and reduction not supported"
 
 
@@ -443,19 +448,19 @@ def test_merger_binding_errs():
     binding = {
         "Z": [{"init-ranks": ["M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, binding)
+        MergerComponent("Merger1", 1, attrs, binding)
     assert str(
         excinfo.value) == "Tensor not specified for Einsum Z in binding to Merger1"
 
     binding = {"Z": [{"tensor": "T", "final-ranks": ["M", "N", "K"]}]}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, binding)
+        MergerComponent("Merger1", 1, attrs, binding)
     assert str(
         excinfo.value) == "Initial ranks not specified for tensor T in Einsum Z in binding to Merger1"
 
     binding = {"Z": [{"tensor": "T", "init-ranks": ["M", "N", "K"]}]}
     with pytest.raises(ValueError) as excinfo:
-        MergerComponent("Merger1", attrs, binding)
+        MergerComponent("Merger1", 1, attrs, binding)
     assert str(
         excinfo.value) == "Final ranks not specified for tensor T in Einsum Z in binding to Merger1"
 
@@ -479,7 +484,7 @@ def test_merger_binding_errs():
                       "final-ranks": ["M",
                                       "N",
                                       "K"]}]}
-    merger = MergerComponent("Merger1", attrs, binding)
+    merger = MergerComponent("Merger1", 1, attrs, binding)
     with pytest.raises(ValueError) as excinfo:
         merger.get_init_ranks("Z", "T", ["M", "N", "K"])
     assert str(
@@ -495,7 +500,7 @@ def test_merger_component():
         "reduce": False}
     binding = {"Z": [{"tensor": "T", "init-ranks": [
         "M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
-    merger = MergerComponent("Merger0", attrs, binding)
+    merger = MergerComponent("Merger0", 1, attrs, binding)
 
     bindings = {"Z": [{"tensor": "T", "init-ranks": [
         "M", "K", "N"], "final-ranks": ["M", "N", "K"]}]}
@@ -512,10 +517,10 @@ def test_merger_component():
     assert merger.get_init_ranks("Z", "A", ["M", "K"]) is None
 
     assert repr(
-        merger) == "(MergerComponent, Merger0, {'Z': [{'tensor': 'T', 'init-ranks': ['M', 'K', 'N'], 'final-ranks': ['M', 'N', 'K']}]}, 64, 32, 2, opt, False)"
+        merger) == "(MergerComponent, Merger0, 1, {'Z': [{'tensor': 'T', 'init-ranks': ['M', 'K', 'N'], 'final-ranks': ['M', 'N', 'K']}]}, 64, 32, 2, opt, False)"
 
     attrs = {"inputs": 200, "comparator_radix": 2}
-    merger = MergerComponent("Merger1", attrs, binding)
+    merger = MergerComponent("Merger1", 1, attrs, binding)
 
     assert merger.get_inputs() == 200
     assert merger.get_comparator_radix() == 2
@@ -526,7 +531,7 @@ def test_merger_component():
 
 def test_sequencer_component_no_num_ranks():
     with pytest.raises(ValueError) as excinfo:
-        SequencerComponent("Seq", {}, {})
+        SequencerComponent("Seq", 1, {}, {})
 
     assert str(excinfo.value) == "Number of ranks unspecified for sequencer Seq"
 
@@ -535,7 +540,7 @@ def test_sequencer_component_too_many_ranks():
     attrs = {"num_ranks": 1}
     bindings = {"Z": [{"rank": "K"}, {"rank": "M"}]}
     with pytest.raises(ValueError) as excinfo:
-        SequencerComponent("Seq", attrs, bindings)
+        SequencerComponent("Seq", 1, attrs, bindings)
 
     assert str(
         excinfo.value) == "Too many ranks bound to sequencer Seq during Einsum Z"
@@ -544,16 +549,16 @@ def test_sequencer_component_too_many_ranks():
 def test_sequencer_component():
     attrs = {"num_ranks": 2}
     bindings = {"Z": [{"rank": "K"}, {"rank": "M"}]}
-    sequencer = SequencerComponent("Seq", attrs, bindings)
+    sequencer = SequencerComponent("Seq", 1, attrs, bindings)
 
     assert sequencer.get_ranks("Z") == ["K", "M"]
 
 
 def test_skip_ahead_component():
     bindings = {"Z": [{"rank": "K2"}]}
-    skip_ahead = SkipAheadComponent("K2Intersection", {}, bindings)
+    skip_ahead = SkipAheadComponent("K2Intersection", 1, {}, bindings)
 
 
 def test_two_finger_intersector():
     bindings = {"Z": [{"rank": "K2"}]}
-    skip_ahead = TwoFingerComponent("K2Intersection", {}, bindings)
+    skip_ahead = TwoFingerComponent("K2Intersection", 1, {}, bindings)

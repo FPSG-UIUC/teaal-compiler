@@ -100,6 +100,22 @@ class Hardware:
         """
         return self.configs[einsum]
 
+    def get_frequency(self, einsum: str) -> int:
+        """
+        The clock_frequency (in Hz) should be specified as an attribute at the
+        top level
+        """
+        top_level = self.tree[self.configs[einsum]]
+        freq = top_level.get_attr("clock_frequency")
+
+        if freq is None:
+            raise ValueError("Unspecified clock frequency for config " + self.configs[einsum])
+
+        if isinstance(freq, str):
+            raise ValueError("Bad clock frequency for config " + self.configs[einsum])
+
+        return freq
+
     def get_prefix(self, einsum: str) -> str:
         """
         Get the prefix for collected metrics for the given Einsum
@@ -158,7 +174,7 @@ class Hardware:
         einsum = self.program.get_equation().get_output().root_name()
         return self.tree[self.configs[einsum]]
 
-    def __build_component(self, local: dict) -> Component:
+    def __build_component(self, local: dict, num_instances: int) -> Component:
         """
         Build a component
         """
@@ -202,7 +218,7 @@ class Hardware:
         name = local["name"]
         binding = self.bindings.get_component(name)
 
-        component = class_(name, local["attributes"], binding)
+        component = class_(name, num_instances, local["attributes"], binding)
         self.components[component.get_name()] = component
 
         return component
@@ -212,7 +228,7 @@ class Hardware:
         Build the levels of the architecture tree
         """
         attrs = tree["attributes"]
-        local = [self.__build_component(comp)
+        local = [self.__build_component(comp, tree["num"])
                  for comp in tree["local"]]
         subtrees = [self.__build_level(subtree)
                     for subtree in tree["subtree"]]

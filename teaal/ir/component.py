@@ -34,14 +34,13 @@ class Component:
     Representation an hardware component
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a component
         """
         self.name = name
-        # TODO: Remove this (not used)
-        self.attrs = attrs
+        self.num_instances = num_instances
         self.bindings = bindings
 
     def get_name(self) -> str:
@@ -49,6 +48,12 @@ class Component:
         Get the component name
         """
         return self.name
+
+    def get_num_instances(self) -> int:
+        """
+        Get the number of instances
+        """
+        return self.num_instances
 
     def get_bindings(self) -> Dict[str, List[dict]]:
         """
@@ -75,7 +80,7 @@ class Component:
         """
         A tuple of all fields of a component
         """
-        return (self.name, self.bindings)
+        return (self.name, self.num_instances, self.bindings)
 
     def __repr__(self) -> str:
         """
@@ -183,12 +188,12 @@ class MemoryComponent(Component):
     Superclass for all memory components
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a memory component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         self.bandwidth = self._check_attr(attrs, "bandwidth", int)
 
@@ -287,7 +292,7 @@ class MemoryComponent(Component):
         """
         A tuple of all fields
         """
-        return (self.name, self.bindings, self.bandwidth)
+        return (self.name, self.num_instances, self.bindings, self.bandwidth)
 
 
 class BufferComponent(MemoryComponent):
@@ -295,12 +300,12 @@ class BufferComponent(MemoryComponent):
     A Component for a buffer
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a buffer component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         self.depth = self._check_float_attr(attrs, "depth")
         self.width = self._check_attr(attrs, "width", int)
@@ -329,6 +334,7 @@ class BufferComponent(MemoryComponent):
         """
         return (
             self.name,
+            self.num_instances,
             self.bindings,
             self.bandwidth,
             self.depth,
@@ -340,12 +346,12 @@ class BuffetComponent(BufferComponent):
     A Component for a Buffet
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a buffet component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
         for einsum in self.tensor_bindings:
             for tensor, tensor_bindings in self.tensor_bindings[einsum].items(
             ):
@@ -433,12 +439,12 @@ class ComputeComponent(FunctionalComponent):
     A Component for a compute functional unit
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a compute component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         type_ = self._check_str_attr(attrs, "type", {"mul", "add"})
         if type_ is None:
@@ -455,7 +461,7 @@ class ComputeComponent(FunctionalComponent):
         """
         A tuple of all fields
         """
-        return (self.name, self.bindings, self.type)
+        return (self.name, self.num_instances, self.bindings, self.type)
 
 
 class DRAMComponent(MemoryComponent):
@@ -470,12 +476,12 @@ class IntersectorComponent(FunctionalComponent):
     A Component superclass for all intersectors
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct an intersector component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         for einsum, einsum_bindings in bindings.items():
             for binding in einsum_bindings:
@@ -492,12 +498,12 @@ class LeaderFollowerComponent(IntersectorComponent):
     A Component for leader-follower intersection
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a leader-follower intersector component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         for einsum, einsum_bindings in bindings.items():
             for binding in einsum_bindings:
@@ -514,12 +520,12 @@ class MergerComponent(Component):
     A Component for a merger
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a merger component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         # TODO: change back to int
         inputs = self._check_float_attr(attrs, "inputs")
@@ -650,6 +656,7 @@ class MergerComponent(Component):
         """
         return (
             self.name,
+            self.num_instances,
             self.bindings,
             self.inputs,
             self.comparator_radix,
@@ -663,12 +670,12 @@ class SequencerComponent(FunctionalComponent):
     A Component for a sequencer
     """
 
-    def __init__(self, name: str, attrs: dict,
+    def __init__(self, name: str, num_instances: int, attrs: dict,
                  bindings: Dict[str, List[dict]]) -> None:
         """
         Construct a sequencer component
         """
-        super().__init__(name, attrs, bindings)
+        super().__init__(name, num_instances, attrs, bindings)
 
         num_ranks = self._check_attr(attrs, "num_ranks", int)
         if num_ranks is None:

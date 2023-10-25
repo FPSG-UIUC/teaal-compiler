@@ -147,7 +147,7 @@ def test_no_binding():
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     hardware = Hardware(arch, bindings, program)
 
-    cache = CacheComponent("Cache", {}, {})
+    cache = CacheComponent("Cache", 1, {}, {})
     assert hardware.get_component("Cache") == cache
 
 
@@ -329,7 +329,7 @@ def test_get_component():
 
     def assert_component(type_, name, attrs):
         binding = bindings.get_component(name)
-        component = type_(name, attrs, binding)
+        component = type_(name, 1, attrs, binding)
 
         assert hardware.get_component(name) == component
 
@@ -426,8 +426,8 @@ def test_get_components():
     hardware = Hardware(arch, bindings, program)
 
     intersect = SkipAheadComponent(
-        "Intersect0", {}, bindings.get_component("Intersect0"))
-    mac = ComputeComponent("MAC",
+        "Intersect0", 1, {}, bindings.get_component("Intersect0"))
+    mac = ComputeComponent("MAC", 1,
                            {"type": "add"},
                            bindings.get_component("MAC"))
 
@@ -442,6 +442,63 @@ def test_get_config():
     assert hardware.get_config("T0") == "MultiplyPhase"
     assert hardware.get_config("T1") == "MergePhase"
     assert hardware.get_config("Z") == "MergePhase"
+
+def test_get_frequency_unspecified():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M]
+      expressions:
+      - Z[m] = a
+    architecture:
+      accel:
+      - name: System
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+    """
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    hardware = Hardware(arch, bindings, program)
+
+    with pytest.raises(ValueError) as excinfo:
+        hardware.get_frequency("Z")
+    assert str(excinfo.value) == "Unspecified clock frequency for config accel"
+def test_get_frequency_bad():
+    yaml = """
+    einsum:
+      declaration:
+        Z: [M]
+      expressions:
+      - Z[m] = a
+    architecture:
+      accel:
+      - name: System
+        attributes:
+          clock_frequency: foo
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+    """
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+    hardware = Hardware(arch, bindings, program)
+
+    with pytest.raises(ValueError) as excinfo:
+        hardware.get_frequency("Z")
+    assert str(excinfo.value) == "Bad clock frequency for config accel"
+
+
+
+def test_get_frequency():
+    yaml = build_outerspace_yaml()
+    hardware = parse_yamls(yaml)
+
+    assert hardware.get_frequency("Z") == 1500000000
 
 def test_get_traffic_path_multiple_bindings():
     yaml = """
@@ -632,10 +689,10 @@ def test_get_traffic_path():
     program.add_einsum(1)
     hardware = Hardware(arch, bindings, program)
 
-    mem = DRAMComponent("Memory", {}, bindings.get_component("Memory"))
-    s0b = BuffetComponent("S0B", {}, bindings.get_component("S0B"))
-    s1b = BuffetComponent("S1B", {}, bindings.get_component("S1B"))
-    s2b = BuffetComponent("S2B", {}, bindings.get_component("S2B"))
+    mem = DRAMComponent("Memory", 1, {}, bindings.get_component("Memory"))
+    s0b = BuffetComponent("S0B", 1, {}, bindings.get_component("S0B"))
+    s1b = BuffetComponent("S1B", 1, {}, bindings.get_component("S1B"))
+    s2b = BuffetComponent("S2B", 1, {}, bindings.get_component("S2B"))
 
     assert hardware.get_traffic_path(
         "A", "M", "payload", "default") == [(mem, "lazy"), (s0b, "lazy")]
@@ -697,16 +754,16 @@ def test_get_tree():
     hardware = Hardware(arch, bindings, program)
 
     regs = BuffetComponent(
-        "Registers",
+        "Registers", 8,
         {},
         bindings.get_component("Registers"))
-    mac = ComputeComponent("MAC",
+    mac = ComputeComponent("MAC", 8,
                            {"type": "mul"},
                            bindings.get_component("MAC"))
     pe = Level("PE", 8, {}, [regs, mac], [])
 
     mem_attrs = {"datawidth": 8, "bandwidth": 128}
-    mem = DRAMComponent("Memory", mem_attrs, bindings.get_component("Memory"))
+    mem = DRAMComponent("Memory", 1, mem_attrs, bindings.get_component("Memory"))
     attrs = {"clock_frequency": 10 ** 9}
 
     tree = Level("System", 1, attrs, [mem], [pe])
