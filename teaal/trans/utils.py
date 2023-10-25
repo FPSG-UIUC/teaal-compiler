@@ -91,12 +91,12 @@ class TransUtils:
         return SExpr(set_call)
 
     @staticmethod
-    def build_shape(tensor: Tensor) -> Argument:
+    def build_shape(ranks: Sequence[str]) -> Argument:
         """
         Build the shape argument
         """
-        ranks = [EVar(rank) for rank in tensor.get_ranks()]
-        return AParam("shape", EList(ranks))
+        rank_vars = [EVar(rank) for rank in ranks]
+        return AParam("shape", EList(rank_vars))
 
     @staticmethod
     def build_swizzle(

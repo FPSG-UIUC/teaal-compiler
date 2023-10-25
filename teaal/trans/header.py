@@ -189,10 +189,9 @@ class Header:
 
         # If at least one rank is not available, we need an explicit shape
         if not all(avail) or self.metrics is not None:
-            # TODO: Use TransUtils.build_shape
             # TODO: Test that this removes the partitioning
-            shape = EList([EVar(part.get_root_name(rank))
-                          for rank in output.get_ranks()])
-            args.append(AParam("shape", shape))
+            unpart_ranks = [part.get_root_name(
+                rank) for rank in output.get_ranks()]
+            args.append(TransUtils.build_shape(unpart_ranks))
 
         return args

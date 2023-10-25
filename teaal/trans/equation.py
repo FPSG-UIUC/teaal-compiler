@@ -440,7 +440,7 @@ class Equation:
                     if factor.root_name() == leader:
                         continue
 
-                    # TODO: Only eager fibers can follow
+                    # TODO: Only uncompressed fibers can follow
                     fiber_args.append(self.__iter_fiber(rank, factor))
 
                 args: List[Argument] = [AJust(fiber) for fiber in fiber_args]

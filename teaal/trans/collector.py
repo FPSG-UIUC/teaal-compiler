@@ -582,7 +582,8 @@ class Collector:
                 depth = EInt([i == f for i, f in zip(
                     init_ranks, final_ranks)].index(False))
 
-                # TODO: This is very bad; Need to first update the HiFiber
+                # TODO: Need to first update the HiFiber to use new merge
+                # hardware spec
                 radix = TransUtils.build_expr(merger.get_comparator_radix())
                 next_latency: Expression
                 if merger.get_inputs() < float("inf"):

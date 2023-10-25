@@ -167,7 +167,6 @@ class Hardware:
         elif class_name == "dram":
             class_ = DRAMComponent
 
-        # TODO: Support two-finger intersection
         elif class_name == "intersector":
             type_ = local["attributes"]["type"].lower()
             if type_ == "leader-follower":

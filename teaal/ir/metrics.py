@@ -140,13 +140,13 @@ class Metrics:
     def get_eager_evict_on(self, tensor: str, rank: str) -> List[str]:
         """
         Get the ranks eager load should be evicted on in loop order
-
-        TODO: Test that they are in loop order
         """
         ranks = []
         for loop_rank, evicts in self.eager_evicts.items():
             if (tensor, rank) in evicts:
                 ranks.append(loop_rank)
+
+        ranks.sort(key=self.program.get_loop_order().get_ranks().index)
         return ranks
 
     def get_eager_evicts(self, rank: str) -> List[Tuple[str, str]]:

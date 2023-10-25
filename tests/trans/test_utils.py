@@ -49,8 +49,7 @@ def test_build_set_rank_ids():
 
 
 def test_build_shape():
-    tensor = Tensor("A", ["I", "J"])
-    assert TransUtils.build_shape(tensor).gen() == "shape=[I, J]"
+    assert TransUtils.build_shape(["I", "J"]).gen() == "shape=[I, J]"
 
 
 def test_build_swizzle():
