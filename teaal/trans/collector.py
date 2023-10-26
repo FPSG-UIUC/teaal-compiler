@@ -545,8 +545,10 @@ class Collector:
         for intersector in self.metrics.get_hardware().get_components(einsum,
                                                                       IntersectorComponent):
             isect_name = intersector.get_name()
-            metrics_isect = AAccess(metrics_einsum, EString(isect_name))
-            block.add(SAssign(metrics_isect, EInt(0)))
+            block.add(SAssign(AAccess(metrics_einsum, EString(isect_name)), EDict({})))
+            metrics_isect = EAccess(metrics_einsum, EString(isect_name))
+            metrics_isect_op = AAccess(metrics_isect, EString("intersect"))
+            block.add(SAssign(metrics_isect_op, EInt(0)))
 
             for binding in intersector.get_bindings()[einsum]:
                 isects = EMethod(
@@ -556,15 +558,14 @@ class Collector:
                         binding["rank"]),
                     "getNumIntersects",
                     [])
-                block.add(SIAssign(metrics_isect, OAdd(), isects))
+                block.add(SIAssign(metrics_isect_op, OAdd(), isects))
 
             # op_freq = cycles / s * ops / cycle
             op_freq = self.metrics.get_hardware().get_frequency(einsum) * \
                 intersector.get_num_instances()
-            metrics_isect_expr = EAccess(metrics_einsum, EString(isect_name))
-            time = EBinOp(metrics_isect_expr, ODiv(), EInt(op_freq))
+            time = EBinOp(EAccess(metrics_isect, EString("intersect")), ODiv(), EInt(op_freq))
 
-            metrics_time = AAccess(metrics_isect_expr, EString("time"))
+            metrics_time = AAccess(metrics_isect, EString("time"))
             block.add(SAssign(metrics_time, time))
             self.fusion.add_component(einsum, intersector.get_name())
 

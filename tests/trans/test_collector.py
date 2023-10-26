@@ -304,9 +304,10 @@ def test_dump_gamma_T():
         "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] = 0\n" + \
         "metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
         "metrics[\"T\"][\"MainMemory\"][\"time\"] = (metrics[\"T\"][\"MainMemory\"][\"A\"][\"read\"] + metrics[\"T\"][\"MainMemory\"][\"B\"][\"read\"]) / 1099511627776\n" + \
-        "metrics[\"T\"][\"Intersect\"] = 0\n" + \
-        "metrics[\"T\"][\"Intersect\"] += Intersect_K.getNumIntersects()\n" + \
-        "metrics[\"T\"][\"Intersect\"][\"time\"] = metrics[\"T\"][\"Intersect\"] / 32000000000"
+        "metrics[\"T\"][\"Intersect\"] = {}\n" + \
+        "metrics[\"T\"][\"Intersect\"][\"intersect\"] = 0\n" + \
+        "metrics[\"T\"][\"Intersect\"][\"intersect\"] += Intersect_K.getNumIntersects()\n" + \
+        "metrics[\"T\"][\"Intersect\"][\"time\"] = metrics[\"T\"][\"Intersect\"][\"intersect\"] / 32000000000"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -426,15 +427,18 @@ def test_dump_extensor():
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 128000000000\n" + \
-        "metrics[\"Z\"][\"K2Intersect\"] = 0\n" + \
-        "metrics[\"Z\"][\"K2Intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K2Intersect\"][\"time\"] = metrics[\"Z\"][\"K2Intersect\"] / 1000000000\n" + \
-        "metrics[\"Z\"][\"K1Intersect\"] = 0\n" + \
-        "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"] / 1000000000\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"] / 128000000000\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"] = {}\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"time\"] = metrics[\"Z\"][\"K2Intersect\"][\"intersect\"] / 1000000000\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"] = {}\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"][\"intersect\"] / 1000000000\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"] = {}\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"intersect\"] += K0Intersection_K0.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"][\"intersect\"] / 128000000000\n" + \
         "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
         "metrics[\"time\"] = max(metrics[\"Z\"][\"FPAdd\"][\"time\"], metrics[\"Z\"][\"FPMul\"][\"time\"], metrics[\"Z\"][\"K0Intersection\"][\"time\"], metrics[\"Z\"][\"K1Intersect\"][\"time\"], metrics[\"Z\"][\"K2Intersect\"][\"time\"], metrics[\"Z\"][\"MainMemory\"][\"time\"])"
 
@@ -488,15 +492,18 @@ def test_dump_extensor_energy():
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 128000000000\n" + \
-        "metrics[\"Z\"][\"K2Intersect\"] = 0\n" + \
-        "metrics[\"Z\"][\"K2Intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K2Intersect\"][\"time\"] = metrics[\"Z\"][\"K2Intersect\"] / 1000000000\n" + \
-        "metrics[\"Z\"][\"K1Intersect\"] = 0\n" + \
-        "metrics[\"Z\"][\"K1Intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"] / 1000000000\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"] / 128000000000\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"] = {}\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"intersect\"] += K2Intersect_K2.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K2Intersect\"][\"time\"] = metrics[\"Z\"][\"K2Intersect\"][\"intersect\"] / 1000000000\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"] = {}\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"intersect\"] += K1Intersect_K1.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"][\"intersect\"] / 1000000000\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"] = {}\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"intersect\"] += K0Intersection_K0.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"][\"intersect\"] / 128000000000\n" + \
         "metrics[\"Z\"][\"TopSequencer\"] = {}\n" + \
         "metrics[\"Z\"][\"TopSequencer\"][\"N2\"] = Compute.numIters(\"tmp/extensor_energy-N2-iter.csv\")\n" + \
         "metrics[\"Z\"][\"TopSequencer\"][\"K2\"] = Compute.numIters(\"tmp/extensor_energy-K2-iter.csv\")\n" + \
