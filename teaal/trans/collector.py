@@ -545,7 +545,11 @@ class Collector:
         for intersector in self.metrics.get_hardware().get_components(einsum,
                                                                       IntersectorComponent):
             isect_name = intersector.get_name()
-            block.add(SAssign(AAccess(metrics_einsum, EString(isect_name)), EDict({})))
+            block.add(
+                SAssign(
+                    AAccess(
+                        metrics_einsum, EString(isect_name)), EDict(
+                        {})))
             metrics_isect = EAccess(metrics_einsum, EString(isect_name))
             metrics_isect_op = AAccess(metrics_isect, EString("intersect"))
             block.add(SAssign(metrics_isect_op, EInt(0)))
@@ -563,7 +567,12 @@ class Collector:
             # op_freq = cycles / s * ops / cycle
             op_freq = self.metrics.get_hardware().get_frequency(einsum) * \
                 intersector.get_num_instances()
-            time = EBinOp(EAccess(metrics_isect, EString("intersect")), ODiv(), EInt(op_freq))
+            time = EBinOp(
+                EAccess(
+                    metrics_isect,
+                    EString("intersect")),
+                ODiv(),
+                EInt(op_freq))
 
             metrics_time = AAccess(metrics_isect, EString("time"))
             block.add(SAssign(metrics_time, time))
@@ -624,8 +633,8 @@ class Collector:
                 final_ranks = binding["final-ranks"]
 
                 input_ = binding["tensor"] + "_" + "".join(init_ranks)
+                tensors.append(input_)
                 tensor_name = EVar(input_)
-                tensors.append(tensor_name)
 
                 # TODO: Way more complicated merges are possible than a single
                 # swap
@@ -665,7 +674,7 @@ class Collector:
             time = EBinOp(
                 EAccess(
                     metrics_merger,
-                    tensors[0]),
+                    EString(tensors[0])),
                 ODiv(),
                 EInt(op_freq))
 

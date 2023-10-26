@@ -728,9 +728,10 @@ def test_hifiber_intersect():
         "metrics = {}\n" + \
         "metrics[\"Z\"] = {}\n" + \
         "formats = {}\n" + \
-        "metrics[\"Z\"][\"TF\"] = 0\n" + \
-        "metrics[\"Z\"][\"TF\"] += TF_K.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"TF\"][\"time\"] = metrics[\"Z\"][\"TF\"] / 2048\n" + \
+        "metrics[\"Z\"][\"TF\"] = {}\n" + \
+        "metrics[\"Z\"][\"TF\"][\"intersect\"] = 0\n" + \
+        "metrics[\"Z\"][\"TF\"][\"intersect\"] += TF_K.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"TF\"][\"time\"] = metrics[\"Z\"][\"TF\"][\"intersect\"] / 2048\n" + \
         "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
         "metrics[\"time\"] = metrics[\"Z\"][\"TF\"][\"time\"]"
 

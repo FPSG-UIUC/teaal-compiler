@@ -342,7 +342,7 @@ def test_dump_gamma_Z():
         "metrics[\"Z\"][\"MainMemory\"][\"time\"] = (metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"]) / 1099511627776\n" + \
         "metrics[\"Z\"][\"HighRadixMerger\"] = {}\n" + \
         "metrics[\"Z\"][\"HighRadixMerger\"][\"T_MKN\"] = Compute.numSwaps(T_MKN, 1, 64, 1)\n" + \
-        "metrics[\"Z\"][\"HighRadixMerger\"][\"time\"] = metrics[\"Z\"][\"HighRadixMerger\"][T_MKN] / 32000000000\n" + \
+        "metrics[\"Z\"][\"HighRadixMerger\"][\"time\"] = metrics[\"Z\"][\"HighRadixMerger\"][\"T_MKN\"] / 32000000000\n" + \
         "metrics[\"Z\"][\"FPMul\"] = {}\n" + \
         "metrics[\"Z\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
         "metrics[\"Z\"][\"FPMul\"][\"time\"] = metrics[\"Z\"][\"FPMul\"][\"mul\"] / 32000000000\n" + \
@@ -386,7 +386,7 @@ def test_dump_outerspace_Z():
         "metrics[\"Z\"][\"MainMemory\"][\"time\"] = (metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"MainMemory\"][\"Z\"][\"write\"]) / 1099511627776\n" + \
         "metrics[\"Z\"][\"SortHW\"] = {}\n" + \
         "metrics[\"Z\"][\"SortHW\"][\"T1_MKN\"] = Compute.numSwaps(T1_MKN, 1, float(\"inf\"), \"N\")\n" + \
-        "metrics[\"Z\"][\"SortHW\"][\"time\"] = metrics[\"Z\"][\"SortHW\"][T1_MKN] / 193500000000\n" + \
+        "metrics[\"Z\"][\"SortHW\"][\"time\"] = metrics[\"Z\"][\"SortHW\"][\"T1_MKN\"] / 193500000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 193500000000\n" + \
