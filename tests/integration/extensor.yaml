@@ -1,0 +1,272 @@
+einsum:
+  declaration:
+    A: [K, M]
+    B: [K, N]
+    Z: [M, N]
+  expressions:
+    - Z[m,n] = A[k,m] * B[k,n]
+mapping:
+  rank-order:
+    A: [K, M]
+    B: [K, N]
+    Z: [M, N]
+  partitioning:
+    Z:
+      K: [uniform_shape(K1), uniform_shape(K0)]
+      M: [uniform_shape(M1), uniform_shape(M0)]
+      N: [uniform_shape(N1), uniform_shape(N0)]
+  loop-order:
+    Z: [N2, K2, M2, M1, N1, K1, M0, N0, K0]
+  spacetime:
+    Z:
+      space: [K1]
+      time: [N2, K2, M2, M1, N1, M0, N0, K0]
+format:
+  A:
+    default:
+      rank-order: [K2, M2, M1, K1, M0, K0]
+      # These formats do not matter because there are no cbits or pbits
+      K2:
+        format: C
+      M2:
+        format: C
+      M1:
+        format: C
+      # M1 and K1 metadata are stored as a tuple (M1, K1)
+      # of size (32 bits, 32 bits)
+      K1:
+        format: C
+        cbits: 64
+      # Microtiles are in CSF-like format
+      M0:
+        format: C
+        cbits: 32
+        pbits: 32
+      K0:
+        format: C
+        cbits: 32
+        pbits: 64
+
+  B:
+    default:
+      rank-order: [N2, K2, N1, K1, N0, K0]
+      # These formats do not matter because there are no cbits or pbits
+      N2:
+        format: C
+      K2:
+        format: C
+      # B is CSF the rest of the way down
+      N1:
+        format: C
+        cbits: 32
+        pbits: 32
+      K1:
+        format: C
+        cbits: 32
+        pbits: 32
+      N0:
+        format: C
+        cbits: 32
+        pbits: 32
+      K0:
+        format: C
+        cbits: 32
+        pbits: 64
+  Z:
+    default:
+      rank-order: [N2, M2, M1, N1, M0, N0]
+      # These ranks do not matter because there are no cbits or pbits
+      N2:
+        format: U
+      M2:
+        format: U
+      # There is never any traffic counted for the M1 and N1 ranks
+      M1:
+        format: U
+      N1:
+        format: U
+      M0:
+        format: U
+      # The bottom ranks are in a COO-like format (M0, N0) of size
+      # (32 bits, 32 bits)
+      N0:
+        format: C
+        cbits: 64
+        pbits: 64
+architecture:
+  Accelerator:
+  - name: System
+    attributes:
+      clock_frequency: 1000000000 # 1 GHz = 1000000000 Hz
+    local:
+    - name: MainMemory
+      class: DRAM
+      attributes:
+        bandwidth: 586314575512 # BW is 68.256 GB/s * 2^30 B/GB * 8 bits/B
+    - name: K2Intersect
+      class: Intersector
+      attributes:
+        type: skip-ahead
+    subtree:
+    - name: Chip
+      local:
+      - name: LLB
+        class: Buffet
+        attributes:
+          width: 64
+          depth: 3932160 # 30 MB / 8B/line
+      - name: K1Intersect
+        class: Intersector
+        attributes:
+          type: skip-ahead
+      subtree:
+      - name: PE[0..127] # 128 PEs
+        local:
+        - name: PEB
+          class: Buffet
+          attributes:
+            width: 64
+            depth: 8192 # 64kB / 8B/line
+        - name: K0Intersection
+          class: Intersector
+          attributes:
+            type: skip-ahead
+        - name: FPMul
+          class: Compute
+          attributes:
+            type: mul
+        - name: FPAdd
+          class: Compute
+          attributes:
+            type: add
+bindings:
+  Z:
+  - config: Accelerator
+    prefix: tmp/extensor
+  - component: MainMemory
+    bindings:
+    - tensor: A
+      rank: K1
+      type: coord
+      format: default
+    - tensor: A
+      rank: M0
+      type: coord
+      format: default
+    - tensor: A
+      rank: M0
+      type: payload
+      format: default
+    - tensor: A
+      rank: K0
+      type: coord
+      format: default
+    - tensor: A
+      rank: K0
+      type: payload
+      format: default
+    - tensor: B
+      rank: N1
+      type: coord
+      format: default
+    - tensor: B
+      rank: N1
+      type: payload
+      format: default
+    - tensor: B
+      rank: K1
+      type: coord
+      format: default
+    - tensor: B
+      rank: K1
+      type: payload
+      format: default
+    - tensor: B
+      rank: N0
+      type: coord
+      format: default
+    - tensor: B
+      rank: N0
+      type: payload
+      format: default
+    - tensor: B
+      rank: K0
+      type: coord
+      format: default
+    - tensor: B
+      rank: K0
+      type: payload
+      format: default
+    - tensor: Z
+      rank: N0
+      type: coord
+      format: default
+    - tensor: Z
+      rank: N0
+      type: payload
+      format: default
+  - component: K2Intersect
+    bindings:
+    - rank: K2
+  - component: LLB
+    bindings:
+    - tensor: A
+      rank: K1
+      type: coord
+      evict-on: M2
+      format: default
+      style: lazy
+    - tensor: A
+      rank: M0
+      type: coord
+      evict-on: M2
+      format: default
+      style: eager
+    - tensor: B
+      rank: N1
+      type: coord
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: N1
+      type: payload
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: K1
+      type: coord
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: K1
+      type: payload
+      evict-on: K2
+      format: default
+      style: lazy
+    - tensor: B
+      rank: N0
+      type: coord
+      evict-on: K2
+      format: default
+      style: eager
+    - tensor: Z
+      rank: M0
+      type: coord
+      evict-on: M2
+      format: default
+      style: eager
+  - component: K1Intersect
+    bindings:
+    - rank: K1
+  - component: K0Intersection
+    bindings:
+    - rank: K0
+  - component: FPMul
+    bindings:
+    - op: mul
+  - component: FPAdd
+    bindings:
+    - op: add

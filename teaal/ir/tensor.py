@@ -120,6 +120,12 @@ class Tensor:
             return self.__get_rank()
         return None
 
+    def peek_clean(self) -> str:
+        """
+        Peek at the top rank; should only be called if there is a rank to look at
+        """
+        return self.ranks[self.iter_ptr]
+
     def peek_rest(self) -> List[str]:
         """
         Return the list of ranks that have not yet been iterated over for this

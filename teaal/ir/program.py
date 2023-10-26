@@ -71,6 +71,12 @@ class Program:
 
             self.tensors[tensor.root_name()] = tensor
 
+        # Get all einsums
+        self.einsums = []
+        for expr in self.einsum.get_expressions():
+            self.einsums.append(
+                str(next(expr.find_data("output")).children[0]))
+
         self.einsum_ind: Optional[int] = None
         self.equation: Optional[Equation] = None
         self.es_tensors: List[Tensor] = []
@@ -174,6 +180,12 @@ class Program:
         new_ranks = self.partitioning.swizzle_for_flattening(
             tensor.get_ranks())
         tensor.update_ranks(new_ranks)
+
+    def get_all_einsums(self) -> List[str]:
+        """
+        Get a list of all of the Einsums (as specified by their output tensor)
+        """
+        return self.einsums
 
     def get_equation(self) -> Equation:
         """

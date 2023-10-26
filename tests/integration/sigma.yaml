@@ -1,0 +1,117 @@
+einsum:
+  declaration:
+    A: [K, M]
+    B: [K, N]
+    Z: [M, N]
+  expressions:
+    - Z[m, n] = A[k, m] * B[k, n]
+mapping:
+  rank-order:
+    A: [K, M]
+    B: [K, N]
+    Z: [M, N]
+  partitioning:
+    Z:
+      K:
+        - uniform_shape(128)
+      (M, K0):
+        - flatten()
+      MK0:
+        - uniform_occupancy(A.16384)
+  loop-order:
+    Z: [K1, MK01, N, MK00]
+  spacetime:
+    Z:
+      space: [MK00]
+      time: [K1, MK01, N]
+architecture:
+  Accelerator:
+  - name: System
+    attributes:
+      clock_frequency: 500000000 # 500 MHz = 500000000 Hz
+    local:
+    - name: MainMemory
+      class: DRAM
+      attributes:
+        bandwidth: 8796093022208 # 1024 GB/s * 2^30 B/GB * 8 bits/B
+    subtree:
+    - name: Chip
+      local:
+      - name: DataSRAMBanks
+        class: Buffet
+        attributes:
+          width: 32 # Not specified; minimum possible
+          depth: 8388608 # 32MB / 4B/line = 8388608 lines
+          bandwidth:  8246337208320 # 960 GB/s * 2^30 B/GB * 8 bits/B
+      subtree:
+      - name: FlexDPE[0..127] # 128 FlexDPEs
+        subtree:
+        - name: PE[0..16383] # 128 PEs per FlexDPE
+          local:
+          - name: RegFile
+            class: Buffet
+            attributes:
+              width: 4096 # Distribution network width: 128 * 32 bits
+              depth: 256 # 128 * 128 PEs * 32 bits * 2 inputs / width
+          - name: Multiplier
+            class: Compute
+            attributes:
+              type: mul
+format:
+  A:
+    flattened:
+      rank-order: [K1, MK01, MK00]
+      K1:
+        format: U
+      MK01:
+        format: U
+      MK00:
+        # TODO: Support B format
+        format: C
+        pbits: 32
+  B:
+    partitioned:
+      rank-order: [K1, N, K0]
+      K1:
+        format: U
+      N:
+        format: U
+      K0:
+        format: U
+        pbits: 32
+
+bindings:
+  Z:
+  - config: Accelerator
+    prefix: tmp/sigma
+  - component: DataSRAMBanks
+    bindings:
+    - tensor: A
+      rank: MK00
+      type: payload
+      evict-on: root
+      format: flattened
+      style: eager
+    - tensor: B
+      rank: K0
+      type: payload
+      evict-on: root
+      format: partitioned
+      style: eager
+  - component: RegFile
+    bindings:
+    - tensor: A
+      rank: MK00
+      format: flattened
+      type: payload
+      evict-on: MK01
+      style: eager
+    - tensor: B
+      rank: K0
+      format: partitioned
+      type: payload
+      evict-on: N
+      style: eager
+  - component: Multiplier
+    bindings:
+    - op: mul

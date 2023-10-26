@@ -1,8 +1,23 @@
 import pytest
 
 from teaal.hifiber import *
+from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
+from teaal.parse import *
 from teaal.trans.utils import TransUtils
+
+
+def make_program():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K, M]
+        B: [K, N]
+        Z: [M, N]
+      expressions:
+        - Z[m, n] = A[k, m] * B[k, n]
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
 def test_build_expr_bad():
@@ -18,6 +33,7 @@ def test_build_expr():
     assert TransUtils.build_expr("foo").gen() == "\"foo\""
     assert TransUtils.build_expr([1, 2, 3, 4]).gen() == "[1, 2, 3, 4]"
     assert TransUtils.build_expr({1: 2, 3: 4}).gen() == "{1: 2, 3: 4}"
+    assert TransUtils.build_expr((1, 2, 3, 4)).gen() == "(1, 2, 3, 4)"
 
 
 def test_build_rank_ids():
@@ -33,8 +49,7 @@ def test_build_set_rank_ids():
 
 
 def test_build_shape():
-    tensor = Tensor("A", ["I", "J"])
-    assert TransUtils.build_shape(tensor).gen() == "shape=[I, J]"
+    assert TransUtils.build_shape(["I", "J"]).gen() == "shape=[I, J]"
 
 
 def test_build_swizzle():
@@ -44,14 +59,16 @@ def test_build_swizzle():
 
 
 def test_next_tmp():
-    utils = TransUtils()
+    program = make_program()
+    utils = TransUtils(program)
     assert utils.next_tmp() == "tmp0"
     assert utils.next_tmp() == "tmp1"
     assert utils.next_tmp() == "tmp2"
 
 
 def test_curr_tmp():
-    utils = TransUtils()
+    program = make_program()
+    utils = TransUtils(program)
 
     with pytest.raises(ValueError) as excinfo:
         utils.curr_tmp()

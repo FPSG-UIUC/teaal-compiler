@@ -51,6 +51,11 @@ def test_omul():
     assert mul.gen() == "*"
 
 
+def test_onotin():
+    notin = ONotIn()
+    assert notin.gen() == "not in"
+
+
 def test_oor():
     or_ = OOr()
     assert or_.gen() == "|"

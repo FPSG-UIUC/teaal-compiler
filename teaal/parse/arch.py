@@ -52,57 +52,60 @@ class Architecture:
         if not isinstance(self.yaml["architecture"], dict):
             raise ValueError("Bad architecture spec: " + str(self.yaml))
 
-        subtrees = self.yaml["architecture"]["subtree"].copy()
+        subtrees = {}
+        for config in self.yaml["architecture"]:
+            subtrees[config] = self.yaml["architecture"][config].copy()
 
-        while subtrees:
-            tree = subtrees.pop()
+        for config in subtrees:
+            while subtrees[config]:
+                tree = subtrees[config].pop()
 
-            if "name" not in tree.keys():
-                raise ValueError("Unnamed subtree: " + repr(tree))
+                if "name" not in tree.keys():
+                    raise ValueError("Unnamed subtree: " + repr(tree))
 
-            name_tree = LevelParser.parse(tree["name"])
+                name_tree = LevelParser.parse(tree["name"])
 
-            if name_tree.data == "single":
-                tree["name"] = str(name_tree.children[0])
-                tree["num"] = 1
+                if name_tree.data == "single":
+                    tree["name"] = str(name_tree.children[0])
+                    tree["num"] = 1
 
-            elif name_tree.data == "multiple":
-                tree["name"] = str(name_tree.children[0])
+                elif name_tree.data == "multiple":
+                    tree["name"] = str(name_tree.children[0])
 
-                num = name_tree.children[1]
-                if isinstance(num, Tree):
+                    num = name_tree.children[1]
+                    if isinstance(num, Tree):
+                        # This error should be caught by the LevelParser
+                        raise ValueError(
+                            "Unknown num: " + repr(num))  # pragma: no cover
+
+                    tree["num"] = int(num) + 1
+
+                else:
                     # This error should be caught by the LevelParser
                     raise ValueError(
-                        "Unknown num: " + repr(num))  # pragma: no cover
+                        "Unknown level name: " +
+                        repr(name_tree))  # pragma: no cover
 
-                tree["num"] = int(num) + 1
+                if "attributes" not in tree.keys():
+                    tree["attributes"] = {}
 
-            else:
-                # This error should be caught by the LevelParser
-                raise ValueError(
-                    "Unknown level name: " +
-                    repr(name_tree))  # pragma: no cover
+                if "local" not in tree.keys():
+                    tree["local"] = []
 
-            if "attributes" not in tree.keys():
-                tree["attributes"] = {}
+                for local in tree["local"]:
+                    if "name" not in local.keys():
+                        raise ValueError("Unnamed local: " + repr(local))
 
-            if "local" not in tree.keys():
-                tree["local"] = []
+                    if "class" not in local.keys():
+                        raise ValueError("Unclassed local: " + repr(local))
 
-            for local in tree["local"]:
-                if "name" not in local.keys():
-                    raise ValueError("Unnamed local: " + repr(local))
+                    if "attributes" not in local.keys():
+                        local["attributes"] = {}
 
-                if "class" not in local.keys():
-                    raise ValueError("Unclassed local: " + repr(local))
+                if "subtree" not in tree.keys():
+                    tree["subtree"] = []
 
-                if "attributes" not in local.keys():
-                    local["attributes"] = {}
-
-            if "subtree" not in tree.keys():
-                tree["subtree"] = []
-
-            subtrees.extend(tree["subtree"])
+                subtrees[config].extend(tree["subtree"])
 
     @classmethod
     def from_file(cls, filename: str) -> "Architecture":

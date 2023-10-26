@@ -1,24 +1,66 @@
 einsum:
   declaration:
-    I: [B, C, H, W]
-    F: [C, M, R, S]
-    O: [B, M, P, Q]
+    SOB: [UA, UB]
+    T: [UA, UB, K]
+    I: [K]
+    OB: []
   expressions:
-    - O[b, m, p, q] = I[b, c, p+r, q+s]*F[c, m, r, s]
-mapping:
-  rank-order:
-    I: [B, C, H, W]
-    F: [M, C, R, S]
-    O: [B, M, P, Q]
-  partitioning:
-    O:
-      M:                              # filter partitioning
-        - uniform_shape(32)           # 2 filters happening simultaneously per array
-        - uniform_shape(16)           # 16 filters happening in interleaving fashion per PE
-      B:
-        - uniform_shape(4)
-      C:
-        - uniform_shape(6)            # 2 channels running simultaneously per PE
-        - uniform_shape(3)            # 3 channels running per PE
-  loop-order:
-    O: [B1, C2, M2, B0, M1, P, C1, R, Q, S, M0, C0]
+    - SOB[ua, ub] = T[ua, ub, k] * I[k]
+    - OB[] = SOB[ua, ub]
+# einsum:
+#   declaration:
+#     A: [S]
+#     Z: [T]
+#   expressions:
+#     - Z[t] = A[2 * t]
+# format:
+#   A:
+#     default:
+#       rank-order: [S]
+#       S:
+#         format: C
+#         pbits: 32
+#   Z:
+#     default:
+#       rank-order: [T]
+#       T:
+#         format: C
+#         pbits: 32
+# architecture:
+#   accel:
+#   - name: System
+#     local:
+#     - name: MainMemory
+#       class: DRAM
+#     subtree:
+#     - name: Chip
+#       local:
+#       - name: LLB
+#         class: Cache
+#         attributes:
+#           width: 32
+#           depth: 1024
+# bindings:
+#   Z:
+#   - config: accel
+#     prefix: tmp/demo
+#   - component: MainMemory
+#     bindings:
+#     - tensor: A
+#       rank: S
+#       type: payload
+#       format: default
+#     - tensor: Z
+#       rank: T
+#       type: payload
+#       format: default
+#   - component: LLB
+#     bindings:
+#     - tensor: A
+#       rank: S
+#       type: payload
+#       format: default
+#     - tensor: Z
+#       rank: T
+#       type: payload
+#       format: default

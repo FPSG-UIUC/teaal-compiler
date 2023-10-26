@@ -25,42 +25,9 @@ Representations of all of the nodes in the FlowGraph
 """
 
 import abc
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
 from teaal.ir.node import Node
-
-
-class CollectingNode(Node):
-    """
-    A Node to turn on reuse distance collection for a particular rank of a
-    tensor
-    """
-
-    def __init__(self, tensor: str, rank: str) -> None:
-        """
-        Construct a node for the collection of reuse metrics for a tensor's
-        rank
-        """
-        self.tensor = tensor
-        self.rank = rank
-
-    def get_rank(self) -> str:
-        """
-        Accessor for the rank
-        """
-        return self.rank
-
-    def get_tensor(self) -> str:
-        """
-        Accessor for the tensor
-        """
-        return self.tensor
-
-    def _Node__key(self) -> Iterable[Any]:
-        """
-        Iterable of fields of a Collecting
-        """
-        return self.tensor, self.rank
 
 
 class EagerInputNode(Node):
@@ -92,6 +59,30 @@ class EagerInputNode(Node):
         Iterable of fields of a FromFiberNode
         """
         return self.rank, self.tensors
+
+
+class EndLoopNode(Node):
+    """
+    A Node representing the end of a loop
+    """
+
+    def __init__(self, rank: str) -> None:
+        """
+        Construct a EndLoopNode
+        """
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a EndLoopNode
+        """
+        return self.rank,
 
 
 class FiberNode(Node):
@@ -256,6 +247,54 @@ class LoopNode(Node):
     def _Node__key(self) -> Iterable[Any]:
         """
         Iterable of fields of a LoopNode
+        """
+        return self.rank,
+
+
+class MetricsFooterNode(Node):
+    """
+    A Node for collecting metrics before the start of the given loop
+    """
+
+    def __init__(self, rank: str) -> None:
+        """
+        Construct a MetricsFooterNode
+        """
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a MetricsFooterNode
+        """
+        return self.rank,
+
+
+class MetricsHeaderNode(Node):
+    """
+    A Node for collecting metrics before the start of the given loop
+    """
+
+    def __init__(self, rank: str) -> None:
+        """
+        Construct a MetricsHeaderNode
+        """
+        self.rank = rank
+
+    def get_rank(self) -> str:
+        """
+        Accessor for the rank
+        """
+        return self.rank
+
+    def _Node__key(self) -> Iterable[Any]:
+        """
+        Iterable of fields of a MetricsHeaderNode
         """
         return self.rank,
 

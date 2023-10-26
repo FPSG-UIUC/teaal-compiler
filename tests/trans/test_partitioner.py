@@ -29,7 +29,7 @@ def build_partitioner(parts):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    partitioner = Partitioner(program, TransUtils())
+    partitioner = Partitioner(program, TransUtils(program))
     return program, partitioner
 
 
@@ -51,7 +51,7 @@ def build_partitioner_conv(expr, parts):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    partitioner = Partitioner(program, TransUtils())
+    partitioner = Partitioner(program, TransUtils(program))
     return program, partitioner
 
 
@@ -70,7 +70,7 @@ def build_partitioner_copy(parts):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    partitioner = Partitioner(program, TransUtils())
+    partitioner = Partitioner(program, TransUtils(program))
     return program, partitioner
 
 
@@ -90,7 +90,7 @@ def build_partitioner_math_no_halo(parts):
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
 
-    partitioner = Partitioner(program, TransUtils())
+    partitioner = Partitioner(program, TransUtils(program))
     return program, partitioner
 
 
@@ -566,7 +566,7 @@ def assert_unpartition(spec, hifiber_options):
     for tensor in program.get_equation().get_tensors():
         program.apply_all_partitioning(tensor)
 
-    partitioner = Partitioner(program, TransUtils())
+    partitioner = Partitioner(program, TransUtils(program))
     hifiber = partitioner.unpartition(
         program.get_equation().get_output()).gen(0)
 
@@ -643,7 +643,7 @@ def test_unpartition_flatten():
 
     program.apply_all_partitioning(program.get_equation().get_output())
 
-    partitioner = Partitioner(program, TransUtils())
+    partitioner = Partitioner(program, TransUtils(program))
     hifiber = partitioner.unpartition(
         program.get_equation().get_output()).gen(0)
     corr = "tmp0 = Z_M1NM01NM00\n" + \

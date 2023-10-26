@@ -29,6 +29,7 @@ from copy import deepcopy
 from typing import Any
 
 from teaal.hifiber import *
+from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 
 
@@ -37,8 +38,9 @@ class TransUtils:
     Different utilities for generating HiFiber programs
     """
 
-    def __init__(self) -> None:
+    def __init__(self, program: Program) -> None:
         self.count = -1
+        self.program = program
 
     @staticmethod
     def build_expr(obj: Any) -> Expression:
@@ -63,6 +65,10 @@ class TransUtils:
                      for key, val in obj.items()}
             return EDict(dict_)
 
+        elif isinstance(obj, tuple):
+            tuple_ = [TransUtils.build_expr(elem) for elem in obj]
+            return ETuple(tuple(tuple_))
+
         else:
             raise ValueError("Unable to translate " +
                              str(obj) + " with type " + str(type(obj)))
@@ -85,12 +91,12 @@ class TransUtils:
         return SExpr(set_call)
 
     @staticmethod
-    def build_shape(tensor: Tensor) -> Argument:
+    def build_shape(ranks: Sequence[str]) -> Argument:
         """
         Build the shape argument
         """
-        ranks = [EVar(rank) for rank in tensor.get_ranks()]
-        return AParam("shape", EList(ranks))
+        rank_vars = [EVar(rank) for rank in ranks]
+        return AParam("shape", EList(rank_vars))
 
     @staticmethod
     def build_swizzle(

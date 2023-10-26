@@ -31,7 +31,7 @@ def test_bad_architecture():
 def test_unnamed_subtree():
     yaml = """
     architecture:
-      subtree:
+      Config0:
       - attributes:
           foo: 1
     """
@@ -44,7 +44,7 @@ def test_unnamed_subtree():
 def test_unnamed_local():
     yaml = """
     architecture:
-      subtree:
+      Config0:
       - name: System
         local:
         - class: DRAM
@@ -58,7 +58,7 @@ def test_unnamed_local():
 def test_unclassed_local():
     yaml = """
     architecture:
-      subtree:
+      Config0:
       - name: System
         local:
         - name: Memory
@@ -105,14 +105,19 @@ def test_unspecified():
 
 def test_all_spec():
     regs = build_local("Registers", "Buffet", {})
-    mac = build_local("MAC", "compute", {})
-    subtree = build_subtree("PE", 8, {}, [regs, mac], [])
+    mac = build_local("MAC", "compute", {"type": "mul"})
+    subtree0 = build_subtree("PE", 8, {}, [regs, mac], [])
+
+    mac0 = build_local("MAC0", "compute", {"type": "mul"})
+    mac1 = build_local("MAC1", "compute", {"type": "add"})
+    subtree1 = build_subtree("PE", 8, {}, [regs, mac0, mac1], [])
 
     mem = build_local("Memory", "DRAM", {"datawidth": 8, "bandwidth": 128})
     attrs = {"clock_frequency": 10 ** 9}
-    tree = build_subtree("System", 1, attrs, [mem], [subtree])
+    tree0 = build_subtree("System", 1, attrs, [mem], [subtree0])
+    tree1 = build_subtree("System", 1, attrs, [mem], [subtree1])
 
     arch = Architecture.from_file("tests/integration/test_arch.yaml")
-    spec = {"architecture": {"subtree": [tree]}}
+    spec = {"architecture": {"Config0": [tree0], "Config1": [tree1]}}
 
     assert arch.get_spec() == spec

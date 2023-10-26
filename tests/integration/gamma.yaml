@@ -4,155 +4,238 @@ einsum:
     B: [K, N]
     T: [K, M, N]
     Z: [M, N]
-
   expressions:
     - T[k,m,n] = take(A[k,m], B[k,n], 1)
-    - Z[m,n] = T[k,m,n] * A[k,m]
-
+    - Z[m,n] = T[k,m,n]*A[k,m]
 mapping:
   rank-order:
     A: [M, K]
     B: [K, N]
     T: [M, K, N]
     Z: [M, N]
-
   loop-order:
     T: [M, K, N]
     Z: [M, N, K]
-
+  spacetime:
+    T:
+      space: [M]
+      time: [K, N]
+    Z:
+      space: [M]
+      time: [N, K]
+format:
+  A:
+    default:
+      rank-order: [M, K]
+      M:
+        format: U
+        pbits: 32
+      K:
+        format: C
+        cbits: 32
+        pbits: 64
+  B:
+    default:
+      rank-order: [K, N]
+      K:
+        format: U
+        pbits: 32
+      N:
+        format: C
+        cbits: 32
+        pbits: 64
+  Z:
+    default:
+      rank-order: [M, N]
+      M:
+        format: U
+        pbits: 32
+      N:
+        format: C
+        cbits: 32
+        pbits: 64
 architecture:
-  subtree:
+  Accelerator:
   - name: System
     attributes:
-      clock_frequency: 1000000000
-
+      clock_frequency: 1000000000 # 1 GHz = 1 * 10^9 Hz = 1000000000 Hz
     local:
     - name: MainMemory
       class: DRAM
       attributes:
-        datawidth: 8
-        bandwidth: 128
-
+        bandwidth: 1099511627776 # 128 GB/s = 128 * 2^30 * 8 bits/s
     subtree:
     - name: Chip
-
       local:
-      - name: FiberCache # 3MB FiberCache
+      - name: FiberCache
         class: Cache
         attributes:
-          width: 8
-          depth: 3145728
-
+          width: 64 # Block size is not mentioned in the paper; minimum correct value
+          depth: 393216 # 3 MB / 8B = 393216 lines
       subtree:
       - name: PE[0..31] # 32 PEs
-
+        local:
+        - name: Stage0RegFile
+          class: Buffet
+          attributes:
+            width: 64
+            depth: inf # Not specified by Gamma
+        - name: Stage1RegFile
+          class: Buffet
+          attributes:
+            width: 64
+            depth: inf # Not specified by Gamma
         subtree:
-        - name: Stage0
-
+        - name: Stage0[0..31]
           local:
-          - name: RegFile0
-            class: Buffet
-
-          - name: Intersection
-            class: LeaderFollower
-
-        - name: Stage0to1
-
+          - name: Intersect
+            class: Intersector
+            attributes:
+              type: leader-follower
+        - name: Stage0to1[0..31]
           local:
           - name: HighRadixMerger
             class: Merger
             attributes:
-              radix: 64
-              next_latency: 1
-
-        - name: Stage1
-
+              inputs: 64
+              comparator_radix: 64
+              outputs: 1
+              order: fifo
+              reduce: False
+        - name: Stage1[0..31]
           local:
-          - name: RegFile1
-            class: Buffet
-
-          - name: MAC
+          - name: FPMul
             class: compute
+            attributes:
+              type: mul
+          - name: FPAdd
+            class: compute
+            attributes:
+              type: add
 bindings:
-- name: MainMemory
-  bindings:
-  - tensor: A
-    rank: root
-  - tensor: B
-    rank: root
-  - tensor: Z
-    rank: root
-
-- name: FiberCache
-  bindings:
-  - tensor: B
-    rank: K
-
-- name: RegFile0
-  bindings:
-  - tensor: A
-    rank: M
-  - tensor: B
-    rank: N
-  - tensor: T
-    rank: M
-
-- name: Intersection
-  bindings:
-  - einsum: T
-    rank: K
-    leader: A
-
-- name: HighRadixMerger
-  bindings:
-  # T[M, K, N] -> T[M, N, K]
-  - tensor: T
-    init_ranks: [M, K, N]
-    swap_depth: 1
-
-- name: RegFile1
-  bindings:
-  - tensor: A
-    rank: M
-  - tensor: T
-    rank: M
-  - tensor: Z
-    rank: N
-
-- name: MAC
-  bindings:
-  - einsum: Z
-    op: mul
-  - einsum: Z
-    op: add
-
-format:
-  A:
-    M:
-      format: U
-      rhbits: 32
-      pbits: 32
-    K:
-      format: C
-      cbits: 32
-      pbits: 64
-
-  B:
-    K:
-      format: U
-      rhbits: 32
-      pbits: 32
-    N:
-      format: C
-      cbits: 32
-      pbits: 64
-
+  T:
+  - config: Accelerator
+    prefix: tmp/gamma_T
+  - component: MainMemory
+    bindings:
+    - tensor: A
+      rank: M
+      type: payload
+      format: default
+    - tensor: A
+      rank: K
+      type: coord
+      format: default
+    - tensor: A
+      rank: K
+      type: payload
+      format: default
+    - tensor: B
+      rank: K
+      type: payload
+      format: default
+    - tensor: B
+      rank: N
+      type: coord
+      format: default
+    - tensor: B
+      rank: N
+      type: payload
+      format: default
+  - component: FiberCache
+    bindings:
+    - tensor: B
+      rank: K
+      type: payload
+      format: default
+    - tensor: B
+      rank: N
+      type: coord
+      format: default
+    - tensor: B
+      rank: N
+      type: payload
+      format: default
+  - component: Stage0RegFile
+    bindings:
+    - tensor: A
+      rank: M
+      type: payload
+      format: default
+      evict-on: root
+    - tensor: A
+      rank: K
+      type: coord
+      format: default
+      evict-on: M
+    - tensor: A
+      rank: K
+      type: payload
+      format: default
+      evict-on: M
+  - component: Intersect
+    bindings:
+    - rank: K
+      leader: A
   Z:
-    M:
-      format: U
-      rhbits: 32
-      pbits: 32
-    N:
-      format: C
-      cbits: 32
-      pbits: 64
+  - config: Accelerator
+    prefix: tmp/gamma_Z
+  - component: MainMemory
+    bindings:
+    - tensor: Z
+      rank: M
+      type: payload
+      format: default
+    - tensor: Z
+      rank: N
+      type: coord
+      format: default
+    - tensor: Z
+      rank: N
+      type: payload
+      format: default
+  - component: Stage0RegFile
+    bindings:
+    - tensor: A
+      rank: M
+      type: payload
+      format: default
+      evict-on: root
+    - tensor: A
+      rank: K
+      type: coord
+      format: default
+      evict-on: M
+    - tensor: A
+      rank: K
+      type: payload
+      format: default
+      evict-on: M
+  - component: Stage1RegFile
+    bindings:
+    - tensor: Z
+      rank: M
+      type: payload
+      format: default
+      evict-on: root
+    - tensor: Z
+      rank: N
+      type: coord
+      format: default
+      evict-on: M
+    - tensor: Z
+      rank: N
+      type: payload
+      format: default
+      evict-on: M
+  - component: HighRadixMerger
+    bindings:
+    - tensor: T
+      init-ranks: [M, K, N]
+      final-ranks: [M, N, K]
+  - component: FPMul
+    bindings:
+    - op: mul
+  - component: FPAdd
+    bindings:
+    - op: add

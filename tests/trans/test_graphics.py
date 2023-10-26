@@ -1,6 +1,7 @@
+from teaal.ir.hardware import Hardware
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
-from teaal.parse.einsum import Einsum
-from teaal.parse.mapping import Mapping
+from teaal.parse import *
 from teaal.trans.graphics import Graphics
 
 
@@ -16,7 +17,7 @@ def create_default():
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
-    return Graphics(program)
+    return Graphics(program, None)
 
 
 def create_spacetime(opt):
@@ -38,7 +39,24 @@ def create_spacetime(opt):
                 opt: """ + opt
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
-    return Graphics(program)
+    return Graphics(program, None)
+
+
+def create_gamma():
+    fname = "tests/integration/gamma.yaml"
+    einsum = Einsum.from_file(fname)
+    mapping = Mapping.from_file(fname)
+    arch = Architecture.from_file(fname)
+    bindings = Bindings.from_file(fname)
+    format_ = Format.from_file(fname)
+
+    program = Program(einsum, mapping)
+    hardware = Hardware(arch, bindings, program)
+
+    program.add_einsum(0)
+    metrics = Metrics(program, hardware, format_)
+
+    return Graphics(program, metrics)
 
 
 def test_make_body_none():
@@ -64,6 +82,11 @@ def test_make_body_slip():
     assert graphics.make_body().gen(0) == hifiber
 
 
+def test_make_body_metrics():
+    graphics = create_gamma()
+    assert graphics.make_body().gen(0) == ""
+
+
 def test_make_footer_none():
     graphics = create_default()
     assert graphics.make_footer().gen(0) == ""
@@ -74,6 +97,11 @@ def test_make_footer():
     graphics.make_header()
     hifiber = "displayCanvas(canvas)"
     assert graphics.make_footer().gen(0) == hifiber
+
+
+def test_make_footer_metrics():
+    graphics = create_gamma()
+    assert graphics.make_footer().gen(0) == ""
 
 
 def test_make_header_none():
@@ -92,3 +120,8 @@ def test_make_header_slip():
     hifiber = "canvas = createCanvas(A_KM, B_KN, Z_MN)\n" + \
         "timestamps = {}"
     assert graphics.make_header().gen(0) == hifiber
+
+
+def test_make_header_metrics():
+    graphics = create_gamma()
+    assert graphics.make_header().gen(0) == ""

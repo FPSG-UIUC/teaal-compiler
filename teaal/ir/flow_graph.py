@@ -29,6 +29,7 @@ import networkx as nx  # type: ignore
 from sympy import Symbol
 from typing import cast, Dict, List, Optional, Tuple
 
+from teaal.ir.component import *
 from teaal.ir.flow_nodes import *
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
@@ -94,7 +95,7 @@ class FlowGraph:
         self.graph = nx.DiGraph()
         self.iter_map: Dict[str, List[str]] = {}
 
-        self.__build_loop_nest()
+        chain = self.__build_loop_nest()
         self.__build_output()
 
         # Add Swizzle, GetRoot and FiberNodes for each tensor
@@ -116,10 +117,6 @@ class FlowGraph:
             # Get the root fiber
             self.__build_swizzle_root_fiber(tensor, True)
 
-        # Add CollectingNodes
-        for tensor in self.program.get_equation().get_tensors():
-            self.__build_collecting(tensor)
-
         iter_graph = IterationGraph(self.program)
         while iter_graph.peek_concord()[0] is not None:
             self.__build_fiber_nodes(iter_graph, flatten_info)
@@ -135,31 +132,6 @@ class FlowGraph:
             is_output = tensor.get_is_output()
             tensor.reset()
             tensor.set_is_output(is_output)
-
-    def __build_collecting(self, tensor: Tensor) -> None:
-        """
-        Build a CollectingNode should it be required
-        """
-        # None if there is no hardware
-        if not self.metrics:
-            return
-
-        # None if the tensor is never stored in DRAM
-        if not self.metrics.in_dram(tensor):
-            return
-
-        # None if the tensor is stationary
-        if self.metrics.on_chip_stationary(tensor):
-            return
-
-        # Otherwise, add a CollectingNode
-        root = tensor.root_name()
-        rank = self.metrics.get_on_chip_rank(tensor)
-        swizzle_node = SwizzleNode(root, tensor.get_ranks(), "loop-order")
-        collecting_node = CollectingNode(root, rank)
-
-        self.graph.add_edge(swizzle_node, collecting_node)
-        self.graph.add_edge(collecting_node, MetricsNode("Start"))
 
     def __build_dyn_part(
             self, tensor: Tensor, partitioning: Tuple[str, ...], flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:
@@ -180,6 +152,7 @@ class FlowGraph:
 
             for rank in partitioning:
                 self.graph.add_edge(RankNode(root, rank), swizzle_node)
+            self.program.apply_partition_swizzling(tensor)
 
             # Add to flattening info
             flatten_info[root].append(partitioning)
@@ -250,7 +223,7 @@ class FlowGraph:
         # We need a EagerInputNode and an IntervalNode if at least one tensor
         # will be projected and it is a partitioned rank (so we don't know the
         # bounds)
-        if any(tensor.peek() != rank.lower() for tensor in tensors) and \
+        if any(tensor.peek_clean() != rank for tensor in tensors) and \
                 self.program.get_partitioning().split_rank_name(rank)[1] == "0":
             self.__build_project_interval(rank)
 
@@ -270,7 +243,8 @@ class FlowGraph:
                 get_payload_node)
 
             for rank in ranks:
-                loop_rank = part.get_final_rank_id(tensor, rank)
+                loop_rank = part.get_final_rank_id(
+                    tensor.get_init_ranks(), rank)
                 self.graph.add_edge(LoopNode(loop_rank), get_payload_node)
 
         for ranks, tensor in iter_graph.pop_discord():
@@ -279,9 +253,9 @@ class FlowGraph:
                 get_payload_node, FiberNode(
                     tensor.fiber_name()))
 
-    def __build_loop_nest(self) -> None:
+    def __build_loop_nest(self) -> List[Node]:
         """
-        Build the loop nest
+        Build the loop nest, returns the chain of nodes
         """
         loop_order = self.program.get_loop_order().get_ranks()
 
@@ -289,22 +263,46 @@ class FlowGraph:
         chain: List[Node] = [OtherNode("StartLoop")]
         for rank in loop_order:
             chain.append(LoopNode(rank))
-            self.graph.add_edge(chain[-2], chain[-1])
+        chain.append(OtherNode("Body"))
+        for rank in reversed(loop_order):
+            chain.append(EndLoopNode(rank))
+        chain.append(OtherNode("Footer"))
 
-        # Add the graphics generation, body, and footer
+        # Note that the chain is guaranteed to have at least two nodes
+        for i in range(len(chain) - 1):
+            self.graph.add_edge(chain[i], chain[i + 1])
+
+        # Add the graphics generation
         self.graph.add_edge(OtherNode("Graphics"), OtherNode("StartLoop"))
         self.graph.add_edge(OtherNode("Output"), OtherNode("Graphics"))
-        self.graph.add_edge(chain[-1], OtherNode("Body"))
-        self.graph.add_edge(OtherNode("Body"), OtherNode("Footer"))
 
         # If we have Metrics, we need to add the MetricsNodes
         if self.metrics:
             self.graph.add_edge(OtherNode("StartLoop"), MetricsNode("Start"))
             self.graph.add_edge(MetricsNode("Start"), chain[1])
 
-            self.graph.add_edge(OtherNode("Body"), MetricsNode("End"))
+            metrics_chain: List[Node] = []
+            for rank in loop_order:
+                metrics_chain.append(MetricsHeaderNode(rank))
+            metrics_chain.append(MetricsNode("Body"))
+            for rank in reversed(loop_order):
+                metrics_chain.append(MetricsFooterNode(rank))
+
+            j = 0
+            for i, metrics_node in enumerate(metrics_chain):
+                self.graph.add_edge(chain[i + j], metrics_chain[i])
+                self.graph.add_edge(metrics_chain[i], chain[i + j + 1])
+
+                if metrics_node == MetricsNode("Body"):
+                    j = 1
+
+            self.graph.add_edge(MetricsNode("Start"), metrics_chain[0])
+            self.graph.add_edge(metrics_chain[-1], MetricsNode("End"))
+            self.graph.add_edge(chain[-2], MetricsNode("End"))
             self.graph.add_edge(MetricsNode("End"), OtherNode("Footer"))
             self.graph.add_edge(OtherNode("Footer"), MetricsNode("Dump"))
+
+        return chain
 
     def __build_output(self) -> None:
         """
@@ -403,6 +401,22 @@ class FlowGraph:
 
             self.graph.add_edge(swizzle_node, part_node)
 
+            # Add an additional swizzle node to ensure that the tensor always
+            # starts in the correct order before being merged by a hardware
+            # merger
+            if self.metrics:
+                init_ranks = self.metrics.get_merger_init_ranks(
+                    root, tensor.get_ranks())
+                if init_ranks:
+                    metrics_swizzle_node = SwizzleNode(
+                        root, init_ranks, "metrics")
+
+                    for rank in init_ranks:
+                        self.graph.add_edge(
+                            RankNode(root, rank), metrics_swizzle_node)
+
+                    self.graph.add_edge(metrics_swizzle_node, swizzle_node)
+
         # Otherwise, add the edge from the source rank to the partitioning
         else:
             self.graph.add_edge(RankNode(root, partitioning[0]), part_node)
@@ -440,6 +454,23 @@ class FlowGraph:
         # If this is a static swizzle, do it before the graphics
         if static:
             self.graph.add_edge(swizzle_node, OtherNode("Graphics"))
+
+        # Add an additional swizzle node to ensure that the tensor always
+        # starts in the correct order before being merged by a hardware merger
+        if self.metrics:
+            init_ranks = self.metrics.get_merger_init_ranks(
+                root, tensor.get_ranks())
+            if init_ranks:
+                metrics_swizzle_node = SwizzleNode(root, init_ranks, "metrics")
+
+                for rank in init_ranks:
+                    self.graph.add_edge(
+                        RankNode(
+                            root,
+                            rank),
+                        metrics_swizzle_node)
+
+                self.graph.add_edge(metrics_swizzle_node, swizzle_node)
 
     def __connect_dyn_part(self, tensor: Tensor, rank: str,
                            flatten_info: Dict[str, List[Tuple[str, ...]]]) -> None:

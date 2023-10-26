@@ -29,6 +29,7 @@ from typing import cast, List, Optional
 from teaal.hifiber import *
 from teaal.ir.flow_graph import FlowGraph
 from teaal.ir.flow_nodes import *
+from teaal.ir.fusion import Fusion
 from teaal.ir.hardware import Hardware
 from teaal.ir.iter_graph import IterationGraph
 from teaal.ir.metrics import Metrics
@@ -64,9 +65,10 @@ class HiFiber:
         self.hardware: Optional[Hardware] = None
         self.format = format_
         if arch and bindings and arch.get_spec():
-            self.hardware = Hardware(arch, bindings)
+            self.hardware = Hardware(arch, bindings, self.program)
+            self.fusion = Fusion(self.hardware)
 
-        self.trans_utils = TransUtils()
+        self.trans_utils = TransUtils(self.program)
 
         self.hifiber = SBlock([])
         for i in range(len(einsum.get_expressions())):
@@ -83,30 +85,28 @@ class HiFiber:
         self.metrics: Optional[Metrics] = None
         if self.hardware and self.format:
             self.metrics = Metrics(self.program, self.hardware, self.format)
+            self.fusion.add_einsum(self.program)
 
         # Create the flow graph and get the relevant nodes
         flow_graph = FlowGraph(self.program, self.metrics, ["hoist"])
         nodes = flow_graph.get_sorted()
 
         # Create all relevant translator objects
-        self.graphics = Graphics(self.program)
+        self.graphics = Graphics(self.program, self.metrics)
         self.partitioner = Partitioner(self.program, self.trans_utils)
-        self.header = Header(self.program, self.partitioner)
+        self.header = Header(self.program, self.metrics, self.partitioner)
         self.graph = IterationGraph(self.program)
-        self.eqn = Equation(self.program)
+        self.eqn = Equation(self.program, self.metrics)
 
         if self.metrics:
-            self.collector = Collector(self.program, self.metrics)
+            self.collector = Collector(self.program, self.metrics, self.fusion)
 
-        stmt = self.__trans_nodes(nodes, 0)[1]
+        stmt = self.__trans_nodes(nodes)[1]
 
         self.program.reset()
         return stmt
 
-    def __trans_nodes(self,
-                      nodes: List[Node],
-                      depth: int) -> Tuple[int,
-                                           Statement]:
+    def __trans_nodes(self, nodes: List[Node]) -> Tuple[int, Statement]:
         """
         Recursive function to generate the actual HiFiber program
         """
@@ -115,9 +115,32 @@ class HiFiber:
         i = 0
         while i < len(nodes):
             node = nodes[i]
-            if isinstance(node, FromFiberNode):
+
+            if isinstance(node, EagerInputNode):
+                code.add(
+                    self.eqn.make_eager_inputs(
+                        node.get_rank(),
+                        node.get_tensors()))
+
+            elif isinstance(node, EndLoopNode):
+                return i + 1, code
+
+            elif isinstance(node, FromFiberNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
                 code.add(Header.make_tensor_from_fiber(tensor))
+
+            elif isinstance(node, GetPayloadNode):
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
+                code.add(
+                    self.header.make_get_payload(
+                        tensor, node.get_ranks()))
+
+            elif isinstance(node, GetRootNode):
+                tensor = self.program.get_equation().get_tensor(node.get_tensor())
+                code.add(Header.make_get_root(tensor))
+
+            elif isinstance(node, IntervalNode):
+                code.add(self.eqn.make_interval(node.get_rank()))
 
             elif isinstance(node, LoopNode):
                 # Generate the for loop
@@ -127,9 +150,33 @@ class HiFiber:
                 payload = self.eqn.make_payload(cast(str, rank), tensors)
 
                 # Recurse for the for loop body
-                j, body = self.__trans_nodes(nodes[(i + 1):], depth + 1)
+                j, body = self.__trans_nodes(nodes[(i + 1):])
                 code.add(SFor(payload, expr, body))
                 i += j
+
+            elif isinstance(node, MetricsNode):
+                if node.get_type() == "Body":
+                    code.add(self.collector.make_body())
+
+                elif node.get_type() == "Dump":
+                    code.add(self.collector.dump())
+
+                elif node.get_type() == "End":
+                    code.add(self.collector.end())
+
+                elif node.get_type() == "Start":
+                    code.add(self.collector.start())
+
+                else:
+                    raise ValueError(
+                        "Unknown node: " +
+                        repr(node))  # pragma: no cover
+
+            elif isinstance(node, MetricsFooterNode):
+                code.add(self.collector.make_loop_footer(node.get_rank()))
+
+            elif isinstance(node, MetricsHeaderNode):
+                code.add(self.collector.make_loop_header(node.get_rank()))
 
             elif isinstance(node, OtherNode):
                 if node.get_type() == "Body":
@@ -137,16 +184,11 @@ class HiFiber:
                     code.add(self.graphics.make_body())
 
                 elif node.get_type() == "Footer":
-                    if depth == 0:
-                        code.add(
-                            Footer.make_footer(
-                                self.program,
-                                self.graphics,
-                                self.partitioner))
-
-                    else:
-                        # Pop back up a level and retry this node
-                        return i, code
+                    code.add(
+                        Footer.make_footer(
+                            self.program,
+                            self.graphics,
+                            self.partitioner))
 
                 elif node.get_type() == "Graphics":
                     code.add(self.graphics.make_header())
@@ -168,49 +210,11 @@ class HiFiber:
 
             elif isinstance(node, SwizzleNode):
                 tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(self.header.make_swizzle(tensor, node.get_type()))
-
-            elif isinstance(node, GetRootNode):
-                tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(Header.make_get_root(tensor))
-
-            elif isinstance(node, EagerInputNode):
                 code.add(
-                    self.eqn.make_eager_inputs(
-                        node.get_rank(),
-                        node.get_tensors()))
-
-            elif isinstance(node, IntervalNode):
-                code.add(self.eqn.make_interval(node.get_rank()))
-
-            elif isinstance(node, MetricsNode):
-                if node.get_type() == "Dump":
-                    code.add(self.collector.dump())
-
-                elif node.get_type() == "End":
-                    if depth == 0:
-                        code.add(self.collector.end())
-                    else:
-                        # Pop back up a level and retry this node
-                        return i, code
-
-                elif node.get_type() == "Start":
-                    code.add(self.collector.start())
-
-                else:
-                    raise ValueError(
-                        "Unknown node: " +
-                        repr(node))  # pragma: no cover
-
-            elif isinstance(node, CollectingNode):
-                code.add(
-                    self.collector.set_collecting(
-                        node.get_tensor(),
-                        node.get_rank()))
-
-            elif isinstance(node, GetPayloadNode):
-                tensor = self.program.get_equation().get_tensor(node.get_tensor())
-                code.add(Header.make_get_payload(tensor, node.get_ranks()))
+                    self.header.make_swizzle(
+                        tensor,
+                        node.get_ranks(),
+                        node.get_type()))
 
             else:
                 raise ValueError(

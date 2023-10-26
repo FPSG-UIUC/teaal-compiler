@@ -24,11 +24,15 @@ SOFTWARE.
 Representation of the hardware of an accelerator
 """
 
-from typing import Dict, Type
+from typing import Dict, Set, Type, TypeVar
 
 from teaal.ir.component import *
 from teaal.ir.level import Level
+from teaal.ir.program import Program
+
 from teaal.parse import *
+
+T = TypeVar("T")
 
 
 class Hardware:
@@ -36,21 +40,42 @@ class Hardware:
     Representation of the hardware of an accelerator
     """
 
-    def __init__(self, arch: Architecture, bindings: Bindings) -> None:
+    def __init__(
+            self,
+            arch: Architecture,
+            bindings: Bindings,
+            program: Program) -> None:
         """
         Construct the hardware
+
+        TODO: The program is only used to get the Einsum name; standardize
+        so all use program or all take it as an argument
         """
+        self.bindings = bindings
+        self.program = program
+
         self.components: Dict[str, Component] = {}
+
+        # Get the configuration for each Einsum
+        self.configs = {}
+        for einsum in self.program.get_all_einsums():
+            self.configs[einsum] = self.bindings.get_config(einsum)
 
         spec = arch.get_spec()
         if spec is None:
             raise ValueError("Empty architecture specification")
 
-        subtree = spec["architecture"]["subtree"]
-        if len(subtree) != 1:
-            raise ValueError("Architecture must have a single root level")
+        # Build the architecture tree for each configuration
+        self.tree = {}
+        for config in spec["architecture"]:
+            subtree = spec["architecture"][config]
+            if len(subtree) != 1:
+                raise ValueError(
+                    "Configuration " +
+                    config +
+                    " must have a single root level")
 
-        self.tree = self.__build_level(subtree[0], bindings)
+            self.tree[config] = self.__build_level(subtree[0])
 
     def get_component(self, name: str) -> Component:
         """
@@ -58,198 +83,158 @@ class Hardware:
         """
         return self.components[name]
 
-    def get_compute_path(self, einsum: str) -> List[Level]:
+    def get_components(self, einsum: str, class_: Type[T]) -> List[T]:
         """
-        Get a list of levels with dataflow corresponding to this einsum
+        Get a list of components relevant to this einsum
         """
-        return self.__compute_helper(einsum, self.tree)
-
-    def get_compute_components(self, einsum: str) -> List[ComputeComponent]:
-        """
-        Get a list of compute components relevant to this einsum
-        """
-        path = self.get_compute_path(einsum)
-
-        components = []
-        for level in path:
-            for component in level.get_local():
-                if isinstance(component, ComputeComponent) and \
-                        component.get_bindings(einsum):
-                    components.append(component)
-
+        components: List[T] = []
+        for name in self.bindings.get_bindings()[einsum]:
+            component = self.components[name]
+            if isinstance(component, class_):
+                components.append(component)
         return components
 
-    def get_merger_components(self) -> List[MergerComponent]:
+    def get_config(self, einsum: str) -> str:
         """
-        Get all merger components
+        Get the name of the hardware configuration for this Einsum
         """
-        mergers = []
-        for component in self.components.values():
-            if isinstance(component, MergerComponent):
-                mergers.append(component)
+        return self.configs[einsum]
 
-        return mergers
+    def get_frequency(self, einsum: str) -> int:
+        """
+        The clock_frequency (in Hz) should be specified as an attribute at the
+        top level
+        """
+        top_level = self.tree[self.configs[einsum]]
+        freq = top_level.get_attr("clock_frequency")
+
+        if freq is None:
+            raise ValueError(
+                "Unspecified clock frequency for config " +
+                self.configs[einsum])
+
+        if isinstance(freq, str):
+            raise ValueError(
+                "Bad clock frequency for config " +
+                self.configs[einsum])
+
+        return freq
+
+    def get_prefix(self, einsum: str) -> str:
+        """
+        Get the prefix for collected metrics for the given Einsum
+        """
+        return self.bindings.get_prefix(einsum)
 
     def get_traffic_path(
             self,
-            einsum: str,
-            tensor: str) -> List[MemoryComponent]:
+            tensor: str,
+            rank: str,
+            type_: str,
+            format_: str) -> List[Tuple[MemoryComponent, str]]:
         """
-        Get a list of paths this tensor will be loaded into
+        Get a list of components  this tensor will be loaded into and either
+        a lazy style or the source rank of the eager load
         """
-        paths = self.__traffic_helper(tensor, self.tree)
+        einsum = self.program.get_equation().get_output().root_name()
 
-        # Merge all paths together
-        final: List[MemoryComponent] = []
-        compute_path = self.get_compute_path(einsum)
+        components: List[Tuple[MemoryComponent, str]] = []
 
-        for path in paths:
-            sub_path = Hardware.__sub_path(path, compute_path)
+        levels = [(self.tree[self.configs[einsum]], 0)]
+        depths_covered = set()
+        while levels:
+            level, depth = levels.pop()
 
-            if len(final) < len(sub_path) and final == sub_path[:len(final)]:
-                final = sub_path
+            for component in level.get_local():
+                if not isinstance(component, MemoryComponent):
+                    continue
 
-            elif len(sub_path) < len(final) and sub_path == final[:len(sub_path)]:
-                pass
+                binding = component.get_binding(
+                    einsum, tensor, rank, type_, format_)
+                if binding:
+                    if isinstance(
+                            component,
+                            BuffetComponent) and binding["style"] == "eager":
+                        components.append((component, binding["root"]))
+                    else:
+                        components.append((component, "lazy"))
 
-            elif sub_path == final:
-                pass
+                    if depth in depths_covered:
+                        raise ValueError(
+                            "Multiple traffic paths for tensor " +
+                            tensor +
+                            " in Einsum " +
+                            einsum)
+                    depths_covered.add(depth)
 
-            else:
-                raise ValueError(
-                    "Multiple bindings for einsum " +
-                    einsum +
-                    " and tensor " +
-                    tensor)
+            levels.extend((tree, depth + 1) for tree in level.get_subtrees())
 
-        return final
+        return components
 
     def get_tree(self) -> Level:
         """
         Get the architecture tree
         """
-        return self.tree
+        einsum = self.program.get_equation().get_output().root_name()
+        return self.tree[self.configs[einsum]]
 
-    @staticmethod
-    def __sub_path(
-            mem_path: List[MemoryComponent],
-            compute_path: List[Level]) -> List[MemoryComponent]:
-        """
-        Return the prefix of the mem_path captured by this compute_path
-        """
-        i = 0
-        for level in compute_path:
-            if mem_path[i] in level.get_local():
-                i += 1
-
-            if i == len(mem_path):
-                break
-
-        return mem_path[:i]
-
-    def __build_component(self, local: dict, bindings: Bindings) -> Component:
+    def __build_component(self, local: dict, num_instances: int) -> Component:
         """
         Build a component
         """
         class_: Type[Component]
-        if local["class"].lower() == "buffet":
+        class_name = local["class"].lower()
+        if class_name == "buffet":
             class_ = BuffetComponent
 
-        elif local["class"].lower() == "cache":
+        elif class_name == "cache":
             class_ = CacheComponent
 
-        elif local["class"].lower() == "compute":
+        elif class_name == "compute":
             class_ = ComputeComponent
 
-        elif local["class"].lower() == "dram":
+        elif class_name == "dram":
             class_ = DRAMComponent
 
-        elif local["class"].lower() == "leaderfollower":
-            class_ = LeaderFollowerComponent
+        elif class_name == "intersector":
+            type_ = local["attributes"]["type"].lower()
+            if type_ == "leader-follower":
+                class_ = LeaderFollowerComponent
 
-        elif local["class"].lower() == "merger":
+            elif type_ == "skip-ahead":
+                class_ = SkipAheadComponent
+
+            elif type_ == "two-finger":
+                class_ = TwoFingerComponent
+
+            else:
+                raise ValueError("Unknown intersection type: " + type_)
+
+        elif class_name == "merger":
             class_ = MergerComponent
 
-        elif local["class"].lower() == "skipahead":
-            class_ = SkipAheadComponent
+        elif class_name == "sequencer":
+            class_ = SequencerComponent
 
         else:
             raise ValueError("Unknown class: " + local["class"])
 
         name = local["name"]
-        binding = bindings.get(name)
+        binding = self.bindings.get_component(name)
 
-        component = class_(name, local["attributes"], binding)
+        component = class_(name, num_instances, local["attributes"], binding)
         self.components[component.get_name()] = component
 
         return component
 
-    def __build_level(self, tree: dict, bindings: Bindings) -> Level:
+    def __build_level(self, tree: dict) -> Level:
         """
         Build the levels of the architecture tree
         """
         attrs = tree["attributes"]
-        local = [self.__build_component(comp, bindings)
+        local = [self.__build_component(comp, tree["num"])
                  for comp in tree["local"]]
-        subtrees = [self.__build_level(subtree, bindings)
+        subtrees = [self.__build_level(subtree)
                     for subtree in tree["subtree"]]
 
         return Level(tree["name"], tree["num"], attrs, local, subtrees)
-
-    def __compute_helper(self, einsum: str, level: Level) -> List[Level]:
-        """
-        Recursive implementation to find the dataflow to compute for a given
-        einsum
-        """
-        # Recurse down the tree
-        paths = []
-        for subtree in level.get_subtrees():
-            sub_path = self.__compute_helper(einsum, subtree)
-            if sub_path:
-                paths.append(sub_path)
-
-        if len(paths) > 1:
-            raise ValueError("Only one compute path allowed per einsum")
-
-        if paths:
-            return [level] + paths[0]
-
-        # Check if a local component performs compute for this einsum
-        root = False
-        for comp in level.get_local():
-            if isinstance(comp, ComputeComponent) and \
-                    comp.get_bindings(einsum):
-                return [level]
-
-        return []
-
-    def __traffic_helper(self, tensor: str,
-                         level: Level) -> List[List[MemoryComponent]]:
-        """
-        Recursive implementation to find the memory traffic pattern of a tensor
-        from a given subtree
-        """
-        # Recurse down the tree
-        paths = []
-        for subtree in level.get_subtrees():
-            paths.extend(self.__traffic_helper(tensor, subtree))
-
-        # Check if the memory components at this level store the tensor
-        mem_components = []
-        for comp in level.get_local():
-            if isinstance(comp, MemoryComponent) and comp.get_binding(tensor):
-                mem_components.append(comp)
-
-        # Return a list of paths
-        if not paths:
-            return [[mem] for mem in mem_components]
-
-        if not mem_components:
-            return paths
-
-        final = []
-        for mem in mem_components:
-            for path in paths:
-                final.append([mem] + path)
-
-        return final

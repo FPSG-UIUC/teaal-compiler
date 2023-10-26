@@ -25,9 +25,10 @@ Translate the header above the HiFiber loop nest
 """
 
 from sympy import Symbol
-from typing import Iterable, Set
+from typing import Iterable, Optional, Set
 
 from teaal.hifiber import *
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -41,15 +42,22 @@ class Header:
     Generate the HiFiber code for loop headers
     """
 
-    def __init__(self, program: Program, partitioner: Partitioner) -> None:
+    def __init__(
+            self,
+            program: Program,
+            metrics: Optional[Metrics],
+            partitioner: Partitioner) -> None:
         """
         Construct a new Header object
         """
         self.program = program
+        self.metrics = metrics
         self.partitioner = partitioner
 
-    @staticmethod
-    def make_get_payload(tensor: Tensor, ranks: Iterable[str]) -> Statement:
+    def make_get_payload(
+            self,
+            tensor: Tensor,
+            ranks: Iterable[str]) -> Statement:
         """
         Make a call to getPayload() or getPayloadRef()
         """
@@ -58,8 +66,15 @@ class Header:
         else:
             func = "getPayload"
 
-        rank_arg = [AJust(EVar(rank.lower())) for rank in ranks]
-        call = EMethod(EVar(tensor.fiber_name()), func, rank_arg)
+        args: List[Argument] = [AJust(EVar(rank.lower())) for rank in ranks]
+        if self.metrics:
+            args.append(
+                AParam(
+                    "trace",
+                    EString(
+                        "get_payload_" +
+                        tensor.root_name())))
+        call = EMethod(EVar(tensor.fiber_name()), func, args)
 
         for _ in ranks:
             tensor.pop()
@@ -88,7 +103,11 @@ class Header:
         constr = EFunc("Tensor", args)
         return SAssign(AVar(tensor.tensor_name()), constr)
 
-    def make_swizzle(self, tensor: Tensor, type_: str) -> Statement:
+    def make_swizzle(
+            self,
+            tensor: Tensor,
+            ranks: List[str],
+            type_: str) -> Statement:
         """
         Make call to swizzleRanks() (as necessary)
         """
@@ -99,6 +118,8 @@ class Header:
             self.program.get_loop_order().apply(tensor)
         elif type_ == "partitioning":
             self.program.apply_partition_swizzling(tensor)
+        elif type_ == "metrics":
+            tensor.swizzle(ranks)
         else:
             raise ValueError("Unknown swizzling reason: " + type_)
 
@@ -147,7 +168,7 @@ class Header:
 
             if loop_order.is_ready(
                 part.get_final_rank_id(
-                    output, ranks[i]), pos):
+                    output.get_init_ranks(), ranks[i]), pos):
                 final_pos[ranks[i]] = pos
 
                 i += 1
@@ -167,7 +188,10 @@ class Header:
                         avail[i] = True
 
         # If at least one rank is not available, we need an explicit shape
-        if not all(avail):
-            args.append(TransUtils.build_shape(output))
+        if not all(avail) or self.metrics is not None:
+            # TODO: Test that this removes the partitioning
+            unpart_ranks = [part.get_root_name(
+                rank) for rank in output.get_ranks()]
+            args.append(TransUtils.build_shape(unpart_ranks))
 
         return args

@@ -28,7 +28,7 @@ from itertools import chain
 
 from lark.lexer import Token
 from lark.tree import Tree
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -55,6 +55,27 @@ class Equation:
         Get a mapping from factors to their location in the factor order
         """
         return self.factor_order
+
+    def get_iter(self,
+                 tensors: List[Tensor]) -> Tuple[Optional[Tensor],
+                                                 List[List[Tensor]]]:
+        """
+        Organize the tensors as they are iterated in the for loop
+        Returns (Optional[output], [[tensors intersected together] unioned together])
+        """
+        output: Optional[Tensor] = None
+        inputs: List[List[Tensor]] = [[] for _ in self.term_tensors]
+        for tensor in tensors:
+            if tensor.get_is_output():
+                output = tensor
+                continue
+
+            inputs[self.factor_order[tensor.root_name()][0]].append(tensor)
+
+        for term in inputs:
+            term.sort(key=lambda t: self.factor_order[t.root_name()][1])
+
+        return output, [term for term in inputs if term]
 
     def get_in_update(self) -> List[List[bool]]:
         """

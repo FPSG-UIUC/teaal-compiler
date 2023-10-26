@@ -1,10 +1,34 @@
 import pytest
 from sympy import symbols
 
+from teaal.ir.coord_math import CoordMath
 from teaal.ir.partitioning import Partitioning
 from teaal.ir.spacetime import SpaceTime
+from teaal.ir.tensor import Tensor
 from teaal.parse.mapping import Mapping
 from teaal.parse.spacetime import SpaceTimeParser
+from tests.utils.parse_tree import *
+
+
+def parse_mapping(parts, spacetime):
+    yaml = """
+    mapping:
+        partitioning:
+            Z:""" + parts + """
+        spacetime:
+            Z:""" + spacetime
+    return Mapping.from_str(yaml)
+
+
+def build_partitioning(mapping):
+    dict_ = mapping.get_partitioning()["Z"]
+
+    coord_math = CoordMath()
+    tensor = Tensor("T", ["J", "M", "N", "K"])
+    ranks = make_ranks(["j", "m", "n", "k"])
+    coord_math.add(tensor, ranks)
+
+    return Partitioning(dict_, ["J", "M", "N", "K"], coord_math)
 
 
 def create_yaml(space, time, opt=None):
@@ -24,8 +48,8 @@ def create_yaml(space, time, opt=None):
 
 
 def create_eqn_exprs():
-    k, m, n = symbols("k m n")
-    return {k: k, m: m, n: n}
+    j, k, m, n = symbols("j k m n")
+    return {j: j, k: k, m: m, n: n}
 
 
 def test_bad_space():
@@ -146,6 +170,27 @@ def test_get_style():
     assert spacetime.get_style("M") == "pos"
     assert spacetime.get_style("K") == "pos"
     assert spacetime.get_style("N") == "coord"
+
+
+def test_get_style_flattening():
+    parts = """
+                (M, K): [flatten()]
+    """
+    sptm = """
+                space: [MK.pos]
+                time: [J, N]
+    """
+    mapping = parse_mapping(parts, sptm)
+    partitioning = build_partitioning(mapping)
+    eqn_exprs = create_eqn_exprs()
+    spacetime = SpaceTime(
+        mapping.get_spacetime()["Z"],
+        partitioning,
+        eqn_exprs)
+
+    assert spacetime.get_style("MK") == "pos"
+    assert spacetime.get_style("M") == "pos"
+    assert spacetime.get_style("K") == "pos"
 
 
 def test_get_time():

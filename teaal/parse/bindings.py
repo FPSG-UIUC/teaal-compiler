@@ -24,7 +24,7 @@ SOFTWARE.
 Parse the input YAML for the bindings
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from teaal.parse.yaml import YamlParser
 
@@ -39,12 +39,30 @@ class Bindings:
         Read the YAML input
         """
 
-        self.components = {}
+        self.components: Dict[str, Dict[str, List[dict]]] = {}
+        self.configs = {}
+        self.prefixes = {}
         if yaml is None or "bindings" not in yaml.keys():
             return
 
-        for binding in yaml["bindings"]:
-            self.components[binding["name"]] = binding["bindings"]
+        for einsum in yaml["bindings"]:
+            self.components[einsum] = {}
+
+            configured = False
+            for binding in yaml["bindings"][einsum]:
+                if "config" in binding:
+                    self.configs[einsum] = binding["config"]
+                    self.prefixes[einsum] = binding["prefix"]
+
+                    configured = True
+
+                else:
+                    self.components[einsum][binding["component"]
+                                            ] = binding["bindings"]
+
+            if not configured:
+                raise ValueError(
+                    "Accelerator config and prefix missing for Einsum " + einsum)
 
     @classmethod
     def from_file(cls, filename: str) -> "Bindings":
@@ -60,11 +78,32 @@ class Bindings:
         """
         return cls(YamlParser.parse_str(string))
 
-    def get(self, name) -> List[dict]:
+    def get_component(self, name: str) -> Dict[str, List[dict]]:
         """
         Get the binding information for a component
         """
-        if name not in self.components.keys():
-            return []
+        info = {}
 
-        return self.components[name]
+        for einsum in self.components:
+            if name in self.components[einsum].keys():
+                info[einsum] = self.components[einsum][name]
+
+        return info
+
+    def get_bindings(self) -> Dict[str, Dict[str, List[dict]]]:
+        """
+        Get the binding information for all components
+        """
+        return self.components
+
+    def get_config(self, einsum: str) -> str:
+        """
+        Get the hardware configuration for a given Einsum
+        """
+        return self.configs[einsum]
+
+    def get_prefix(self, einsum: str) -> str:
+        """
+        Get the metrics prefix for the given Einsum
+        """
+        return self.prefixes[einsum]

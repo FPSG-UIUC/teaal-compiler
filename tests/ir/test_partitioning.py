@@ -358,12 +358,10 @@ def test_get_final_rank_id():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.get_final_rank_id(Tensor("B", ["K", "N"]), "N") == "N2"
-    assert partitioning.get_final_rank_id(
-        Tensor("B", ["K", "N"]), "N2") == "N2"
-    assert partitioning.get_final_rank_id(
-        Tensor("A", ["K", "M"]), "M1I") == "M1"
-    assert partitioning.get_final_rank_id(Tensor("B", ["K", "N"]), "K") == "K"
+    assert partitioning.get_final_rank_id(["K", "N"], "N") == "N2"
+    assert partitioning.get_final_rank_id(["K", "N"], "N2") == "N2"
+    assert partitioning.get_final_rank_id(["K", "M"], "M1I") == "M1"
+    assert partitioning.get_final_rank_id(["K", "N"], "K") == "K"
 
 
 def test_final_rank_id_flattening():
@@ -374,23 +372,15 @@ def test_final_rank_id_flattening():
     """
     partitioning = build_partitioning(all_parts)
 
-    assert partitioning.get_final_rank_id(
-        Tensor("A", ["K", "M"]), "MK00") == "MK00"
-    assert partitioning.get_final_rank_id(
-        Tensor("A", ["K", "M"]), "MK01") == "MK01"
-    assert partitioning.get_final_rank_id(
-        Tensor("A", ["K", "M"]), "MK0") == "MK01"
-    assert partitioning.get_final_rank_id(
-        Tensor("A", ["K", "M"]), "M") == "MK01"
-    assert partitioning.get_final_rank_id(
-        Tensor("Z", ["M", "N"]), "M") == "MK00"
-    assert partitioning.get_final_rank_id(
-        Tensor("A", ["K", "M"]), "K0") == "MK01"
-    assert partitioning.get_final_rank_id(
-        Tensor("B", ["K", "N"]), "K0") == "MK00"
-    assert partitioning.get_final_rank_id(
-        Tensor("B", ["K", "N"]), "K1") == "K1"
-    assert partitioning.get_final_rank_id(Tensor("B", ["K", "N"]), "N") == "N"
+    assert partitioning.get_final_rank_id(["K", "M"], "MK00") == "MK00"
+    assert partitioning.get_final_rank_id(["K", "M"], "MK01") == "MK01"
+    assert partitioning.get_final_rank_id(["K", "M"], "MK0") == "MK01"
+    assert partitioning.get_final_rank_id(["K", "M"], "M") == "MK01"
+    assert partitioning.get_final_rank_id(["M", "N"], "M") == "MK00"
+    assert partitioning.get_final_rank_id(["K", "M"], "K0") == "MK01"
+    assert partitioning.get_final_rank_id(["K", "N"], "K0") == "MK00"
+    assert partitioning.get_final_rank_id(["K", "N"], "K1") == "K1"
+    assert partitioning.get_final_rank_id(["K", "N"], "N") == "N"
 
 
 def test_get_final_rank_id_conv():
@@ -400,10 +390,10 @@ def test_get_final_rank_id_conv():
     """
     partitioning = build_partitioning_conv(all_parts)
 
-    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W") == "W2"
-    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W1I") == "W1"
-    assert partitioning.get_final_rank_id(Tensor("I", ["W"]), "W0") == "W0"
-    assert partitioning.get_final_rank_id(Tensor("F", ["S"]), "S") == "S"
+    assert partitioning.get_final_rank_id(["W"], "W") == "W2"
+    assert partitioning.get_final_rank_id(["W"], "W1I") == "W1"
+    assert partitioning.get_final_rank_id(["W"], "W0") == "W0"
+    assert partitioning.get_final_rank_id(["S"], "S") == "S"
 
 
 def test_get_intermediates():

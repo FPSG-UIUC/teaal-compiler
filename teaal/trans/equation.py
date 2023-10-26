@@ -28,6 +28,8 @@ from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol
 from typing import cast, Dict, List, Optional, Type
 
 from teaal.hifiber import *
+from teaal.ir.component import *
+from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
 from teaal.parse.utils import ParseUtils
@@ -40,11 +42,12 @@ class Equation:
     equation at the bottom of the loop nest
     """
 
-    def __init__(self, program: Program) -> None:
+    def __init__(self, program: Program, metrics: Optional[Metrics]) -> None:
         """
         Construct a new Equation
         """
         self.program = program
+        self.metrics = metrics
 
     def make_eager_inputs(self, rank: str, inputs: List[str]) -> Statement:
         """
@@ -52,7 +55,8 @@ class Equation:
         """
         tensors = [self.program.get_equation().get_tensor(input_)
                    for input_ in inputs]
-        iter_expr = self.__make_input_iter_expr(rank, tensors)
+        _, input_tensors = self.program.get_equation().get_iter(tensors)
+        iter_expr = self.__make_input_iter_expr(rank, input_tensors)
 
         # Use Fiber.fromLazy() to translate
         # Note: Assume that if we are making eager inputs, then we are
@@ -106,29 +110,27 @@ class Equation:
         if not tensors:
             raise ValueError("Must iterate over at least one tensor")
 
+        output, inputs = self.program.get_equation().get_iter(tensors)
+
         # If there are no input tensors, we need to iterRangeShapeRef on the
         # output
-        output_tensor = self.__get_output_tensor(tensors)
-        if len(tensors) == 1 and output_tensor:
+        if len(tensors) == 1 and output:
             iter_output = self.__make_output_only_iter_expr(rank)
             return self.__add_enumerate(rank, iter_output)
 
         # Build the expression of the inputs
-        expr = self.__make_input_iter_expr(rank, tensors)
+        expr = self.__make_input_iter_expr(rank, inputs)
 
         # Finally, add in the output
-        if output_tensor:
-            trank = output_tensor.peek()
-            if trank is not None:
-                trank = trank.upper()
-
+        if output:
+            trank = output.peek_clean()
             if trank != rank:
                 raise ValueError(
                     "Cannot project into the output tensor. Replace " +
                     rank + " with " + str(trank) + " in the loop order")
 
             expr = Equation.__add_operator(
-                EVar(output_tensor.fiber_name()), OLtLt(), expr)
+                EVar(output.fiber_name()), OLtLt(), expr)
 
         return self.__add_enumerate(rank, expr)
 
@@ -193,14 +195,13 @@ class Equation:
                 "Must have at least one tensor to make the payload")
 
         # Separate the tensors into terms
-        terms = self.__separate_terms(tensors)
-        output_tensor = self.__get_output_tensor(tensors)
+        output, inputs = self.program.get_equation().get_iter(tensors)
 
         payload: Payload
-        if terms:
+        if inputs:
             # Construct the term payloads
             term_payloads = []
-            for term in terms:
+            for term in inputs:
                 payload = PVar(term[-1].fiber_name())
                 for factor in reversed(term[:-1]):
                     payload = PTuple([PVar(factor.fiber_name()), payload])
@@ -212,11 +213,11 @@ class Equation:
                 payload = PTuple([PVar("_"), term_payload, payload])
 
             # Put the output on the outside
-            if output_tensor:
-                payload = PTuple([PVar(output_tensor.fiber_name()), payload])
+            if output:
+                payload = PTuple([PVar(output.fiber_name()), payload])
 
-        elif output_tensor:
-            payload = PVar(output_tensor.fiber_name())
+        elif output:
+            payload = PVar(output.fiber_name())
 
         else:
             # We should never get to this state
@@ -317,7 +318,9 @@ class Equation:
         spacetime = self.program.get_spacetime()
         enum_st = spacetime is not None and spacetime.emit_pos(rank)
 
-        return enum_int or enum_st
+        enum_metrics = self.metrics is None
+
+        return (enum_int or enum_st) and enum_metrics
 
     @staticmethod
     def __frac_coords(sexpr: Basic) -> bool:
@@ -328,16 +331,6 @@ class Equation:
             return True
 
         return any(Equation.__frac_coords(arg) for arg in sexpr.args)
-
-    def __get_output_tensor(self, tensors: List[Tensor]) -> Optional[Tensor]:
-        """
-        Get the output tensor if it exists
-        """
-        output = self.program.get_equation().get_output()
-        if output in tensors:
-            return output
-        else:
-            return None
 
     def __in_update(self, factor: str) -> bool:
         """
@@ -350,23 +343,18 @@ class Equation:
         """
         Get fiber for iteration (may involve projection)
         """
-        trank = tensor.peek()
-        if trank is None:
-            raise ValueError(
-                "Cannot iterate over payload " +
-                tensor.fiber_name())
+        trank = tensor.peek_clean()
 
         # If this fiber is already over the correct rank, we can iterate over
         # it directly
-        rank = rank.lower()
         if trank == rank:
             return EVar(tensor.fiber_name())
 
         # Otherwise, we need to project
         partitioning = self.program.get_partitioning()
-        root, suffix = partitioning.split_rank_name(rank.upper())
+        root, suffix = partitioning.split_rank_name(rank)
         root = root.lower()
-        troot = partitioning.get_root_name(trank.upper()).lower()
+        troot = partitioning.get_root_name(trank).lower()
 
         # If we are going to project, get the iteration rank in terms of the
         # tensor rank
@@ -384,19 +372,20 @@ class Equation:
         # If not, we do not need to translate the halo
         else:
             sexpr = CoordAccess.isolate_rank(sexpr, troot)
-            sexpr = sexpr.subs(troot, trank)
+            sexpr = sexpr.subs(troot, trank.lower())
 
-        lambda_ = ELambda([trank], CoordAccess.build_expr(sexpr))
+        lambda_ = ELambda([trank.lower()], CoordAccess.build_expr(sexpr))
         args = [AParam("trans_fn", lambda_)]
 
         # Build the interval if we need to make sure that the halo does not
         # add extra computation
         if suffix == "":
-            interval = ETuple([EInt(0), EVar(rank.upper())])
+            interval = ETuple([EInt(0), EVar(rank)])
             args.append(AParam("interval", interval))
 
         elif suffix == "0":
-            interval = ETuple([EVar(rank + "_start"), EVar(rank + "_end")])
+            interval = ETuple([EVar(rank.lower() + "_start"),
+                              EVar(rank.lower() + "_end")])
             args.append(AParam("interval", interval))
 
         project = EMethod(EVar(tensor.fiber_name()), "project", args)
@@ -416,20 +405,53 @@ class Equation:
     def __make_input_iter_expr(
             self,
             rank: str,
-            tensors: List[Tensor]) -> Expression:
+            tensors: List[List[Tensor]]) -> Expression:
         """
         Make the iteration expression for the inputs
         """
-        # Separate the tensors into terms
-        terms = self.__separate_terms(tensors)
+        leader_follower = False
+        leader = ""
+        if self.metrics is not None:
+            intersector = self.metrics.get_coiter(rank)
+
+            # If this uses leader-follower intersection
+            if isinstance(intersector, LeaderFollowerComponent):
+                leader_follower = True
+
+                einsum = self.program.get_equation().get_output().root_name()
+                for binding in intersector.get_bindings()[einsum]:
+                    if binding["rank"] == rank:
+                        leader = binding["leader"]
+                        break
 
         # Combine terms with intersections
         intersections = []
-        for term in terms:
-            expr = self.__iter_fiber(rank, term[-1])
-            for factor in reversed(term[:-1]):
-                fiber = self.__iter_fiber(rank, factor)
-                expr = Equation.__add_operator(fiber, OAnd(), expr)
+        for term in tensors:
+            expr: Expression
+            if leader_follower:
+                # If there is more than one term, there is ambiguity we are
+                # not capturing
+                assert len(tensors) == 1
+
+                leader_tensor = self.program.get_equation().get_tensor(leader)
+                fiber_args = [self.__iter_fiber(rank, leader_tensor)]
+
+                for factor in term:
+                    if factor.root_name() == leader:
+                        continue
+
+                    # TODO: Only uncompressed fibers can follow
+                    fiber_args.append(self.__iter_fiber(rank, factor))
+
+                args: List[Argument] = [AJust(fiber) for fiber in fiber_args]
+                args.append(AParam("style", EString("leader-follower")))
+                expr = EMethod(EVar("Fiber"), "intersection", args)
+
+            else:
+                expr = self.__iter_fiber(rank, term[-1])
+                for factor in reversed(term[:-1]):
+                    fiber = self.__iter_fiber(rank, factor)
+                    expr = Equation.__add_operator(fiber, OAnd(), expr)
             intersections.append(expr)
 
         # Combine intersections with a union
@@ -438,20 +460,3 @@ class Equation:
             expr = Equation.__add_operator(intersection, OOr(), expr)
 
         return expr
-
-    def __separate_terms(self, tensors: List[Tensor]) -> List[List[Tensor]]:
-        """
-        Separate a list of tensors according to which term they belong to
-        """
-        # Separate the tensors
-        terms: List[List[Tensor]] = [[]
-                                     for _ in self.program.get_equation().get_term_tensors()]
-        for tensor in tensors:
-            if tensor.get_is_output():
-                continue
-
-            terms[self.program.get_equation().get_factor_order()[
-                tensor.root_name()][0]].append(tensor)
-
-        # Remove any empty lists
-        return [term for term in terms if term]

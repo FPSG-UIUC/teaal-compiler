@@ -30,6 +30,22 @@ def create_default():
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
+def create_cascade():
+    yaml = """
+    einsum:
+        declaration:
+            Z: [M, N]
+            A: [K, M]
+            B: [K, N]
+            T: [M, N]
+            C: [M, N]
+        expressions:
+            - T[m, n] = A[k, m] * B[k, n]
+            - Z[m, n] = T[m, n] + C[m, n]
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+
+
 def create_loop_ordered():
     yaml = """
     einsum:
@@ -213,6 +229,11 @@ def test_apply_partition_swizzling():
     program.apply_partitioning(A, ("K",))
     program.apply_partition_swizzling(A)
     assert A.get_ranks() == ["J", "K1", "N", "M", "K0"]
+
+
+def test_get_all_einsums():
+    program = create_cascade()
+    assert program.get_all_einsums() == ["T", "Z"]
 
 
 def test_get_equation_unconfigured():

@@ -571,7 +571,175 @@ def test_hifiber_dyn_flattening():
     assert str(HiFiber(einsum, mapping)) == hifiber
 
 
-def test_hifiber_hardware():
+def test_hifiber_traffic():
+    yaml = """
+    einsum:
+      declaration:
+        A: [K, M]
+        B: [K, M]
+        C: [K]
+        Z: [M]
+      expressions:
+      - Z[m] = A[k, m] * B[k, m] * C[k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [M, K]
+    architecture:
+      accel:
+      - name: level0
+        attributes:
+          clock_frequency: 2048
+        local:
+        - name: DRAM
+          class: DRAM
+          attributes:
+            bandwidth: 512
+        subtree:
+        - name: level1
+          local:
+          - name: L2Cache
+            class: Cache
+            attributes:
+              width: 64
+              depth: 1024
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: DRAM
+        bindings:
+        - tensor: Z
+          rank: M
+          type: elem
+          format: default
+      - component: L2Cache
+        bindings:
+        - tensor: Z
+          rank: M
+          type: elem
+          format: default
+    format:
+      Z:
+        default:
+          rank-order: [M]
+          M:
+            format: C
+            cbits: 32
+            pbits: 64
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    format_ = Format.from_str(yaml)
+
+    hifiber = "Z_M = Tensor(rank_ids=[\"M\"], shape=[M])\n" + \
+        "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
+        "B_MK = B_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
+        "z_m = Z_M.getRoot()\n" + \
+        "a_m = A_MK.getRoot()\n" + \
+        "b_m = B_MK.getRoot()\n" + \
+        "c_k = C_K.getRoot()\n" + \
+        "Metrics.beginCollect(\"tmp/Z\")\n" + \
+        "Metrics.trace(\"M\", type_=\"populate_read_0\", consumable=False)\n" + \
+        "Metrics.trace(\"M\", type_=\"populate_write_0\", consumable=False)\n" + \
+        "for m, (z_ref, (a_k, b_k)) in z_m << (a_m & b_m):\n" + \
+        "    for k, (a_val, (b_val, c_val)) in a_k & (b_k & c_k):\n" + \
+        "        z_ref += a_val * b_val * c_val\n" + \
+        "Metrics.endCollect()\n" + \
+        "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {\"Z\": Format(Z_M, {\"rank-order\": [\"M\"], \"M\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
+        "bindings = [{\"tensor\": \"Z\", \"rank\": \"M\", \"type\": \"elem\", \"format\": \"default\"}]\n" + \
+        "traces = {(\"Z\", \"M\", \"elem\", \"read\"): \"tmp/Z-M-populate_read_0.csv\", (\"Z\", \"M\", \"elem\", \"write\"): \"tmp/Z-M-populate_write_0.csv\"}\n" + \
+        "traffic = Traffic.cacheTraffic(bindings, formats, traces, 65536, 64)\n" + \
+        "metrics[\"Z\"][\"DRAM\"] = {}\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"] = {}\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] = 0\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] = 0\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"time\"] = (metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"]) / 512\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = metrics[\"Z\"][\"DRAM\"][\"time\"]"
+
+    assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
+
+
+def test_hifiber_intersect():
+    yaml = """
+    einsum:
+      declaration:
+        Z: []
+        A: [I, J, K]
+        B: [I, J, K]
+      expressions:
+      - Z[] = A[i, j, k] * B[i, j, k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [I, J, K]
+    architecture:
+      accel:
+      - name: level0
+        attributes:
+          clock_frequency: 2048
+        local:
+        - name: TF
+          class: Intersector
+          attributes:
+            type: two-finger
+    bindings:
+      Z:
+      - config: accel
+        prefix: tmp/Z
+      - component: TF
+        bindings:
+        - rank: K
+    # TODO: Allow the format to be empty
+    format:
+      Z:
+        default:
+          rank-order: []
+    """
+    einsum = Einsum.from_str(yaml)
+    mapping = Mapping.from_str(yaml)
+    arch = Architecture.from_str(yaml)
+    bindings = Bindings.from_str(yaml)
+    format_ = Format.from_str(yaml)
+
+    hifiber = "Z_ = Tensor(rank_ids=[], shape=[])\n" + \
+        "z_ref = Z_.getRoot()\n" + \
+        "a_i = A_IJK.getRoot()\n" + \
+        "b_i = B_IJK.getRoot()\n" + \
+        "Metrics.beginCollect(\"tmp/Z\")\n" + \
+        "TF_K = TwoFingerIntersector()\n" + \
+        "Metrics.trace(\"K\", type_=\"intersect_0\", consumable=True)\n" + \
+        "Metrics.trace(\"K\", type_=\"intersect_1\", consumable=True)\n" + \
+        "for i, (a_j, b_j) in a_i & b_i:\n" + \
+        "    for j, (a_k, b_k) in a_j & b_j:\n" + \
+        "        for k, (a_val, b_val) in a_k & b_k:\n" + \
+        "            z_ref += a_val * b_val\n" + \
+        "        TF_K.addTraces(Metrics.consumeTrace(\"K\", \"intersect_0\"), Metrics.consumeTrace(\"K\", \"intersect_1\"))\n" + \
+        "Metrics.endCollect()\n" + \
+        "metrics = {}\n" + \
+        "metrics[\"Z\"] = {}\n" + \
+        "formats = {}\n" + \
+        "metrics[\"Z\"][\"TF\"] = 0\n" + \
+        "metrics[\"Z\"][\"TF\"] += TF_K.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"TF\"][\"time\"] = metrics[\"Z\"][\"TF\"] / 2048\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = metrics[\"Z\"][\"TF\"][\"time\"]"
+
+    assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
+
+
+def test_hifiber_gamma_no_errors():
+    # There is too much variation in the Gamma spec to test if the HiFiber
+    # remains unchanged
     fname = "tests/integration/gamma.yaml"
     einsum = Einsum.from_file(fname)
     mapping = Mapping.from_file(fname)
@@ -579,50 +747,17 @@ def test_hifiber_hardware():
     bindings = Bindings.from_file(fname)
     format_ = Format.from_file(fname)
 
-    hifiber = "T_MKN = Tensor(rank_ids=[\"M\", \"K\", \"N\"])\n" + \
-        "t_m = T_MKN.getRoot()\n" + \
-        "a_m = A_MK.getRoot()\n" + \
-        "b_k = B_KN.getRoot()\n" + \
-        "B_KN.setCollecting(\"K\", True)\n" + \
-        "Metrics.beginCollect([\"M\", \"K\", \"N\"])\n" + \
-        "for m, (t_k, a_k) in t_m << a_m:\n" + \
-        "    for k, (t_n, (a_val, b_n)) in t_k << (a_k & b_k):\n" + \
-        "        for n, (t_ref, b_val) in t_n << b_n:\n" + \
-        "            t_ref += b_val\n" + \
-        "Metrics.endCollect()\n" + \
-        "metrics = {}\n" + \
-        "metrics[\"T\"] = {}\n" + \
-        "metrics[\"T\"][\"T footprint\"] = 0\n" + \
-        "metrics[\"T\"][\"T traffic\"] = 0\n" + \
-        "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-        "metrics[\"T\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
-        "metrics[\"T\"][\"A traffic\"] = metrics[\"T\"][\"A footprint\"]\n" + \
-        "B_KN_format = Format(B_KN, {\"K\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-        "metrics[\"T\"][\"B footprint\"] = B_KN_format.getTensor()\n" + \
-        "metrics[\"T\"][\"B traffic\"] = Traffic.cacheTraffic(B_KN, \"K\", B_KN_format, 25165824) + B_KN_format.getRank(\"K\")\n" + \
-        "metrics[\"T\"][\"K intersections\"] = Compute.lfCount(Metrics.dump(), \"K\", 0)\n" + \
-        "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
-        "T_MNK = T_MKN.swizzleRanks(rank_ids=[\"M\", \"N\", \"K\"])\n" + \
-        "z_m = Z_MN.getRoot()\n" + \
-        "t_m = T_MNK.getRoot()\n" + \
-        "a_m = A_MK.getRoot()\n" + \
-        "Metrics.beginCollect([\"M\", \"N\", \"K\"])\n" + \
-        "for m, (z_n, (t_n, a_k)) in z_m << (t_m & a_m):\n" + \
-        "    for n, (z_ref, t_k) in z_n << t_n:\n" + \
-        "        for k, (t_val, a_val) in t_k & a_k:\n" + \
-        "            z_ref += t_val * a_val\n" + \
-        "Metrics.endCollect()\n" + \
-        "metrics[\"Z\"] = {}\n" + \
-        "Z_MN_format = Format(Z_MN, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-        "metrics[\"Z\"][\"Z footprint\"] = Z_MN_format.getTensor()\n" + \
-        "metrics[\"Z\"][\"Z traffic\"] = metrics[\"Z\"][\"Z footprint\"]\n" + \
-        "metrics[\"Z\"][\"T footprint\"] = 0\n" + \
-        "metrics[\"Z\"][\"T traffic\"] = 0\n" + \
-        "A_MK_format = Format(A_MK, {\"M\": {\"format\": \"U\", \"rhbits\": 32, \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})\n" + \
-        "metrics[\"Z\"][\"A footprint\"] = A_MK_format.getTensor()\n" + \
-        "metrics[\"Z\"][\"A traffic\"] = metrics[\"Z\"][\"A footprint\"]\n" + \
-        "metrics[\"Z\"][\"mul\"] = Compute.opCount(Metrics.dump(), \"mul\")\n" + \
-        "metrics[\"Z\"][\"add\"] = Compute.opCount(Metrics.dump(), \"add\")\n" + \
-        "metrics[\"Z\"][\"T_MKN merge ops\"] = Compute.swapCount(T_MKN, 1, 64, 1)"
+    print(HiFiber(einsum, mapping, arch, bindings, format_))
 
-    assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
+
+def test_hifiber_extensor_no_errors():
+    # There is too much variation in the ExTensor spec to test if the HiFiber
+    # remains unchanged
+    fname = "tests/integration/extensor.yaml"
+    einsum = Einsum.from_file(fname)
+    mapping = Mapping.from_file(fname)
+    arch = Architecture.from_file(fname)
+    bindings = Bindings.from_file(fname)
+    format_ = Format.from_file(fname)
+
+    print(HiFiber(einsum, mapping, arch, bindings, format_))

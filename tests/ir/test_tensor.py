@@ -91,6 +91,11 @@ def test_peek_empty():
     assert tensor.peek() is None
 
 
+def test_peek_clean():
+    tensor = Tensor("A", ["I", "J"])
+    assert tensor.peek_clean() == "I"
+
+
 def test_peek_rest():
     tensor = Tensor("A", ["K1", "M", "K0"])
     assert tensor.peek_rest() == ["K1", "M", "K0"]

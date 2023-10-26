@@ -1,19 +1,34 @@
 bindings:
-  - name: Memory
+  Z:
+  - config: Config0
+    prefix: tmp/Z
+  - component: Memory
     bindings:
     - tensor: A
-      rank: root
-    - tensor: Z
-      rank: root
+      format: A_default
+      rank: M
+      type: payload
 
-  - name: Registers
+    - tensor: Z
+      format: Z_default
+      rank: M
+      type: payload
+
+  - component: Registers
     bindings:
     - tensor: A
+      format: A_default
       rank: M
-    - tensor: Z
-      rank: M
+      type: payload
+      style: eager
+      evict-on: M
 
-  - name: MAC
+    - tensor: Z
+      format: Z_default
+      rank: M
+      type: payload
+      evict-on: root
+
+  - component: MAC
     bindings:
-    - einsum: Z
-      op: add
+    - op: add

@@ -396,9 +396,8 @@ class Partitioner:
         # Make sure there is no translation needed between the leader and
         # follower tensors' ranks
         leader_tensor = self.program.get_equation().get_tensor(leader)
-        leader_rank = leader_tensor.peek()
-        assert leader_rank is not None
-        lroot = self.program.get_partitioning().get_root_name(leader_rank.upper())
+        leader_rank = leader_tensor.peek_clean()
+        lroot = self.program.get_partitioning().get_root_name(leader_rank)
         root = self.program.get_partitioning().get_root_name(rank)
         if root != lroot:
             raise ValueError(
