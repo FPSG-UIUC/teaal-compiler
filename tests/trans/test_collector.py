@@ -357,6 +357,7 @@ def test_dump_gamma_Z():
 
     assert collector.dump().gen(0) == hifiber
 
+
 def test_dump_outerspace_T0():
     yaml = build_outerspace_yaml()
     collector = build_collector(yaml, 0)
@@ -847,6 +848,16 @@ def test_make_loop_header_unconfigured():
 def test_make_loop_header():
     yaml = build_extensor_yaml()
     collector = build_collector(yaml, 0)
+    program = collector.program
+    part_ir = program.get_partitioning()
+    for tensor in program.get_equation().get_tensors():
+        tensor.update_ranks(
+            part_ir.partition_ranks(
+                tensor.get_ranks(),
+                part_ir.get_all_parts(),
+                True,
+                True))
+        program.get_loop_order().apply(tensor)
     collector.start()
 
     assert collector.make_loop_header("N2").gen(0) == ""
@@ -856,18 +867,18 @@ def test_make_loop_header():
 
     assert collector.make_loop_header("M1").gen(0) == hifiber
 
-    hifiber_option1 = "if () not in eager_z_m0_read:\n" + \
-        "    eager_z_m0_read.add(())\n" + \
+    hifiber_option1 = "if (m1, n1) not in eager_z_m0_read:\n" + \
+        "    eager_z_m0_read.add((m1, n1))\n" + \
         "    z_m0.trace(\"eager_z_m0_read\")\n" + \
-        "if () not in eager_a_m0_read:\n" + \
-        "    eager_a_m0_read.add(())\n" + \
+        "if (m1, k1) not in eager_a_m0_read:\n" + \
+        "    eager_a_m0_read.add((m1, k1))\n" + \
         "    a_m0.trace(\"eager_a_m0_read\")"
 
-    hifiber_option2 = "if () not in eager_a_m0_read:\n" + \
-        "    eager_a_m0_read.add(())\n" + \
+    hifiber_option2 = "if (m1, k1) not in eager_a_m0_read:\n" + \
+        "    eager_a_m0_read.add((m1, k1))\n" + \
         "    a_m0.trace(\"eager_a_m0_read\")\n" + \
-        "if () not in eager_z_m0_read:\n" + \
-        "    eager_z_m0_read.add(())\n" + \
+        "if (m1, n1) not in eager_z_m0_read:\n" + \
+        "    eager_z_m0_read.add((m1, n1))\n" + \
         "    z_m0.trace(\"eager_z_m0_read\")"
 
     assert collector.make_loop_header("M0").gen(

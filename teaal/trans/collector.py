@@ -295,19 +295,27 @@ class Collector:
         """
         loop_ranks = self.program.get_loop_order().get_ranks()
         i = loop_ranks.index(rank)
-        output = self.program.get_equation().get_output()
+        tensor_ir = self.program.get_equation().get_tensor(tensor)
 
         # If this is a write trace and this is the current outer-most loop,
         # then just use the outermost loop of the tensor
         if not is_read_trace and i == 0:
-            rank = output.get_ranks()[0]
+            tensor_rank = tensor_ir.get_ranks()[0]
 
         # Otherwise, get the rank of the current fiber
         elif not is_read_trace and i > 0:
-            output_ranks = output.get_ranks()
-            rank = output_ranks[output_ranks.index(loop_ranks[i - 1]) + 1]
+            output_ranks = tensor_ir.get_ranks()
+            tensor_rank = output_ranks[output_ranks.index(
+                loop_ranks[i - 1]) + 1]
 
-        fiber = tensor.lower() + "_" + rank.lower()
+        else:
+            avail = self.program.get_partitioning().get_available(rank)
+            poss_ranks = [
+                rank for rank in tensor_ir.get_ranks() if rank in avail]
+            assert len(poss_ranks) == 1
+            tensor_rank = poss_ranks[0]
+
+        fiber = tensor.lower() + "_" + tensor_rank.lower()
 
         trace = "eager_" + fiber
         if is_read_trace:
@@ -318,7 +326,7 @@ class Collector:
         args: List[Argument] = [AJust(EString(trace))]
         if not is_read_trace:
             # We want to use the iteration number for the last loop rank
-            final_tensor = Tensor(output.root_name(), output.get_init_ranks())
+            final_tensor = Tensor(tensor, tensor_ir.get_init_ranks())
             self.program.apply_all_partitioning(final_tensor)
             self.program.get_loop_order().apply(final_tensor)
 
@@ -330,10 +338,8 @@ class Collector:
             return trace_stmt
 
         # If read, only read the first time
-        tensor_ir = self.program.get_equation().get_tensor(tensor)
-
+        evict_rank = self.metrics.get_eager_evict_on(tensor, tensor_rank)[-1]
         get_final = self.program.get_partitioning().get_final_rank_id
-        evict_rank = self.metrics.get_eager_evict_on(tensor, rank)[-1]
         er_ind = loop_ranks.index(get_final([evict_rank], evict_rank))
         tree_ind = loop_ranks.index(get_final([rank], rank))
 

@@ -146,7 +146,10 @@ class Metrics:
             if (tensor, rank) in evicts:
                 ranks.append(loop_rank)
 
-        ranks.sort(key=self.program.get_loop_order().get_ranks().index)
+        ranks.sort(
+            key=(
+                ["root"] +
+                self.program.get_loop_order().get_ranks()).index)
         return ranks
 
     def get_eager_evicts(self, rank: str) -> List[Tuple[str, str]]:
@@ -248,7 +251,8 @@ class Metrics:
                 component +
                 " not a memory")
 
-        inds = [i for i, (comp, _) in enumerate(path) if comp.get_name() == component]
+        inds = [i for i, (comp, _) in enumerate(
+            path) if comp.get_name() == component]
         if not inds:
             return None
 
