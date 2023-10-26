@@ -357,6 +357,41 @@ def test_dump_gamma_Z():
 
     assert collector.dump().gen(0) == hifiber
 
+def test_dump_outerspace_T0():
+    yaml = build_outerspace_yaml()
+    collector = build_collector(yaml, 0)
+
+    hifiber = "metrics = {}\n" + \
+        "metrics[\"T0\"] = {}\n" + \
+        "formats = {\"A\": Format(A_KM, {\"rank-order\": [\"K\", \"M\"], \"K\": {\"format\": \"U\", \"pbits\": 32}, \"M\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"B\": Format(B_KN, {\"rank-order\": [\"K\", \"N\"], \"K\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
+        "bindings = [{\"tensor\": \"B\", \"rank\": \"N\", \"type\": \"coord\", \"format\": \"default\"}, {\"tensor\": \"B\", \"rank\": \"N\", \"type\": \"payload\", \"format\": \"default\"}]\n" + \
+        "Traffic.filterTrace(\"tmp/outerspace_T0-N-populate_1.csv\", \"tmp/outerspace_T0-N-iter.csv\", \"tmp/outerspace_T0-N-populate_1_payload.csv\")\n" + \
+        "traces = {(\"B\", \"N\", \"coord\", \"read\"): \"tmp/outerspace_T0-N-populate_1.csv\", (\"B\", \"N\", \"payload\", \"read\"): \"tmp/outerspace_T0-N-populate_1_payload.csv\"}\n" + \
+        "traffic = Traffic.cacheTraffic(bindings, formats, traces, 131072, 64)\n" + \
+        "metrics[\"T0\"][\"MainMemory\"] = {}\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"B\"] = {}\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"B\"][\"read\"] = 0\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "bindings = [{\"tensor\": \"A\", \"rank\": \"K\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"A\", \"rank\": \"M\", \"type\": \"coord\", \"evict-on\": \"K\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"A\", \"rank\": \"M\", \"type\": \"payload\", \"evict-on\": \"K\", \"format\": \"default\", \"style\": \"lazy\"}, {\"tensor\": \"B\", \"rank\": \"K\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"default\", \"style\": \"lazy\"}]\n" + \
+        "Traffic.filterTrace(\"tmp/outerspace_T0-K-intersect_2.csv\", \"tmp/outerspace_T0-K-iter.csv\", \"tmp/outerspace_T0-K-intersect_2_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"tmp/outerspace_T0-M-populate_1.csv\", \"tmp/outerspace_T0-M-iter.csv\", \"tmp/outerspace_T0-M-populate_1_payload.csv\")\n" + \
+        "Traffic.filterTrace(\"tmp/outerspace_T0-K-intersect_3.csv\", \"tmp/outerspace_T0-K-iter.csv\", \"tmp/outerspace_T0-K-intersect_3_payload.csv\")\n" + \
+        "traces = {(\"A\", \"K\", \"payload\", \"read\"): \"tmp/outerspace_T0-K-intersect_2_payload.csv\", (\"A\", \"M\", \"coord\", \"read\"): \"tmp/outerspace_T0-M-populate_1.csv\", (\"A\", \"M\", \"payload\", \"read\"): \"tmp/outerspace_T0-M-populate_1_payload.csv\", (\"B\", \"K\", \"payload\", \"read\"): \"tmp/outerspace_T0-K-intersect_3_payload.csv\"}\n" + \
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 8192, 64)\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"A\"] = {}\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"A\"][\"read\"] = 0\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"A\"][\"read\"] += traffic[0][\"A\"][\"read\"]\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"B\"][\"read\"] += traffic[0][\"B\"][\"read\"]\n" + \
+        "metrics[\"T0\"][\"MainMemory\"][\"time\"] = (metrics[\"T0\"][\"MainMemory\"][\"A\"][\"read\"] + metrics[\"T0\"][\"MainMemory\"][\"B\"][\"read\"]) / 1099511627776\n" + \
+        "metrics[\"T0\"][\"FPMul\"] = {}\n" + \
+        "metrics[\"T0\"][\"FPMul\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
+        "metrics[\"T0\"][\"FPMul\"][\"time\"] = metrics[\"T0\"][\"FPMul\"][\"mul\"] / 385500000000"
+
+    # print(collector.dump().gen(0))
+    # assert False
+
+    assert collector.dump().gen(0) == hifiber
+
 
 def test_dump_outerspace_Z():
     yaml = build_outerspace_yaml()

@@ -248,7 +248,7 @@ class Metrics:
                 component +
                 " not a memory")
 
-        inds = [i for i, (comp, _) in enumerate(path) if comp == component_ir]
+        inds = [i for i, (comp, _) in enumerate(path) if comp.get_name() == component]
         if not inds:
             return None
 
