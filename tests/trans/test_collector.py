@@ -787,7 +787,7 @@ def test_make_loop_footer():
     assert collector.make_loop_footer("K0").gen(0) == hifiber
 
     hifiber = "K1Intersect_K1.addTraces(Metrics.consumeTrace(\"K1\", \"intersect_0\"), Metrics.consumeTrace(\"K1\", \"intersect_1\"))\n" + \
-        "z_k1.trace(\"eager_z_k1_write\", iteration_num=n0_iter_num)"
+        "z_m0.trace(\"eager_z_m0_write\", iteration_num=n0_iter_num)"
 
     assert collector.make_loop_footer("K1").gen(0) == hifiber
 
@@ -896,7 +896,7 @@ def test_make_loop_header_eager_root():
     collector = build_collector(yaml, 0)
     collector.start()
 
-    hifiber = "z_k.trace(\"eager_z_k_write\", iteration_num=m_iter_num)"
+    hifiber = "z_m.trace(\"eager_z_m_write\", iteration_num=m_iter_num)"
     assert collector.make_loop_footer("K").gen(0) == hifiber
 
 
@@ -1085,4 +1085,4 @@ def test_trace_tree():
     assert collector.trace_tree("A", "M0", True).gen(0) == hifiber
 
     hifiber = "z_m0.trace(\"eager_z_m0_write\", iteration_num=n0_iter_num)"
-    assert collector.trace_tree("Z", "M0", False).gen(0) == hifiber
+    assert collector.trace_tree("Z", "K1", False).gen(0) == hifiber

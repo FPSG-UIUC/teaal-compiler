@@ -293,6 +293,20 @@ class Collector:
         """
         Trace a subtree under the fiber specified
         """
+        loop_ranks = self.program.get_loop_order().get_ranks()
+        i = loop_ranks.index(rank)
+        output = self.program.get_equation().get_output()
+
+        # If this is a write trace and this is the current outer-most loop,
+        # then just use the outermost loop of the tensor
+        if not is_read_trace and i == 0:
+            rank = output.get_ranks()[0]
+
+        # Otherwise, get the rank of the current fiber
+        elif not is_read_trace and i > 0:
+            output_ranks = output.get_ranks()
+            rank = output_ranks[output_ranks.index(loop_ranks[i - 1]) + 1]
+
         fiber = tensor.lower() + "_" + rank.lower()
 
         trace = "eager_" + fiber
@@ -304,7 +318,6 @@ class Collector:
         args: List[Argument] = [AJust(EString(trace))]
         if not is_read_trace:
             # We want to use the iteration number for the last loop rank
-            output = self.program.get_equation().get_tensor(tensor)
             final_tensor = Tensor(output.root_name(), output.get_init_ranks())
             self.program.apply_all_partitioning(final_tensor)
             self.program.get_loop_order().apply(final_tensor)
@@ -317,7 +330,6 @@ class Collector:
             return trace_stmt
 
         # If read, only read the first time
-        loop_ranks = self.program.get_loop_order().get_ranks()
         tensor_ir = self.program.get_equation().get_tensor(tensor)
 
         get_final = self.program.get_partitioning().get_final_rank_id
