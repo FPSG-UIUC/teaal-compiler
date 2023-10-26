@@ -41,4 +41,6 @@ def test_integration():
         output = str(HiFiber(einsum, mapping))
 
         hifiber = read_hifiber(filename + ".py")
+        if output != hifiber:
+            print(output)
         assert output == hifiber, test_name + " integration test failed!"

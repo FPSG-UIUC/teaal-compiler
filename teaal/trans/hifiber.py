@@ -66,7 +66,7 @@ class HiFiber:
         self.format = format_
         if arch and bindings and arch.get_spec():
             self.hardware = Hardware(arch, bindings, self.program)
-            self.fusion = Fusion()
+            self.fusion = Fusion(self.hardware)
 
         self.trans_utils = TransUtils(self.program)
 
@@ -85,7 +85,7 @@ class HiFiber:
         self.metrics: Optional[Metrics] = None
         if self.hardware and self.format:
             self.metrics = Metrics(self.program, self.hardware, self.format)
-            self.fusion.add_einsum(self.program, self.metrics)
+            self.fusion.add_einsum(self.program)
 
         # Create the flow graph and get the relevant nodes
         flow_graph = FlowGraph(self.program, self.metrics, ["hoist"])
@@ -99,7 +99,7 @@ class HiFiber:
         self.eqn = Equation(self.program, self.metrics)
 
         if self.metrics:
-            self.collector = Collector(self.program, self.metrics)
+            self.collector = Collector(self.program, self.metrics, self.fusion)
 
         stmt = self.__trans_nodes(nodes)[1]
 

@@ -7,10 +7,10 @@ def test_component_get_name():
     component = Component("Test", 1, {}, {})
     assert component.get_name() == "Test"
 
+
 def test_component_get_num_instances():
     component = Component("Test", 5, {}, {})
     assert component.get_num_instances() == 5
-
 
 
 def test_component_eq():
@@ -319,7 +319,9 @@ def test_compute_component():
 def test_dram_component():
     bindings = {"Z": [{"tensor": "A", "rank": "M",
                        "type": "payload", "format": "default"}]}
-    dram = DRAMComponent("DRAM", 1, {"datawidth": 8, "bandwidth": 128}, bindings)
+    dram = DRAMComponent(
+        "DRAM", 1, {
+            "datawidth": 8, "bandwidth": 128}, bindings)
 
 
 def test_intersector_component_binding_errs():

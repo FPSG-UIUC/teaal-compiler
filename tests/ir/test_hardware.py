@@ -6,9 +6,11 @@ from teaal.ir.level import Level
 from teaal.ir.program import Program
 from teaal.parse import *
 
+
 def build_outerspace_yaml():
     with open("tests/integration/outerspace.yaml", "r") as f:
         return f.read()
+
 
 def parse_yamls(yaml):
     einsum = Einsum.from_str(yaml)
@@ -20,6 +22,7 @@ def parse_yamls(yaml):
     bindings = Bindings.from_str(yaml)
 
     return Hardware(arch, bindings, program)
+
 
 def test_no_arch():
     yaml = """
@@ -435,6 +438,7 @@ def test_get_components():
         "Z", FunctionalComponent) == [
         intersect, mac]
 
+
 def test_get_config():
     yaml = build_outerspace_yaml()
     hardware = parse_yamls(yaml)
@@ -442,6 +446,7 @@ def test_get_config():
     assert hardware.get_config("T0") == "MultiplyPhase"
     assert hardware.get_config("T1") == "MergePhase"
     assert hardware.get_config("Z") == "MergePhase"
+
 
 def test_get_frequency_unspecified():
     yaml = """
@@ -466,6 +471,8 @@ def test_get_frequency_unspecified():
     with pytest.raises(ValueError) as excinfo:
         hardware.get_frequency("Z")
     assert str(excinfo.value) == "Unspecified clock frequency for config accel"
+
+
 def test_get_frequency_bad():
     yaml = """
     einsum:
@@ -493,12 +500,12 @@ def test_get_frequency_bad():
     assert str(excinfo.value) == "Bad clock frequency for config accel"
 
 
-
 def test_get_frequency():
     yaml = build_outerspace_yaml()
     hardware = parse_yamls(yaml)
 
     assert hardware.get_frequency("Z") == 1500000000
+
 
 def test_get_traffic_path_multiple_bindings():
     yaml = """
@@ -763,7 +770,11 @@ def test_get_tree():
     pe = Level("PE", 8, {}, [regs, mac], [])
 
     mem_attrs = {"datawidth": 8, "bandwidth": 128}
-    mem = DRAMComponent("Memory", 1, mem_attrs, bindings.get_component("Memory"))
+    mem = DRAMComponent(
+        "Memory",
+        1,
+        mem_attrs,
+        bindings.get_component("Memory"))
     attrs = {"clock_frequency": 10 ** 9}
 
     tree = Level("System", 1, attrs, [mem], [pe])

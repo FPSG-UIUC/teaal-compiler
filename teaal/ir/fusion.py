@@ -27,18 +27,21 @@ Representation of the fusion schedule of this accelerator
 from typing import List, Optional, Set
 
 from teaal.ir.component import *
-from teaal.ir.metrics import Metrics
+from teaal.ir.hardware import Hardware
 from teaal.ir.program import Program
+
 
 class Fusion:
     """
     Representation of the fusion schedule of the accelerator
     """
 
-    def __init__(self) -> None:
+    def __init__(self, hardware: Hardware) -> None:
         """
         Construct a new fusion object
         """
+        self.hardware = hardware
+
         self.blocks: List[List[str]] = []
         self.curr_block: List[str] = []
         self.fused_ranks: List[str] = []
@@ -46,7 +49,9 @@ class Fusion:
         self.curr_config: Optional[str] = None
         self.components_used: Set[str] = set()
 
-    def add_einsum(self, program: Program, metrics: Metrics) -> None:
+        self.component_dict: Dict[str, List[str]] = {}
+
+    def add_einsum(self, program: Program) -> None:
         """
         Add the information corresponding to this Einsum
         """
@@ -55,11 +60,12 @@ class Fusion:
 
         spacetime = program.get_spacetime()
         if not spacetime:
-            raise ValueError("Undefined spacetime for einsum " + einsum)
+            raise ValueError("Undefined spacetime for Einsum " + einsum)
 
         space_ranks = spacetime.get_space()
 
-        # Get the temporal ranks in all loop orders before the first spatial rank
+        # Get the temporal ranks in all loop orders before the first spatial
+        # rank
         fused_ranks: List[str]
         if space_ranks:
             fused_ranks = loop_ranks[:loop_ranks.index(space_ranks[0])]
@@ -68,19 +74,17 @@ class Fusion:
 
         # Get the components used for this Einsum
         components_used = set()
-        for component in metrics.get_hardware().get_components(einsum, FunctionalComponent):
-            if einsum not in component.get_bindings().keys():
-                continue
-
+        for component in self.hardware.get_components(
+                einsum, FunctionalComponent):
             if component.get_bindings()[einsum]:
                 components_used.add(component.get_name())
 
         # Get the config
-        config = metrics.get_hardware().get_config(einsum)
-
+        config = self.hardware.get_config(einsum)
 
         # Check if the fusion conditions are met
-        if config == self.curr_config and fused_ranks == self.fused_ranks and not self.components_used.intersection(components_used):
+        if config == self.curr_config and fused_ranks == self.fused_ranks and not self.components_used.intersection(
+                components_used):
             self.curr_block.append(einsum)
             self.components_used = self.components_used.union(components_used)
 
@@ -91,8 +95,23 @@ class Fusion:
             self.fused_ranks = fused_ranks
             self.curr_config = config
 
+        # Prepare to record the components contributing to the exectuion time
+        self.component_dict[einsum] = []
+
+    def add_component(self, einsum: str, component: str) -> None:
+        """
+        Add a component whose time is being tracked
+        """
+        self.component_dict[einsum].append(component)
+
     def get_blocks(self) -> List[List[str]]:
         """
         Get the Einsums organized by their fusion blocks
         """
         return self.blocks
+
+    def get_components(self, einsum: str) -> List[str]:
+        """
+        Get the names of the components used for this Einsum
+        """
+        return self.component_dict[einsum]

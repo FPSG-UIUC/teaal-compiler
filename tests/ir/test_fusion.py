@@ -1,8 +1,10 @@
+import pytest
+
 from teaal.ir.fusion import Fusion
 from teaal.ir.hardware import Hardware
-from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.parse import *
+
 
 def make_yaml(spacetime, bindings):
     yaml = """
@@ -54,6 +56,7 @@ def make_yaml(spacetime, bindings):
 
     return yaml
 
+
 def parse_yamls(yaml):
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
@@ -67,6 +70,30 @@ def parse_yamls(yaml):
     format_ = Format.from_str(yaml)
 
     return program, hardware, format_
+
+
+def test_no_spacetime():
+    spacetime = ""
+    bindings = """
+      T:
+      - config: configA
+        prefix: tmp/T
+      Z:
+      - config: configB
+        prefix: tmp/Z
+    """
+    yaml = make_yaml(spacetime, bindings)
+
+    program, hardware, format_ = parse_yamls(yaml)
+    fusion = Fusion(hardware)
+
+    program.add_einsum(0)
+
+    with pytest.raises(ValueError) as excinfo:
+        fusion.add_einsum(program)
+    assert str(
+        excinfo.value) == "Undefined spacetime for Einsum T"
+
 
 def test_add_einsum_diff_configs():
     spacetime = """
@@ -89,17 +116,16 @@ def test_add_einsum_diff_configs():
     yaml = make_yaml(spacetime, bindings)
 
     program, hardware, format_ = parse_yamls(yaml)
-    fusion = Fusion()
+    fusion = Fusion(hardware)
 
     program.add_einsum(0)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     program.add_einsum(1)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     assert fusion.get_blocks() == [["T"], ["Z"]]
+
 
 def test_add_einsum_diff_temporal_ranks():
     spacetime = """
@@ -122,17 +148,16 @@ def test_add_einsum_diff_temporal_ranks():
     yaml = make_yaml(spacetime, bindings)
 
     program, hardware, format_ = parse_yamls(yaml)
-    fusion = Fusion()
+    fusion = Fusion(hardware)
 
     program.add_einsum(0)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     program.add_einsum(1)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     assert fusion.get_blocks() == [["T"], ["Z"]]
+
 
 def test_add_einsum_diff_temporal_ranks():
     spacetime = """
@@ -155,17 +180,16 @@ def test_add_einsum_diff_temporal_ranks():
     yaml = make_yaml(spacetime, bindings)
 
     program, hardware, format_ = parse_yamls(yaml)
-    fusion = Fusion()
+    fusion = Fusion(hardware)
 
     program.add_einsum(0)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     program.add_einsum(1)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     assert fusion.get_blocks() == [["T"], ["Z"]]
+
 
 def test_add_einsum_overlapping_components():
     spacetime = """
@@ -194,17 +218,16 @@ def test_add_einsum_overlapping_components():
     yaml = make_yaml(spacetime, bindings)
 
     program, hardware, format_ = parse_yamls(yaml)
-    fusion = Fusion()
+    fusion = Fusion(hardware)
 
     program.add_einsum(0)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     program.add_einsum(1)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     assert fusion.get_blocks() == [["T"], ["Z"]]
+
 
 def test_add_einsum_fused():
     spacetime = """
@@ -233,14 +256,49 @@ def test_add_einsum_fused():
     yaml = make_yaml(spacetime, bindings)
 
     program, hardware, format_ = parse_yamls(yaml)
-    fusion = Fusion()
+    fusion = Fusion(hardware)
 
     program.add_einsum(0)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     program.add_einsum(1)
-    metrics = Metrics(program, hardware, format_)
-    fusion.add_einsum(program, metrics)
+    fusion.add_einsum(program)
 
     assert fusion.get_blocks() == [["T", "Z"]]
+
+
+def test_add_components():
+    spacetime = """
+        T:
+          space: [N]
+          time: [M, K]
+        Z:
+          space: [N]
+          time: [M, K]
+    """
+
+    bindings = """
+      T:
+      - config: configA
+        prefix: tmp/T
+      - component: FPMul0
+        bindings:
+        - op: mul
+      - component: FPMul1
+        bindings:
+        - op: mul
+      Z:
+      - config: configA
+        prefix: tmp/Z
+    """
+    yaml = make_yaml(spacetime, bindings)
+
+    program, hardware, format_ = parse_yamls(yaml)
+    fusion = Fusion(hardware)
+
+    program.add_einsum(0)
+    fusion.add_einsum(program)
+    fusion.add_component("T", "FPMul0")
+    fusion.add_component("T", "FPMul1")
+
+    assert fusion.get_components("T") == ["FPMul0", "FPMul1"]

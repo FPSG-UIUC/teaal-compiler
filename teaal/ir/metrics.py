@@ -490,7 +490,6 @@ class Metrics:
             # Build the set of specs to collect
             einsum = self.program.get_equation().get_output().root_name()
 
-            # TODO: What about eager binding?
             for format_ in self.format_options[tensor]:
                 for rank in spec[format_]:
                     if rank == "rank-order":

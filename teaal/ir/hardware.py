@@ -109,10 +109,14 @@ class Hardware:
         freq = top_level.get_attr("clock_frequency")
 
         if freq is None:
-            raise ValueError("Unspecified clock frequency for config " + self.configs[einsum])
+            raise ValueError(
+                "Unspecified clock frequency for config " +
+                self.configs[einsum])
 
         if isinstance(freq, str):
-            raise ValueError("Bad clock frequency for config " + self.configs[einsum])
+            raise ValueError(
+                "Bad clock frequency for config " +
+                self.configs[einsum])
 
         return freq
 

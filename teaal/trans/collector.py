@@ -26,6 +26,7 @@ Translate the metrics collection
 
 from teaal.hifiber import *
 from teaal.ir.component import *
+from teaal.ir.fusion import Fusion
 from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
 from teaal.ir.tensor import Tensor
@@ -37,12 +38,17 @@ class Collector:
     Translate the metrics collection
     """
 
-    def __init__(self, program: Program, metrics: Metrics) -> None:
+    def __init__(
+            self,
+            program: Program,
+            metrics: Metrics,
+            fusion: Fusion) -> None:
         """
         Construct a collector object
         """
         self.program = program
         self.metrics = metrics
+        self.fusion = fusion
 
         # tree_traces: Optional[Dict[rank, Dict[is_read, Set[tensor]]]]
         self.tree_traces: Optional[Dict[str, Dict[bool, Set[str]]]] = None
@@ -121,6 +127,11 @@ class Collector:
 
         # Track the sequences
         block.add(self.__build_sequencers())
+
+        # Add the final execution time modeling
+        num_einsums = len(self.program.get_all_einsums())
+        if self.program.get_einsum_ind() + 1 == num_einsums:
+            block.add(self.__build_time())
 
         return block
 
@@ -435,12 +446,13 @@ class Collector:
             assert len(ops) == 1
 
             # op_freq = cycles / s * ops / cycle
-            op_freq = self.metrics.get_hardware().get_frequency(einsum) * fu.get_num_instances()
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * \
+                fu.get_num_instances()
             time = EBinOp(EAccess(metrics_fu, ops[0]), ODiv(), EInt(op_freq))
 
             metrics_time = AAccess(metrics_fu, EString("time"))
             block.add(SAssign(metrics_time, time))
-
+            self.fusion.add_component(einsum, fu.get_name())
 
         return block
 
@@ -535,12 +547,14 @@ class Collector:
                 block.add(SIAssign(metrics_isect, OAdd(), isects))
 
             # op_freq = cycles / s * ops / cycle
-            op_freq = self.metrics.get_hardware().get_frequency(einsum) * intersector.get_num_instances()
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * \
+                intersector.get_num_instances()
             metrics_isect_expr = EAccess(metrics_einsum, EString(isect_name))
             time = EBinOp(metrics_isect_expr, ODiv(), EInt(op_freq))
 
             metrics_time = AAccess(metrics_isect_expr, EString("time"))
             block.add(SAssign(metrics_time, time))
+            self.fusion.add_component(einsum, intersector.get_name())
 
         return block
 
@@ -633,11 +647,18 @@ class Collector:
             assert len(tensors) == 1
 
             # op_freq = cycles / s * ops / cycle
-            op_freq = self.metrics.get_hardware().get_frequency(einsum) * merger.get_num_instances()
-            time = EBinOp(EAccess(metrics_merger, tensors[0]), ODiv(), EInt(op_freq))
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * \
+                merger.get_num_instances()
+            time = EBinOp(
+                EAccess(
+                    metrics_merger,
+                    tensors[0]),
+                ODiv(),
+                EInt(op_freq))
 
             metrics_time = AAccess(metrics_merger, EString("time"))
             block.add(SAssign(metrics_time, time))
+            self.fusion.add_component(einsum, merger.get_name())
 
         return block
 
@@ -678,14 +699,72 @@ class Collector:
 
             assert steps is not None
 
-            op_freq = self.metrics.get_hardware().get_frequency(einsum) * seq.get_num_instances()
+            op_freq = self.metrics.get_hardware().get_frequency(einsum) * \
+                seq.get_num_instances()
             time = EBinOp(EParens(steps), ODiv(), EInt(op_freq))
 
             metrics_time = AAccess(seq_expr, EString("time"))
             block.add(SAssign(metrics_time, time))
-            print(SAssign(metrics_time, time).gen(0))
+            self.fusion.add_component(einsum, seq.get_name())
 
         return block
+
+    def __build_time(self) -> Statement:
+        """
+        Add the code necessary to compute the final execution time
+        """
+        sblock = SBlock([])
+
+        # Save the Einsum blocks
+        metrics = EVar("metrics")
+        blocks = TransUtils.build_expr(self.fusion.get_blocks())
+        sblock.add(SAssign(AAccess(metrics, EString("blocks")), blocks))
+
+        # Compute the execution time
+        time: Optional[Expression] = None
+        for block in self.fusion.get_blocks():
+
+            # Collect up the statistics for the block
+            component_time: Dict[str, Expression] = {}
+            for einsum in block:
+                metrics_einsum = EAccess(metrics, EString(einsum))
+                for comp in self.fusion.get_components(einsum):
+                    new_time = EAccess(
+                        EAccess(
+                            metrics_einsum,
+                            EString(comp)),
+                        EString("time"))
+
+                    if comp in component_time:
+                        component_time[comp] = EBinOp(
+                            component_time[comp], OAdd(), new_time)
+                    else:
+                        component_time[comp] = new_time
+
+            # Sort components to enable testing
+            comps = sorted(component_time.keys())
+
+            # Compute block time by taking the max
+            block_time: Expression
+            if len(comps) == 0:
+                block_time = EInt(0)
+            elif len(comps) == 1:
+                block_time = component_time[comp]
+            else:
+                comp_args = [AJust(component_time[comp]) for comp in comps]
+                block_time = EFunc("max", comp_args)
+
+            # The execution time is the sum of all of the blocks
+            if time:
+                time = EBinOp(time, OAdd(), block_time)
+            else:
+                time = block_time
+
+        assert time is not None
+
+        sblock.add(SAssign(AAccess(metrics, EString("time")), time))
+
+        return sblock
 
     def __build_trace_ranks(self) -> Tuple[Statement, bool]:
         """
@@ -981,16 +1060,18 @@ class Collector:
             bits: Optional[Expression] = None
             metrics_src = EAccess(metrics_einsum, EString(src))
 
-            # Note: not technically necessary, just to make the testing deterministic
-            sorted_tensors = list(tensors)
-            sorted_tensors.sort()
+            # Note: not technically necessary, just to make the testing
+            # deterministic
+            sorted_tensors = sorted(tensors)
 
             for tensor in sorted_tensors:
                 metrics_tensor = EAccess(metrics_src, EString(tensor))
                 new_bits: Expression = EAccess(metrics_tensor, EString("read"))
 
                 if tensor == einsum:
-                    new_bits = EBinOp(new_bits, OAdd(), EAccess(metrics_tensor, EString("write")))
+                    new_bits = EBinOp(
+                        new_bits, OAdd(), EAccess(
+                            metrics_tensor, EString("write")))
 
                 if bits:
                     bits = EBinOp(bits, OAdd(), new_bits)
@@ -1006,9 +1087,15 @@ class Collector:
 
             metrics_time = AAccess(metrics_src, EString("time"))
             # Note: the current model assumes perfect load balance
-            time = EBinOp(bits, ODiv(), EInt(component.get_bandwidth() * component.get_num_instances()))
+            time = EBinOp(
+                bits,
+                ODiv(),
+                EInt(
+                    component.get_bandwidth() *
+                    component.get_num_instances()))
 
             block.add(SAssign(metrics_time, time))
+            self.fusion.add_component(einsum, src)
 
         return block
 

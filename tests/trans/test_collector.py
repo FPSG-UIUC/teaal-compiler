@@ -1,5 +1,6 @@
 import pytest
 
+from teaal.ir.fusion import Fusion
 from teaal.ir.hardware import Hardware
 from teaal.ir.metrics import Metrics
 from teaal.ir.program import Program
@@ -45,7 +46,22 @@ def build_collector(yaml, i):
 
     program.add_einsum(i)
     metrics = Metrics(program, hardware, format_)
-    return Collector(program, metrics)
+    fusion = Fusion(hardware)
+    fusion.add_einsum(program)
+    return Collector(program, metrics, fusion)
+
+
+def add_einsum(collector, i):
+    program = collector.program
+    hardware = collector.metrics.hardware
+    format_ = collector.metrics.format
+    fusion = collector.fusion
+
+    program.reset()
+    program.add_einsum(i)
+    metrics = Metrics(program, hardware, format_)
+    fusion.add_einsum(program)
+    return Collector(program, metrics, fusion)
 
 
 def check_hifiber_lines(gen_lines, corr_lines):
@@ -74,6 +90,11 @@ def test_create_component_unknown():
         B: [K]
       expressions:
       - Z[] = A[k] * B[k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [K]
     architecture:
       accel:
       - name: level0
@@ -108,6 +129,11 @@ def test_create_component():
         B: [I, J, K]
       expressions:
       - Z[] = A[i, j, k] * B[i, j, k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [I, J, K]
     architecture:
       accel:
       - name: level0
@@ -164,6 +190,11 @@ def test_consume_traces_unknown():
         B: [K]
       expressions:
       - Z[] = A[k] * B[k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [K]
     architecture:
       accel:
       - name: level0
@@ -197,6 +228,11 @@ def test_consume_traces():
         B: [I, J, K]
       expressions:
       - Z[] = A[i, j, k] * B[i, j, k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [I, J, K]
     architecture:
       accel:
       - name: level0
@@ -277,7 +313,10 @@ def test_dump_gamma_T():
 
 def test_dump_gamma_Z():
     yaml = build_gamma_yaml()
-    collector = build_collector(yaml, 1)
+    collector = build_collector(yaml, 0)
+    collector.dump()
+
+    collector = add_einsum(collector, 1)
 
     hifiber = "metrics[\"Z\"] = {}\n" + \
         "formats = {\"Z\": Format(Z_MN, {\"rank-order\": [\"M\", \"N\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}}), \"A\": Format(A_MK, {\"rank-order\": [\"M\", \"K\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"K\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
@@ -308,7 +347,9 @@ def test_dump_gamma_Z():
         "metrics[\"Z\"][\"FPMul\"][\"time\"] = metrics[\"Z\"][\"FPMul\"][\"mul\"] / 32000000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
-        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 32000000000"
+        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 32000000000\n" + \
+        "metrics[\"blocks\"] = [[\"T\", \"Z\"]]\n" + \
+        "metrics[\"time\"] = max(metrics[\"Z\"][\"FPAdd\"][\"time\"], metrics[\"Z\"][\"FPMul\"][\"time\"], metrics[\"Z\"][\"HighRadixMerger\"][\"time\"], metrics[\"T\"][\"Intersect\"][\"time\"], metrics[\"T\"][\"MainMemory\"][\"time\"] + metrics[\"Z\"][\"MainMemory\"][\"time\"])"
 
     # print(collector.dump().gen(0))
     # assert False
@@ -318,7 +359,13 @@ def test_dump_gamma_Z():
 
 def test_dump_outerspace_Z():
     yaml = build_outerspace_yaml()
-    collector = build_collector(yaml, 2)
+    collector = build_collector(yaml, 0)
+    collector.dump()
+
+    collector = add_einsum(collector, 1)
+    collector.dump()
+
+    collector = add_einsum(collector, 2)
 
     hifiber = "metrics[\"Z\"] = {}\n" + \
         "formats = {\"Z\": Format(Z_MN, {\"rank-order\": [\"M\", \"N\"], \"M\": {\"format\": \"U\", \"pbits\": 32}, \"N\": {\"format\": \"C\", \"cbits\": 32, \"pbits\": 64}})}\n" + \
@@ -341,7 +388,9 @@ def test_dump_outerspace_Z():
         "metrics[\"Z\"][\"SortHW\"][\"time\"] = metrics[\"Z\"][\"SortHW\"][T1_MKN] / 193500000000\n" + \
         "metrics[\"Z\"][\"FPAdd\"] = {}\n" + \
         "metrics[\"Z\"][\"FPAdd\"][\"add\"] = Metrics.dump()[\"Compute\"][\"payload_add\"]\n" + \
-        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 193500000000"
+        "metrics[\"Z\"][\"FPAdd\"][\"time\"] = metrics[\"Z\"][\"FPAdd\"][\"add\"] / 193500000000\n" + \
+        "metrics[\"blocks\"] = [[\"T0\"], [\"T1\", \"Z\"]]\n" + \
+        "metrics[\"time\"] = max(metrics[\"T0\"][\"FPMul\"][\"time\"], metrics[\"T0\"][\"MainMemory\"][\"time\"]) + max(metrics[\"Z\"][\"FPAdd\"][\"time\"], metrics[\"T1\"][\"MainMemory\"][\"time\"] + metrics[\"Z\"][\"MainMemory\"][\"time\"], metrics[\"Z\"][\"SortHW\"][\"time\"])"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -385,8 +434,9 @@ def test_dump_extensor():
         "metrics[\"Z\"][\"K1Intersect\"][\"time\"] = metrics[\"Z\"][\"K1Intersect\"] / 1000000000\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] = 0\n" + \
         "metrics[\"Z\"][\"K0Intersection\"] += K0Intersection_K0.getNumIntersects()\n" + \
-        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"] / 128000000000"
-
+        "metrics[\"Z\"][\"K0Intersection\"][\"time\"] = metrics[\"Z\"][\"K0Intersection\"] / 128000000000\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = max(metrics[\"Z\"][\"FPAdd\"][\"time\"], metrics[\"Z\"][\"FPMul\"][\"time\"], metrics[\"Z\"][\"K0Intersection\"][\"time\"], metrics[\"Z\"][\"K1Intersect\"][\"time\"], metrics[\"Z\"][\"K2Intersect\"][\"time\"], metrics[\"Z\"][\"MainMemory\"][\"time\"])"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -461,8 +511,9 @@ def test_dump_extensor_energy():
         "metrics[\"Z\"][\"BottomSequencer\"][\"M0\"] = Compute.numIters(\"tmp/extensor_energy-M0-iter.csv\")\n" + \
         "metrics[\"Z\"][\"BottomSequencer\"][\"N0\"] = Compute.numIters(\"tmp/extensor_energy-N0-iter.csv\")\n" + \
         "metrics[\"Z\"][\"BottomSequencer\"][\"K0\"] = Compute.numIters(\"tmp/extensor_energy-K0-iter.csv\")\n" + \
-        "metrics[\"Z\"][\"BottomSequencer\"][\"time\"] = (metrics[\"Z\"][\"BottomSequencer\"][\"M0\"] + metrics[\"Z\"][\"BottomSequencer\"][\"N0\"] + metrics[\"Z\"][\"BottomSequencer\"][\"K0\"]) / 128000000000"
-
+        "metrics[\"Z\"][\"BottomSequencer\"][\"time\"] = (metrics[\"Z\"][\"BottomSequencer\"][\"M0\"] + metrics[\"Z\"][\"BottomSequencer\"][\"N0\"] + metrics[\"Z\"][\"BottomSequencer\"][\"K0\"]) / 128000000000\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = max(metrics[\"Z\"][\"BottomSequencer\"][\"time\"], metrics[\"Z\"][\"FPAdd\"][\"time\"], metrics[\"Z\"][\"FPMul\"][\"time\"], metrics[\"Z\"][\"K0Intersection\"][\"time\"], metrics[\"Z\"][\"K1Intersect\"][\"time\"], metrics[\"Z\"][\"K2Intersect\"][\"time\"], metrics[\"Z\"][\"LLB\"][\"time\"], metrics[\"Z\"][\"MainMemory\"][\"time\"], metrics[\"Z\"][\"MiddleSequencer\"][\"time\"], metrics[\"Z\"][\"TopSequencer\"][\"time\"])"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -490,7 +541,9 @@ def test_dump_sigma():
         "metrics[\"Z\"][\"DataSRAMBanks\"][\"time\"] = (metrics[\"Z\"][\"DataSRAMBanks\"][\"A\"][\"read\"] + metrics[\"Z\"][\"DataSRAMBanks\"][\"B\"][\"read\"]) / 8246337208320\n" + \
         "metrics[\"Z\"][\"Multiplier\"] = {}\n" + \
         "metrics[\"Z\"][\"Multiplier\"][\"mul\"] = Metrics.dump()[\"Compute\"][\"payload_mul\"]\n" + \
-        "metrics[\"Z\"][\"Multiplier\"][\"time\"] = metrics[\"Z\"][\"Multiplier\"][\"mul\"] / 8192000000000"
+        "metrics[\"Z\"][\"Multiplier\"][\"time\"] = metrics[\"Z\"][\"Multiplier\"][\"mul\"] / 8192000000000\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = max(metrics[\"Z\"][\"DataSRAMBanks\"][\"time\"], metrics[\"Z\"][\"Multiplier\"][\"time\"])"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -507,6 +560,10 @@ def test_dump_new_flattened_tensor_for_format():
       partitioning:
         Z:
           (K, M): [flatten()]
+      spacetime:
+        Z:
+          space: []
+          time: [KM]
     architecture:
       accel:
       - name: level0
@@ -543,7 +600,9 @@ def test_dump_new_flattened_tensor_for_format():
         "bindings = [{\"tensor\": \"A\", \"rank\": \"KM\", \"type\": \"payload\", \"evict-on\": \"root\", \"format\": \"default\", \"style\": \"lazy\"}]\n" + \
         "Traffic.filterTrace(\"tmp/Z-KM-populate_1.csv\", \"tmp/Z-KM-iter.csv\", \"tmp/Z-KM-populate_1_payload.csv\")\n" + \
         "traces = {(\"A\", \"KM\", \"payload\", \"read\"): \"tmp/Z-KM-populate_1_payload.csv\"}\n" + \
-        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 65536, 64)"
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 65536, 64)\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = 0"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -556,6 +615,11 @@ def test_dump_skip_zero_bits():
         A: [K, M]
       expressions:
         - Z[k, m] = A[k, m]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [K, M]
     architecture:
       accel:
       - name: level0
@@ -610,7 +674,9 @@ def test_dump_skip_zero_bits():
         "formats = {\"Z\": Format(Z_KM, {\"rank-order\": [\"K\", \"M\"], \"K\": {\"format\": \"C\", \"cbits\": 0}, \"M\": {\"format\": \"C\", \"pbits\": 32}}), \"A\": Format(A_KM, {\"rank-order\": [\"K\", \"M\"], \"K\": {\"format\": \"C\", \"pbits\": 0}, \"M\": {\"format\": \"C\", \"pbits\": 32}})}\n" + \
         "bindings = [{\"tensor\": \"Z\", \"evict-on\": \"root\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"K\", \"rank\": \"M\", \"type\": \"payload\"}, {\"tensor\": \"A\", \"evict-on\": \"root\", \"style\": \"eager\", \"format\": \"default\", \"root\": \"K\", \"rank\": \"M\", \"type\": \"payload\"}]\n" + \
         "traces = {(\"Z\", \"M\", \"payload\", \"read\"): \"tmp/Z-M-eager_z_k_read.csv\", (\"Z\", \"M\", \"payload\", \"write\"): \"tmp/Z-M-eager_z_k_write.csv\", (\"A\", \"M\", \"payload\", \"read\"): \"tmp/Z-M-eager_a_k_read.csv\"}\n" + \
-        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 65536, 64)"
+        "traffic = Traffic.buffetTraffic(bindings, formats, traces, 65536, 64)\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = 0"
 
     assert collector.dump().gen(0) == hifiber
 
@@ -638,6 +704,11 @@ def test_make_body_iter_num():
         A: [K, M]
       expressions:
         - Z[k, m] = A[k, m]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [K, M]
     architecture:
       accel:
       - name: level0
@@ -760,7 +831,6 @@ def test_make_loop_header():
     assert collector.make_loop_header("M0").gen(
         0) in {hifiber_option1, hifiber_option2}
 
-# TODO: Actually compute the exectution time in TeAAL
 # TODO: Multiply buffer size by number of instances
 
 
@@ -775,6 +845,10 @@ def test_make_loop_header_eager_root():
     mapping:
       loop-order:
         Z: [K, M]
+      spacetime:
+        Z:
+          space: []
+          time: [K, M]
     format:
       Z:
         default:

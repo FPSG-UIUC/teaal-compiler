@@ -581,9 +581,16 @@ def test_hifiber_traffic():
         Z: [M]
       expressions:
       - Z[m] = A[k, m] * B[k, m] * C[k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [M, K]
     architecture:
       accel:
       - name: level0
+        attributes:
+          clock_frequency: 2048
         local:
         - name: DRAM
           class: DRAM
@@ -653,7 +660,10 @@ def test_hifiber_traffic():
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] = 0\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] = 0\n" + \
         "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] += traffic[0][\"Z\"][\"read\"]\n" + \
-        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]"
+        "metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"] += traffic[0][\"Z\"][\"write\"]\n" + \
+        "metrics[\"Z\"][\"DRAM\"][\"time\"] = (metrics[\"Z\"][\"DRAM\"][\"Z\"][\"read\"] + metrics[\"Z\"][\"DRAM\"][\"Z\"][\"write\"]) / 512\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = metrics[\"Z\"][\"DRAM\"][\"time\"]"
 
     assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
 
@@ -667,9 +677,16 @@ def test_hifiber_intersect():
         B: [I, J, K]
       expressions:
       - Z[] = A[i, j, k] * B[i, j, k]
+    mapping:
+      spacetime:
+        Z:
+          space: []
+          time: [I, J, K]
     architecture:
       accel:
       - name: level0
+        attributes:
+          clock_frequency: 2048
         local:
         - name: TF
           class: Intersector
@@ -712,7 +729,10 @@ def test_hifiber_intersect():
         "metrics[\"Z\"] = {}\n" + \
         "formats = {}\n" + \
         "metrics[\"Z\"][\"TF\"] = 0\n" + \
-        "metrics[\"Z\"][\"TF\"] += TF_K.getNumIntersects()"
+        "metrics[\"Z\"][\"TF\"] += TF_K.getNumIntersects()\n" + \
+        "metrics[\"Z\"][\"TF\"][\"time\"] = metrics[\"Z\"][\"TF\"] / 2048\n" + \
+        "metrics[\"blocks\"] = [[\"Z\"]]\n" + \
+        "metrics[\"time\"] = metrics[\"Z\"][\"TF\"][\"time\"]"
 
     assert str(HiFiber(einsum, mapping, arch, bindings, format_)) == hifiber
 
