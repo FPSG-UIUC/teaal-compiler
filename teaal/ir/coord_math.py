@@ -28,7 +28,7 @@ from functools import reduce
 
 from lark.lexer import Token
 from lark.tree import Tree
-from sympy import Basic, solve, Symbol
+from sympy import Basic, solve, Symbol # type: ignore
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 
 from teaal.ir.tensor import Tensor

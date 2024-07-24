@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the header above the HiFiber loop nest
 """
 
-from sympy import Symbol
+from sympy import Symbol # type: ignore
 from typing import Iterable, Optional, Set
 
 from teaal.hifiber import *

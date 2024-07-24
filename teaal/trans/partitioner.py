@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the partitiong specification
 """
 from lark.tree import Tree
-from sympy import Add, Basic, Expr, Mul, Number, Symbol
+from sympy import Add, Basic, Expr, Mul, Number, Symbol # type: ignore
 from typing import cast, List, Optional, Set, Tuple, Union
 
 from teaal.hifiber import *

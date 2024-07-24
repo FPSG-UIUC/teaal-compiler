@@ -27,7 +27,7 @@ Intermediate representation of the loop order information
 from itertools import chain
 
 from lark.tree import Tree
-from sympy import Basic, Symbol
+from sympy import Basic, Symbol # type: ignore
 from typing import Any, cast, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.coord_math import CoordMath

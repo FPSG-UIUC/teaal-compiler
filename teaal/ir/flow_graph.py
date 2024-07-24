@@ -26,7 +26,7 @@ Representation of the control-dataflow graph of the program
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-from sympy import Symbol
+from sympy import Symbol # type: ignore
 from typing import cast, Dict, List, Optional, Tuple
 
 from teaal.ir.component import *

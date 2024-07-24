@@ -25,7 +25,7 @@ Translate the canvas spacetime information
 """
 from copy import deepcopy
 
-from sympy import Symbol
+from sympy import Symbol # type: ignore
 from typing import List, Optional
 
 from teaal.hifiber import *
