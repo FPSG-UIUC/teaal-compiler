@@ -6,7 +6,7 @@ def test_translate_no_loops():
     einsum = Einsum.from_file("tests/integration/test_translate_no_loops.yaml")
     mapping = Mapping.from_file(
         "tests/integration/test_translate_no_loops.yaml")
-    hifiber = "A_ = Tensor(rank_ids=[])\n" + \
+    hifiber = "A_ = Tensor(rank_ids=[], name=\"A\")\n" + \
         "a_ref = A_.getRoot()\n" + \
         "a_ref += b"
     assert str(HiFiber(einsum, mapping)) == hifiber
@@ -16,7 +16,7 @@ def test_translate_defaults():
     einsum = Einsum.from_file("tests/integration/test_input_no_mapping.yaml")
     mapping = Mapping.from_file(
         "tests/integration/test_input_no_mapping.yaml")
-    hifiber = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+    hifiber = "T1_MN = Tensor(rank_ids=[\"M\", \"N\"], name=\"T1\")\n" + \
         "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
         "B_NK = B_KN.swizzleRanks(rank_ids=[\"N\", \"K\"])\n" + \
         "t1_m = T1_MN.getRoot()\n" + \
@@ -26,7 +26,7 @@ def test_translate_defaults():
         "    for n, (t1_ref, b_k) in t1_n << b_n:\n" + \
         "        for k, (a_val, b_val) in a_k & b_k:\n" + \
         "            t1_ref += a_val * b_val\n" + \
-        "Z_MN = Tensor(rank_ids=[\"M\", \"N\"])\n" + \
+        "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], name=\"Z\")\n" + \
         "z_m = Z_MN.getRoot()\n" + \
         "t1_m = T1_MN.getRoot()\n" + \
         "c_m = C_MN.getRoot()\n" + \
@@ -41,7 +41,7 @@ def test_translate_specified():
     einsum = Einsum.from_file("tests/integration/test_input.yaml")
     mapping = Mapping.from_file("tests/integration/test_input.yaml")
 
-    hifiber_option1 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+    hifiber_option1 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"], name=\"T1\")\n" + \
         "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
         "canvas = createCanvas(A_KM, B_KN, T1_NM)\n" + \
         "t1_n = T1_NM.getRoot()\n" + \
@@ -56,7 +56,7 @@ def test_translate_specified():
         "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
         "T1_MN = tmp1\n" + \
         "displayCanvas(canvas)\n" + \
-        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"], name=\"T1\")\n" + \
         "tmp2 = T1_MN\n" + \
         "tmp3 = tmp2.splitUniform(6, depth=1)\n" + \
         "tmp4 = tmp3.splitUniform(3, depth=2)\n" + \
@@ -96,7 +96,7 @@ def test_translate_specified():
         "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
         "Z_NM = tmp17"
 
-    hifiber_option2 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+    hifiber_option2 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"], name=\"T1\")\n" + \
         "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
         "canvas = createCanvas(A_KM, B_KN, T1_NM)\n" + \
         "t1_n = T1_NM.getRoot()\n" + \
@@ -111,7 +111,7 @@ def test_translate_specified():
         "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
         "T1_MN = tmp1\n" + \
         "displayCanvas(canvas)\n" + \
-        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"], name=\"Z\")\n" + \
         "tmp2 = T1_MN\n" + \
         "tmp3 = tmp2.splitUniform(4, depth=0)\n" + \
         "tmp4 = tmp3.splitUniform(2, depth=1)\n" + \
@@ -151,7 +151,7 @@ def test_translate_specified():
         "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
         "Z_NM = tmp17"
 
-    hifiber_option3 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+    hifiber_option3 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"], name=\"T1\")\n" + \
         "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
         "t1_n = T1_NM.getRoot()\n" + \
         "a_k = A_KM.getRoot()\n" + \
@@ -166,7 +166,7 @@ def test_translate_specified():
         "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
         "T1_MN = tmp1\n" + \
         "displayCanvas(canvas)\n" + \
-        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"], name=\"Z\")\n" + \
         "tmp2 = T1_MN\n" + \
         "tmp3 = tmp2.splitUniform(4, depth=0)\n" + \
         "tmp4 = tmp3.splitUniform(2, depth=1)\n" + \
@@ -206,7 +206,7 @@ def test_translate_specified():
         "tmp17.setRankIds(rank_ids=[\"N\", \"M\"])\n" + \
         "Z_NM = tmp17"
 
-    hifiber_option4 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+    hifiber_option4 = "T1_NM = Tensor(rank_ids=[\"N\", \"M\"], name=\"T1\")\n" + \
         "A_KM = A_MK.swizzleRanks(rank_ids=[\"K\", \"M\"])\n" + \
         "t1_n = T1_NM.getRoot()\n" + \
         "a_k = A_KM.getRoot()\n" + \
@@ -221,7 +221,7 @@ def test_translate_specified():
         "tmp1 = tmp0.swizzleRanks(rank_ids=[\"M\", \"N\"])\n" + \
         "T1_MN = tmp1\n" + \
         "displayCanvas(canvas)\n" + \
-        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"])\n" + \
+        "Z_M2N2M1N1M0N0 = Tensor(rank_ids=[\"M2\", \"N2\", \"M1\", \"N1\", \"M0\", \"N0\"], name=\"Z\")\n" + \
         "tmp2 = T1_MN\n" + \
         "tmp3 = tmp2.splitUniform(6, depth=1)\n" + \
         "tmp4 = tmp3.splitUniform(3, depth=2)\n" + \
@@ -290,7 +290,7 @@ def test_hifiber_dyn_part():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "Z_MN1N0 = Tensor(rank_ids=[\"M\", \"N1\", \"N0\"])\n" + \
+    hifiber = "Z_MN1N0 = Tensor(rank_ids=[\"M\", \"N1\", \"N0\"], name=\"Z\")\n" + \
         "z_m = Z_MN1N0.getRoot()\n" + \
         "a_k = A_KM.getRoot()\n" + \
         "b_k = B_KN.getRoot()\n" + \
@@ -361,7 +361,7 @@ def test_hifiber_index_math_no_halo():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "Z_M2M1M0 = Tensor(rank_ids=[\"M2\", \"M1\", \"M0\"])\n" + \
+    hifiber = "Z_M2M1M0 = Tensor(rank_ids=[\"M2\", \"M1\", \"M0\"], name=\"Z\")\n" + \
         "tmp0 = A_K\n" + \
         "tmp1 = tmp0.splitUniform(2 * 10, depth=0)\n" + \
         "tmp2 = tmp1.splitUniform(2 * 5, depth=1)\n" + \
@@ -411,7 +411,7 @@ def test_hifiber_conv():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "O_Q1Q0 = Tensor(rank_ids=[\"Q1\", \"Q0\"])\n" + \
+    hifiber = "O_Q1Q0 = Tensor(rank_ids=[\"Q1\", \"Q0\"], name=\"O\")\n" + \
         "tmp0 = I_W\n" + \
         "tmp1 = tmp0.splitUniform(10, depth=0, post_halo=-1 + S)\n" + \
         "I_W1W0 = tmp1\n" + \
@@ -461,7 +461,7 @@ def test_hifiber_static_flattening():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"])\n" + \
+    hifiber = "Z_NM = Tensor(rank_ids=[\"N\", \"M\"], name=\"Z\")\n" + \
         "tmp0 = A_KM\n" + \
         "tmp1 = tmp0.splitUniform(4, depth=0)\n" + \
         "A_K1K0M = tmp1\n" + \
@@ -521,7 +521,7 @@ def test_hifiber_dyn_flattening():
     einsum = Einsum.from_str(yaml)
     mapping = Mapping.from_str(yaml)
 
-    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])\n" + \
+    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"], name=\"Z\")\n" + \
         "tmp0 = A_KM\n" + \
         "tmp1 = tmp0.splitUniform(6, depth=1)\n" + \
         "A_KM1M0 = tmp1\n" + \
@@ -635,7 +635,7 @@ def test_hifiber_traffic():
     bindings = Bindings.from_str(yaml)
     format_ = Format.from_str(yaml)
 
-    hifiber = "Z_M = Tensor(rank_ids=[\"M\"], shape=[M])\n" + \
+    hifiber = "Z_M = Tensor(rank_ids=[\"M\"], name=\"Z\", shape=[M])\n" + \
         "A_MK = A_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
         "B_MK = B_KM.swizzleRanks(rank_ids=[\"M\", \"K\"])\n" + \
         "z_m = Z_M.getRoot()\n" + \
@@ -711,7 +711,7 @@ def test_hifiber_intersect():
     bindings = Bindings.from_str(yaml)
     format_ = Format.from_str(yaml)
 
-    hifiber = "Z_ = Tensor(rank_ids=[], shape=[])\n" + \
+    hifiber = "Z_ = Tensor(rank_ids=[], name=\"Z\", shape=[])\n" + \
         "z_ref = Z_.getRoot()\n" + \
         "a_i = A_IJK.getRoot()\n" + \
         "b_i = B_IJK.getRoot()\n" + \

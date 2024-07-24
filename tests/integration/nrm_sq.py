@@ -1,4 +1,4 @@
-T_ABIJ = Tensor(rank_ids=["A", "B", "I", "J"])
+T_ABIJ = Tensor(rank_ids=["A", "B", "I", "J"], name="T")
 t_a = T_ABIJ.getRoot()
 v_a = V_ABIJ.getRoot()
 for a, (t_b, v_b) in t_a << v_a:
@@ -6,7 +6,7 @@ for a, (t_b, v_b) in t_a << v_a:
         for i, (t_j, v_j) in t_i << v_i:
             for j, (t_ref, v_val) in t_j << v_j:
                 t_ref += v_val
-Q_ = Tensor(rank_ids=[])
+Q_ = Tensor(rank_ids=[], name="Q")
 q_ref = Q_.getRoot()
 v_a = V_ABIJ.getRoot()
 t_a = T_ABIJ.getRoot()

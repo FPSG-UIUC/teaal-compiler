@@ -1,4 +1,4 @@
-T1_IJ = Tensor(rank_ids=["I", "J"])
+T1_IJ = Tensor(rank_ids=["I", "J"], name="T1")
 t1_i = T1_IJ.getRoot()
 a_i = A_IJK.getRoot()
 b_k = B_KL.getRoot()
@@ -7,7 +7,7 @@ for i, (t1_j, a_j) in t1_i << a_i:
         for k, (a_val, b_l) in a_k & b_k:
             for l, b_val in b_l:
                 t1_ref += a_val * b_val
-D_I = Tensor(rank_ids=["I"])
+D_I = Tensor(rank_ids=["I"], name="D")
 d_i = D_I.getRoot()
 c_i = C_IJ.getRoot()
 t1_i = T1_IJ.getRoot()

@@ -1,4 +1,4 @@
-Z_IK = Tensor(rank_ids=["I", "K"])
+Z_IK = Tensor(rank_ids=["I", "K"], name="Z")
 B_KJ = B_JK.swizzleRanks(rank_ids=["K", "J"])
 z_i = Z_IK.getRoot()
 a_i = A_IJ.getRoot()

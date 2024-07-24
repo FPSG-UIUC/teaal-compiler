@@ -1,4 +1,4 @@
-Z_M = Tensor(rank_ids=["M"])
+Z_M = Tensor(rank_ids=["M"], name="Z")
 z_m = Z_M.getRoot()
 a_k = A_K.getRoot()
 b_m = B_MK.getRoot()

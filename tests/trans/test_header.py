@@ -124,7 +124,7 @@ def test_make_output():
             Z: [M1, K, N, M0]
     """
 
-    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"])"
+    hifiber = "Z_M1NM0 = Tensor(rank_ids=[\"M1\", \"N\", \"M0\"], name=\"Z\")"
 
     header = build_matmul_header(mapping)
     assert header.make_output().gen(depth=0) == hifiber
@@ -135,7 +135,7 @@ def test_make_output_shape():
             - Z[m, n] = A[k, m]
     """
 
-    hifiber = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], shape=[M, N])"
+    hifiber = "Z_MN = Tensor(rank_ids=[\"M\", \"N\"], name=\"Z\", shape=[M, N])"
 
     header = build_header(exprs, "")
     assert header.make_output().gen(depth=0) == hifiber
@@ -152,27 +152,27 @@ def test_make_output_no_shape_flattening():
                 (M, N): [flatten()]
     """
 
-    hifiber = "Z_MN = Tensor(rank_ids=[\"MN\"])"
+    hifiber = "Z_MN = Tensor(rank_ids=[\"MN\"], name=\"Z\")"
     header = build_header(exprs, mapping)
     assert header.make_output().gen(depth=0) == hifiber
 
 
 def test_make_output_conv_no_shape():
-    hifiber = "O_Q = Tensor(rank_ids=[\"Q\"])"
+    hifiber = "O_Q = Tensor(rank_ids=[\"Q\"], name=\"O\")"
     header = build_header_conv("[S, Q]")
 
     assert header.make_output().gen(0) == hifiber
 
 
 def test_make_output_conv_shape():
-    hifiber = "O_Q = Tensor(rank_ids=[\"Q\"], shape=[Q])"
+    hifiber = "O_Q = Tensor(rank_ids=[\"Q\"], name=\"O\", shape=[Q])"
     header = build_header_conv("[Q, S]")
 
     assert header.make_output().gen(0) == hifiber
 
 
 def test_make_output_metrics_shape():
-    hifiber = "T_MKN = Tensor(rank_ids=[\"M\", \"K\", \"N\"], shape=[M, K, N])"
+    hifiber = "T_MKN = Tensor(rank_ids=[\"M\", \"K\", \"N\"], name=\"T\", shape=[M, K, N])"
     header = build_header_gamma()
 
     assert header.make_output().gen(0) == hifiber

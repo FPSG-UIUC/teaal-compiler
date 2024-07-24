@@ -99,7 +99,8 @@ class Header:
         self.program.get_loop_order().apply(tensor)
 
         arg0 = TransUtils.build_rank_ids(tensor)
-        args = self.__make_shape([arg0])
+        arg1 = AParam("name", EString(tensor.root_name()))
+        args = self.__make_shape([arg0, arg1])
         constr = EFunc("Tensor", args)
         return SAssign(AVar(tensor.tensor_name()), constr)
 
