@@ -37,7 +37,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # Make sure we are given exactly one argument
     if len(sys.argv) != 2:
-        print("Usage: pipenv run python teaal [input file]")
+        print("Usage: python -m teaal [input file]")
 
     # Translate
     else:
