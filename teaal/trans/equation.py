@@ -24,7 +24,7 @@ SOFTWARE.
 Translation for how tensors and variables are combined
 """
 
-from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol # type: ignore
+from sympy import Add, Basic, Integer, Mul, Rational, solve, Symbol  # type: ignore
 from typing import cast, Dict, List, Optional, Type
 
 from teaal.hifiber import *

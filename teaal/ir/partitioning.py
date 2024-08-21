@@ -26,7 +26,7 @@ Intermediate representation of the partitioning information
 
 from lark.tree import Tree
 import networkx as nx  # type: ignore
-from sympy import Basic, Symbol # type: ignore
+from sympy import Basic, Symbol  # type: ignore
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from teaal.ir.coord_math import CoordMath

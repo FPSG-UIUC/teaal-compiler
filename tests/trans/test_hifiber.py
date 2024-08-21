@@ -294,8 +294,8 @@ def test_hifiber_dyn_part():
         "z_m = Z_MN1N0.getRoot()\n" + \
         "a_k = A_KM.getRoot()\n" + \
         "b_k = B_KN.getRoot()\n" + \
-        "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)\n" + \
-        "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k)\n" + \
+        "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k, name=\"A\")\n" + \
+        "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k, name=\"B\")\n" + \
         "tmp0 = A_KM\n" + \
         "tmp1 = tmp0.splitEqual(6)\n" + \
         "A_K2K1IM = tmp1\n" + \
@@ -309,7 +309,7 @@ def test_hifiber_dyn_part():
         "B_K2NK1I = B_K2K1IN.swizzleRanks(rank_ids=[\"K2\", \"N\", \"K1I\"])\n" + \
         "b_k2 = B_K2NK1I.getRoot()\n" + \
         "for k2, (a_m, b_n) in a_k2 & b_k2:\n" + \
-        "    B_NK1I = Tensor.fromFiber(rank_ids=[\"N\", \"K1I\"], fiber=b_n)\n" + \
+        "    B_NK1I = Tensor.fromFiber(rank_ids=[\"N\", \"K1I\"], fiber=b_n, name=\"B\")\n" + \
         "    tmp4 = B_NK1I\n" + \
         "    tmp5 = tmp4.splitEqual(5)\n" + \
         "    B_N1N0K1I = tmp5\n" + \
@@ -317,14 +317,14 @@ def test_hifiber_dyn_part():
         "    B_N1K1IN0 = B_N1N0K1I.swizzleRanks(rank_ids=[\"N1\", \"K1I\", \"N0\"])\n" + \
         "    b_n1 = B_N1K1IN0.getRoot()\n" + \
         "    for m, (z_n1, a_k1i) in z_m << a_m:\n" + \
-        "        A_K1I = Tensor.fromFiber(rank_ids=[\"K1I\"], fiber=a_k1i)\n" + \
+        "        A_K1I = Tensor.fromFiber(rank_ids=[\"K1I\"], fiber=a_k1i, name=\"A\")\n" + \
         "        tmp6 = A_K1I\n" + \
         "        tmp7 = tmp6.splitEqual(3)\n" + \
         "        A_K1K0 = tmp7\n" + \
         "        A_K1K0.setRankIds(rank_ids=[\"K1\", \"K0\"])\n" + \
         "        a_k1 = A_K1K0.getRoot()\n" + \
         "        for n1, (z_n0, b_k1i) in z_n1 << b_n1:\n" + \
-        "            B_K1IN0 = Tensor.fromFiber(rank_ids=[\"K1I\", \"N0\"], fiber=b_k1i)\n" + \
+        "            B_K1IN0 = Tensor.fromFiber(rank_ids=[\"K1I\", \"N0\"], fiber=b_k1i, name=\"B\")\n" + \
         "            tmp8 = B_K1IN0\n" + \
         "            tmp9 = tmp8.splitNonUniform(a_k1)\n" + \
         "            B_K1K0N0 = tmp9\n" + \
@@ -480,7 +480,7 @@ def test_hifiber_static_flattening():
         "b_k1 = B_K1NK0.getRoot()\n" + \
         "a_k1 = A_K1MK0_flat.getRoot()\n" + \
         "for k1, (a_mk0, b_n) in a_k1 & b_k1:\n" + \
-        "    A_MK0 = Tensor.fromFiber(rank_ids=[\"MK0\"], fiber=a_mk0)\n" + \
+        "    A_MK0 = Tensor.fromFiber(rank_ids=[\"MK0\"], fiber=a_mk0, name=\"A\")\n" + \
         "    tmp6 = A_MK0\n" + \
         "    tmp7 = tmp6.splitEqual(5)\n" + \
         "    A_MK01MK00 = tmp7\n" + \
@@ -530,9 +530,9 @@ def test_hifiber_dyn_flattening():
         "A_M1KM0 = A_KM1M0.swizzleRanks(rank_ids=[\"M1\", \"K\", \"M0\"])\n" + \
         "b_k = B_KN.getRoot()\n" + \
         "a_m1 = A_M1KM0.getRoot()\n" + \
-        "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k)\n" + \
+        "B_KN = Tensor.fromFiber(rank_ids=[\"K\", \"N\"], fiber=b_k, name=\"B\")\n" + \
         "for m1, (z_n, a_k) in z_m1 << a_m1:\n" + \
-        "    A_KM0 = Tensor.fromFiber(rank_ids=[\"K\", \"M0\"], fiber=a_k)\n" + \
+        "    A_KM0 = Tensor.fromFiber(rank_ids=[\"K\", \"M0\"], fiber=a_k, name=\"A\")\n" + \
         "    tmp2 = A_KM0\n" + \
         "    tmp3 = tmp2.splitEqual(4)\n" + \
         "    A_K1K0M0 = tmp3\n" + \
@@ -550,7 +550,7 @@ def test_hifiber_dyn_flattening():
         "    B_K1NK0 = B_K1K0N.swizzleRanks(rank_ids=[\"K1\", \"N\", \"K0\"])\n" + \
         "    b_k1 = B_K1NK0.getRoot()\n" + \
         "    for k1, (a_m0k0, b_n) in a_k1 & b_k1:\n" + \
-        "        A_M0K0 = Tensor.fromFiber(rank_ids=[\"M0K0\"], fiber=a_m0k0)\n" + \
+        "        A_M0K0 = Tensor.fromFiber(rank_ids=[\"M0K0\"], fiber=a_m0k0, name=\"A\")\n" + \
         "        tmp8 = A_M0K0\n" + \
         "        tmp9 = tmp8.splitEqual(5)\n" + \
         "        A_M0K01M0K00 = tmp9\n" + \

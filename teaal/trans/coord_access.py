@@ -25,7 +25,7 @@ Translation from a symbolic representation of an index access to the
 corresonding HiFiber
 """
 
-from sympy import Add, Basic, Integer, Mul, Rational, Symbol # type: ignore
+from sympy import Add, Basic, Integer, Mul, Rational, Symbol  # type: ignore
 from typing import Type
 
 from teaal.hifiber import *

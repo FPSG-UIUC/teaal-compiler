@@ -242,6 +242,6 @@ def test_make_swizzle_metrics():
 
 
 def test_make_tensor_from_fiber():
-    hifiber = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k)"
+    hifiber = "A_KM = Tensor.fromFiber(rank_ids=[\"K\", \"M\"], fiber=a_k, name=\"A\")"
     tensor = Tensor("A", ["K", "M"])
     assert Header.make_tensor_from_fiber(tensor).gen(depth=0) == hifiber

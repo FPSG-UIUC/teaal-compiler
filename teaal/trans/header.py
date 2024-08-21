@@ -24,7 +24,7 @@ SOFTWARE.
 Translate the header above the HiFiber loop nest
 """
 
-from sympy import Symbol # type: ignore
+from sympy import Symbol  # type: ignore
 from typing import Iterable, Optional, Set
 
 from teaal.hifiber import *
@@ -141,7 +141,8 @@ class Header:
 
         ranks = [EString(rank) for rank in tensor.get_ranks()]
         args = [AParam("rank_ids", EList(ranks)),
-                AParam("fiber", EVar(tensor.fiber_name()))]
+                AParam("fiber", EVar(tensor.fiber_name())),
+                AParam("name", EString(tensor.root_name()))]
 
         from_fiber = EMethod(EVar("Tensor"), "fromFiber", args)
         tensor_name = AVar(tensor.tensor_name())
