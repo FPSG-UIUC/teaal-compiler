@@ -123,6 +123,30 @@ def create_conv():
     return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
 
 
+def create_conv_step():
+    yaml = """
+    einsum:
+        declaration:
+            F: [S]
+            I: [W]
+            O: [Q]
+        expressions:
+            - O[q] = I[2 * q + s] * F[s]
+    mapping:
+        partitioning:
+            O:
+                Q: [uniform_shape(10)]
+                W: [follow(Q)]
+        loop-order:
+            O: [Q1, Q0, S]
+        spacetime:
+            O:
+                space: []
+                time: [Q1, Q0, S]
+    """
+    return Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
+
+
 def test_create_canvas():
     program = create_spacetime()
     program.add_einsum(0)
@@ -279,6 +303,21 @@ def test_add_activity_conv():
     canvas.create_canvas()
 
     hifiber = "canvas.addActivity((w,), (w + -1 * q,), (q,), spacetime=((), (w_pos, q_pos)))"
+    assert canvas.add_activity().gen(0) == hifiber
+
+
+def test_add_activity_conv_step():
+    program = create_conv_step()
+    program.add_einsum(0)
+    part_ir = program.get_partitioning()
+
+    for tensor in program.get_equation().get_tensors():
+        program.apply_all_partitioning(tensor)
+
+    canvas = Canvas(program)
+    canvas.create_canvas()
+
+    hifiber = "canvas.addActivity((2 * q1, s + 2 * q0), (s,), (q1, q0), spacetime=((), (q1_pos, q0_pos, s_pos)))"
     assert canvas.add_activity().gen(0) == hifiber
 
 

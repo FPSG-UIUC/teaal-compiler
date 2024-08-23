@@ -25,7 +25,7 @@ Translate the canvas spacetime information
 """
 from copy import deepcopy
 
-from sympy import Symbol  # type: ignore
+from sympy import Add, Symbol  # type: ignore
 from typing import List, Optional
 
 from teaal.hifiber import *
@@ -148,18 +148,34 @@ class Canvas:
         part_ir = self.program.get_partitioning()
         root, suffix = part_ir.split_rank_name(rank.upper())
 
-        # This is not the innermost rank
-        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "I":
-            return EVar(rank)
-
         # If this rank is the result of flattening, then build the access
         # as a tuple of the constituent ranks
         if part_ir.is_flattened(rank.upper()):
             flat_ranks = self.program.get_loop_order().get_iter_ranks(rank.upper())
             return ETuple([EVar(frank.lower()) for frank in flat_ranks])
 
-        # Otherwise, this is the innermost rank; so translate
         sexpr = self.program.get_coord_math().get_trans(root.lower())
+
+        # This is not the innermost rank, so we only care about the term with
+        # the root
+        if len(suffix) > 0 and suffix != "0" and suffix[-1] != "I":
+            # Extract the relevant term
+            opt_loop_rank = part_ir.partition_rank((rank.upper(),))
+            assert opt_loop_rank is not None
+            loop_rank = opt_loop_rank[0]
+
+            loop_root, loop_suffix = part_ir.split_rank_name(loop_rank)
+
+            terms = [
+                t for t in Add.make_args(sexpr) if Symbol(
+                    loop_root.lower()) in t.free_symbols]
+            assert len(terms) == 1
+
+            term = terms[0].subs(
+                Symbol(
+                    loop_root.lower()), Symbol(
+                    loop_rank.lower()))
+            return CoordAccess.build_expr(term)
 
         # Now, we need to replace the roots with their dynamic names
         for symbol in sexpr.atoms(Symbol):

@@ -1,30 +1,26 @@
 einsum:
-  declaration: # Ranks are listed alphabetically in this section
-    TS: [T, P1, P0, E]
-    ND: [P1, P0]
-    NTS: [T, P1, P0, E]
-    PF: [P1, P0, E, C]
-    OF: [P1, E]
-    MS: [P1, P0, E]
-    PS: [P1, P0, E, C]
-    TOP: [P1, E, C, P0]
+  declaration:
+    I: [B, C, H, W]
+    F: [C, M, R, S]
+    O: [B, M, P, Q]
   expressions:
-    - ND[p1, p0] = TS[t,  p1, p0, e]
-    - NTS[t,  p1, p0, e] = TS[t,  p1, p0, e] * ND[p1, p0]
-    - PF[p1, p0, e, c] = NTS[t,  p1, p0, e]
-    - OF[p1, e] = PF[p1, p0, e, c]
-    - MS[p1, p0, e] = NTS[t,  p1, p0, e]
-    - PS[p1, p0, e, c] = MS[p1, p0, e] * OF[p1, e]
-    - TOP[p1, e, c, p0] = PF[p1, p0, e, c] + PS[p1, p0, e, c]
+    - O[b, m, p, q] = I[b, c, 4*p+r, 4*q+s]*F[c, m, r, s]
 mapping:
   rank-order:
-    PF: [P1, E, P0, C]
-    PS: [P1, E, P0, C]
-    TOP: [P1, E, C, P0]
+    I: [B, C, H, W]
+    F: [M, C, R, S]
+    O: [B, M, P, Q]
+  partitioning:
+    O:
+      M:
+        - uniform_shape(32)
+        - uniform_shape(16)
+      P:
+        - uniform_shape(P0)
+      H: [follow(P)]
   loop-order:
-    ND: [T, P1, P0, E]
-    PF: [T, P1, E, P0, C]
-    MS: [T, P1, P0, E]
-    OF: [P1, E, P0, C]
-    PS: [P1, E, P0, C]
-    TOP: [P1, E, C, P0]
+    O: [C, M2, B, M1, P1, P0, R, Q, S, M0]
+  spacetime:
+    O:
+      space: [P0]
+      time: [C, M2, B, M1, P1, R, Q, S, M0]
