@@ -1,26 +1,31 @@
 einsum:
   declaration:
-    I: [B, C, H, W]
-    F: [C, M, R, S]
-    O: [B, M, P, Q]
+    A: [K, M]
+    B: [K, N]
+    T: [K, M, N]
+    Z: [M, N]
   expressions:
-    - O[b, m, p, q] = I[b, c, 4*p+r, 4*q+s]*F[c, m, r, s]
+    - T[k, m, n] = A[k, m] * B[k, n]
+    - Z[m, n] = T[k, m, n]
 mapping:
   rank-order:
-    I: [B, C, H, W]
-    F: [M, C, R, S]
-    O: [B, M, P, Q]
+    A: [K, M]
+    B: [K, N]
+    T: [M, K, N]
+    Z: [M, N]
   partitioning:
-    O:
-      M:
-        - uniform_shape(32)
-        - uniform_shape(16)
-      P:
-        - uniform_shape(P0)
-      H: [follow(P)]
+    T:
+      (K, M): [flatten()]
+      KM: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
+    Z:
+      M: [uniform_occupancy(T.4), uniform_occupancy(T.2)]
   loop-order:
-    O: [C, M2, B, M1, P1, P0, R, Q, S, M0]
+    T: [KM2, KM1, KM0, N]
+    Z: [M2, M1, M0, N, K]
   spacetime:
-    O:
-      space: [P0]
-      time: [C, M2, B, M1, P1, R, Q, S, M0]
+    T:
+      space: [KM1, KM0]
+      time: [KM2, N]
+    Z:
+      space: [M1, M0]
+      time: [M2, N, K]

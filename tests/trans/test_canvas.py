@@ -274,24 +274,29 @@ def test_add_activity_flatten():
         partitioning:
             Z:
                 (M, N): [flatten()]
+                MN: [uniform_occupancy(A.5)]
         loop-order:
-            Z: [MN]
+            Z: [MN1, MN0]
         spacetime:
             Z:
-                space: []
-                time: [MN]
+                space: [MN0]
+                time: [MN1]
     """
     program = Program(Einsum.from_str(yaml), Mapping.from_str(yaml))
     program.add_einsum(0)
     part_ir = program.get_partitioning()
 
-    for tensor in program.get_equation().get_tensors():
-        program.apply_all_partitioning(tensor)
+    # Static partitioning
+    program.apply_all_partitioning(program.get_equation().get_output())
+    program.apply_partitioning(program.get_equation().get_tensor("A"), ("M", "N"))
 
     canvas = Canvas(program)
     canvas.create_canvas()
 
-    hifiber = "canvas.addActivity(((m, n),), ((m, n),), spacetime=((), (mn_pos,)))"
+    # Dynamic partitioning
+    program.apply_partitioning(program.get_equation().get_tensor("A"), ("MN",))
+
+    hifiber = "canvas.addActivity(((m, n),), (mn1, (m, n)), spacetime=((mn0_pos,), (mn1_pos,)))"
     assert canvas.add_activity().gen(0) == hifiber
 
 

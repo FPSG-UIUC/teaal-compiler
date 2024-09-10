@@ -152,7 +152,11 @@ class Canvas:
         # as a tuple of the constituent ranks
         if part_ir.is_flattened(rank.upper()):
             flat_ranks = self.program.get_loop_order().get_iter_ranks(rank.upper())
-            return ETuple([EVar(frank.lower()) for frank in flat_ranks])
+
+            if len(flat_ranks) == 1:
+                return EVar(flat_ranks[0].lower())
+            else:
+                return ETuple([EVar(frank.lower()) for frank in flat_ranks])
 
         sexpr = self.program.get_coord_math().get_trans(root.lower())
 
