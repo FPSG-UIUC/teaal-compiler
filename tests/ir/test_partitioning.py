@@ -19,7 +19,8 @@ def parse_partitioning(parts):
 
 def build_part_dict(parts):
     parsed = parse_partitioning(parts)
-    return {tuple(str(child) for child in key.children): val for key, val in parsed["Z"].items()}
+    return {tuple(str(child) for child in key.children)
+                  : val for key, val in parsed["Z"].items()}
 
 
 def build_partitioning(parts):
@@ -906,7 +907,19 @@ def test_swizzle_for_flattening():
 
     assert partitioning.swizzle_for_flattening(["K", "M"]) == ["K", "M"]
     assert partitioning.swizzle_for_flattening(["K1", "K0", "J", "M", "N"]) == [
-        "K1", "J", "N", "M", "K0"]
+        "K1", "J", "M", "K0", "N"]
+
+
+def test_swizzle_for_flattening_flexagon():
+    all_parts = """
+                K: [ uniform_shape(16) ]
+                (K0, M): [ flatten() ]
+                K0M: [ uniform_occupancy(A.64) ]
+    """
+    partitioning = build_partitioning(all_parts)
+
+    assert partitioning.swizzle_for_flattening(["M", "K1", "K0", "N"]) == [
+        "K1", "K0", "M", "N"]
 
 
 def test_unpack():

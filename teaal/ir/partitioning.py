@@ -457,9 +457,20 @@ class Partitioning:
         used_parts = self.__used_parts(new_ranks, self.all_parts, True)
         for part in used_parts:
             if len(part) > 1:
-                for rank in part:
+                # We do not want to re-order unaffected ranks
+
+                # Start and end of flattened ranks
+                min_pos = min(new_ranks.index(rank) for rank in part)
+                max_pos = max(new_ranks.index(rank) for rank in part)
+
+                # Extra ranks that need to be moved around
+                extras = max_pos - min_pos - len(part) + 1
+
+                for i, rank in enumerate(part):
                     del new_ranks[new_ranks.index(rank)]
-                    new_ranks.append(rank)
+
+                for i, rank in enumerate(part):
+                    new_ranks.insert(min_pos + extras + i, rank)
 
         return new_ranks
 

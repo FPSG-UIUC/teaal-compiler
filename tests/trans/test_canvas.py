@@ -288,7 +288,8 @@ def test_add_activity_flatten():
 
     # Static partitioning
     program.apply_all_partitioning(program.get_equation().get_output())
-    program.apply_partitioning(program.get_equation().get_tensor("A"), ("M", "N"))
+    program.apply_partitioning(
+        program.get_equation().get_tensor("A"), ("M", "N"))
 
     canvas = Canvas(program)
     canvas.create_canvas()

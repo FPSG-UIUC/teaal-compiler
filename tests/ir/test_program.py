@@ -228,7 +228,7 @@ def test_apply_partition_swizzling():
 
     program.apply_partitioning(A, ("K",))
     program.apply_partition_swizzling(A)
-    assert A.get_ranks() == ["J", "K1", "N", "M", "K0"]
+    assert A.get_ranks() == ["J", "K1", "M", "K0", "N"]
 
 
 def test_get_all_einsums():

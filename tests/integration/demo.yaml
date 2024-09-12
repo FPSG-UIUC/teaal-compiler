@@ -1,31 +1,24 @@
 einsum:
-  declaration:
-    A: [K, M]
-    B: [K, N]
-    T: [K, M, N]
-    Z: [M, N]
-  expressions:
-    - T[k, m, n] = A[k, m] * B[k, n]
-    - Z[m, n] = T[k, m, n]
+    declaration:
+        A: [K, M]
+        B: [K, N]
+        T: [K, M, N]
+        Z: [M, N]
+    expressions:
+        - T[k, m, n] = A[k, m] * B[k, n]
 mapping:
-  rank-order:
-    A: [K, M]
-    B: [K, N]
-    T: [M, K, N]
-    Z: [M, N]
-  partitioning:
-    T:
-      (K, M): [flatten()]
-      KM: [uniform_occupancy(A.4), uniform_occupancy(A.2)]
-    Z:
-      M: [uniform_occupancy(T.4), uniform_occupancy(T.2)]
-  loop-order:
-    T: [KM2, KM1, KM0, N]
-    Z: [M2, M1, M0, N, K]
-  spacetime:
-    T:
-      space: [KM1, KM0]
-      time: [KM2, N]
-    Z:
-      space: [M1, M0]
-      time: [M2, N, K]
+    rank-order:
+        A: [K, M]
+        B: [K, N]
+        T: [M, K, N]
+        Z: [M, N]
+    partitioning:
+        T:
+            K: [ uniform_shape(16) ]
+            (K0, M): [ flatten() ]
+            K0M: [ uniform_occupancy(A.64) ]
+        Z:
+            K: [ uniform_occupancy(T.64) ]
+    loop-order:
+        T: [K1, K0M1, K0M0, N]
+        Z: [M, K1, K0, N]
