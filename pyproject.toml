@@ -7,7 +7,7 @@ name = "teaal"
 description = "A compiler from a YAML description to HiFiber code"
 version = "0.0.1"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = {file = "LICENSE"}
 authors = [
     {"name" = "Nandeeka Nayak", "email" = "ndnayak2@illinois.edu"}
@@ -17,8 +17,8 @@ dependencies = [
     "pytest-cov",
     "autopep8",
     "mypy",
-    "lark-parser",
-    "ruamel-yaml",
+    "lark",
+    "ruamel-yaml<0.18.0",
     "networkx",
     "matplotlib",
     "sympy"

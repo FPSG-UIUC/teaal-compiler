@@ -26,7 +26,7 @@ class EquationParser:
         ?num: NUMBER -> pos
             | "-" NUMBER -> neg
 
-        ?output: NAME "[" ranks "]"
+        ?output: NAME "[" ranks "]" -> output
 
         ?tensor: NAME "[" ranks "]"
 
@@ -46,6 +46,11 @@ class EquationParser:
     @staticmethod
     def parse(equation: str) -> Tree:
         tree = EquationParser.parser.parse(equation)
+
+        # Remove None due to empty ranks
+        for ranks in tree.find_data("ranks"):
+            if ranks.children == [None]:
+                ranks.children = []
 
         # Parse both positive and negative numbers
         for itimes in tree.find_data("itimes"):
