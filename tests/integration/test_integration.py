@@ -33,6 +33,7 @@ test_names = [
 
 
 def test_integration():
+    errors = []
     for test_name in test_names:
         filename = 'tests/integration/' + test_name
 
@@ -43,4 +44,6 @@ def test_integration():
         hifiber = read_hifiber(filename + ".py")
         if output != hifiber:
             print(output)
-        assert output == hifiber, test_name + " integration test failed!"
+            errors.append(test_name)
+
+    assert not errors, "Integration tests " + str(errors) + " failed!"

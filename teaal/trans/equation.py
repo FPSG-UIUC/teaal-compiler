@@ -263,7 +263,11 @@ class Equation:
 
         # Create the final statement
         out_name = self.program.get_equation().get_output().root_name().lower() + "_ref"
-        return SIAssign(AVar(out_name), OAdd(), sum_)
+
+        if self.__no_reduction():
+            return SIAssign(AVar(out_name), OLtLt(), sum_)
+        else:
+            return SIAssign(AVar(out_name), OAdd(), sum_)
 
     @staticmethod
     def __add_operator(
@@ -287,6 +291,11 @@ class Equation:
         if self.__need_enumerate(rank):
             expr = EFunc("enumerate", [AJust(expr)])
         return expr
+
+    def __no_reduction(self) -> bool:
+        out_ranks = self.program.get_equation().get_output().get_ranks()
+        all_ranks = self.program.get_loop_order().get_ranks()
+        return out_ranks == all_ranks
 
     def __need_enumerate(self, rank: str) -> bool:
         """

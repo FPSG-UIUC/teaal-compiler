@@ -8,7 +8,7 @@ def test_translate_no_loops():
         "tests/integration/test_translate_no_loops.yaml")
     hifiber = "A_ = Tensor(rank_ids=[], name=\"A\")\n" + \
         "a_ref = A_.getRoot()\n" + \
-        "a_ref += b"
+        "a_ref <<= b"
     assert str(HiFiber(einsum, mapping)) == hifiber
 
 
@@ -32,7 +32,7 @@ def test_translate_defaults():
         "c_m = C_MN.getRoot()\n" + \
         "for m, (z_n, (_, t1_n, c_n)) in z_m << (t1_m | c_m):\n" + \
         "    for n, (z_ref, (_, t1_val, c_val)) in z_n << (t1_n | c_n):\n" + \
-        "        z_ref += t1_val + c_val"
+        "        z_ref <<= t1_val + c_val"
 
     assert str(HiFiber(einsum, mapping)) == hifiber
 
@@ -88,7 +88,7 @@ def test_translate_specified():
         "            for n1, (z_m0, (_, t1_m0, c_m0)) in z_n1 << (t1_n1 | c_n1):\n" + \
         "                for m0, (z_n0, (_, t1_n0, c_n0)) in z_m0 << (t1_m0 | c_m0):\n" + \
         "                    for n0, (z_ref, (_, t1_val, c_val)) in z_n0 << (t1_n0 | c_n0):\n" + \
-        "                        z_ref += t1_val + c_val\n" + \
+        "                        z_ref <<= t1_val + c_val\n" + \
         "tmp14 = Z_M2N2M1N1M0N0\n" + \
         "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
         "tmp16 = tmp15.mergeRanks(depth=3, levels=2, coord_style=\"absolute\")\n" + \
@@ -143,7 +143,7 @@ def test_translate_specified():
         "            for n1, (z_m0, (_, t1_m0, c_m0)) in z_n1 << (t1_n1 | c_n1):\n" + \
         "                for m0, (z_n0, (_, t1_n0, c_n0)) in z_m0 << (t1_m0 | c_m0):\n" + \
         "                    for n0, (z_ref, (_, t1_val, c_val)) in z_n0 << (t1_n0 | c_n0):\n" + \
-        "                        z_ref += t1_val + c_val\n" + \
+        "                        z_ref <<= t1_val + c_val\n" + \
         "tmp14 = Z_M2N2M1N1M0N0\n" + \
         "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
         "tmp16 = tmp15.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
@@ -198,7 +198,7 @@ def test_translate_specified():
         "            for n1, (z_m0, (_, t1_m0, c_m0)) in z_n1 << (t1_n1 | c_n1):\n" + \
         "                for m0, (z_n0, (_, t1_n0, c_n0)) in z_m0 << (t1_m0 | c_m0):\n" + \
         "                    for n0, (z_ref, (_, t1_val, c_val)) in z_n0 << (t1_n0 | c_n0):\n" + \
-        "                        z_ref += t1_val + c_val\n" + \
+        "                        z_ref <<= t1_val + c_val\n" + \
         "tmp14 = Z_M2N2M1N1M0N0\n" + \
         "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
         "tmp16 = tmp15.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
@@ -253,7 +253,7 @@ def test_translate_specified():
         "            for n1, (z_m0, (_, t1_m0, c_m0)) in z_n1 << (t1_n1 | c_n1):\n" + \
         "                for m0, (z_n0, (_, t1_n0, c_n0)) in z_m0 << (t1_m0 | c_m0):\n" + \
         "                    for n0, (z_ref, (_, t1_val, c_val)) in z_n0 << (t1_n0 | c_n0):\n" + \
-        "                        z_ref += t1_val + c_val\n" + \
+        "                        z_ref <<= t1_val + c_val\n" + \
         "tmp14 = Z_M2N2M1N1M0N0\n" + \
         "tmp15 = tmp14.swizzleRanks(rank_ids=[\"N2\", \"N1\", \"N0\", \"M2\", \"M1\", \"M0\"])\n" + \
         "tmp16 = tmp15.mergeRanks(depth=3, levels=2, coord_style=\"absolute\")\n" + \
@@ -381,7 +381,7 @@ def test_hifiber_index_math_no_halo():
         "        else:\n" + \
         "            m0_end = M\n" + \
         "        for m0, (z_ref, a_val) in z_m0 << a_k0.project(trans_fn=lambda k0: 1 / 2 * k0, interval=(m0_start, m0_end)).prune(trans_fn=lambda i, c, p: c % 1 == 0):\n" + \
-        "            z_ref += a_val\n" + \
+        "            z_ref <<= a_val\n" + \
         "tmp3 = Z_M2M1M0\n" + \
         "tmp4 = tmp3.mergeRanks(depth=0, levels=2, coord_style=\"absolute\")\n" + \
         "tmp4.setRankIds(rank_ids=[\"M\"])\n" + \

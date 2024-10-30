@@ -635,18 +635,18 @@ def test_make_update():
 def test_make_update_vars():
     program = make_other("A[i] = b * c * d", "")
     eqn = Equation(program, None)
-    stmt = "a_ref += b * c * d"
+    stmt = "a_ref <<= b * c * d"
     assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_mult_terms():
     program = make_other("A[i] = b * B[i] + c * C[i] + d * D[i]", "")
     eqn = Equation(program, None)
-    stmt = "a_ref += b * b_val + c * c_val + d * d_val"
+    stmt = "a_ref <<= b * b_val + c * c_val + d * d_val"
     assert eqn.make_update().gen(depth=0) == stmt
 
 
 def test_make_update_take():
     _, eqn = make_take()
-    stmt = "z_ref += b"
+    stmt = "z_ref <<= b"
     assert eqn.make_update().gen(depth=0) == stmt

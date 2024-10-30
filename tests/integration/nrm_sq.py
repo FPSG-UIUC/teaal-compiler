@@ -5,7 +5,7 @@ for a, (t_b, v_b) in t_a << v_a:
     for b, (t_i, v_i) in t_b << v_b:
         for i, (t_j, v_j) in t_i << v_i:
             for j, (t_ref, v_val) in t_j << v_j:
-                t_ref += v_val
+                t_ref <<= v_val
 Q_ = Tensor(rank_ids=[], name="Q")
 q_ref = Q_.getRoot()
 v_a = V_ABIJ.getRoot()

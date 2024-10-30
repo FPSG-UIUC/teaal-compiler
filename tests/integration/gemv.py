@@ -11,4 +11,4 @@ z_m = Z_M.getRoot()
 t1_m = T1_M.getRoot()
 c_m = C_M.getRoot()
 for m, (z_ref, (_, t1_val, c_val)) in z_m << (t1_m | c_m):
-    z_ref += a * t1_val + b * c_val
+    z_ref <<= a * t1_val + b * c_val
